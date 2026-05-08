@@ -1,1 +1,19 @@
+.folder-item {
+    background: #2a3942;
+    padding: 15px;
+    margin: 10px 0;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    transition: 0.3s;
+}
+.folder-item:hover { background: #3b4a54; }
+.folder-item i { color: #ffca28; margin-right: 15px; font-size: 20px; }
+#add-btn {
+    position: fixed; bottom: 20px; right: 20px;
+    width: 60px; height: 60px; border-radius: 50%;
+    background: #00a884; color: white; border: none;
+    font-size: 24px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
 
