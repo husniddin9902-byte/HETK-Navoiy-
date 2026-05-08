@@ -11,10 +11,20 @@
 </head>
 <body>
 
-    <div id="app-container">
-        <div style="display:flex; height:100vh; align-items:center; justify-content:center; background:#0b141a; color:white; font-family:sans-serif;">
-            <h2>EnergoMap Pro yuklanmoqda...</h2>
+    <div id="main-app" style="display: flex; flex-direction: column; height: 100vh; background: #0b141a;">
+        <div style="background: #202c33; padding: 15px; display: flex; align-items: center; color: white; border-bottom: 1px solid #3b4a54;">
+            <button id="back-btn" style="background:none; border:none; color:#00a884; font-size: 20px; cursor: pointer; margin-right: 15px;">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <h3 style="margin:0; font-family: sans-serif; font-size: 18px;">HETK-Navoiy Monitoring</h3>
         </div>
+        
+        <div id="folder-list" style="flex:1; padding: 15px; overflow-y: auto;">
+            </div>
+
+        <button id="add-btn" style="position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; border-radius: 50%; background: #00a884; color: white; border: none; font-size: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); cursor: pointer; display: flex; align-items: center; justify-content: center;">
+            <i class="fas fa-plus"></i>
+        </button>
     </div>
 
     <script src="app.js"></script>
