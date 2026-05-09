@@ -3,30 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HETK Navoiy - EnergoMap</title>
+    <title>HETK Navoiy Monitoring</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
-    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
 
-    <div id="main-app" style="display: flex; flex-direction: column; height: 100vh; background: #0b141a;">
-        <div style="background: #202c33; padding: 15px; display: flex; align-items: center; color: white; border-bottom: 1px solid #3b4a54;">
-            <button id="back-btn" style="background:none; border:none; color:#00a884; font-size: 20px; cursor: pointer; margin-right: 15px;">
-                <i class="fas fa-arrow-left"></i>
-            </button>
-            <h3 style="margin:0; font-family: sans-serif; font-size: 18px;">HETK-Navoiy Monitoring</h3>
-        </div>
-        
-        <div id="folder-list" style="flex:1; padding: 15px; overflow-y: auto;">
-            </div>
-
-        <button id="add-btn" style="position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; border-radius: 50%; background: #00a884; color: white; border: none; font-size: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); cursor: pointer; display: flex; align-items: center; justify-content: center;">
-            <i class="fas fa-plus"></i>
-        </button>
+    <div class="header">
+        <button id="main-menu-btn" class="icon-btn"><i class="fas fa-bars"></i></button> <div class="header-title">Joylashuvni saqlash</div>
+        <div class="header-right">
+            <button id="list-menu-btn" class="icon-btn"><i class="fas fa-list-ul"></i></button> <button id="map-type-btn" class="icon-btn map-thumbnail"></button> </div>
     </div>
 
-    <script src="app.js"></script>
-</body>
-</html>
+    <div id="map"></div>
+
+    <button id="locate-btn" class="map-overlay-btn"><i class="fas fa-crosshairs"></i></button>
+
+    <div class="bottom-panel">
+        
+        <div id="info-panel" class="info-panel hidden">
+            <div class="info-row">
+                <span class="label">Kenglik:</span>
+                <span id="latitude" class="value">40.106168</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Uzunlik:</span>
+                <span id="longitude" class="value">65.81719</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Manzil:</span>
+                <span id="address" class="value">Navoiy viloyati, O'zbekiston</span>
+            </div>
+            <button id="copy-btn" class="copy-btn"><i class="fas fa-copy">
+                
