@@ -1,19 +1,43 @@
-.folder-item {
-    background: #2a3942;
-    padding: 15px;
-    margin: 10px 0;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-    transition: 0.3s;
+body { margin: 0; padding: 0; font-family: sans-serif; }
+#map { height: 100vh; width: 100vw; z-index: 1; }
+
+/* Header (Yuqori qism) */
+.header {
+    position: fixed; top: 0; width: 100%; height: 60px;
+    background: #00334e; color: white; display: flex;
+    align-items: center; justify-content: space-between;
+    padding: 0 15px; z-index: 1000; box-sizing: border-box;
 }
-.folder-item:hover { background: #3b4a54; }
-.folder-item i { color: #ffca28; margin-right: 15px; font-size: 20px; }
-#add-btn {
-    position: fixed; bottom: 20px; right: 20px;
-    width: 60px; height: 60px; border-radius: 50%;
-    background: #00a884; color: white; border: none;
-    font-size: 24px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+.icon-btn { background: none; border: none; color: white; font-size: 20px; cursor: pointer; }
+.header-title { font-size: 18px; font-weight: bold; flex-grow: 1; margin-left: 15px; }
+
+/* Overlay tugmalar (Xarita ustidagi) */
+.map-overlay-btn {
+    position: fixed; right: 15px; top: 75px;
+    width: 45px; height: 45px; background: white;
+    border: 1px solid #ccc; border-radius: 4px;
+    z-index: 1000; font-size: 20px; color: #555;
 }
 
+/* Pastki panel */
+.bottom-panel {
+    position: fixed; bottom: 0; width: 100%;
+    background: #00334e; color: white; z-index: 1000;
+    transition: 0.3s; padding-bottom: 20px;
+}
+.info-panel { padding: 15px; background: #002235; font-size: 14px; }
+.info-panel.hidden { display: none; }
+.info-row { margin-bottom: 5px; display: flex; justify-content: space-between; }
+.copy-btn { background: none; border: none; color: white; font-size: 20px; }
+
+.toggle-btn {
+    width: 100%; background: none; border: none;
+    color: white; font-size: 25px; padding: 5px;
+}
+
+.action-buttons { display: flex; justify-content: space-around; padding: 10px; }
+.main-btn {
+    flex: 1; margin: 0 10px; padding: 12px;
+    border: none; border-radius: 8px; color: white;
+    font-weight: bold; background: #34495e;
+}
