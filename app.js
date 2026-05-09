@@ -1,4 +1,4 @@
-// 1. Xaritani sozlash (Google Hybrid/Sputnik ko'rinishi)
+// 1. Xarita sozlamalari
 var map = L.map('map', {
     zoomControl: false 
 }).setView([40.1031, 65.3739], 13); 
@@ -8,33 +8,31 @@ L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
     subdomains:['mt0','mt1','mt2','mt3']
 }).addTo(map);
 
-var marker, circle;
+var marker; // Aylana (circle) o'chirildi
 
-// 2. Lokatsiyani aniqlash funksiyasi (Siz aytgan yuqori aniqlik bilan)
 function findMyLocation() {
     map.locate({
         setView: true, 
         maxZoom: 18,
-        enableHighAccuracy: true, // GPS-ni maksimal kuch bilan ishlatadi
-        timeout: 10000 
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0 
     });
 }
 
-// 3. Lokatsiya topilganda bajariladigan ishlar
 map.on('locationfound', function(e) {
+    // Agar marker oldindan bo'lsa, uni yangilaymiz, aks holda yangi yaratamiz
     if (marker) {
         marker.setLatLng(e.latlng);
-        circle.setLatLng(e.latlng).setRadius(e.accuracy / 2);
     } else {
         marker = L.marker(e.latlng).addTo(map);
-        circle = L.circle(e.latlng, {radius: e.accuracy / 2}).addTo(map);
     }
 
     // Koordinatalarni panelga chiqarish
     document.getElementById('latitude').innerText = e.latlng.lat.toFixed(6);
     document.getElementById('longitude').innerText = e.latlng.lng.toFixed(6);
     
-    // Manzilni matn ko'rinishida olish
+    // Manzilni aniqlash
     fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${e.latlng.lat}&lon=${e.latlng.lng}`)
         .then(res => res.json())
         .then(data => {
@@ -42,15 +40,14 @@ map.on('locationfound', function(e) {
         });
 });
 
-// 4. Xatolik bo'lsa
 map.on('locationerror', function(e) {
-    alert("GPS aniqlanmadi: " + e.message);
+    console.log("GPS aniqlanmadi: " + e.message);
 });
 
-// Sayt ochilishi bilan lokatsiyani qidirishni boshlash
+// Sayt ochilishi bilan ishga tushirish
 findMyLocation();
 
-// 5. Tugmalar logikasi (Strelka va Lokatsiya tugmasi)
+// Tugmalar logikasi
 document.getElementById('locate-btn').addEventListener('click', findMyLocation);
 
 document.getElementById('toggle-info').addEventListener('click', function() {
