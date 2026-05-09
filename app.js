@@ -7,43 +7,66 @@ L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
 
 var marker;
 
-function findMyLocation() {
-    map.locate({
-        setView: true, 
-        maxZoom: 18,
-        enableHighAccuracy: true,
-        timeout: 30000, // Vaqtni 30 soniyaga uzaytirdik
-        maximumAge: 0 
-    });
+// ASOSIY FUNKSIYA: Doimiy kuzatuv (WatchPosition)
+function startTracking() {
+    if (navigator.geolocation) {
+        navigator.geolocation.watchPosition(
+            function(position) {
+                var lat = position.coords.latitude;
+                var lng = position.coords.longitude;
+                var accuracy = position.coords.accuracy;
+
+                console.log("Aniqlik: " + accuracy + " metr");
+
+                // Agar aniqlik 100 metrdan ko'p bo'lsa, GPS hali yaxshi ushlamagan bo'ladi
+                var newLatLng = new L.LatLng(lat, lng);
+
+                if (marker) {
+                    marker.setLatLng(newLatLng);
+                } else {
+                    marker = L.marker(newLatLng).addTo(map);
+                }
+
+                // Xaritani faqat birinchi marta yoki tugma bosilganda markazga oladi
+                // map.setView(newLatLng, 18); 
+
+                document.getElementById('latitude').innerText = lat.toFixed(6);
+                document.getElementById('longitude').innerText = lng.toFixed(6);
+                
+                // Manzilni yangilash
+                updateAddress(lat, lng);
+            },
+            function(error) {
+                console.log("Xatolik: " + error.message);
+            },
+            {
+                enableHighAccuracy: true, // GPS-ni majburlash
+                maximumAge: 0,           // Keshdan foydalanmaslik
+                timeout: 10000           // Har 10 soniyada yangilash
+            }
+        );
+    }
 }
 
-map.on('locationfound', function(e) {
-    if (marker) {
-        marker.setLatLng(e.latlng);
-    } else {
-        marker = L.marker(e.latlng).addTo(map);
-    }
-    
-    document.getElementById('latitude').innerText = e.latlng.lat.toFixed(6);
-    document.getElementById('longitude').innerText = e.latlng.lng.toFixed(6);
-    
-    fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${e.latlng.lat}&lon=${e.latlng.lng}`)
+function updateAddress(lat, lng) {
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`)
         .then(res => res.json())
         .then(data => {
-            document.getElementById('address').innerText = data.display_name || "Manzil topilmadi";
-        }).catch(() => {
-            document.getElementById('address').innerText = "Internet aloqasi sust";
+            document.getElementById('address').innerText = data.display_name;
         });
+}
+
+// Tugma bosilganda xaritani nuqtaga qaytarish
+document.getElementById('locate-btn').addEventListener('click', function() {
+    if (marker) {
+        map.setView(marker.getLatLng(), 18);
+    } else {
+        startTracking();
+    }
 });
 
-// Xatolik xabarini ekranga chiqarmaslik uchun console-ga yo'naltiramiz
-map.on('locationerror', function(e) {
-    console.log("GPS qidirilmoqda... " + e.message);
-});
-
-findMyLocation();
-
-document.getElementById('locate-btn').addEventListener('click', findMyLocation);
+// Sayt ochilishi bilan kuzatishni boshlash
+startTracking();
 
 document.getElementById('toggle-info').addEventListener('click', function() {
     var panel = document.getElementById('info-panel');
