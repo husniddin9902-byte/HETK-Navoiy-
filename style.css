@@ -8,7 +8,7 @@ body, html {
 }
 
 /* Xarita balandligi - eng muhimi */
-#map-container {
+#map {
     height: 100vh;
     width: 100vw;
     position: absolute;
