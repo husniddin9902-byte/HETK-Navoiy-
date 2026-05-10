@@ -1,48 +1,52 @@
-function initLocation() {
+var map = L.map('map', { zoomControl: false }).setView([40.1031, 65.3739], 13); 
+
+L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+    maxZoom: 20,
+    subdomains:['mt0','mt1','mt2','mt3']
+}).addTo(map);
+
+var marker;
+
+function startTracking() {
     if (navigator.geolocation) {
-        navigator.geolocation.watchPosition(success, error, {
-            enableHighAccuracy: true,
-            maximumAge: 0,
-            timeout: 10000
-        });
-    } else {
-        alert("Brauzeringiz geolokatsiyani qo'llab-quvvatlamaydi.");
+        // watchPosition — bu doimiy va real vaqtda kuzatish
+        navigator.geolocation.watchPosition(
+            function(position) {
+                var lat = position.coords.latitude;
+                var lng = position.coords.longitude;
+                var acc = position.coords.accuracy; // Aniqlik (metrda)
+
+                document.getElementById('latitude').innerText = lat.toFixed(6);
+                document.getElementById('longitude').innerText = lng.toFixed(6);
+                document.getElementById('accuracy-text').innerText = "Aniqlik: " + Math.round(acc) + " metr";
+
+                var newPos = new L.LatLng(lat, lng);
+                
+                if (!marker) {
+                    marker = L.marker(newPos).addTo(map);
+                    map.setView(newPos, 18);
+                } else {
+                    marker.setLatLng(newPos);
+                }
+            },
+            function(error) {
+                console.log("Xato: " + error.message);
+            },
+            {
+                enableHighAccuracy: true, // GPS datchigini majburan ishlatish
+                maximumAge: 0,           // Keshdan ma'lumot olmaslik
+                timeout: 10000           // 10 soniya kutish
+            }
+        );
     }
 }
 
-function success(position) {
-    const lat = position.coords.latitude;
-    const lng = position.coords.longitude;
-
-    // Koordinatalarni matn ko'rinishida chiqarish
-    document.getElementById('latitude').innerText = lat.toFixed(6);
-    document.getElementById('longitude').innerText = lng.toFixed(6);
-
-    // Google Maps iframe-ni yangilash
-    const mapIframe = document.getElementById('google-map');
-    
-    // t=k (Sputnik), z=19 (Yaqinlik), q (Nuqta manzili)
-    // URL-ni to'g'ri formatda yozamiz:
-    mapIframe.src = `https://maps.google.com/maps?q=${lat},${lng}&z=19&t=k&output=embed`;
-}
-
-function error(err) {
-    console.warn(`Xatolik: ${err.message}`);
-    // Agar timeout bo'lsa, qayta urinib ko'radi
-}
-
-// "Nishon" tugmasini bossa sahifani yangilab, qayta qidiradi
 document.getElementById('locate-btn').addEventListener('click', () => {
-    location.reload();
+    if (marker) map.setView(marker.getLatLng(), 18);
 });
 
-// Pastki panelni ochib-yopish
 document.getElementById('toggle-info').addEventListener('click', function() {
     document.getElementById('info-panel').classList.toggle('hidden');
-    // Strelka belgisini o'zgartirish
-    this.querySelector('i').classList.toggle('fa-chevron-up');
-    this.querySelector('i').classList.toggle('fa-chevron-down');
 });
 
-// Sayt ochilishi bilan boshlash
-initLocation();
+startTracking();
