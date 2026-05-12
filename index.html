@@ -17,9 +17,39 @@
 
     <button id="locate-btn" class="map-overlay-btn"><i class="fas fa-crosshairs"></i></button>
 
-    <div class="bottom-panel">
-    ... (bu yerda nimalardir yozilgan) ...
+<div class="bottom-panel">
+    <div class="toggle-btn" id="toggle-panel">
+        <i class="fas fa-chevron-up" id="toggle-icon"></i>
     </div>
+
+    <div id="detailed-info" class="info-content">
+        <p class="accuracy-text">Accurate to <span id="accuracy">0</span> meters</p>
+        
+        <div class="data-row">
+            <span class="label">Latitude</span>
+            <span class="value">: <span id="latitude">0.000000</span></span>
+        </div>
+        
+        <div class="data-row">
+            <span class="label">Longitude</span>
+            <span class="value">: <span id="longitude">0.000000</span></span>
+            <div class="copy-box" onclick="copyCoords()">
+                <i class="far fa-copy"></i><br><span>Copy</span>
+            </div>
+        </div>
+
+        <div class="data-row">
+            <span class="label">Address</span>
+            <span class="value">: <span id="address">Aniqlanmoqda...</span></span>
+        </div>
+    </div>
+
+    <div class="action-buttons">
+        <button class="main-btn save-btn">Save Location</button>
+        <button class="main-btn share-btn">Share Location</button>
+    </div>
+</div>
+    
     
         </div>
     </div>
