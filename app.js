@@ -67,3 +67,15 @@ map.on('movestart', function() {
 if (!isUserInteracting) {
     map.setView([lat, lng], 18);
 }
+
+function togglePanel() {
+    var panel = document.getElementById('panel');
+    var icon = document.getElementById('toggle-icon');
+    if (panel.style.height === '60px') {
+        panel.style.height = 'auto';
+        icon.className = 'fas fa-chevron-circle-down';
+    } else {
+        panel.style.height = '60px';
+        icon.className = 'fas fa-chevron-circle-up';
+    }
+}
