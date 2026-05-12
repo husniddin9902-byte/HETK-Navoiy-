@@ -10,33 +10,25 @@
 </head>
 <body>
     <div class="header">
-        <button class="icon-btn"><i class="fas fa-bars"></i></button>
         <div class="header-title">Joylashuvni saqlash</div>
-        <button class="icon-btn"><i class="fas fa-list-ul"></i></button>
     </div>
 
-    <div id="map"></div>
+    <div id="map" style="width: 100%; height: 100vh;"></div>
 
     <button id="locate-btn" class="map-overlay-btn"><i class="fas fa-crosshairs"></i></button>
 
     <div class="bottom-panel">
-        <button id="toggle-info" class="toggle-btn"><i class="fas fa-chevron-up"></i></button>
-        <div id="info-panel" class="info-panel hidden">
-            <p>Lat: <span id="latitude">0.00</span></p>
-            <p>Long: <span id="longitude">0.00</span></p>
-            <p id="accuracy-text" style="font-size: 10px; color: #aaa;"></p>
+        <div id="info-panel" class="info-panel">
+            <p>Lat: <span id="latitude">0.00</span> | Long: <span id="longitude">0.00</span></p>
         </div>
         <div class="action-buttons">
             <button class="main-btn save-btn">Save Location</button>
-            <button class="main-btn share-btn">Share Location</button>
         </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <script src="app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
-<script src="app.js"></script>
-    
 </body>
 </html>
