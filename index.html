@@ -9,9 +9,41 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="header">
-        <div class="header-title">Joylashuvni saqlash</div>
-    </div>
+        <div class="bottom-panel minimized" id="panel">
+        <div class="toggle-container" onclick="togglePanel()">
+            <div class="toggle-circle">
+                <i class="fas fa-chevron-up" id="toggle-icon"></i>
+            </div>
+        </div>
+
+        <div id="detailed-info" class="info-content">
+            <p class="accuracy-text">Accurate to <span id="accuracy">0</span> meters</p>
+            
+            <div class="data-row">
+                <span class="label">Latitude</span>
+                <span class="value">: <span id="latitude">40.106038</span></span>
+            </div>
+            
+            <div class="data-row">
+                <span class="label">Longitude</span>
+                <span class="value">: <span id="longitude">65.81715</span></span>
+                <div class="copy-box" onclick="copyCoords()">
+                    <i class="far fa-copy"></i><br><span>Copy</span>
+                </div>
+            </div>
+
+            <div class="data-row">
+                <span class="label">Address</span>
+                <span class="value">: <span id="address">4R38+M8, Khodzha-Kalishan, Navoiy viloyati, O'zbekiston</span></span>
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            <button class="main-btn save-btn">Save Location</button>
+            <button class="main-btn share-btn">Share Location</button>
+        </div>
+        </div>
+    
 
     <div id="map" style="width: 100%; height: 100vh;"></div>
 
