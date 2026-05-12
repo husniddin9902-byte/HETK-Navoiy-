@@ -1,5 +1,3 @@
-
-
 // 1. Firebase Sozlamalari
 const firebaseConfig = {
   apiKey: "AIzaSyBFOoT_ZhvE1tT1Qglh5GjPPhs8ZsyRWoc",
@@ -17,29 +15,79 @@ const database = firebase.database();
 // 2. Xaritani ishga tushirish
 var map = L.map('map', { zoomControl: false }).setView([40.10, 65.81], 16);
 
-// Google Satellite qatlamini ulaymiz (Rasmdagi kabi bo'lishi uchun)
 L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}',{
     maxZoom: 20,
     subdomains:['mt0','mt1','mt2','mt3']
 }).addTo(map);
 
-
-var marker = L.marker([40.10, 65.37], { draggable: true }).addTo(map);
+var marker = L.marker([40.10, 65.37]).addTo(map);
 var lastPos = null;
+var isUserInteracting = false; // Xarita surilganini bilish uchun
 
-// 3. Lokatsiyani aniqlash
+// 3. Lokatsiyani aniqlash va xaritani yangilash
 function onLocation(p) {
-    lastPos = { lat: p.coords.latitude, lng: p.coords.longitude };
-    var newLatLng = new L.LatLng(lastPos.lat, lastPos.lng);
+    const lat = p.coords.latitude;
+    const lng = p.coords.longitude;
+    const acc = Math.round(p.coords.accuracy);
+    lastPos = { lat: lat, lng: lng };
+    
+    var newLatLng = new L.LatLng(lat, lng);
     marker.setLatLng(newLatLng);
-    map.setView(newLatLng, 18);
-    document.getElementById('latitude').innerText = lastPos.lat.toFixed(6);
-    document.getElementById('longitude').innerText = lastPos.lng.toFixed(6);
+
+    // AGAR foydalanuvchi xaritani surayotgan bo'lsa, xarita markazini o'zgartirmaydi
+    if (!isUserInteracting) {
+        map.setView(newLatLng, 18);
+    }
+
+    // UI elementlarini yangilash
+    document.getElementById('latitude').innerText = lat.toFixed(6);
+    document.getElementById('longitude').innerText = lng.toFixed(6);
+    document.getElementById('accuracy').innerText = acc;
+    
+    // Manzilni aniqlash (Reverse Geocoding)
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById('address').innerText = data.display_name || "Manzil topilmadi";
+        }).catch(() => {
+            document.getElementById('address').innerText = "Internetda xatolik";
+        });
 }
 
 navigator.geolocation.watchPosition(onLocation, (e) => console.log(e), { enableHighAccuracy: true });
 
-// 4. Bazaga saqlash
+// 4. Xarita bilan o'zaro aloqa boshlanganda avto-centerni o'chirish
+map.on('movestart', function() {
+    isUserInteracting = true;
+});
+
+// 5. Nishon tugmasi (Bosilganda foydalanuvchiga qaytadi)
+document.getElementById('locate-btn').addEventListener('click', () => {
+    isUserInteracting = false; // Avto-centerni qayta yoqish
+    if(lastPos) {
+        map.setView([lastPos.lat, lastPos.lng], 18);
+    }
+});
+
+// 6. Panelni ochish/yopish (SIZ SO'RAGAN QISM)
+function togglePanel() {
+    const panel = document.getElementById('panel');
+    const icon = document.getElementById('toggle-icon');
+    
+    // Panelga minimized klassini qo'shish/olib tashlash
+    panel.classList.toggle('minimized');
+    
+    // Strelka yo'nalishini o'zgartirish
+    if (panel.classList.contains('minimized')) {
+        icon.style.transform = 'rotate(0deg)'; 
+        icon.className = 'fas fa-chevron-up';
+    } else {
+        icon.style.transform = 'rotate(180deg)';
+        icon.className = 'fas fa-chevron-down';
+    }
+}
+
+// 7. Bazaga saqlash
 document.querySelector('.save-btn').addEventListener('click', function() {
     if (lastPos) {
         database.ref('locations/' + Date.now()).set({
@@ -49,40 +97,4 @@ document.querySelector('.save-btn').addEventListener('click', function() {
         }).then(() => alert("Bazaga saqlandi!"));
     }
 });
-
-// 5. Nishon tugmasi
-document.getElementById('locate-btn').addEventListener('click', () => {
-    if(lastPos) map.setView([lastPos.lat, lastPos.lng], 18);
-});
-
-// 1. Eng tepada o'zgaruvchi ochamiz
-var isUserInteracting = false; 
-
-// 2. Xarita ushlab surilganda 'true' bo'ladi
-map.on('movestart', function() {
-    isUserInteracting = true;
-});
-
-// 3. 'watchPosition' ichidagi map.setView qismini mana bunday o'zgartiramiz:
-if (!isUserInteracting) {
-    map.setView([lat, lng], 18);
-}
-
-function togglePanel() {
-    const panel = document.getElementById('panel');
-    const icon = document.getElementById('toggle-icon');
-    
-    // Panelni ochish yoki yopish (minimized klassini boshqarish)
-    panel.classList.toggle('minimized');
-    
-    // Strelka yo'nalishini va ko'rinishini o'zgartirish
-    if (panel.classList.contains('minimized')) {
-        // Panel yopilganda: strelka tepaga qarash kabi ko'rinadi
-        icon.style.transform = 'rotate(0deg)'; 
-        icon.className = 'fas fa-chevron-up';
-    } else {
-        // Panel ochilganda: strelka pastga qarash kabi ko'rinadi
-        icon.style.transform = 'rotate(180deg)';
-        icon.className = 'fas fa-chevron-down';
-    }
-}
+          
