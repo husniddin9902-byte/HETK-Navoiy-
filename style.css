@@ -1,39 +1,108 @@
-/* Umumiy fon va shriftlar */
-body, html { margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, sans-serif; height: 100%; overflow: hidden; }
+/* Umumiy sahifa sozlamalari */
+body, html {
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Roboto, sans-serif;
+    height: 100%;
+    overflow: hidden;
+}
 
-/* Xarita butun ekranga */
-#map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 1; }
+/* Xarita konteyneri */
+#map {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 100%;
+    z-index: 1;
+}
 
-/* Pastki panel - Rasmdagi kabi nafis */
+/* Pastki panel - Asosiy konteyner */
 .bottom-panel {
     position: fixed;
     bottom: 0;
     width: 100%;
-    background: #003250; /* To'q ko'k header/footer rangi */
+    background: #003250; /* Rasmdagi to'q ko'k fond */
     color: white;
     z-index: 1000;
-    transition: all 0.4s ease;
-    padding-bottom: 20px;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 0 0 25px 0;
+    border-top-left-radius: 25px;
+    border-top-right-radius: 25px;
+    box-shadow: 0 -5px 15px rgba(0,0,0,0.3);
 }
 
-/* Panelni yopuvchi strelka tugmasi */
-.toggle-btn {
+/* Panel yopiq holatda (faqat tugmalar qismi qoladi) */
+.bottom-panel.minimized {
+    /* Bu qism JS orqali boshqariladi, panelni pastga suradi */
+    transform: translateY(calc(100% - 100px)); 
+}
+
+/* Strelka tugmasi - O'rtadagi doira */
+.toggle-container {
     display: flex;
     justify-content: center;
-    padding: 10px;
-    cursor: pointer;
+    margin-top: -25px;
+    margin-bottom: 10px;
 }
 
-.toggle-btn i { font-size: 24px; color: white; }
+.toggle-circle {
+    background: #003250;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
+}
+
+.toggle-circle i {
+    font-size: 20px;
+    color: white;
+    transition: transform 0.4s;
+}
 
 /* Ma'lumotlar qismi */
-.info-content { padding: 0 20px; font-size: 14px; }
-.accuracy-text { text-align: center; color: #adadad; margin: 5px 0 15px 0; }
-.data-row { display: flex; margin-bottom: 10px; align-items: flex-start; }
-.label { width: 90px; color: #adadad; }
-.value { flex: 1; color: white; line-height: 1.4; }
+.info-content {
+    padding: 0 20px;
+    transition: opacity 0.3s;
+}
 
-/* Tugmalar - Rasmdagi kabi yonma-yon va chiroyli */
+.accuracy-text {
+    text-align: center;
+    color: #adadad;
+    font-size: 12px;
+    margin: 10px 0;
+}
+
+.data-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    font-size: 14px;
+}
+
+.label {
+    width: 90px;
+    color: #adadad;
+}
+
+.value {
+    flex: 1;
+}
+
+/* Copy tugmasi dizayni */
+.copy-box {
+    text-align: center;
+    cursor: pointer;
+    padding-left: 10px;
+}
+
+.copy-box i { font-size: 18px; }
+.copy-box span { font-size: 10px; display: block; }
+
+/* Pastki asosiy tugmalar */
 .action-buttons {
     display: flex;
     gap: 12px;
@@ -42,15 +111,16 @@ body, html { margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, sans-serif;
 
 .main-btn {
     flex: 1;
-    padding: 14px;
+    padding: 15px;
     border: none;
-    border-radius: 8px;
-    background: #446580; /* Tugma rangi */
+    border-radius: 10px;
+    background: #34495e;
     color: white;
+    font-weight: 600;
     font-size: 14px;
-    font-weight: 500;
     cursor: pointer;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
 
-.copy-icon { font-size: 24px; cursor: pointer; color: white; }
+.share-btn {
+    background: #446580;
+}
