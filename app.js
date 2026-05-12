@@ -1,3 +1,5 @@
+
+
 // 1. Firebase Sozlamalari
 const firebaseConfig = {
   apiKey: "AIzaSyBFOoT_ZhvE1tT1Qglh5GjPPhs8ZsyRWoc",
@@ -50,3 +52,16 @@ document.querySelector('.save-btn').addEventListener('click', function() {
 document.getElementById('locate-btn').addEventListener('click', () => {
     if(lastPos) map.setView([lastPos.lat, lastPos.lng], 18);
 });
+
+// 1. Eng tepada o'zgaruvchi ochamiz
+var isUserInteracting = false; 
+
+// 2. Xarita ushlab surilganda 'true' bo'ladi
+map.on('movestart', function() {
+    isUserInteracting = true;
+});
+
+// 3. 'watchPosition' ichidagi map.setView qismini mana bunday o'zgartiramiz:
+if (!isUserInteracting) {
+    map.setView([lat, lng], 18);
+}
