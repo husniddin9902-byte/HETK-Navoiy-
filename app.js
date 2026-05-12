@@ -1,4 +1,4 @@
-// 1. Firebase Sozlamalari
+            // 1. Firebase Sozlamalari
 const firebaseConfig = {
   apiKey: "AIzaSyBFOoT_ZhvE1tT1Qglh5GjPPhs8ZsyRWoc",
   authDomain: "energo-monitoring.firebaseapp.com",
@@ -12,7 +12,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
-// 2. Xaritani ishga tushirish
+// 2. Xaritani ishga tushirish (Google Satellite bilan)
 var map = L.map('map', { zoomControl: false }).setView([40.10, 65.81], 16);
 
 L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}',{
@@ -20,11 +20,11 @@ L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}',{
     subdomains:['mt0','mt1','mt2','mt3']
 }).addTo(map);
 
-var marker = L.marker([40.10, 65.37]).addTo(map);
+var marker = L.marker([40.10, 65.81]).addTo(map);
 var lastPos = null;
-var isUserInteracting = false; // Xarita surilganini bilish uchun
+var isUserInteracting = false; 
 
-// 3. Lokatsiyani aniqlash va xaritani yangilash
+// 3. Lokatsiyani aniqlash funksiyasi
 function onLocation(p) {
     const lat = p.coords.latitude;
     const lng = p.coords.longitude;
@@ -34,67 +34,84 @@ function onLocation(p) {
     var newLatLng = new L.LatLng(lat, lng);
     marker.setLatLng(newLatLng);
 
-    // AGAR foydalanuvchi xaritani surayotgan bo'lsa, xarita markazini o'zgartirmaydi
+    // Xarita surilmagan bo'lsa, markazni yangilab turadi
     if (!isUserInteracting) {
         map.setView(newLatLng, 18);
     }
 
     // UI elementlarini yangilash
-    document.getElementById('latitude').innerText = lat.toFixed(6);
-    document.getElementById('longitude').innerText = lng.toFixed(6);
-    document.getElementById('accuracy').innerText = acc;
+    if(document.getElementById('latitude')) document.getElementById('latitude').innerText = lat.toFixed(6);
+    if(document.getElementById('longitude')) document.getElementById('longitude').innerText = lng.toFixed(6);
+    if(document.getElementById('accuracy')) document.getElementById('accuracy').innerText = acc;
     
-    // Manzilni aniqlash (Reverse Geocoding)
+    // Manzilni aniqlash
     fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
         .then(res => res.json())
         .then(data => {
-            document.getElementById('address').innerText = data.display_name || "Manzil topilmadi";
+            if(document.getElementById('address')) {
+                document.getElementById('address').innerText = data.display_name || "Manzil topilmadi";
+            }
         }).catch(() => {
-            document.getElementById('address').innerText = "Internetda xatolik";
+            if(document.getElementById('address')) document.getElementById('address').innerText = "Internetda xatolik";
         });
 }
 
+// GPS kuzatishni yoqish
 navigator.geolocation.watchPosition(onLocation, (e) => console.log(e), { enableHighAccuracy: true });
 
-// 4. Xarita bilan o'zaro aloqa boshlanganda avto-centerni o'chirish
+// 4. Xarita nazorati
 map.on('movestart', function() {
     isUserInteracting = true;
 });
 
-// 5. Nishon tugmasi (Bosilganda foydalanuvchiga qaytadi)
-document.getElementById('locate-btn').addEventListener('click', () => {
-    isUserInteracting = false; // Avto-centerni qayta yoqish
-    if(lastPos) {
-        map.setView([lastPos.lat, lastPos.lng], 18);
-    }
-});
+// Nishon tugmasi bosilganda avto-sentrni qayta yoqish
+if(document.getElementById('locate-btn')) {
+    document.getElementById('locate-btn').addEventListener('click', () => {
+        isUserInteracting = false; 
+        if(lastPos) map.setView([lastPos.lat, lastPos.lng], 18);
+    });
+}
 
-// 6. Panelni ochish/yopish (SIZ SO'RAGAN QISM)
+// 5. Panelni ochish/yopish (Strelka effekti bilan)
 function togglePanel() {
     const panel = document.getElementById('panel');
     const icon = document.getElementById('toggle-icon');
     
-    // Panelga minimized klassini qo'shish/olib tashlash
+    if(!panel || !icon) return;
+
     panel.classList.toggle('minimized');
     
-    // Strelka yo'nalishini o'zgartirish
     if (panel.classList.contains('minimized')) {
         icon.style.transform = 'rotate(0deg)'; 
-        icon.className = 'fas fa-chevron-up';
+        icon.className = 'fas fa-chevron-up'; // Tepaga strelka
     } else {
         icon.style.transform = 'rotate(180deg)';
-        icon.className = 'fas fa-chevron-down';
+        icon.className = 'fas fa-chevron-down'; // Pastga strelka
     }
 }
 
-// 7. Bazaga saqlash
+// 6. Bazaga saqlash
 document.querySelector('.save-btn').addEventListener('click', function() {
     if (lastPos) {
         database.ref('locations/' + Date.now()).set({
             lat: lastPos.lat,
             lng: lastPos.lng,
-            time: new Date().toLocaleString()
-        }).then(() => alert("Bazaga saqlandi!"));
+            time: new Date().toLocaleString(),
+            address: document.getElementById('address').innerText
+        }).then(() => {
+            alert("Bazaga saqlandi!"); //
+        });
+    } else {
+        alert("GPS ma'lumoti kutilmoqda...");
     }
 });
-          
+
+// 7. Nusxa ko'chirish funksiyasi
+function copyCoords() {
+    if(lastPos) {
+        const text = `${lastPos.lat.toFixed(6)}, ${lastPos.lng.toFixed(6)}`;
+        navigator.clipboard.writeText(text).then(() => {
+            alert("Koordinatalar nusxalandi!");
+        });
+    }
+}
