@@ -69,13 +69,20 @@ if (!isUserInteracting) {
 }
 
 function togglePanel() {
-    var panel = document.getElementById('panel');
-    var icon = document.getElementById('toggle-icon');
-    if (panel.style.height === '60px') {
-        panel.style.height = 'auto';
-        icon.className = 'fas fa-chevron-circle-down';
+    const panel = document.getElementById('panel');
+    const icon = document.getElementById('toggle-icon');
+    
+    // Panelni ochish yoki yopish (minimized klassini boshqarish)
+    panel.classList.toggle('minimized');
+    
+    // Strelka yo'nalishini va ko'rinishini o'zgartirish
+    if (panel.classList.contains('minimized')) {
+        // Panel yopilganda: strelka tepaga qarash kabi ko'rinadi
+        icon.style.transform = 'rotate(0deg)'; 
+        icon.className = 'fas fa-chevron-up';
     } else {
-        panel.style.height = '60px';
-        icon.className = 'fas fa-chevron-circle-up';
+        // Panel ochilganda: strelka pastga qarash kabi ko'rinadi
+        icon.style.transform = 'rotate(180deg)';
+        icon.className = 'fas fa-chevron-down';
     }
 }
