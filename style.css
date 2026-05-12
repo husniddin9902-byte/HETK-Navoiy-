@@ -1,68 +1,56 @@
+/* Umumiy fon va shriftlar */
+body, html { margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, sans-serif; height: 100%; overflow: hidden; }
+
+/* Xarita butun ekranga */
+#map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 1; }
+
+/* Pastki panel - Rasmdagi kabi nafis */
 .bottom-panel {
     position: fixed;
     bottom: 0;
     width: 100%;
-    background: #003250; /* Rasmdagi to'q ko'k */
+    background: #003250; /* To'q ko'k header/footer rangi */
     color: white;
-    padding: 10px 20px 25px 20px;
-    border-top-left-radius: 20px;
-    border-top-right-radius: 20px;
     z-index: 1000;
-    box-sizing: border-box;
-    transition: 0.3s;
+    transition: all 0.4s ease;
+    padding-bottom: 20px;
 }
 
-.accuracy-text {
-    text-align: center;
-    font-size: 13px;
-    color: #adadad;
-    margin: 10px 0;
-}
-
-.data-row {
+/* Panelni yopuvchi strelka tugmasi */
+.toggle-btn {
     display: flex;
-    align-items: center;
-    margin-bottom: 8px;
-    font-size: 15px;
+    justify-content: center;
+    padding: 10px;
+    cursor: pointer;
 }
 
-.label {
-    width: 90px;
-    color: #adadad;
-}
+.toggle-btn i { font-size: 24px; color: white; }
 
-.value {
-    flex: 1;
-}
+/* Ma'lumotlar qismi */
+.info-content { padding: 0 20px; font-size: 14px; }
+.accuracy-text { text-align: center; color: #adadad; margin: 5px 0 15px 0; }
+.data-row { display: flex; margin-bottom: 10px; align-items: flex-start; }
+.label { width: 90px; color: #adadad; }
+.value { flex: 1; color: white; line-height: 1.4; }
 
-.copy-box {
-    text-align: center;
-    font-size: 11px;
-    padding-left: 10px;
-}
-
+/* Tugmalar - Rasmdagi kabi yonma-yon va chiroyli */
 .action-buttons {
     display: flex;
-    gap: 15px;
-    margin-top: 20px;
+    gap: 12px;
+    padding: 10px 20px;
 }
 
 .main-btn {
     flex: 1;
-    padding: 15px;
-    border-radius: 10px;
+    padding: 14px;
     border: none;
-    background: #34495e;
+    border-radius: 8px;
+    background: #446580; /* Tugma rangi */
     color: white;
-    font-weight: bold;
     font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
 
-.share-btn {
-    background: #446580; /* Sal ochroq ko'k */
-}
-
-.toggle-btn {
-    text-align: center;
-    padding: 5px;
-}
+.copy-icon { font-size: 24px; cursor: pointer; color: white; }
