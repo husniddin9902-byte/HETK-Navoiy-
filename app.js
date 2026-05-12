@@ -15,12 +15,14 @@ firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
 // 2. Xaritani ishga tushirish
-var map = L.map('map', { zoomControl: false }).setView([40.10, 65.37], 13); 
+var map = L.map('map', { zoomControl: false }).setView([40.10, 65.81], 16);
 
-L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+// Google Satellite qatlamini ulaymiz (Rasmdagi kabi bo'lishi uchun)
+L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}',{
     maxZoom: 20,
-    subdomains: ['mt0','mt1','mt2','mt3']
+    subdomains:['mt0','mt1','mt2','mt3']
 }).addTo(map);
+
 
 var marker = L.marker([40.10, 65.37], { draggable: true }).addTo(map);
 var lastPos = null;
