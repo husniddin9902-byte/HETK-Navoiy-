@@ -9,7 +9,13 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-        <div class="bottom-panel minimized" id="panel">
+
+    <div id="map" style="width: 100%; height: 100vh;"></div>
+
+    <button id="locate-btn" class="map-overlay-btn"><i class="fas fa-crosshairs"></i></button>
+
+    <div class="bottom-panel minimized" id="panel">
+        
         <div class="toggle-container" onclick="togglePanel()">
             <div class="toggle-circle">
                 <i class="fas fa-chevron-up" id="toggle-icon"></i>
@@ -21,12 +27,12 @@
             
             <div class="data-row">
                 <span class="label">Latitude</span>
-                <span class="value">: <span id="latitude">40.106038</span></span>
+                <span class="value">: <span id="latitude">0.000000</span></span>
             </div>
             
             <div class="data-row">
                 <span class="label">Longitude</span>
-                <span class="value">: <span id="longitude">65.81715</span></span>
+                <span class="value">: <span id="longitude">0.000000</span></span>
                 <div class="copy-box" onclick="copyCoords()">
                     <i class="far fa-copy"></i><br><span>Copy</span>
                 </div>
@@ -34,7 +40,7 @@
 
             <div class="data-row">
                 <span class="label">Address</span>
-                <span class="value">: <span id="address">4R38+M8, Khodzha-Kalishan, Navoiy viloyati, O'zbekiston</span></span>
+                <span class="value">: <span id="address">Aniqlanmoqda...</span></span>
             </div>
         </div>
 
@@ -42,53 +48,12 @@
             <button class="main-btn save-btn">Save Location</button>
             <button class="main-btn share-btn">Share Location</button>
         </div>
-        </div>
-    
-
-    <div id="map" style="width: 100%; height: 100vh;"></div>
-
-    <button id="locate-btn" class="map-overlay-btn"><i class="fas fa-crosshairs"></i></button>
-
-<div class="bottom-panel">
-    <div class="toggle-btn" id="toggle-panel">
-        <i class="fas fa-chevron-up" id="toggle-icon"></i>
-    </div>
-
-    <div id="detailed-info" class="info-content">
-        <p class="accuracy-text">Accurate to <span id="accuracy">0</span> meters</p>
-        
-        <div class="data-row">
-            <span class="label">Latitude</span>
-            <span class="value">: <span id="latitude">0.000000</span></span>
-        </div>
-        
-        <div class="data-row">
-            <span class="label">Longitude</span>
-            <span class="value">: <span id="longitude">0.000000</span></span>
-            <div class="copy-box" onclick="copyCoords()">
-                <i class="far fa-copy"></i><br><span>Copy</span>
-            </div>
-        </div>
-
-        <div class="data-row">
-            <span class="label">Address</span>
-            <span class="value">: <span id="address">Aniqlanmoqda...</span></span>
-        </div>
-    </div>
-
-    <div class="action-buttons">
-        <button class="main-btn save-btn">Save Location</button>
-        <button class="main-btn share-btn">Share Location</button>
-    </div>
-</div>
-    
-    
-        </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <script src="app.js"></script>
+
 </body>
 </html>
