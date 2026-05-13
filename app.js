@@ -1,4 +1,4 @@
-            // 1. Firebase Sozlamalari
+// 1. Firebase Sozlamalari
 const firebaseConfig = {
   apiKey: "AIzaSyBFOoT_ZhvE1tT1Qglh5GjPPhs8ZsyRWoc",
   authDomain: "energo-monitoring.firebaseapp.com",
