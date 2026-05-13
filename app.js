@@ -34,17 +34,14 @@ function onLocation(p) {
     var newLatLng = new L.LatLng(lat, lng);
     marker.setLatLng(newLatLng);
 
-    // Foydalanuvchi xaritaga tegmagan bo'lsa, avtomatik markazlashtirish
     if (!isUserInteracting) {
         map.setView(newLatLng, 18);
     }
 
-    // Ekrandagi ma'lumotlarni yangilash
     if(document.getElementById('latitude')) document.getElementById('latitude').innerText = lat.toFixed(6);
     if(document.getElementById('longitude')) document.getElementById('longitude').innerText = lng.toFixed(6);
     if(document.getElementById('accuracy')) document.getElementById('accuracy').innerText = acc;
     
-    // Reverse Geocoding - Manzilni aniqlash
     fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
         .then(res => res.json())
         .then(data => {
@@ -56,15 +53,13 @@ function onLocation(p) {
         });
 }
 
-// GPS kuzatishni yoqish
 navigator.geolocation.watchPosition(onLocation, (e) => console.log(e), { enableHighAccuracy: true });
 
-// 4. Xarita nazorati (Foydalanuvchi xaritani sursa avto-center o'chadi)
+// 4. Xarita nazorati
 map.on('movestart', function() {
     isUserInteracting = true;
 });
 
-// Nishon (Locate) tugmasi - Bosilganda avto-center qayta yoqiladi
 if(document.getElementById('locate-btn')) {
     document.getElementById('locate-btn').addEventListener('click', () => {
         isUserInteracting = false; 
@@ -72,7 +67,7 @@ if(document.getElementById('locate-btn')) {
     });
 }
 
-// 5. Panelni ochish/yopish (Strelka va Klass effekti bilan)
+// 5. Panelni ochish/yopish
 function togglePanel() {
     const panel = document.getElementById('panel');
     const icon = document.getElementById('toggle-icon');
@@ -83,30 +78,15 @@ function togglePanel() {
     
     if (panel.classList.contains('minimized')) {
         icon.style.transform = 'rotate(0deg)'; 
-        icon.className = 'fas fa-chevron-up'; // Yopiq turganda tepaga
+        icon.className = 'fas fa-chevron-up';
     } else {
         icon.style.transform = 'rotate(180deg)';
-        icon.className = 'fas fa-chevron-down'; // Ochiq turganda pastga
+        icon.className = 'fas fa-chevron-down';
     }
 }
 
-// 6. Bazaga saqlash funksiyasi
-document.querySelector('.save-btn').addEventListener('click', function() {
-    if (lastPos) {
-        database.ref('locations/' + Date.now()).set({
-            lat: lastPos.lat,
-            lng: lastPos.lng,
-            time: new Date().toLocaleString(),
-            address: document.getElementById('address').innerText
-        }).then(() => {
-            showToast("Bazaga muvaffaqiyatli saqlandi!");
-        });
-    } else {
-        showToast("GPS ma'lumoti kutilmoqda...");
-    }
-});
-
-// 7. Chiroyli xabar (Toast) chiqarish funksiyasi
+// 6. Chiroyli xabar (Toast) chiqarish funksiyasi
+// Bu funksiya brauzerning xunuk oq oynasini o'rniga ishlaydi
 function showToast(message) {
     const oldToast = document.querySelector('.toast-message');
     if (oldToast) oldToast.remove();
@@ -129,6 +109,7 @@ function showToast(message) {
         box-shadow: 0 4px 15px rgba(0,0,0,0.4);
         transition: opacity 0.5s;
         white-space: nowrap;
+        pointer-events: none;
     `;
 
     document.body.appendChild(toast);
@@ -139,7 +120,23 @@ function showToast(message) {
     }, 2000);
 }
 
-// 8. NUSXA OLISH FUNKSIYASI (Ruscha formatda va Toast bilan)
+// 7. Bazaga saqlash
+document.querySelector('.save-btn').addEventListener('click', function() {
+    if (lastPos) {
+        database.ref('locations/' + Date.now()).set({
+            lat: lastPos.lat,
+            lng: lastPos.lng,
+            time: new Date().toLocaleString(),
+            address: document.getElementById('address').innerText
+        }).then(() => {
+            showToast("Bazaga saqlandi!");
+        });
+    } else {
+        showToast("GPS kutilmoqda...");
+    }
+});
+
+// 8. NUSXA OLISH (Faqat Toast bilan)
 function copyCoords() {
     if (!lastPos) {
         showToast("Joylashuv aniqlanmagan!");
@@ -150,7 +147,6 @@ function copyCoords() {
     const lng = lastPos.lng.toFixed(6);
     const address = document.getElementById('address').innerText;
     
-    // Vaqtni formatlash: May 13, 2026 09:14:18 PM
     const now = new Date();
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const month = months[now.getMonth()];
@@ -161,26 +157,18 @@ function copyCoords() {
     const minutes = String(now.getMinutes()).padStart(2, '0');
     const seconds = String(now.getSeconds()).padStart(2, '0');
     const ampm = hours >= 12 ? 'PM' : 'AM';
-    hours = hours % 12;
-    hours = hours ? hours : 12;
+    hours = hours % 12 || 12;
     const formattedTime = `${month} ${day}, ${year} ${String(hours).padStart(2, '0')}:${minutes}:${seconds} ${ampm}`;
 
-    // Xarita havolalari
     const googleMapsUrl = `https://www.google.com/maps?q=${lat},${lng}`;
     const wazeUrl = `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
 
-    // Matn formati
-    const fullText = `Широта: ${lat}
-Долгота: ${lng}
-Адрес: ${address}
-Дата: ${formattedTime}
-Google Maps: ${googleMapsUrl}
-Waze: ${wazeUrl}`;
+    const fullText = `Широта: ${lat}\nДолгота: ${lng}\nАдрес: ${address}\nДата: ${formattedTime}\nGoogle Maps: ${googleMapsUrl}\nWaze: ${wazeUrl}`;
 
-    // Clipboardga nusxa olish
     navigator.clipboard.writeText(fullText).then(() => {
+        // Endi bu yerda alert() yo'q! Faqat Toast chiqadi.
         showToast("Ma’lumot nusxalandi");
     }).catch(err => {
         console.error('Xatolik:', err);
     });
-                           }
+}
