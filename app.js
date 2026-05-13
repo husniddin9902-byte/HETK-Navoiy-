@@ -99,17 +99,50 @@ document.querySelector('.save-btn').addEventListener('click', function() {
             time: new Date().toLocaleString(),
             address: document.getElementById('address').innerText
         }).then(() => {
-            alert("Bazaga muvaffaqiyatli saqlandi!");
+            showToast("Bazaga muvaffaqiyatli saqlandi!");
         });
     } else {
-        alert("GPS ma'lumoti kutilmoqda...");
+        showToast("GPS ma'lumoti kutilmoqda...");
     }
 });
 
-// 7. NUSXA OLISH FUNKSIYASI (Siz so'ragan formatda)
+// 7. Chiroyli xabar (Toast) chiqarish funksiyasi
+function showToast(message) {
+    const oldToast = document.querySelector('.toast-message');
+    if (oldToast) oldToast.remove();
+
+    const toast = document.createElement('div');
+    toast.className = 'toast-message';
+    toast.innerText = message;
+    
+    toast.style.cssText = `
+        position: fixed;
+        bottom: 120px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.85);
+        color: white;
+        padding: 12px 25px;
+        border-radius: 30px;
+        font-size: 14px;
+        z-index: 3000;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+        transition: opacity 0.5s;
+        white-space: nowrap;
+    `;
+
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 500);
+    }, 2000);
+}
+
+// 8. NUSXA OLISH FUNKSIYASI (Ruscha formatda va Toast bilan)
 function copyCoords() {
     if (!lastPos) {
-        alert("Joylashuv aniqlanmagan!");
+        showToast("Joylashuv aniqlanmagan!");
         return;
     }
 
@@ -117,7 +150,7 @@ function copyCoords() {
     const lng = lastPos.lng.toFixed(6);
     const address = document.getElementById('address').innerText;
     
-    // Vaqtni formatlash: May 13, 2026 08:46:12 PM
+    // Vaqtni formatlash: May 13, 2026 09:14:18 PM
     const now = new Date();
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const month = months[now.getMonth()];
@@ -136,7 +169,7 @@ function copyCoords() {
     const googleMapsUrl = `https://www.google.com/maps?q=${lat},${lng}`;
     const wazeUrl = `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
 
-    // SIZ SO'RAGAN MATN FORMATI
+    // Matn formati
     const fullText = `Широта: ${lat}
 Долгота: ${lng}
 Адрес: ${address}
@@ -144,10 +177,10 @@ function copyCoords() {
 Google Maps: ${googleMapsUrl}
 Waze: ${wazeUrl}`;
 
-    // Clipboardga (operativ xotiraga) nusxa olish
+    // Clipboardga nusxa olish
     navigator.clipboard.writeText(fullText).then(() => {
-        alert("Barcha ma'lumotlar nusxalandi!");
+        showToast("Ma’lumot nusxalandi");
     }).catch(err => {
-        console.error('Nusxa olishda xatolik:', err);
+        console.error('Xatolik:', err);
     });
-}
+                           }
