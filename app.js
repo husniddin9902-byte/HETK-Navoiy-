@@ -12,7 +12,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
-// 2. Xaritani ishga tushirish (Google Satellite bilan)
+// 2. Xaritani ishga tushirish
 var map = L.map('map', { zoomControl: false }).setView([40.10, 65.81], 16);
 
 L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}',{
@@ -20,11 +20,12 @@ L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}',{
     subdomains:['mt0','mt1','mt2','mt3']
 }).addTo(map);
 
-var marker = L.marker([40.10, 65.81]).addTo(map);
+// Marker uchun o'zgaruvchini boshida bo'sh qoldiramiz
+var userMarker = null; 
 var lastPos = null;
 var isUserInteracting = false; 
 
-// 3. Lokatsiyani aniqlash funksiyasi
+// 3. Lokatsiyani aniqlash funksiyasi (KO'K NUQTA VA DOIRA BILAN)
 function onLocation(p) {
     const lat = p.coords.latitude;
     const lng = p.coords.longitude;
@@ -32,7 +33,47 @@ function onLocation(p) {
     lastPos = { lat: lat, lng: lng };
     
     var newLatLng = new L.LatLng(lat, lng);
-    marker.setLatLng(newLatLng);
+
+    // Eski markerni olib tashlash
+    if (userMarker) {
+        map.removeLayer(userMarker);
+    }
+
+    // Rasmda ko'rsatilgan ko'k nuqta va shaffof doira (zona) ni yaratish
+    var customIcon = L.divIcon({
+        className: 'user-location-container',
+        html: `
+            <div style="
+                position: relative;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 40px;
+                height: 40px;
+            ">
+                <div style="
+                    position: absolute;
+                    width: 40px;
+                    height: 40px;
+                    background: rgba(0, 122, 255, 0.2); 
+                    border: 1px solid rgba(0, 122, 255, 0.4);
+                    border-radius: 50%;
+                "></div>
+                <div style="
+                    width: 12px;
+                    height: 12px;
+                    background: #007AFF;
+                    border: 2px solid white;
+                    border-radius: 50%;
+                    z-index: 2;
+                    box-shadow: 0 0 5px rgba(0,0,0,0.3);
+                "></div>
+            </div>`,
+        iconSize: [40, 40],
+        iconAnchor: [20, 20]
+    });
+
+    userMarker = L.marker(newLatLng, { icon: customIcon }).addTo(map);
 
     if (!isUserInteracting) {
         map.setView(newLatLng, 18);
@@ -67,7 +108,7 @@ if(document.getElementById('locate-btn')) {
     });
 }
 
-// 5. Panelni ochish/yopish
+// 5. Panelni ochish/yopish (O'ZGARIShSIZ QOLDI)
 function togglePanel() {
     const panel = document.getElementById('panel');
     const icon = document.getElementById('toggle-icon');
@@ -85,8 +126,7 @@ function togglePanel() {
     }
 }
 
-// 6. Chiroyli xabar (Toast) chiqarish funksiyasi
-// Bu funksiya brauzerning xunuk oq oynasini o'rniga ishlaydi
+// 6. Chiroyli xabar (Toast) chiqarish funksiyasi (O'ZGARIShSIZ QOLDI)
 function showToast(message) {
     const oldToast = document.querySelector('.toast-message');
     if (oldToast) oldToast.remove();
@@ -136,7 +176,7 @@ document.querySelector('.save-btn').addEventListener('click', function() {
     }
 });
 
-// 8. NUSXA OLISH (Faqat Toast bilan)
+// 8. NUSXA OLISH (O'ZGARIShSIZ QOLDI)
 function copyCoords() {
     if (!lastPos) {
         showToast("Joylashuv aniqlanmagan!");
@@ -166,9 +206,8 @@ function copyCoords() {
     const fullText = `Широта: ${lat}\nДолгота: ${lng}\nАдрес: ${address}\nДата: ${formattedTime}\nGoogle Maps: ${googleMapsUrl}\nWaze: ${wazeUrl}`;
 
     navigator.clipboard.writeText(fullText).then(() => {
-        // Endi bu yerda alert() yo'q! Faqat Toast chiqadi.
         showToast("Ma’lumot nusxalandi");
     }).catch(err => {
         console.error('Xatolik:', err);
     });
-}
+      }
