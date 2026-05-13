@@ -25,6 +25,11 @@
         <div id="detailed-info" class="info-content">
             <p class="accuracy-text">Accurate to <span id="accuracy">0</span> meters</p>
             
+            <div class="copy-box" onclick="copyCoords()">
+                <i class="far fa-copy"></i>
+                <span>Copy</span>
+            </div>
+
             <div class="data-row">
                 <span class="label">Latitude</span>
                 <span class="value">: <span id="latitude">0.000000</span></span>
@@ -33,9 +38,6 @@
             <div class="data-row">
                 <span class="label">Longitude</span>
                 <span class="value">: <span id="longitude">0.000000</span></span>
-                <div class="copy-box" onclick="copyCoords()">
-                    <i class="far fa-copy"></i><br><span>Copy</span>
-                </div>
             </div>
 
             <div class="data-row">
@@ -54,6 +56,5 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <script src="app.js"></script>
-
 </body>
 </html>
