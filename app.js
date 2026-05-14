@@ -26,9 +26,8 @@ L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}',{
     subdomains:['mt0','mt1','mt2','mt3']
 }).addTo(map);
 
-// 3. Panelni yangilovchi asosiy funksiya (TO'SIQ SHU YERDA)
+// 3. Panelni yangilovchi asosiy funksiya
 function updatePanelValues(lat, lng, acc = null, force = false) {
-    // Agar qo'lda tanlangan bo'lsa va bu GPSdan kelayotgan (force=false) bo'lsa - TO'XTATISH
     if (isManualSelection && !force) return;
 
     const latEl = document.getElementById('latitude');
@@ -86,7 +85,6 @@ function onLocation(p) {
         map.setView(newLatLng, 18);
     }
 
-    // GPS dan kelayotgan ma'lumot (force=false bo'lgani uchun isManualSelection payti ishlamaydi)
     updatePanelValues(lat, lng, acc, false);
     updateAddress(lat, lng, false);
 }
@@ -110,7 +108,6 @@ map.on('contextmenu', function(e) {
         className: 'custom-popup'
     }).openPopup();
 
-    // Tanlangan marker ma'lumotini "force=true" bilan panelga majburan yozamiz
     updatePanelValues(e.latlng.lat, e.latlng.lng, null, true);
     updateAddress(e.latlng.lat, e.latlng.lng, true);
 });
@@ -129,13 +126,26 @@ function resetToUserLocation() {
     }
 }
 
-// 6. Xarita va Panel nazorati (Toggle, Toast, Move)
+// 6. Xarita va Panel nazorati
 map.on('movestart', function() { isUserInteracting = true; });
 
+// --- TUGALANGAN QISM: "Meni top" tugmasi bosilganda hammasini reset qiladi ---
 if(document.getElementById('locate-btn')) {
     document.getElementById('locate-btn').addEventListener('click', () => {
         isUserInteracting = false; 
-        if(lastPos) map.setView([lastPos.lat, lastPos.lng], 18);
+        
+        // Agar marker bo'lsa o'chiramiz va blokni ochamiz
+        if (selectedMarker) {
+            map.removeLayer(selectedMarker);
+            selectedMarker = null;
+        }
+        isManualSelection = false; 
+
+        if(lastPos) {
+            map.setView([lastPos.lat, lastPos.lng], 18);
+            updatePanelValues(lastPos.lat, lastPos.lng, null, true);
+            updateAddress(lastPos.lat, lastPos.lng, true);
+        }
     });
 }
 
@@ -175,7 +185,6 @@ function copyCoords() {
     const lat = document.getElementById('latitude').innerText;
     const lng = document.getElementById('longitude').innerText;
     const address = document.getElementById('address').innerText;
-    const fullText = `Широта: ${lat}\nДолгота: ${lng}\nАдрес: ${address}\nGoogle Maps: https://www.google.com/maps?q=${lat},${lng}`;
+    const fullText = `Широта: ${lat}\nДолгота: ${lng}\nАдрес: ${address}\nGoogle Maps: http://maps.google.com/maps?q=${lat},${lng}`;
     navigator.clipboard.writeText(fullText).then(() => { showToast("Ma’lumot nusxalandi"); });
-}
-  
+                          }
