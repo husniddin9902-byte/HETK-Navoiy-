@@ -261,19 +261,19 @@ function copyCoords() {
         console.error('Xatolik:', err);
     });
       }
-
- // --- Marker tanlash va Panelni yangilash (Sizning HTML IDlaringizga mos) ---
+ 
+  // --- Marker tanlash va Panelni yangilash (Xatolik tuzatilgan varianti) ---
 var selectedMarker = null;
+var isManualSelection = false; // Yangi bayroqcha: qo'lda tanlanganmi?
 
 map.on('contextmenu', function(e) {
     if (selectedMarker) map.removeLayer(selectedMarker);
 
-    // 1. Markerni xaritaga qo'yamiz
+    isManualSelection = true; // GPS yangilanishini bloklaymiz
     selectedMarker = L.marker(e.latlng).addTo(map);
     
-    // Popup (Atmen tugmasi)
     var deleteBtn = `<div class="marker-delete-popup" onclick="resetToUserLocation()">
-                        Удалить это местоположение?
+                        Удалить это location?
                      </div>`;
     
     selectedMarker.bindPopup(deleteBtn, {
@@ -282,40 +282,30 @@ map.on('contextmenu', function(e) {
         className: 'custom-popup'
     }).openPopup();
 
-    // 2. PANELNI YANGILASH (HTML dagi IDlar bilan)
+    // Panelni yangi nuqtaga moslaymiz
     updatePanelValues(e.latlng.lat, e.latlng.lng);
 });
 
-// "Atmen" bosilganda hamma narsani joyiga qaytarish
 function resetToUserLocation() {
     if (selectedMarker) {
         map.removeLayer(selectedMarker);
         selectedMarker = null;
     }
     
-    // lastPos - siz turgan joy koordinatalari (rasmda bor edi)
+    isManualSelection = false; // GPS yangilanishiga ruxsat beramiz
+    
     if (typeof lastPos !== 'undefined' && lastPos !== null) {
         updatePanelValues(lastPos.lat, lastPos.lng);
     }
 }
 
-// Paneldagi qiymatlarni o'zgartiruvchi asosiy funksiya
+// BU FUNKSIYA MUHIM: updatePanelValues nomi o'zgarmasligi kerak
 function updatePanelValues(lat, lng) {
-    const latEl = document.getElementById('latitude'); // HTML dagi ID
-    const lngEl = document.getElementById('longitude'); // HTML dagi ID
-    const addrEl = document.getElementById('address'); // HTML dagi ID
+    const latEl = document.getElementById('latitude');
+    const lngEl = document.getElementById('longitude');
 
     if (latEl && lngEl) {
         latEl.innerText = lat.toFixed(6);
         lngEl.innerText = lng.toFixed(6);
-        
-        // Adresni aniqlash funksiyasi bo'lsa shuni chaqiramiz
-        // Agar hali yo'q bo'lsa, vaqtincha "Tanlangan nuqta" deb yozamiz
-        if (typeof getAddress === 'function') {
-            getAddress(lat, lng); 
-        } else if (addrEl) {
-            addrEl.innerText = "Tanlangan nuqta koordinatasi";
-        }
     }
 }
-
