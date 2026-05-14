@@ -19,40 +19,35 @@ L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}',{
     maxZoom: 20,
     subdomains:['mt0','mt1','mt2','mt3']
 }).addTo(map);
-
-// --- Yangi: Xaritadan nuqta tanlash mantiqi ---
+// --- Yangilangan: Xaritadan nuqta tanlash mantiqi ---
 var selectedMarker = null;
 
-// Xaritani 1 sekund (yoki 2) bosib turganda
-var pressTimer;
-map.on('mousedown', function(e) {
-    pressTimer = window.setTimeout(function() {
-        placeSelectedMarker(e.latlng);
-    }, 1000); 
-});
+// Xaritani uzoq bosib turganda (Telefon va kompyuter uchun eng ma'qul yo'li)
+map.on('contextmenu', function(e) {
+    // 1. Agar avvalgi tomchi bo'lsa, uni o'chiramiz
+    if (selectedMarker) {
+        map.removeLayer(selectedMarker);
+    }
 
-map.on('mouseup mousemove', function() {
-    clearTimeout(pressTimer);
-});
-
-// Tomchini joylashtirish funksiyasi
-function placeSelectedMarker(latlng) {
-    if (selectedMarker) map.removeLayer(selectedMarker);
-
-    selectedMarker = L.marker(latlng).addTo(map);
+    // 2. Yangi marker qo'yamiz
+    selectedMarker = L.marker(e.latlng).addTo(map);
     
-    // Popup yozuvi
+    // 3. Popup oynasini ochamiz
     var deleteBtn = `<div class="marker-delete-popup" onclick="resetToUserLocation()">
                         Удалить это местоположение?
                      </div>`;
     
-    selectedMarker.bindPopup(deleteBtn, {closeButton: false, offset: [0, -30]}).openPopup();
+    selectedMarker.bindPopup(deleteBtn, {
+        closeButton: false, 
+        offset: [0, -30],
+        className: 'custom-popup'
+    }).openPopup();
 
-    // Panelni yangilash (Sizning mavjud panelingiz IDlari bo'yicha)
-    updateMyPanel(latlng.lat, latlng.lng);
-}
+    // 4. Panelni yangi nuqtaga moslaymiz
+    updateMyPanel(e.latlng.lat, e.latlng.lng);
+});
 
-// O'chirish bosilganda panelni foydalanuvchi turgan joyga (lastPos) qaytarish
+// O'chirish funksiyasi
 function resetToUserLocation() {
     if (selectedMarker) {
         map.removeLayer(selectedMarker);
@@ -65,17 +60,16 @@ function resetToUserLocation() {
     }
 }
 
-// Panelni yangilovchi yordamchi funksiya
+// Panelni yangilovchi funksiya (IDlarni yana bir bor tekshiring)
 function updateMyPanel(lat, lng) {
-    var latEl = document.getElementById('lat-val'); // O'zingizni IDga tekshiring
-    var lngEl = document.getElementById('lng-val'); // O'zingizni IDga tekshiring
+    var latEl = document.getElementById('lat-val'); 
+    var lngEl = document.getElementById('lng-val'); 
     
     if(latEl && lngEl) {
         latEl.innerText = lat.toFixed(6);
         lngEl.innerText = lng.toFixed(6);
     }
 }
-
 // Marker uchun o'zgaruvchini boshida bo'sh qoldiramiz
 var userMarker = null; 
 var lastPos = null;
