@@ -248,3 +248,25 @@
 .custom-popup .leaflet-popup-tip-container {
     display: none !important;
 }
+
+/* --- XARITADAN BELGILASH VA O'CHIRISH STILLARI --- */
+.marker-delete-popup {
+    background: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    color: #e74c3c;
+    border: 1px solid #ddd;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.custom-popup .leaflet-popup-content-wrapper {
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+.custom-popup .leaflet-popup-tip-container {
+    display: none !important;
+}
