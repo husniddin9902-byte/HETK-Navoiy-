@@ -18,7 +18,7 @@ var userMarker = null;
 var selectedMarker = null;
 var lastPos = null;
 var isUserInteracting = false; 
-var isManualSelection = false; // GPS panelni yangilashini nazorat qilish uchun
+var isManualSelection = false; 
 
 // Google Satellit qatlami
 L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}',{
@@ -26,18 +26,48 @@ L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}',{
     subdomains:['mt0','mt1','mt2','mt3']
 }).addTo(map);
 
-// 3. Lokatsiyani aniqlash funksiyasi (GPS)
+// 3. Panelni yangilovchi asosiy funksiya (TO'SIQ SHU YERDA)
+function updatePanelValues(lat, lng, acc = null, force = false) {
+    // Agar qo'lda tanlangan bo'lsa va bu GPSdan kelayotgan (force=false) bo'lsa - TO'XTATISH
+    if (isManualSelection && !force) return;
+
+    const latEl = document.getElementById('latitude');
+    const lngEl = document.getElementById('longitude');
+    const accEl = document.getElementById('accuracy');
+
+    if (latEl && lngEl) {
+        latEl.innerText = lat.toFixed(6);
+        lngEl.innerText = lng.toFixed(6);
+    }
+    
+    if (accEl && acc !== null) {
+        accEl.innerText = acc;
+    }
+}
+
+function updateAddress(lat, lng, force = false) {
+    if (isManualSelection && !force) return;
+
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+        .then(res => res.json())
+        .then(data => {
+            if(document.getElementById('address')) {
+                document.getElementById('address').innerText = data.display_name || "Manzil topilmadi";
+            }
+        }).catch(() => {
+            if(document.getElementById('address')) document.getElementById('address').innerText = "Internetda xatolik";
+        });
+}
+
+// 4. Lokatsiyani aniqlash funksiyasi (GPS)
 function onLocation(p) {
     const lat = p.coords.latitude;
     const lng = p.coords.longitude;
     const acc = Math.round(p.coords.accuracy);
-    
-    // GPS koordinatalarini har doim xotirada yangilab boramiz
     lastPos = { lat: lat, lng: lng };
     
     var newLatLng = new L.LatLng(lat, lng);
 
-    // Ko'k nuqtani yangilash
     if (userMarker) { map.removeLayer(userMarker); }
 
     var customIcon = L.divIcon({
@@ -56,20 +86,18 @@ function onLocation(p) {
         map.setView(newLatLng, 18);
     }
 
-    // --- MUHIM: Agar foydalanuvchi xaritadan nuqta tanlamagan bo'lsa, panelni GPS bilan yangila ---
-    if (!isManualSelection) {
-        updatePanelValues(lat, lng, acc);
-        updateAddress(lat, lng);
-    }
+    // GPS dan kelayotgan ma'lumot (force=false bo'lgani uchun isManualSelection payti ishlamaydi)
+    updatePanelValues(lat, lng, acc, false);
+    updateAddress(lat, lng, false);
 }
 
 navigator.geolocation.watchPosition(onLocation, (e) => console.log(e), { enableHighAccuracy: true });
 
-// 4. Xaritadan nuqta tanlash (Long Press / ContextMenu)
+// 5. Xaritadan nuqta tanlash (Context Menu)
 map.on('contextmenu', function(e) {
     if (selectedMarker) map.removeLayer(selectedMarker);
 
-    isManualSelection = true; // GPS endi panelni yangilamaydi
+    isManualSelection = true; 
     selectedMarker = L.marker(e.latlng).addTo(map);
     
     var deleteBtn = `<div class="marker-delete-popup" onclick="resetToUserLocation()">
@@ -82,48 +110,26 @@ map.on('contextmenu', function(e) {
         className: 'custom-popup'
     }).openPopup();
 
-    // Panelni tanlangan nuqtaga qarab yangilaymiz
-    updatePanelValues(e.latlng.lat, e.latlng.lng);
-    updateAddress(e.latlng.lat, e.latlng.lng);
+    // Tanlangan marker ma'lumotini "force=true" bilan panelga majburan yozamiz
+    updatePanelValues(e.latlng.lat, e.latlng.lng, null, true);
+    updateAddress(e.latlng.lat, e.latlng.lng, true);
 });
 
-// Nuqtani o'chirish va GPS holatiga qaytish
 function resetToUserLocation() {
     if (selectedMarker) {
         map.removeLayer(selectedMarker);
         selectedMarker = null;
     }
     
-    isManualSelection = false; // GPSga yana ruxsat beramiz
+    isManualSelection = false; 
     
     if (lastPos) {
-        updatePanelValues(lastPos.lat, lastPos.lng);
-        updateAddress(lastPos.lat, lastPos.lng);
+        updatePanelValues(lastPos.lat, lastPos.lng, null, true);
+        updateAddress(lastPos.lat, lastPos.lng, true);
     }
 }
 
-// 5. Yordamchi funksiyalar (Panel va Adres uchun)
-function updatePanelValues(lat, lng, acc = null) {
-    if(document.getElementById('latitude')) document.getElementById('latitude').innerText = lat.toFixed(6);
-    if(document.getElementById('longitude')) document.getElementById('longitude').innerText = lng.toFixed(6);
-    if(acc !== null && document.getElementById('accuracy')) {
-        document.getElementById('accuracy').innerText = acc;
-    }
-}
-
-function updateAddress(lat, lng) {
-    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
-        .then(res => res.json())
-        .then(data => {
-            if(document.getElementById('address')) {
-                document.getElementById('address').innerText = data.display_name || "Manzil topilmadi";
-            }
-        }).catch(() => {
-            if(document.getElementById('address')) document.getElementById('address').innerText = "Internetda xatolik";
-        });
-}
-
-// 6. Xarita va Panel nazorati
+// 6. Xarita va Panel nazorati (Toggle, Toast, Move)
 map.on('movestart', function() { isUserInteracting = true; });
 
 if(document.getElementById('locate-btn')) {
@@ -137,7 +143,6 @@ function togglePanel() {
     const panel = document.getElementById('panel');
     const icon = document.getElementById('toggle-icon');
     if(!panel || !icon) return;
-
     panel.classList.toggle('minimized');
     icon.style.transform = panel.classList.contains('minimized') ? 'rotate(0deg)' : 'rotate(180deg)';
     icon.className = panel.classList.contains('minimized') ? 'fas fa-chevron-up' : 'fas fa-chevron-down';
@@ -154,31 +159,23 @@ function showToast(message) {
     setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 500); }, 2000);
 }
 
-// 7. Bazaga saqlash
+// 7. Saqlash va Nusxa olish
 document.querySelector('.save-btn').addEventListener('click', function() {
-    // Hozirgi paneldagi koordinatalarni olish (GPS yoki tanlangan marker)
     const currentLat = document.getElementById('latitude').innerText;
     const currentLng = document.getElementById('longitude').innerText;
-
     database.ref('locations/' + Date.now()).set({
         lat: currentLat,
         lng: currentLng,
         time: new Date().toLocaleString(),
         address: document.getElementById('address').innerText
-    }).then(() => {
-        showToast("Bazaga saqlandi!");
-    });
+    }).then(() => { showToast("Bazaga saqlandi!"); });
 });
 
-// 8. NUSXA OLISH
 function copyCoords() {
     const lat = document.getElementById('latitude').innerText;
     const lng = document.getElementById('longitude').innerText;
     const address = document.getElementById('address').innerText;
-    
     const fullText = `Широта: ${lat}\nДолгота: ${lng}\nАдрес: ${address}\nGoogle Maps: https://www.google.com/maps?q=${lat},${lng}`;
-
-    navigator.clipboard.writeText(fullText).then(() => {
-        showToast("Ma’lumot nusxalandi");
-    });
+    navigator.clipboard.writeText(fullText).then(() => { showToast("Ma’lumot nusxalandi"); });
 }
+  
