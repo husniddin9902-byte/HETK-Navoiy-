@@ -225,3 +225,26 @@
 .leaflet-popup-tip-container {
     display: none !important;
 }
+
+/* Popup dizayni */
+.marker-delete-popup {
+    background: white;
+    padding: 8px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    color: #ff4444;
+    border: 2px solid #eee;
+    text-align: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+/* Standart Leaflet popup dizaynini tozalash */
+.custom-popup .leaflet-popup-content-wrapper {
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+}
+.custom-popup .leaflet-popup-tip-container {
+    display: none !important;
+}
