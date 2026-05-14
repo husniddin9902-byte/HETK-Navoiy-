@@ -261,3 +261,61 @@ function copyCoords() {
         console.error('Xatolik:', err);
     });
       }
+
+ // --- Marker tanlash va Panelni yangilash (Sizning HTML IDlaringizga mos) ---
+var selectedMarker = null;
+
+map.on('contextmenu', function(e) {
+    if (selectedMarker) map.removeLayer(selectedMarker);
+
+    // 1. Markerni xaritaga qo'yamiz
+    selectedMarker = L.marker(e.latlng).addTo(map);
+    
+    // Popup (Atmen tugmasi)
+    var deleteBtn = `<div class="marker-delete-popup" onclick="resetToUserLocation()">
+                        Удалить это местоположение?
+                     </div>`;
+    
+    selectedMarker.bindPopup(deleteBtn, {
+        closeButton: false, 
+        offset: [0, -30],
+        className: 'custom-popup'
+    }).openPopup();
+
+    // 2. PANELNI YANGILASH (HTML dagi IDlar bilan)
+    updatePanelValues(e.latlng.lat, e.latlng.lng);
+});
+
+// "Atmen" bosilganda hamma narsani joyiga qaytarish
+function resetToUserLocation() {
+    if (selectedMarker) {
+        map.removeLayer(selectedMarker);
+        selectedMarker = null;
+    }
+    
+    // lastPos - siz turgan joy koordinatalari (rasmda bor edi)
+    if (typeof lastPos !== 'undefined' && lastPos !== null) {
+        updatePanelValues(lastPos.lat, lastPos.lng);
+    }
+}
+
+// Paneldagi qiymatlarni o'zgartiruvchi asosiy funksiya
+function updatePanelValues(lat, lng) {
+    const latEl = document.getElementById('latitude'); // HTML dagi ID
+    const lngEl = document.getElementById('longitude'); // HTML dagi ID
+    const addrEl = document.getElementById('address'); // HTML dagi ID
+
+    if (latEl && lngEl) {
+        latEl.innerText = lat.toFixed(6);
+        lngEl.innerText = lng.toFixed(6);
+        
+        // Adresni aniqlash funksiyasi bo'lsa shuni chaqiramiz
+        // Agar hali yo'q bo'lsa, vaqtincha "Tanlangan nuqta" deb yozamiz
+        if (typeof getAddress === 'function') {
+            getAddress(lat, lng); 
+        } else if (addrEl) {
+            addrEl.innerText = "Tanlangan nuqta koordinatasi";
+        }
+    }
+}
+
