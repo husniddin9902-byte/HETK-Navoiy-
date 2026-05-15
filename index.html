@@ -9,54 +9,78 @@
     <link rel="stylesheet" href="style.css">
 </head>
 
-    <body>
-        <div class="header-panel">
-    <div class="header-left">
-        <i class="fas fa-bars" id="menu-btn"></i>
-    </div>
-    <div class="header-title">Сохранить местоположение</div>
-    <div class="header-right">
-        <i class="fas fa-list-ul" id="list-btn"></i>
-        <div class="map-type-preview" id="map-type-btn"></div>
-    </div>
+<body>
+    <div class="header-panel">
+        <div class="header-left">
+            <i class="fas fa-bars" id="menu-btn"></i>
         </div>
+        <div class="header-title">Сохранить местоположение</div>
+        <div class="header-right">
+            <i class="fas fa-list-ul" id="list-btn"></i>
+            <div class="map-type-preview" id="map-type-btn"></div>
+        </div>
+    </div>
 
     <div id="map" style="width: 100%; height: 100vh;"></div>
 
     <button id="locate-btn" class="map-overlay-btn"><i class="fas fa-crosshairs"></i></button>
 
-    <div class="bottom-panel minimized" id="panel">
+    <div id="list-container" class="list-modal">
+        <div class="list-header">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="folder-search" placeholder="Поиск по названию...">
+            </div>
+            <i class="fas fa-times" id="close-list"></i>
+        </div>
         
+        <div id="tree-root" class="folder-tree">
+            </div>
+
+        <button id="open-add-folder" class="floating-add-btn">
+            <i class="fas fa-folder-plus"></i>
+        </button>
+    </div>
+
+    <div id="add-folder-panel" class="bottom-sheet-folder hidden">
+        <div class="sheet-handle"></div>
+        <div class="sheet-content">
+            <h3>Добавить новую группу</h3>
+            
+            <input type="text" id="new-group-name" placeholder="Название группы">
+            
+            <select id="parent-folder-select" class="folder-select">
+                <option value="root">Asosiy papka (Bosh)</option>
+                </select>
+
+            <div class="color-picker-section">
+                <div class="color-top">
+                    <span>Цвет группы</span>
+                    <div id="color-preview" class="color-circle"></div>
+                </div>
+                <input type="range" id="color-slider" min="0" max="360" value="0" class="hue-slider">
+            </div>
+
+            <div class="sheet-actions">
+                <button class="sheet-btn cancel" id="cancel-folder">Отменить</button>
+                <button class="sheet-btn save" id="save-folder">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-panel minimized" id="panel">
         <div class="toggle-container" onclick="togglePanel()">
             <div class="toggle-circle">
                 <i class="fas fa-chevron-up" id="toggle-icon"></i>
             </div>
         </div>
-
         <div id="detailed-info" class="info-content">
-            <p class="accuracy-text">Accurate to <span id="accuracy">0</span> meters</p>
-            
-            <div class="copy-box" onclick="copyCoords()">
-                <i class="far fa-copy"></i>
-                <span>Copy</span>
-            </div>
-
+            <p class="accuracy-text">Accurate to <span id="accuracy">4</span> meters</p>
             <div class="data-row">
                 <span class="label">Latitude</span>
-                <span class="value">: <span id="latitude">0.000000</span></span>
+                <span class="value">: <span id="latitude">0.0</span></span>
             </div>
-            
-            <div class="data-row">
-                <span class="label">Longitude</span>
-                <span class="value">: <span id="longitude">0.000000</span></span>
             </div>
-
-            <div class="data-row">
-                <span class="label">Address</span>
-                <span class="value">: <span id="address">Aniqlanmoqda...</span></span>
-            </div>
-        </div>
-
         <div class="action-buttons">
             <button class="main-btn save-btn">Save Location</button>
             <button class="main-btn share-btn">Share Location</button>
@@ -67,8 +91,5 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <script src="app.js"></script>
-
-        <script src="app.js?v=1.2"></script>
-        
 </body>
 </html>
