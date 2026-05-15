@@ -152,16 +152,18 @@
     top: 0;
     left: 0;
     width: 100%;
-    height: 60px;
-    background: #003049; /* To'q ko'k rang */
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+    height: 60px; /* Balandlikni qat'iy belgilaymiz */
+    background: #003049; 
+    display: flex; /* Elementlarni qatordagi tartibga soladi */
+    align-items: center; /* Vertikal o'rtaga tekislaydi */
+    justify-content: space-between; /* Chap, o'rta va o'ng blokni ajratadi */
     padding: 0 15px;
-    z-index: 2000; /* Xaritadan yuqorida turishi uchun */
+    z-index: 2000;
     color: white;
-    box-sizing: border-box;
+    box-sizing: border-box; /* Ichki paddingni balandlikka qo'shib yubormaydi */
 }
+
+ 
 
 .header-title {
     font-size: 18px;
@@ -176,8 +178,9 @@
 .header-right {
     display: flex;
     align-items: center;
-    gap: 15px;
+    gap: 15px; /* Ro'yxat va Xarita turi tugmasi orasidagi masofa */
 }
+
 
 .map-type-preview {
     width: 35px;
@@ -191,12 +194,15 @@
 
 /* Xaritani header ostidan boshlanadigan qilish */
 #map {
-    top: 0;
-    bottom: 0;
-    width: 100%;
     position: absolute;
+    top: 60px; /* Menyudan keyin boshlanishi uchun */
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: calc(100vh - 60px) !important; /* Ekran balandligidan menyuni ayirib tashlaydi */
     z-index: 1;
-    }
+}
+
 
   /* Marker ustidagi o'chirish tugmasi stili */
 .marker-delete-popup {
