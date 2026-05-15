@@ -285,24 +285,24 @@ function renderTree(parentId, container) {
 }
 
 window.selectFolder = function(id) {
+    // 1. Tanlangan papka ID-sini saqlaymiz
     activeFolderId = id;
     
-    // Barcha papkalardan 'active-folder' klassini olib tashlash
+    // 2. Barcha papkalardan 'active-folder' klassini olib tashlaymiz
     document.querySelectorAll('.folder-header').forEach(el => {
         el.classList.remove('active-folder');
     });
     
-    // Tanlangan papkaga klass qo'shish (qalamcha chiqishi uchun)
+    // 3. Hozir bosilgan papka elementiga klass qo'shamiz (qalamcha chiqishi uchun)
     const currentFolderEl = document.getElementById(`folder-${id}`);
     if (currentFolderEl) {
         currentFolderEl.classList.add('active-folder');
     }
     
-    // Agar modal ochiq bo'lsa, uni yopish (ixtiyoriy, sizdagi 305-qatordagi mantiq)
-    // if(listModal) listModal.style.display = 'none'; 
-    
+    // Xaritaga o'tib ketmasligi uchun bu yerda switchTab funksiyasini chaqirmaymiz
     showToast(`Tanlandi: ${currentFolders[id].name}`);
 };
+
 
 
 // Papka ichini ochish/yopish (+/- tugmasi)
