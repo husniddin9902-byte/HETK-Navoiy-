@@ -399,3 +399,58 @@
     width: 100%;
     z-index: 1;
 }
+
+/* To'liq ekran rejimi */
+.list-content.full-screen {
+    width: 100% !important;
+    height: 100% !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Bo'limlar (Tab) boshqaruvi */
+.tab-control {
+    display: flex;
+    margin: 10px 15px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 4px;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    background: none;
+    color: #ccc;
+    font-weight: bold;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.tab-btn.active {
+    background: #007AFF;
+    color: white;
+}
+
+/* Bo'limlarni yashirish/ko'rsatish */
+.tab-content { display: none; padding: 15px; overflow-y: auto; flex: 1; }
+.tab-content.active { display: block; }
+
+/* Tahrirlash ikonasi va TP elementlari */
+.edit-icon {
+    float: right;
+    color: #007AFF;
+    padding: 5px;
+    cursor: pointer;
+}
+
+.tp-item {
+    background: rgba(255, 255, 255, 0.05);
+    margin-bottom: 10px;
+    padding: 12px;
+    border-radius: 10px;
+    border-left: 4px solid #007AFF;
+}
