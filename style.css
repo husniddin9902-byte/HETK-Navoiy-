@@ -392,3 +392,10 @@
     font-weight: bold;
     font-size: 14px;
 }
+#map {
+    position: absolute;
+    top: 60px; /* Header balandligi */
+    bottom: 0;
+    width: 100%;
+    z-index: 1;
+}
