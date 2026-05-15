@@ -332,3 +332,65 @@ function togglePanel() {
     // Panel harakatlangandan keyin xaritani to'g'irlash
     setTimeout(() => { map.invalidateSize(); }, 400);
 }
+
+// 1. Tablarni almashtirish logikasi
+document.getElementById('tab-folders').addEventListener('click', () => switchTab('folders'));
+document.getElementById('tab-items').addEventListener('click', () => switchTab('items'));
+
+function switchTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+    if (tab === 'folders') {
+        document.getElementById('tab-folders').classList.add('active');
+        document.getElementById('folders-section').classList.add('active');
+    } else {
+        document.getElementById('tab-items').classList.add('active');
+        document.getElementById('items-section').classList.add('active');
+        // Bu yerda loadSavedPoints() kabi funksiyangiz bo'lsa, uni chaqiring
+    }
+}
+
+// 2. Tahrirlash oynasi va Rang slayderi
+let editingFolderId = null;
+const editColorSlider = document.getElementById('edit-color-slider');
+const editColorPreview = document.getElementById('edit-color-preview');
+
+editColorSlider.addEventListener('input', () => {
+    editColorPreview.style.background = `hsl(${editColorSlider.value}, 100%, 50%)`;
+});
+
+// Tahrirlash oynasini ochish
+window.openEditFolder = function(id, name, hue) {
+    editingFolderId = id;
+    document.getElementById('edit-group-name').value = name;
+    editColorSlider.value = hue || 0;
+    editColorPreview.style.background = `hsl(${hue || 0}, 100%, 50%)`;
+    document.getElementById('edit-folder-panel').classList.remove('hidden');
+};
+
+// 3. O'chirish funksiyasi
+document.getElementById('delete-folder-btn').addEventListener('click', () => {
+    if (confirm("Ushbu guruhni o'chirmoqchimisiz? Ichidagi barcha ma'lumotlar o'chib ketishi mumkin!")) {
+        database.ref('Folders/' + editingFolderId).remove().then(() => {
+            alert("Guruh o'chirildi");
+            document.getElementById('edit-folder-panel').classList.add('hidden');
+        });
+    }
+});
+
+// 4. Saqlash (Update) funksiyasi
+document.getElementById('update-folder-btn').addEventListener('click', () => {
+    const newName = document.getElementById('edit-group-name').value;
+    const newHue = editColorSlider.value;
+
+    if (newName.trim() === "") return alert("Nomini kiriting");
+
+    database.ref('Folders/' + editingFolderId).update({
+        name: newName,
+        hue: newHue,
+        color: `hsl(${newHue}, 100%, 50%)`
+    }).then(() => {
+        document.getElementById('edit-folder-panel').classList.add('hidden');
+    });
+});
