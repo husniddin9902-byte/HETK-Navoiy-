@@ -269,11 +269,18 @@ function renderTree(parentId, container) {
         const folder = currentFolders[id];
         const item = document.createElement('div');
         item.className = 'folder-item';
+        
+        // Tahrirlash tugmasi (qalamcha) qo'shilgan qatori:
         item.innerHTML = `
-            <div class="folder-header" id="folder-${id}">
-                <span class="toggle-btn" style="cursor:pointer; padding: 5px;" onclick="toggleFolderView('${id}')">+</span>
-                <i class="fas fa-folder" style="color: ${folder.color}; margin: 0 8px;"></i>
-                <span onclick="selectFolder('${id}')" style="cursor:pointer; font-weight: 500;">${folder.name}</span>
+            <div class="folder-header" id="folder-${id}" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                <div style="display: flex; align-items: center;">
+                    <span class="toggle-btn" style="cursor:pointer; padding: 5px;" onclick="toggleFolderView('${id}')">+</span>
+                    <i class="fas fa-folder" style="color: ${folder.color}; margin: 0 8px;"></i>
+                    <span onclick="selectFolder('${id}')" style="cursor:pointer; font-weight: 500;">${folder.name}</span>
+                </div>
+                <i class="fas fa-edit edit-icon" style="cursor:pointer; color:#007AFF; padding: 5px;" 
+                   onclick="event.stopPropagation(); openEditFolder('${id}', '${folder.name}', ${folder.hue || 0})">
+                </i>
             </div>
             <div id="children-${id}" class="folder-children" style="display: none; margin-left: 20px; border-left: 1px dashed rgba(255,255,255,0.2); padding-left: 10px;"></div>
         `;
@@ -281,6 +288,8 @@ function renderTree(parentId, container) {
         renderTree(id, item.querySelector(`#children-${id}`));
     });
 }
+
+
 
 // Papka ichini ochish/yopish (+/- tugmasi)
 window.toggleFolderView = function(id) {
