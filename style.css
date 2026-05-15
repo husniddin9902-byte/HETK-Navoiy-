@@ -454,3 +454,47 @@
     border-radius: 10px;
     border-left: 4px solid #007AFF;
 }
+
+/* Ierarxiya chiziqlari va masofasini minimal qilish */
+.folder-children {
+    margin-left: 8px !important; 
+    border-left: 1px dashed rgba(255, 255, 255, 0.1); 
+    padding-left: 4px !important;
+}
+
+/* Papka blokini chapga surish */
+.folder-header {
+    padding: 2px 0px !important; /* Vertikal masofa minimal */
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: 0.2s;
+}
+
+/* Tanlangan papka stili */
+.folder-header.active-folder {
+    background: rgba(0, 122, 255, 0.15);
+}
+
+/* Qalamcha - boshida yashirin */
+.edit-icon {
+    display: none; 
+    margin-left: auto; /* O'ng tarafga surib qo'yadi */
+    color: #007AFF;
+    padding: 0 5px;
+    font-size: 14px;
+}
+
+/* Faqat active-folder ichidagi qalamcha ko'rinadi */
+.active-folder .edit-icon {
+    display: inline-block;
+}
+
+/* Papka nomi va ikonka orasidagi masofa */
+.folder-header i {
+    margin: 0 4px !important;
+    font-size: 13px;
+}
