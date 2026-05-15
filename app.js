@@ -315,3 +315,20 @@ function updateParentSelect() {
     });
 }
   
+// Sahifa yuklanganda xaritani o'z joyiga tushirish
+window.addEventListener('load', function() {
+    setTimeout(function() {
+        map.invalidateSize();
+    }, 500);
+});
+
+// Panel ochilganda yoki yopilganda xaritani yangilash
+function togglePanel() {
+    const panel = document.getElementById('panel');
+    const icon = document.getElementById('toggle-icon');
+    panel.classList.toggle('minimized');
+    icon.style.transform = panel.classList.contains('minimized') ? 'rotate(0deg)' : 'rotate(180deg)';
+    
+    // Panel harakatlangandan keyin xaritani to'g'irlash
+    setTimeout(() => { map.invalidateSize(); }, 400);
+}
