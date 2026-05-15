@@ -50,15 +50,39 @@
     </div>
 
     <div id="list-container" class="list-modal" style="display:none;">
-        <div class="list-content">
-            <div class="list-header">
-                <h3>Guruhlar ierarxiyasi</h3>
-                <button id="close-list" style="background:none; border:none; color:white; font-size:24px;">&times;</button>
-            </div>
-            <div id="tree-root" class="folder-tree"></div>
+    <div class="list-content full-screen">
+        <div class="list-header">
+            <h3>Boshqaruv paneli</h3>
+            <button id="close-list" style="background:none; border:none; color:white; font-size:24px;">&times;</button>
+        </div>
+
+        <div class="tab-control">
+            <button class="tab-btn active" id="tab-folders">Guruhlar</button>
+            <button class="tab-btn" id="tab-items">Nuqtalar (TP)</button>
+        </div>
+
+        <div id="folders-section" class="tab-content active">
+            <div id="tree-root"></div>
             <button id="open-add-folder" class="add-main-btn">+ Yangi guruh qo'shish</button>
         </div>
+
+        <div id="items-section" class="tab-content">
+            <div id="tp-list" class="tp-list-container">
+                </div>
+        </div>
     </div>
+</div>
+
+<div id="edit-folder-panel" class="bottom-sheet-folder hidden">
+    <div class="sheet-handle"></div>
+    <h4>Guruhni tahrirlash</h4>
+    <input type="text" id="edit-group-name" style="width:100%; padding:10px; margin:10px 0; border-radius:8px; background:#001a2c; color:white; border:none;">
+    <div class="sheet-buttons" style="display:flex; gap:10px;">
+        <button id="delete-folder-btn" style="flex:1; background:#ff4444; color:white; border:none; padding:12px; border-radius:8px;">O'chirish</button>
+        <button id="update-folder-btn" style="flex:1; background:#007AFF; color:white; border:none; padding:12px; border-radius:8px;">Saqlash</button>
+    </div>
+</div>
+    
 
     <div id="add-folder-panel" class="bottom-sheet-folder hidden">
         <div class="sheet-handle"></div>
