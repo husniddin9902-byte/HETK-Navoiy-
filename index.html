@@ -8,25 +8,24 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
 </head>
+<body>
 
-    <body>
-        <div class="header-panel">
-    <div class="header-left">
-        <i class="fas fa-bars" id="menu-btn"></i>
-    </div>
-    <div class="header-title">Сохранить местоположение</div>
-    <div class="header-right">
-        <i class="fas fa-list-ul" id="list-btn"></i>
-        <div class="map-type-preview" id="map-type-btn"></div>
-    </div>
+    <div class="header-panel">
+        <div class="header-left">
+            <i class="fas fa-bars" id="menu-btn"></i>
         </div>
+        <div class="header-title">Сохранить местоположение</div>
+        <div class="header-right">
+            <i class="fas fa-list-ul" id="list-btn"></i>
+            <div class="map-type-preview" id="map-type-btn"></div>
+        </div>
+    </div>
 
-    <div id="map" style="width: 100%; height: 100vh;"></div>
+    <div id="map"></div>
 
     <button id="locate-btn" class="map-overlay-btn"><i class="fas fa-crosshairs"></i></button>
 
     <div class="bottom-panel minimized" id="panel">
-        
         <div class="toggle-container" onclick="togglePanel()">
             <div class="toggle-circle">
                 <i class="fas fa-chevron-up" id="toggle-icon"></i>
@@ -35,26 +34,13 @@
 
         <div id="detailed-info" class="info-content">
             <p class="accuracy-text">Accurate to <span id="accuracy">0</span> meters</p>
-            
             <div class="copy-box" onclick="copyCoords()">
                 <i class="far fa-copy"></i>
                 <span>Copy</span>
             </div>
-
-            <div class="data-row">
-                <span class="label">Latitude</span>
-                <span class="value">: <span id="latitude">0.000000</span></span>
-            </div>
-            
-            <div class="data-row">
-                <span class="label">Longitude</span>
-                <span class="value">: <span id="longitude">0.000000</span></span>
-            </div>
-
-            <div class="data-row">
-                <span class="label">Address</span>
-                <span class="value">: <span id="address">Aniqlanmoqda...</span></span>
-            </div>
+            <div class="data-row"><span class="label">Latitude</span><span class="value">: <span id="latitude">0.000000</span></span></div>
+            <div class="data-row"><span class="label">Longitude</span><span class="value">: <span id="longitude">0.000000</span></span></div>
+            <div class="data-row"><span class="label">Address</span><span class="value">: <span id="address">Aniqlanmoqda...</span></span></div>
         </div>
 
         <div class="action-buttons">
@@ -63,38 +49,37 @@
         </div>
     </div>
 
+    <div id="list-container" class="list-modal" style="display:none;">
+        <div class="list-content">
+            <div class="list-header">
+                <h3>Guruhlar ierarxiyasi</h3>
+                <button id="close-list" style="background:none; border:none; color:white; font-size:24px;">&times;</button>
+            </div>
+            <div id="tree-root" class="folder-tree"></div>
+            <button id="open-add-folder" class="add-main-btn">+ Yangi guruh qo'shish</button>
+        </div>
+    </div>
+
+    <div id="add-folder-panel" class="bottom-sheet-folder hidden">
+        <div class="sheet-handle"></div>
+        <h4>Yangi guruh yaratish</h4>
+        <input type="text" id="new-group-name" placeholder="Guruh nomi..." style="width:100%; padding:10px; margin:10px 0; border-radius:8px; border:none; background: #001a2c; color: white;">
+        <label>Qaysi guruh ichiga tushsin?</label>
+        <select id="parent-folder-select" style="width:100%; padding:10px; margin:10px 0; border-radius:8px; background: #001a2c; color: white; border: none;"></select>
+        <label>Guruh rangi:</label>
+        <input type="range" id="color-slider" min="0" max="360" value="0" class="hue-slider">
+        <div id="color-preview" style="width:40px; height:40px; border-radius:50%; margin:10px auto; border:2px solid white; background:red;"></div>
+        <div class="sheet-buttons" style="display:flex; gap:10px;">
+            <button id="cancel-folder" style="flex:1; padding:12px; border-radius:8px; background:#444; color:white; border:none;">Bekor qilish</button>
+            <button id="save-folder" style="flex:1; padding:12px; border-radius:8px; background:#007AFF; color:white; border:none;">Saqlash</button>
+        </div>
+    </div>
+
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
-    
 
-        <script src="app.js?v=1.2"></script>
+    <script src="app.js?v=1.2"></script>
 
-     <div id="list-container" class="list-modal" style="display:none;">
-    <div class="list-content">
-        <div class="list-header">
-            <h3>Guruhlar ierarxiyasi</h3>
-            <button id="close-list" style="background:none; border:none; color:white; font-size:24px;">&times;</button>
-        </div>
-        <div id="tree-root" class="folder-tree"></div>
-        <button id="open-add-folder" class="add-main-btn">+ Yangi guruh qo'shish</button>
-    </div>
-</div>
-
-<div id="add-folder-panel" class="bottom-sheet-folder hidden">
-    <div class="sheet-handle"></div>
-    <h4>Yangi guruh yaratish</h4>
-    <input type="text" id="new-group-name" placeholder="Guruh nomi..." style="width:100%; padding:10px; margin:10px 0; border-radius:8px; border:none;">
-    <label>Qaysi guruh ichiga tushsin?</label>
-    <select id="parent-folder-select" style="width:100%; padding:10px; margin:10px 0; border-radius:8px;"></select>
-    <label>Guruh rangi:</label>
-    <input type="range" id="color-slider" min="0" max="360" value="0" class="hue-slider">
-    <div id="color-preview" style="width:40px; height:40px; border-radius:50%; margin:10px auto; border:2px solid white; background:red;"></div>
-    <div class="sheet-buttons" style="display:flex; gap:10px;">
-        <button id="cancel-folder" style="flex:1; padding:10px; border-radius:8px; background:#444; color:white; border:none;">Bekor qilish</button>
-        <button id="save-folder" style="flex:1; padding:10px; border-radius:8px; background:#007AFF; color:white; border:none;">Saqlash</button>
-    </div>
-</div>
-        
 </body>
 </html>
