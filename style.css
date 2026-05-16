@@ -1,338 +1,347 @@
-/* ==========================================
-   UMUMIY VA BAZAVIY SOZLAMALAR
-   ========================================== */
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-}
-
-body, html {
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    background-color: #000c14;
-}
-
-/* ORQA FONDA TO'LIQ TURADIGAN XARITA */
-#map {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 1;
-}
-
-/* ==========================================
-   TEPA INTERFEYS QATLAMI (MAIN CONTAINER)
-   ========================================== */
-.main-interface-container {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    max-height: 75vh;
-    z-index: 2000;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
-}
-
-/* TEPA NAVIGATSIYA BARI (HETK NAVOIY) */
-.top-navigation-bar {
-    background: #001220;
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 15px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.nav-left {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-#menu-btn {
-    font-size: 18px;
-    cursor: pointer;
-    color: #88a0b0;
-}
-
-.app-main-title {
-    font-size: 16px;
-    font-weight: bold;
-    color: white;
-    letter-spacing: 0.5px;
-}
-
-/* DINAMIK TAB TUGMALARI (GURUGHLAR / XARITA) */
-.custom-tab-control {
-    display: flex;
-    background: #00223a;
-    padding: 3px;
-    border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.nav-tab-btn {
-    background: none;
-    border: none;
-    color: #88a0b0;
-    padding: 6px 14px;
-    font-size: 13px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.nav-tab-btn.active {
-    background: #007AFF;
-    color: white;
-    font-weight: bold;
-}
-
-/* MINI XARITA TURINI ALMASHTIRISH TUGMASI */
-.nav-right {
-    display: flex;
-    align-items: center;
-}
-
-.map-type-preview {
-    width: 32px;
-    height: 32px;
-    border-radius: 6px;
-    border: 1px solid white;
-    background-image: url('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/0/0/0');
-    background-size: cover;
-    cursor: pointer;
-}
-
-/* ==========================================
-   KONTENT PANELI (PAPKALAR VA RO'YXATLAR)
-   ========================================== */
-.content-panel-wrapper {
-    background: rgba(0, 18, 32, 0.96);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    overflow-y: auto;
-    max-height: 60vh;
-    padding-bottom: 15px;
-}
-
-.inner-tab-content {
-    display: none;
-    padding: 10px 15px;
-}
-
-.inner-tab-content.active {
-    display: block;
-}
-
-/* SIZ KO'RSATGAN RASMDAGI QIDIRUV TIZIMI */
-.search-bar-wrapper {
-    padding: 10px 15px;
-    background: #001220;
-    display: none; /* Dastlab guruhlar turganda yopiq bo'ladi */
-}
-
-.search-input-field {
-    position: relative;
-    display: flex;
-    align-items: center;
-}
-
-.search-icon {
-    position: absolute;
-    left: 12px;
-    color: #88a0b0;
-    font-size: 14px;
-}
-
-.search-input-field input {
-    width: 100%;
-    padding: 10px 12px 10px 38px;
-    border-radius: 8px;
-    background: #00223a;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: white;
-    font-size: 14px;
-    outline: none;
-}
-
-.search-input-field input::placeholder {
-    color: #587285;
-}
-
-/* PAPKALAR DARAXTI VA TUGMALAR */
-#tree-root {
-    color: white;
-    margin-bottom: 15px;
-    font-size: 15px;
-}
-
-.add-main-btn {
-    width: 100%;
-    background: #007AFF;
-    color: white;
-    border: none;
-    padding: 12px;
-    border-radius: 10px;
-    font-size: 14px;
-    font-weight: bold;
-    cursor: pointer;
-    box-shadow: 0 4px 10px rgba(0, 122, 255, 0.3);
-}
-
-/* NUQTALAR (TP) RO'YXATI */
-.tp-list-container {
-    max-height: 45vh;
-    overflow-y: auto;
-}
-
-/* ==========================================
-   GPS (MEYNI TOP) OVERLAY TUGMASI
-   ========================================== */
-.map-overlay-btn {
-    position: fixed;
-    right: 15px;
-    bottom: 160px; /* Pastki panel ustida chiroyli turishi uchun */
-    z-index: 999;
-    width: 45px;
-    height: 45px;
-    background: white;
-    border: none;
-    border-radius: 50%;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-    color: #333;
-    font-size: 18px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-}
-
-/* ==========================================
-   PASTKI PANEL (BOTTOM SHEET - KOORDINATALAR)
-   ========================================== */
+/* 1. Asosiy Panel */
 .bottom-panel {
     position: fixed;
     bottom: 0;
     left: 0;
     width: 100%;
-    background: #001220;
-    z-index: 2500;
-    border-top-left-radius: 20px;
-    border-top-right-radius: 20px;
-    padding: 10px 20px 20px 20px;
-    transition: transform 0.3s cubic-bezier(0.1, 0.76, 0.55, 0.94);
-    box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+    background: #003250; /* Rasmdagi to'q ko'k */
+    color: white;
+    z-index: 1000;
+    transition: all 0.4s ease-in-out;
+    border-top-left-radius: 25px;
+    border-top-right-radius: 25px;
+    box-shadow: 0 -5px 15px rgba(0,0,0,0.3);
 }
 
-.bottom-panel.minimized {
-    transform: translateY(140px); /* Faqat tepasi va tugmalari ko'rinib turadi */
+/* 2. PANEL YOPILISHI (Faqat ma'lumotlar yo'qoladi, tugmalar qoladi) */
+.bottom-panel.minimized .info-content {
+    height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    opacity: 0;
+    pointer-events: none;
 }
 
+/* 3. Strelka tugmasi */
 .toggle-container {
-    width: 100%;
     display: flex;
     justify-content: center;
-    padding-bottom: 10px;
+    margin-top: -22px;
     cursor: pointer;
 }
 
 .toggle-circle {
-    width: 36px;
-    height: 36px;
-    background: #00223a;
+    background: #003250;
+    width: 45px;
+    height: 45px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
 }
 
+/* 4. Ma'lumotlar bloki (Latitude, Longitude, Address) */
 .info-content {
-    color: white;
-    margin-bottom: 15px;
+    position: relative; /* Copy tugmasini o'ngga surish uchun shart */
+    padding: 10px 20px;
+    height: 185px; 
+    overflow: hidden;
+    transition: all 0.4s ease-in-out;
 }
 
-.accuracy-text {
-    color: #88a0b0;
-    font-size: 12px;
-    margin-bottom: 10px;
+/* 5. COPY TUGMASI (O'ng tomonda alohida blok) */
+.copy-box {
+    position: absolute;
+    right: 20px;
+    top: 40px; /* Koordinatalar qarshisida turishi uchun */
+    text-align: center;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 10px;
+    border-radius: 12px;
+    width: 55px;
+    transition: background 0.3s;
 }
 
+.copy-box:active { background: rgba(255, 255, 255, 0.3); }
+.copy-box i { font-size: 22px; margin-bottom: 4px; }
+.copy-box span { font-size: 10px; display: block; }
+
+/* 6. Ma'lumotlar qatorlari */
 .data-row {
     display: flex;
-    margin: 5px 0;
+    margin-bottom: 10px;
     font-size: 14px;
+    padding-right: 80px; /* Matn Copy tugmasining ustiga chiqib ketmasligi uchun */
 }
 
-.label {
-    width: 90px;
-    color: #88a0b0;
+.label { width: 85px; color: #adadad; }
+.value { flex: 1; word-break: break-all; }
+
+.accuracy-text {
+    font-size: 13px;
+    opacity: 0.8;
+    margin-bottom: 15px;
+    text-align: left;
 }
 
-.value {
-    color: white;
-}
-
-.copy-box {
-    float: right;
-    background: #00223a;
-    padding: 5px 10px;
-    border-radius: 6px;
-    font-size: 12px;
-    color: #007AFF;
-    cursor: pointer;
-}
-
+/* 7. Pastki Tugmalar (Save/Share) */
 .action-buttons {
     display: flex;
     gap: 12px;
+    padding: 10px 20px 25px 20px;
 }
 
 .main-btn {
     flex: 1;
-    padding: 12px;
-    border-radius: 10px;
+    padding: 14px;
     border: none;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.15); /* Shaffofroq */
+    color: white;
     font-weight: bold;
     font-size: 14px;
     cursor: pointer;
 }
 
-.save-btn {
-    background: #007AFF;
-    color: white;
+/* 8. Xarita ustidagi elementlar */
+.map-overlay-btn {
+    position: absolute;
+    right: 20px;
+    bottom: 250px; /* Panel yopilganda ham tugmaning tepasida turishi uchun */
+    z-index: 1001;
+    background: white;
+    border: none;
+    width: 45px;
+    height: 45px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
 }
 
-.share-btn {
-    background: #28a745;
-    color: white;
+#toggle-icon { transition: transform 0.4s; }
+
+/* Foydalanuvchi ko'k nuqtasi va atrofdagi doira */
+.user-location-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-/* ==========================================
-   BOTTOM SHEET - GURUH QO'SHISH / TAHRIRLASH
-   ========================================== */
+.user-dot {
+    width: 12px;
+    height: 12px;
+    background-color: #007AFF;
+    border: 2px solid white;
+    border-radius: 50%;
+    z-index: 2;
+    box-shadow: 0 0 5px rgba(0,0,0,0.5);
+}
+
+.user-acc-circle {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    background-color: rgba(0, 122, 255, 0.2); /* Shaffof ko'k zona */
+    border: 1px solid rgba(0, 122, 255, 0.4);
+    border-radius: 50%;
+    z-index: 1;
+}
+
+.header-panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 60px; /* Balandlikni qat'iy belgilaymiz */
+    background: #003049; 
+    display: flex; /* Elementlarni qatordagi tartibga soladi */
+    align-items: center; /* Vertikal o'rtaga tekislaydi */
+    justify-content: space-between; /* Chap, o'rta va o'ng blokni ajratadi */
+    padding: 0 15px;
+    z-index: 2000;
+    color: white;
+    box-sizing: border-box; /* Ichki paddingni balandlikka qo'shib yubormaydi */
+}
+
+.header-title {
+    font-size: 18px;
+    font-weight: 500;
+}
+
+.header-left i, .header-right i {
+    font-size: 22px;
+    cursor: pointer;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 15px; /* Ro'yxat va Xarita turi tugmasi orasidagi masofa */
+}
+
+.map-type-preview {
+    width: 35px;
+    height: 35px;
+    border-radius: 4px;
+    border: 2px solid white;
+    background: url('https://mt1.google.com/vt/lyrs=s&x=0&y=0&z=0'); /* Satellite kichik rasmi */
+    background-size: cover;
+    cursor: pointer;
+}
+
+/* Xaritani header ostidan boshlanadigan qilish */
+#map {
+    position: absolute;
+    top: 60px; /* Menyudan keyin boshlanishi uchun */
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: calc(100vh - 60px) !important; /* Ekran balandligidan menyuni ayirib tashlaydi */
+    z-index: 1;
+}
+
+/* Marker ustidagi o'chirish tugmasi stili */
+.marker-delete-popup {
+    background: white;
+    padding: 8px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    color: #d9534f;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    text-align: center;
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+.marker-delete-popup:hover {
+    background: #f8f8f8;
+}
+
+/* Leafletning standart popup qutisini yashirish */
+.leaflet-popup-content-wrapper {
+    background: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+}
+.leaflet-popup-tip-container {
+    display: none !important;
+}
+
+/* Popup dizayni */
+.marker-delete-popup {
+    background: white;
+    padding: 8px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    color: #ff4444;
+    border: 2px solid #eee;
+    text-align: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+/* Standart Leaflet popup dizaynini tozalash */
+.custom-popup .leaflet-popup-content-wrapper {
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+}
+.custom-popup .leaflet-popup-tip-container {
+    display: none !important;
+}
+
+/* --- XARITADAN BELGILASH VA O'CHIRISH STILLARI --- */
+.marker-delete-popup {
+    background: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    color: #e74c3c;
+    border: 1px solid #ddd;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.custom-popup .leaflet-popup-content-wrapper {
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+.custom-popup .leaflet-popup-tip-container {
+    display: none !important;
+}
+
+/* ================================================================
+   YANGI QISMLAR UCHUN STILLAR (FAYL OXIRIGA QO'SHING)
+   ================================================================ */
+
+/* Guruhlar Ro'yxati Modali */
+.list-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 5000;
+    display: none; /* JS orqali ochiladi */
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(5px);
+}
+
+.list-content {
+    background: #002135; /* Sening headering rangi bilan bir xil */
+    color: white;
+    width: 90%;
+    max-height: 80%;
+    border-radius: 20px;
+    padding: 20px;
+    overflow-y: auto;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #333;
+    padding-bottom: 10px;
+}
+
+/* Daraxtsimon ierarxiya stili */
+.folder-tree {
+    margin: 10px 0;
+}
+
+.folder-item {
+    margin: 5px 0;
+    font-size: 16px;
+}
+
+.folder-children {
+    display: none;
+    margin-left: 20px;
+    border-left: 1px dashed rgba(255, 255, 255, 0.2);
+    padding-left: 10px;
+}
+
+/* Yangi guruh ochish paneli (Bottom Sheet) */
 .bottom-sheet-folder {
     position: fixed;
     bottom: 0;
     left: 0;
     width: 100%;
-    background: #001a2c;
-    border-top-left-radius: 20px;
-    border-top-right-radius: 20px;
-    padding: 20px;
-    z-index: 3000;
+    background: #002135;
     color: white;
+    border-radius: 25px 25px 0 0;
+    z-index: 6000;
+    padding: 20px;
     box-shadow: 0 -5px 25px rgba(0,0,0,0.6);
-    transition: transform 0.3s ease;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .bottom-sheet-folder.hidden {
@@ -342,36 +351,173 @@ body, html {
 .sheet-handle {
     width: 40px;
     height: 5px;
-    background: #444;
-    border-radius: 3px;
-    margin: 0 auto 15px auto;
+    background: #555;
+    border-radius: 10px;
+    margin: 0 auto 15px;
 }
 
-.bottom-sheet-folder h4 {
-    margin-bottom: 15px;
-    text-align: center;
-}
-
-.bottom-sheet-folder label {
-    display: block;
-    font-size: 12px;
-    color: #88a0b0;
-    margin: 10px 0 5px 0;
-}
-
-.bottom-sheet-folder input[type="text"], 
-.bottom-sheet-folder select {
-    width: 100%;
-    padding: 10px;
-    background: #001220;
-    border: 1px solid #003554;
-    border-radius: 8px;
-    color: white;
-    outline: none;
-}
-
+/* Rang tanlagich (Hue Slider) */
 .hue-slider {
     width: 100%;
-    margin: 10px 0;
-    }
-    
+    height: 12px;
+    border-radius: 10px;
+    appearance: none;
+    background: linear-gradient(to right, red, yellow, lime, cyan, blue, magenta, red);
+    outline: none;
+    margin: 15px 0;
+}
+
+.hue-slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    background: white;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 5px rgba(0,0,0,0.5);
+}
+
+.add-main-btn {
+    width: 100%;
+    padding: 12px;
+    background: #007AFF;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    margin-top: 15px;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+/* To'liq ekran rejimi */
+.list-content.full-screen {
+    width: 100% !important;
+    height: 100% !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Bo'limlar (Tab) boshqaruvi */
+.tab-control {
+    display: flex;
+    margin: 10px 15px 5px 15px; /* Pastki qismini qidiruvga moslab qisqartirdik */
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 4px;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    background: none;
+    color: #ccc;
+    font-weight: bold;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.tab-btn.active {
+    background: #007AFF;
+    color: white;
+}
+
+/* SIZ AYTGAN QIDIRUV INPUTI STILLARI */
+.search-input-field input::placeholder {
+    color: #5c7588;
+}
+
+.search-input-field input:focus {
+    border-color: #007AFF !important;
+    box-shadow: 0 0 8px rgba(0, 122, 255, 0.3);
+}
+
+/* Bo'limlarni yashirish/ko'rsatish va flex konteyner */
+.tab-content { 
+    display: none; 
+    padding: 15px; 
+    overflow-y: auto; 
+    flex: 1; 
+}
+.tab-content.active { 
+    display: block; 
+}
+
+/* Tahrirlash ikonasi va TP elementlari */
+.edit-icon {
+    float: right;
+    color: #007AFF;
+    padding: 5px;
+    cursor: pointer;
+}
+
+.tp-list-container {
+    height: 100%;
+    overflow-y: auto;
+}
+
+.tp-item {
+    background: rgba(255, 255, 255, 0.05);
+    margin-bottom: 10px;
+    padding: 12px;
+    border-radius: 10px;
+    border-left: 4px solid #007AFF;
+    transition: background 0.2s;
+}
+
+.tp-item:active {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+/* Ierarxiya chiziqlari va masofasini minimal qilish */
+.folder-children {
+    margin-left: 8px !important; 
+    border-left: 1px dashed rgba(255, 255, 255, 0.1); 
+    padding-left: 4px !important;
+}
+
+/* Papka blokini chapga surish */
+.folder-header {
+    padding: 2px 0px !important; /* Vertikal masofa minimal */
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: 0.2s;
+}
+
+/* Tanlangan papka stili */
+.folder-header.active-folder {
+    background: rgba(0, 122, 255, 0.15);
+}
+
+/* Qalamcha - boshida yashirin */
+.edit-icon {
+    display: none; 
+    margin-left: auto; /* O'ng tarafga surib qo'yadi */
+    color: #007AFF;
+    padding: 0 5px;
+    font-size: 14px;
+}
+
+/* Faqat active-folder ichidagi qalamcha ko'rinadi */
+.active-folder .edit-icon {
+    display: inline-block;
+}
+
+/* Papka nomi va ikonka orasidagi masofa */
+.folder-header i {
+    margin: 0 4px !important;
+    font-size: 13px;
+}
+
+/* Maxsus xarita markerlari uchun effekt stili */
+.custom-tp-marker {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
