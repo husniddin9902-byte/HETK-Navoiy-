@@ -507,10 +507,7 @@ document.getElementById('update-folder-btn').addEventListener('click', () => {
 });
 
 // =========================================================================
-// MUKAMMAL SIZ AYTGAN IERARXIK JUMLADAN DARAXTSIMON DROPDOWNLAR MANTIQI
-// =========================================================================
-// =========================================================================
-// MUKAMMAL IERARXIK DARAXTSIMON DROPDOWNLAR MANTIQI (TUGLAR TO'G'RI ISHLAYDI)
+// MUKAMMAL, KENG VA ROSTMANAKAM DARAXTSIMON DROPDOWN (MOBILGA MOSLANGAN)
 // =========================================================================
 function refreshTreeDropdowns(excludeId = null) {
     buildTreeInDiv('parent-folder-tree', 'parent-folder-select', excludeId);
@@ -524,10 +521,10 @@ function buildTreeInDiv(treeContainerId, nativeSelectId, excludeId = null) {
 
     container.innerHTML = "";
 
-    // 1. Asosiy (Bosh guruh) variantini yaratish
+    // 1. Asosiy (Bosh guruh) satri
     const rootRow = document.createElement('div');
-    rootRow.style.cssText = "display:flex; align-items:center; padding:8px; cursor:pointer; color:white; font-size:14px; border-radius:6px;";
-    rootRow.innerHTML = `<span style="width:20px; text-align:center; color:#88a0b0; font-weight:bold; margin-right:5px;">•</span><i class="fas fa-home" style="color:#88a0b0; margin-right:8px;"></i> Asosiy (Bosh guruh)`;
+    rootRow.style.cssText = "display:flex; align-items:center; padding:10px 12px; cursor:pointer; color:white; font-size:14px; border-radius:6px; margin-bottom:4px; background: rgba(255,255,255,0.02);";
+    rootRow.innerHTML = `<span style="width:20px; text-align:center; color:#88a0b0; font-weight:bold; margin-right:8px;">•</span><i class="fas fa-home" style="color:#88a0b0; margin-right:8px;"></i> Asosiy (Bosh guruh)`;
     
     if (nativeSelect.value === 'root' || !nativeSelect.value) {
         rootRow.style.background = "#007AFF";
@@ -539,31 +536,34 @@ function buildTreeInDiv(treeContainerId, nativeSelectId, excludeId = null) {
     });
     container.appendChild(rootRow);
 
-    // 2. To'g'ri ierarxik rekursiya funksiyasi
+    // 2. Ichma-ich elementlarni chiroyli joylash mantiqi
     function appendChildrenNodes(parentId, level, targetBox) {
         const children = Object.keys(currentFolders).filter(id => currentFolders[id].parentId === parentId);
         
         children.forEach(id => {
-            if (excludeId && id === excludeId) return; // O'zini o'ziga ichki guruh qilishni cheklash
+            if (excludeId && id === excludeId) return; 
 
             const folder = currentFolders[id];
             const hasSubFolders = Object.keys(currentFolders).some(childId => currentFolders[childId].parentId === id);
             
             const rowWrapper = document.createElement('div');
-            rowWrapper.style.margin = "2px 0";
+            rowWrapper.style.margin = "4px 0";
+            rowWrapper.style.width = "100%";
 
             const row = document.createElement('div');
             row.id = `tree-item-${treeContainerId}-${id}`;
-            row.style.cssText = `display:flex; align-items:center; padding:8px; cursor:pointer; color:white; font-size:14px; border-radius:6px;`;
-            row.style.paddingLeft = `${(level + 1) * 16}px`;
+            row.style.cssText = `display:flex; align-items:center; padding:10px 12px; cursor:pointer; color:white; font-size:14px; border-radius:6px; width:100%; box-sizing:border-box;`;
+            
+            // Mobil ekranga sig'ishi uchun chekka masofani minimal (har bir ierarxiya uchun 12px) qildik
+            row.style.paddingLeft = `${(level + 1) * 12}px`;
 
-            // Farzandi bor guruhlarga dynamic [+] aks holda nuqta [•]
-            const prefixIcon = hasSubFolders ? `<span class="dropdown-toggle-icon" style="width:20px; text-align:center; color:#88a0b0; font-weight:bold; margin-right:5px; cursor:pointer; background:rgba(255,255,255,0.05); border-radius:4px;">+</span>` : `<span style="width:20px; text-align:center; color:#557080; margin-right:5px;">•</span>`;
+            // Bosh paneldagi kabi chiroyli [+] va [-] tugmalari
+            const prefixIcon = hasSubFolders ? `<span class="dropdown-toggle-icon" style="width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; color:#88a0b0; font-weight:bold; margin-right:6px; cursor:pointer; background:rgba(255,255,255,0.08); border-radius:4px; font-size:14px;">+</span>` : `<span style="width:22px; display:inline-block; text-align:center; color:#557080; margin-right:6px;">•</span>`;
 
             row.innerHTML = `
                 ${prefixIcon}
-                <i class="fas fa-folder" style="color: ${folder.color}; margin-right:8px;"></i>
-                <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${folder.name}</span>
+                <i class="fas fa-folder" style="color: ${folder.color}; margin-right:8px; font-size:15px;"></i>
+                <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1;">${folder.name}</span>
             `;
 
             if (nativeSelect.value === id) {
@@ -572,62 +572,59 @@ function buildTreeInDiv(treeContainerId, nativeSelectId, excludeId = null) {
 
             rowWrapper.appendChild(row);
 
-            // Guruh tanlanishi mantiqi
+            // Papka bosilganda uni tanlash
             row.addEventListener('click', () => {
                 nativeSelect.value = id;
                 refreshTreeDropdownSelection(container, id);
             });
 
-            // Agar ichki guruhlari bo'lsa, ularni yashirin qutiga (childBox) joylash
+            // Ichki guruh qutisi (Ortiqcha chiziqlar va katta marginlar olib tashlandi)
             if (hasSubFolders) {
                 const childBox = document.createElement('div');
                 childBox.id = `tree-child-box-${treeContainerId}-${id}`;
-                childBox.style.display = "none"; // BOSHIDA HAMMASI ZICX VA YASHIRIN TURADI
-                childBox.style.borderLeft = "1px dashed rgba(255,255,255,0.1)";
-                childBox.style.marginLeft = `${(level + 1) * 10}px`;
+                childBox.style.display = "none"; 
+                childBox.style.width = "100%";
                 
                 rowWrapper.appendChild(childBox);
 
-                // Rekursiv ravishda bolalarini shu yashirin qutiga voris qilib biriktiramiz
+                // Rekursiyani davom ettiramiz
                 appendChildrenNodes(id, level + 1, childBox);
 
-                // [+] yoki [-] bosilganda ochilish/yopilish hodisasi
+                // [+] yoki [-] bosilganda ochish/yopish xizmati
                 const toggleIconNode = row.querySelector('.dropdown-toggle-icon');
                 if (toggleIconNode) {
                     toggleIconNode.addEventListener('click', (event) => {
-                        event.stopPropagation(); // Satr bosilib ketishini to'xtatadi
+                        event.stopPropagation(); // Butun satr bosilib ketishini cheklaydi
                         if (childBox.style.display === "none") {
                             childBox.style.display = "block";
                             toggleIconNode.innerText = "-";
+                            toggleIconNode.style.background = "rgba(255,255,255,0.15)";
                         } else {
                             childBox.style.display = "none";
                             toggleIconNode.innerText = "+";
+                            toggleIconNode.style.background = "rgba(255,255,255,0.08)";
                         }
                     });
                 }
             }
 
-            // Elementni target qutiga qo'shish
             targetBox.appendChild(rowWrapper);
         });
     }
 
-    // Eng yuqori darajadagi guruhlarni (root) asosiy konteynerga chizish
     appendChildrenNodes('root', 0, container);
 }
 
-// Tanlangan guruhni ko'k rang bilan belgilash funksiyasi
 function refreshTreeDropdownSelection(container, selectedId) {
     container.querySelectorAll('div[id^="tree-item-"]').forEach(el => {
         el.style.background = "transparent";
     });
     
     const targetDiv = container.querySelector(`[id$="-${selectedId}"]`);
-    
     if (targetDiv) {
         targetDiv.style.background = "#007AFF";
     } else if (selectedId === 'root') {
         const firstDiv = container.querySelector('div');
         if (firstDiv) firstDiv.style.background = "#007AFF";
     }
-}
+                  }
