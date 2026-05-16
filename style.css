@@ -110,11 +110,12 @@
 /* =========================================================================
    2. XARITA VA FOYDALANUVCHI GEOLOKATSIYA NUQTASI STILLARI
    ========================================================================= */
+
 .map-overlay-btn {
-    position: absolute;
-    right: 20px;
-    bottom: 80px; /* Panel yopilganda ham tugmaning tepasida turishi uchun */
-    z-index: 1001;
+    position: fixed !important;
+    right: 20px !important;
+    top: 140px !important;
+    z-index: 2500 !important;
     background: white;
     border: none;
     width: 45px;
