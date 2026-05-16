@@ -1,25 +1,28 @@
 /* =========================================================================
-   1. ASOSIY PANEL VA NAVIGATSIYA STILLARI*/
+   1. ASOSIY PANEL VA NAVIGATSIYA STILLARI
+   ========================================================================= */
 .bottom-panel {
     position: fixed;
     bottom: 0;
     left: 0;
     width: 100%;
-    background: #003250; 
-/* Rasmdagi to'q ko'k */
+    background: #003250; /* Rasmdagi to'q ko'k */
     color: white;
     z-index: 1000;
     transition: all 0.4s ease-in-out;
     border-top-left-radius: 25px;
     border-top-right-radius: 25px;
     box-shadow: 0 -5px 15px rgba(0,0,0,0.3);
-    height: 265px !important; /* Panel ochilgandagi umumiy balandlik */
-}
+    max-height: 40vh !important;
+}. 
 
-
-/* Panel yopilganda balandligi (Faqat ma'lumotlar yashirinadi) */
-.bottom-panel.minimized {
-    transform: translateY(135px); /* Panel silliq pastga tushadi */
+/* Panel yopilishi (Faqat ma'lumotlar yo'qoladi, tugmalar qoladi) */
+.bottom-panel.minimized .info-content {
+    height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    opacity: 0;
+    pointer-events: none;
 }
 
 /* Strelka tugmasi */
@@ -43,9 +46,8 @@
 /* Ma'lumotlar bloki (Latitude, Longitude, Address) */
 .info-content {
     position: relative; /* Copy tugmasini o'ngga surish uchun shart */
-    padding: 15px 20px;
-    min-height: 185px; 
-    height: auto; /* Adres uzun bo'lsa panel o'zi kattalashadi */
+    padding: 10px 20px;
+    height: 185px; 
     overflow: hidden;
     transition: all 0.4s ease-in-out;
 }
@@ -54,7 +56,7 @@
 .copy-box {
     position: absolute;
     right: 20px;
-    top: 45px; /* Koordinatalar qarshisida turishi uchun */
+    top: 40px; /* Koordinatalar qarshisida turishi uchun */
     text-align: center;
     cursor: pointer;
     background: rgba(255, 255, 255, 0.1);
@@ -71,14 +73,13 @@
 /* Ma'lumotlar qatorlari */
 .data-row {
     display: flex;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
     font-size: 14px;
-    padding-right: 85px; /* Matn Copy tugmasining ustiga chiqib ketmasligi uchun */
-    align-items: flex-start;
+    padding-right: 80px; /* Matn Copy tugmasining ustiga chiqib ketmasligi uchun */
 }
 
-.label { width: 85px; color: #adadad; flex-shrink: 0; }
-.value { flex: 1; word-break: break-word; line-height: 1.4; }
+.label { width: 85px; color: #adadad; }
+.value { flex: 1; word-break: break-all; }
 
 .accuracy-text {
     font-size: 13px;
@@ -109,8 +110,6 @@
 /* =========================================================================
    2. XARITA VA FOYDALANUVCHI GEOLOKATSIYA NUQTASI STILLARI
    ========================================================================= */
-
-/* 113-qatordan 124-qatorgacha bo'lgan original tugma kodi joyiga qaytarildi! */
 .map-overlay-btn {
     position: absolute;
     right: 20px;
@@ -404,7 +403,7 @@
 }
 
 /* =========================================================================
-   6. BOTTOM SHEET VA MULTI-CHOOSE IERARXIK DROPDOWN
+   6. BOTTOM SHEET VA MULTI-CHOOSE IERARXIK DROPDOWN (YANGI TUZATISH)
    ========================================================================= */
 .bottom-sheet-folder {
     position: fixed;
@@ -464,16 +463,18 @@
     font-size: 14px;
 }
 
+/* --- KODLAR REKOMENDATSIYASI: ESKI SELECTLARNI YASHIRISH --- */
 #parent-folder-select, 
 #edit-parent-folder-select {
-    display: none !important; 
+    display: none !important; /* Standart brauzer drayver selectini yashiramiz */
 }
 
+/* --- TAHRIRLASH/QO'SHISH OYNASIDAGI DARAXTSIMON DROPDOWN CONTAINER --- */
 .tree-dropdown-container {
     width: 100%;
     max-height: 210px;
     overflow-y: auto;
-    background: #001a2c !important; 
+    background: #001a2c !important; /* To'q chiroyli fon */
     border-radius: 8px;
     padding: 8px;
     margin: 10px 0;
@@ -481,6 +482,7 @@
     box-sizing: border-box;
 }
 
+/* Daraxt ichidagi har bir satr (Guruh elementi) */
 .tree-dropdown-container div {
     display: flex;
     align-items: center;
@@ -498,6 +500,7 @@
     background: rgba(255, 255, 255, 0.08);
 }
 
+/* Tanlangan elementning ko'k fon bilan ajralishi */
 .tree-dropdown-container .selected-tree-node,
 .tree-dropdown-container div[style*="background: rgb(0, 122, 255)"],
 .tree-dropdown-container div[style*="background: #007AFF"] {
@@ -506,6 +509,7 @@
     color: white !important;
 }
 
+/* Ichki guruh ochuvchi/yopuvchi dynamic plus-minus belgisi */
 .dropdown-toggle-icon, .tree-toggle-icon {
     width: 22px;
     height: 22px;
@@ -525,6 +529,7 @@
     color: white;
 }
 
+/* Chiroyli qorong'u scrollbar */
 .tree-dropdown-container::-webkit-scrollbar {
     width: 6px;
 }
@@ -535,4 +540,16 @@
     background: #003a61;
     border-radius: 10px;
 }
+/* PANEL ENG TEPAGA KO'TARILGANDA O'SHA KNOPKADAN PASTROQDA TO'XTACHISHI UCHUN MAJBURIY CHEKLOV */
+#panel, .bottom-panel {
+    max-height: 230px !important;
+    height: 230px !important;
+}
 
+/* Tugmani majburan o'sha panel ko'tarilganda ham tepada chiroyli ko'rinib turishi uchun */
+.map-overlay-btn {
+    position: fixed !important;
+    right: 20px !important;
+    top: 80px !important;
+    bottom: auto !important;
+}
