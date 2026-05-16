@@ -23,9 +23,10 @@
 
     <div id="map"></div>
 
-    <button id="locate-btn" class="map-overlay-btn"><i class="fas fa-crosshairs"></i></button>
-
     <div class="bottom-panel minimized" id="panel">
+        
+        <button id="locate-btn" class="map-overlay-btn" style="position: absolute; right: 20px; top: -65px; z-index: 2000;"><i class="fas fa-crosshairs"></i></button>
+
         <div class="toggle-container" onclick="togglePanel()">
             <div class="toggle-circle">
                 <i class="fas fa-chevron-up" id="toggle-icon"></i>
@@ -50,35 +51,34 @@
     </div>
 
     <div id="list-container" class="list-modal" style="display:none;">
-    <div class="list-content full-screen">
-        <div class="list-header">
-            <h3>Boshqaruv paneli</h3>
-            <button id="close-list" style="background:none; border:none; color:white; font-size:24px;">×</button>
-        </div>
+        <div class="list-content full-screen">
+            <div class="list-header">
+                <h3>Boshqaruv paneli</h3>
+                <button id="close-list" style="background:none; border:none; color:white; font-size:24px;">×</button>
+            </div>
 
-        <div class="tab-control">
-            <button class="tab-btn active" id="tab-folders">Guruhlar</button>
-            <button class="tab-btn" id="tab-items">Xarita</button>
-        </div>
+            <div class="tab-control">
+                <button class="tab-btn active" id="tab-folders">Guruhlar</button>
+                <button class="tab-btn" id="tab-items">Xarita</button>
+            </div>
 
-        <div id="search-container-box" class="search-bar-wrapper" style="padding: 10px 15px; background: #001220;">
-            <div class="search-input-field" style="position: relative; display: flex; align-items: center;">
-                <i class="fas fa-search search-icon" style="position: absolute; left: 12px; color: #88a0b0;"></i>
-                <input type="text" id="element-search" placeholder="Поиск по названию местоположения" style="width: 100%; padding: 10px 12px 10px 38px; border-radius: 8px; background: #00223a; border: 1px solid rgba(255, 255, 255, 0.1); color: white; outline: none;">
+            <div id="search-container-box" class="search-bar-wrapper" style="padding: 10px 15px; background: #001220;">
+                <div class="search-input-field" style="position: relative; display: flex; align-items: center;">
+                    <i class="fas fa-search search-icon" style="position: absolute; left: 12px; color: #88a0b0;"></i>
+                    <input type="text" id="element-search" placeholder="Поиск по названию местоположения" style="width: 100%; padding: 10px 12px 10px 38px; border-radius: 8px; background: #00223a; border: 1px solid rgba(255, 255, 255, 0.1); color: white; outline: none;">
+                </div>
+            </div>
+
+            <div id="folders-section" class="tab-content active">
+                <div id="tree-root"></div>
+                <button id="open-add-folder" class="add-main-btn">+ Yangi guruh qo'shish</button>
+            </div>
+
+            <div id="items-section" class="tab-content">
+                <div id="tp-list" class="tp-list-container"></div>
             </div>
         </div>
-
-        <div id="folders-section" class="tab-content active">
-            <div id="tree-root"></div>
-            <button id="open-add-folder" class="add-main-btn">+ Yangi guruh qo'shish</button>
-        </div>
-
-        <div id="items-section" class="tab-content">
-            <div id="tp-list" class="tp-list-container">
-                </div>
-        </div>
     </div>
-</div>
 
     <div id="edit-folder-panel" class="bottom-sheet-folder hidden">
         <div class="sheet-handle"></div>
@@ -135,4 +135,5 @@
     <script src="app.js?v=1.2"></script>
 
 </body>
-</html>
+    </html>
+    
