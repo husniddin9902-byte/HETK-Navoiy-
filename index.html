@@ -93,7 +93,7 @@
         
         <label>Yangi joylashuv (Ona guruh):</label>
         <div id="edit-parent-folder-tree" class="tree-dropdown-container" style="width:100%; max-height:200px; overflow-y:auto; background:#001a2c; border-radius:8px; padding:10px; margin:10px 0; border:1px solid rgba(255, 255, 255, 0.1);"></div>
-        <select id="edit-parent-folder-select" style="display: none;"></select>
+        <input type="hidden" id="edit-parent-folder-select" value="root">
 
         <label>Guruh rangi:</label>
         <input type="range" id="edit-color-slider" min="0" max="360" value="0" class="hue-slider">
@@ -117,7 +117,7 @@
         
         <label>Qaysi guruh ichiga tushsin?</label>
         <div id="parent-folder-tree" class="tree-dropdown-container" style="width:100%; max-height:200px; overflow-y:auto; background:#001a2c; border-radius:8px; padding:10px; margin:10px 0; border:1px solid rgba(255, 255, 255, 0.1);"></div>
-        <select id="parent-folder-select" style="display: none;"></select>
+        <input type="hidden" id="parent-folder-select" value="root">
         
         <label>Guruh rangi:</label>
         <input type="range" id="color-slider" min="0" max="360" value="0" class="hue-slider">
@@ -135,5 +135,4 @@
     <script src="app.js?v=1.2"></script>
 
 </body>
-            </html>
-            
+</html>
