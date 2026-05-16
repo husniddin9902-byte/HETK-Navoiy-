@@ -521,3 +521,44 @@
     align-items: center;
     justify-content: center;
 }
+
+/* Select select-box o'rniga ishlatiladigan daraxtsimon konteyner */
+.tree-dropdown-container {
+    width: 100%;
+    max-height: 200px;
+    overflow-y: auto;
+    background: #001a2c;
+    border-radius: 8px;
+    padding: 10px;
+    margin: 10px 0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tree-dropdown-item {
+    display: flex;
+    align-items: center;
+    padding: 6px 8px;
+    cursor: pointer;
+    border-radius: 4px;
+    color: white;
+    font-size: 14px;
+    transition: background 0.2s;
+}
+
+.tree-dropdown-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.tree-dropdown-item.selected {
+    background: #007AFF !important;
+    color: white;
+}
+
+.tree-toggle-icon {
+    width: 20px;
+    display: inline-block;
+    text-align: center;
+    cursor: pointer;
+    color: #88a0b0;
+    font-weight: bold;
+}
