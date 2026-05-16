@@ -507,7 +507,7 @@ document.getElementById('update-folder-btn').addEventListener('click', () => {
 });
 
 // =========================================================================
-// MUKAMMAL VERTIKAL DROPDOWN (XARX QANDAY CSS CHEKLOVINI BUZIB O'TADI)
+// BOSH PANELDAGI BILAN 100% BIR XIL CHIROYLI VA TO'G'RI DARAXTSIMON DROPDOWN
 // =========================================================================
 function refreshTreeDropdowns(excludeId = null) {
     buildTreeInDiv('parent-folder-tree', 'parent-folder-select', excludeId);
@@ -521,13 +521,13 @@ function buildTreeInDiv(treeContainerId, nativeSelectId, excludeId = null) {
 
     container.innerHTML = "";
     
-    // Tashqi CSS aralashmasligi uchun konteyner stilini majburlaymiz
-    container.style.cssText = "display: block !important; width: 100% !important; max-height: 250px !important; overflow-y: auto !important; overflow-x: hidden !important; box-sizing: border-box !important; float: none !important; position: relative !important; text-align: left !important;";
+    // Tashqi flex-grid stillarini butunlay neytrallash va bosh panel ko'rinishiga keltirish
+    container.style.cssText = "display: block !important; width: 100% !important; max-height: 260px !important; overflow-y: auto !important; overflow-x: hidden !important; box-sizing: border-box !important; padding: 10px !important; background: #001a2c !important; border-radius: 8px !important;";
 
-    // 1. Asosiy (Bosh guruh) variantini yaratish
+    // 1. Asosiy (Bosh guruh) satri
     const rootRow = document.createElement('div');
-    rootRow.style.cssText = "display: block !important; padding: 12px !important; cursor: pointer !important; color: white !important; font-size: 14px !important; border-radius: 6px !important; margin-bottom: 5px !important; width: 100% !important; box-sizing: border-box !important; background: rgba(255,255,255,0.03) !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important;";
-    rootRow.innerHTML = `<span style="color:#88a0b0; font-weight:bold; margin-right:8px;">•</span> <i class="fas fa-home" style="color:#88a0b0; margin-right:6px;"></i> Asosiy (Bosh guruh)`;
+    rootRow.style.cssText = "display: flex !important; align-items: center !important; padding: 10px 12px !important; cursor: pointer !important; color: white !important; font-size: 14px !important; border-radius: 6px !important; margin-bottom: 6px !important; width: 100% !important; box-sizing: border-box !important; background: rgba(255,255,255,0.03) !important;";
+    rootRow.innerHTML = `<span style="width:20px; text-align:center; color:#88a0b0; font-weight:bold; margin-right:8px;">•</span><i class="fas fa-home" style="color:#88a0b0; margin-right:8px;"></i> Asosiy (Bosh guruh)`;
     
     if (nativeSelect.value === 'root' || !nativeSelect.value) {
         rootRow.style.setProperty('background', '#007AFF', 'important');
@@ -539,7 +539,7 @@ function buildTreeInDiv(treeContainerId, nativeSelectId, excludeId = null) {
     });
     container.appendChild(rootRow);
 
-    // 2. Guruhlarni chizish funksiyasi
+    // 2. Rekursiv daraxt (Xuddi bosh paneldagi tuzilish)
     function appendChildrenNodes(parentId, level, targetBox) {
         const children = Object.keys(currentFolders).filter(id => currentFolders[id].parentId === parentId);
         
@@ -549,66 +549,77 @@ function buildTreeInDiv(treeContainerId, nativeSelectId, excludeId = null) {
             const folder = currentFolders[id];
             const hasSubFolders = Object.keys(currentFolders).some(childId => currentFolders[childId].parentId === id);
             
-            const rowWrapper = document.createElement('div');
-            rowWrapper.style.cssText = "display: block !important; width: 100% !important; margin: 4px 0 !important; box-sizing: border-box !important; float: none !important;";
+            // Har bir guruh uchun vertikal blokli o'rovchi
+            const itemWrapper = document.createElement('div');
+            itemWrapper.style.cssText = "display: block !important; width: 100% !important; margin: 4px 0 !important; box-sizing: border-box !important;";
 
+            // Satrning o'zi (Flex faqat ichki ikonka va matnni tekislash uchun)
             const row = document.createElement('div');
             row.id = `tree-item-${treeContainerId}-${id}`;
-            row.style.cssText = "display: block !important; padding: 12px !important; cursor: pointer !important; color: white !important; font-size: 14px !important; border-radius: 6px !important; width: 100% !important; box-sizing: border-box !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; float: none !important;";
+            row.style.cssText = "display: flex !important; align-items: center !important; padding: 9px 12px !important; cursor: pointer !important; color: white !important; font-size: 14px !important; border-radius: 6px !important; width: 100% !important; box-sizing: border-box !important;";
             
-            // Ichkarilik darajasini tartibli masofa orqali bildiramiz (ekrandan chiqmaydi)
-            row.style.setProperty('padding-left', `${(level + 1) * 15}px`, 'important');
+            // Asosiy paneldagi kabi chapdan chiroyli ierarxik chiziq
+            if (level > 0) {
+                row.style.borderLeft = "1px dashed rgba(255, 255, 255, 0.15)";
+            }
 
-            // Bosh paneldagi kabi oddiy [+]/[-] matni
-            const prefixIcon = hasSubFolders ? `<span class="dropdown-toggle-icon" style="display: inline-block !important; width: 18px !important; height: 18px !important; text-align: center !important; line-height: 16px !important; color: #88a0b0 !important; font-weight: bold !important; margin-right: 6px !important; cursor: pointer !important; background: rgba(255,255,255,0.1) !important; border-radius: 4px !important; font-size: 13px !important; vertical-align: middle !important;">+</span>` : `<span style="display: inline-block !important; width: 18px !important; text-align: center !important; color: #557080 !important; margin-right: 6px !important; vertical-align: middle !important;">•</span>`;
+            // Bosh paneldagi chiroyli kvadrat ichidagi [+] va [-] tugmalari
+            const prefixIcon = hasSubFolders ? 
+                `<span class="dropdown-toggle-icon" style="width:20px; height:20px; display:inline-flex !important; align-items:center; justify-content:center; color:#88a0b0; font-weight:bold; margin-right:8px; cursor:pointer; background:rgba(255,255,255,0.08); border-radius:4px; font-size:13px; flex-shrink:0 !important;">+</span>` : 
+                `<span style="width:20px; display:inline-block; text-align:center; color:#557080; margin-right:8px; flex-shrink:0 !important;">•</span>`;
 
             row.innerHTML = `
                 ${prefixIcon}
-                <i class="fas fa-folder" style="color: ${folder.color} !important; margin-right: 6px !important; vertical-align: middle !important;"></i>
-                <span style="vertical-align: middle !important;">${folder.name}</span>
+                <i class="fas fa-folder" style="color: ${folder.color} !important; margin-right:8px; font-size:15px; flex-shrink:0 !important;"></i>
+                <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1 !important; text-align:left !important;">${folder.name}</span>
             `;
 
             if (nativeSelect.value === id) {
                 row.style.setProperty('background', '#007AFF', 'important');
             }
 
-            rowWrapper.appendChild(row);
+            itemWrapper.appendChild(row);
 
             row.addEventListener('click', () => {
                 nativeSelect.value = id;
                 refreshTreeDropdownSelection(container, id);
             });
 
-            // Ichki guruhlar qutisi (mutlaqo mustaqil va pastdan ochiladigan blok)
+            // Ichki bolalar qutisi (Buni to'g'ri ierarxiya hosil qilishi uchun itemWrapper ichiga qo'shamiz!)
             if (hasSubFolders) {
                 const childBox = document.createElement('div');
                 childBox.id = `tree-child-box-${treeContainerId}-${id}`;
-                childBox.style.cssText = "display: none !important; width: 100% !important; box-sizing: border-box !important; float: none !important;";
+                // Boshida yopiq turadi, chap tomondan chiroyli surilish (Bosh paneldagi kabi 18px)
+                childBox.style.cssText = "display: none !important; width: 100% !important; box-sizing: border-box !important; padding-left: 18px !important;";
                 
-                rowWrapper.appendChild(childBox);
+                itemWrapper.appendChild(childBox);
 
-                // Rekursiyani davom ettirish
+                // Rekursiv ravishda bolalarini shu ichki qutiga joylaymiz
                 appendChildrenNodes(id, level + 1, childBox);
 
+                // [+] va [-] bosilganda ochish/yopish xizmati
                 const toggleIconNode = row.querySelector('.dropdown-toggle-icon');
                 if (toggleIconNode) {
                     toggleIconNode.addEventListener('click', (event) => {
-                        event.stopPropagation(); 
+                        event.stopPropagation(); // Satr bosilib ketishini to'xtatadi
                         if (childBox.style.display === "none !important" || childBox.style.display === "none") {
                             childBox.style.setProperty('display', 'block', 'important');
                             toggleIconNode.innerText = "-";
+                            toggleIconNode.style.background = "rgba(255,255,255,0.15)";
                         } else {
                             childBox.style.setProperty('display', 'none', 'important');
                             toggleIconNode.innerText = "+";
+                            toggleIconNode.style.background = "rgba(255,255,255,0.08)";
                         }
                     });
                 }
             }
 
-            targetBox.appendChild(rowWrapper);
+            targetBox.appendChild(itemWrapper);
         });
     }
 
+    // Daraxtni ildizdan boshlab chizamiz
     appendChildrenNodes('root', 0, container);
 }
 
@@ -624,4 +635,4 @@ function refreshTreeDropdownSelection(container, selectedId) {
         const firstDiv = container.querySelector('div');
         if (firstDiv) firstDiv.style.setProperty('background', '#007AFF', 'important');
     }
-      }
+              }
