@@ -81,40 +81,48 @@
 </div>
 
     <div id="edit-folder-panel" class="bottom-sheet-folder hidden">
-    <div class="sheet-handle"></div>
-    <h4>Guruhni tahrirlash</h4>
-    
-    <label>Guruh nomi:</label>
-    <input type="text" id="edit-group-name" style="width:100%; padding:10px; margin:10px 0; border-radius:8px; background:#001a2c; color:white; border:none;">
-    
+        <div class="sheet-handle"></div>
         
-    <label>Yangi joylashuv (Ona guruh):</label>
-    <select id="edit-parent-folder-select" style="width:100%; padding:10px; margin:10px 0; border-radius:8px; background: #001a2c; color: white; border: none;"></select>
+        <div class="sheet-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h4 style="margin: 0; font-size: 18px;">Guruhni tahrirlash</h4>
+            <button type="button" onclick="document.getElementById('edit-folder-panel').classList.add('hidden')" style="background: rgba(255, 255, 255, 0.1); border: none; color: white; font-size: 24px; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; line-height: 1;">&times;</button>
+        </div>
+        
+        <label>Guruh nomi:</label>
+        <input type="text" id="edit-group-name" style="width:100%; padding:10px; margin:10px 0; border-radius:8px; background:#001a2c; color:white; border:none;">
+        
+        <label>Yangi joylashuv (Ona guruh):</label>
+        <select id="edit-parent-folder-select" style="width:100%; padding:10px; margin:10px 0; border-radius:8px; background: #001a2c; color: white; border: none;"></select>
 
-    <label>Guruh rangi:</label>
-    <input type="range" id="edit-color-slider" min="0" max="360" value="0" class="hue-slider">
-    <div id="edit-color-preview" style="width:40px; height:40px; border-radius:50%; margin:10px auto; border:2px solid white; background:red;"></div>
-    
-    <div class="sheet-buttons" style="display:flex; gap:10px; margin-top:15px;">
-        <button id="delete-folder-btn" style="flex:1; background:#ff4444; color:white; border:none; padding:12px; border-radius:8px;">O'chirish</button>
-        <button id="update-folder-btn" style="flex:1; background:#007AFF; color:white; border:none; padding:12px; border-radius:8px;">Saqlash</button>
+        <label>Guruh rangi:</label>
+        <input type="range" id="edit-color-slider" min="0" max="360" value="0" class="hue-slider">
+        <div id="edit-color-preview" style="width:40px; height:40px; border-radius:50%; margin:10px auto; border:2px solid white; background:red;"></div>
+        
+        <div class="sheet-buttons" style="display:flex; gap:10px; margin-top:15px;">
+            <button id="delete-folder-btn" style="flex:1; background:#ff4444; color:white; border:none; padding:12px; border-radius:8px;">O'chirish</button>
+            <button id="update-folder-btn" style="flex:1; background:#007AFF; color:white; border:none; padding:12px; border-radius:8px;">Saqlash</button>
+        </div>
     </div>
-    </div>
     
-    
-
     <div id="add-folder-panel" class="bottom-sheet-folder hidden">
         <div class="sheet-handle"></div>
-        <h4>Yangi guruh yaratish</h4>
+        
+        <div class="sheet-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h4 style="margin: 0; font-size: 18px;">Yangi guruh yaratish</h4>
+            <button type="button" onclick="document.getElementById('add-folder-panel').classList.add('hidden')" style="background: rgba(255, 255, 255, 0.1); border: none; color: white; font-size: 24px; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; line-height: 1;">&times;</button>
+        </div>
+
         <input type="text" id="new-group-name" placeholder="Guruh nomi..." style="width:100%; padding:10px; margin:10px 0; border-radius:8px; border:none; background: #001a2c; color: white;">
+        
         <label>Qaysi guruh ichiga tushsin?</label>
         <select id="parent-folder-select" style="width:100%; padding:10px; margin:10px 0; border-radius:8px; background: #001a2c; color: white; border: none;"></select>
+        
         <label>Guruh rangi:</label>
         <input type="range" id="color-slider" min="0" max="360" value="0" class="hue-slider">
         <div id="color-preview" style="width:40px; height:40px; border-radius:50%; margin:10px auto; border:2px solid white; background:red;"></div>
-        <div class="sheet-buttons" style="display:flex; gap:10px;">
-            <button id="cancel-folder" style="flex:1; padding:12px; border-radius:8px; background:#444; color:white; border:none;">Bekor qilish</button>
-            <button id="save-folder" style="flex:1; padding:12px; border-radius:8px; background:#007AFF; color:white; border:none;">Saqlash</button>
+        
+        <div class="sheet-buttons" style="margin-top:15px;">
+            <button id="save-folder" style="width:100%; padding:12px; border-radius:8px; background:#007AFF; color:white; border:none; font-weight:bold;">Saqlash</button>
         </div>
     </div>
 
