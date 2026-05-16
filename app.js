@@ -21,7 +21,7 @@ var isUserInteracting = false;
 var isManualSelection = false; 
 let currentFolders = {}; 
 let activeFolderId = 'root'; 
-
+let editingFolderId = null;
 
 // Google Satellit qatlami
 L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}',{
@@ -132,12 +132,9 @@ function resetToUserLocation() {
 // 6. Xarita va Panel nazorati
 map.on('movestart', function() { isUserInteracting = true; });
 
-// --- TUGALANGAN QISM: "Meni top" tugmasi bosilganda hammasini reset qiladi ---
 if(document.getElementById('locate-btn')) {
     document.getElementById('locate-btn').addEventListener('click', () => {
         isUserInteracting = false; 
-        
-        // Agar marker bo'lsa o'chiramiz va blokni ochamiz
         if (selectedMarker) {
             map.removeLayer(selectedMarker);
             selectedMarker = null;
@@ -152,15 +149,6 @@ if(document.getElementById('locate-btn')) {
     });
 }
 
-function togglePanel() {
-    const panel = document.getElementById('panel');
-    const icon = document.getElementById('toggle-icon');
-    if(!panel || !icon) return;
-    panel.classList.toggle('minimized');
-    icon.style.transform = panel.classList.contains('minimized') ? 'rotate(0deg)' : 'rotate(180deg)';
-    icon.className = panel.classList.contains('minimized') ? 'fas fa-chevron-up' : 'fas fa-chevron-down';
-}
-
 function showToast(message) {
     const oldToast = document.querySelector('.toast-message');
     if (oldToast) oldToast.remove();
@@ -172,14 +160,12 @@ function showToast(message) {
     setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 500); }, 2000);
 }
 
-
-// 7. Saqlash va Nusxa olish (Yangilangan)
+// 7. Saqlash va Nusxa olish
 document.querySelector('.save-btn').addEventListener('click', function() {
     const currentLat = document.getElementById('latitude').innerText;
     const currentLng = document.getElementById('longitude').innerText;
     const addr = document.getElementById('address').innerText;
     
-    // Agar hali papka tanlanmagan bo'lsa ogohlantiradi
     if (activeFolderId === 'root') return showToast("Avval papka tanlang!");
 
     database.ref('TPs/' + Date.now()).set({
@@ -191,17 +177,15 @@ document.querySelector('.save-btn').addEventListener('click', function() {
     }).then(() => { showToast("Guruhga saqlandi!"); });
 });
 
-
 function copyCoords() {
     const lat = document.getElementById('latitude').innerText;
     const lng = document.getElementById('longitude').innerText;
     const address = document.getElementById('address').innerText;
-    const fullText = `Широта: ${lat}\nДолгота: ${lng}\nАдрес: ${address}\nGoogle Maps: http://maps.google.com/maps?q=${lat},${lng}`;
+    const fullText = `Широта: ${lat}\nДолгота: ${lng}\nАдрес: ${address}\nGoogle Maps: https://maps.google.com/?q=${lat},${lng}`;
     navigator.clipboard.writeText(fullText).then(() => { showToast("Ma’lumot nusxalandi"); });
-      }
+}
 
-// YANGI QISMLAR: PAPKALAR VA IERARXIYA
-// 1. UI elementlarini (tugmalarni) kodingizdagi ID-lar bilan bog'laymiz
+// PAPKALAR VA IERARXIYA MANTIQI
 const listBtn = document.getElementById('list-btn');
 const listModal = document.getElementById('list-container');
 const closeList = document.getElementById('close-list');
@@ -210,16 +194,14 @@ const addFolderPanel = document.getElementById('add-folder-panel');
 const cancelFolder = document.getElementById('cancel-folder');
 const hueSlider = document.getElementById('color-slider');
 
-// Ro'yxatni ochish va yopish funksiyalari
 if(listBtn) listBtn.addEventListener('click', () => { listModal.style.display = 'flex'; loadFolders(); });
 if(closeList) closeList.addEventListener('click', () => { listModal.style.display = 'none'; });
 if(openAddBtn) openAddBtn.addEventListener('click', () => { 
     addFolderPanel.classList.remove('hidden'); 
-    updateParentSelect(); 
+    updateParentSelect('parent-folder-select'); 
 });
 if(cancelFolder) cancelFolder.addEventListener('click', () => { addFolderPanel.classList.add('hidden'); });
 
-// 2. Rang tanlash uchun slider (Guruh rangi uchun)
 if(hueSlider) {
     hueSlider.addEventListener('input', (e) => {
         const color = `hsl(${e.target.value}, 100%, 50%)`;
@@ -228,20 +210,20 @@ if(hueSlider) {
     });
 }
 
-// 3. Yangi guruhni (papkani) Firebase bazasiga saqlash
 const saveFolderBtn = document.getElementById('save-folder');
 if(saveFolderBtn) {
     saveFolderBtn.addEventListener('click', () => {
         const name = document.getElementById('new-group-name').value;
         const parentId = document.getElementById('parent-folder-select').value;
-        const preview = document.getElementById('color-preview');
-        const color = preview ? preview.style.background : 'red';
+        const hue = hueSlider ? hueSlider.value : 0;
+        const color = `hsl(${hue}, 100%, 50%)`;
 
         if (!name) return showToast("Guruh nomini yozing!");
 
         database.ref('Folders').push({
             name: name,
             parentId: parentId,
+            hue: hue,
             color: color,
             createdAt: Date.now()
         }).then(() => {
@@ -252,7 +234,6 @@ if(saveFolderBtn) {
     });
 }
 
-// 4. Bazadagi papkalarni daraxtsimon qilib yuklash
 function loadFolders() {
     database.ref('Folders').on('value', (snapshot) => {
         currentFolders = snapshot.val() || {};
@@ -271,11 +252,11 @@ function renderTree(parentId, container) {
         item.className = 'folder-item';
         
         item.innerHTML = `
-            <div class="folder-header" id="folder-${id}">
-                <span class="toggle-btn" style="width: 12px; text-align: center; font-size: 12px;" onclick="event.stopPropagation(); toggleFolderView('${id}')">+</span>
-                <i class="fas fa-folder" style="color: ${folder.color};"></i>
-                <span onclick="selectFolder('${id}')" style="flex-grow: 1; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${folder.name}</span>
-                <i class="fas fa-edit edit-icon" onclick="event.stopPropagation(); openEditFolder('${id}', '${folder.name}', ${folder.hue || 0})"></i>
+            <div class="folder-header" id="folder-${id}" onclick="selectFolder('${id}')">
+                <span class="toggle-btn" style="width: 20px; text-align: center; font-size: 16px; display: inline-block;" onclick="event.stopPropagation(); toggleFolderView('${id}')">+</span>
+                <i class="fas fa-folder" style="color: ${folder.color}; margin-right: 5px;"></i>
+                <span style="flex-grow: 1; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline-block;">${folder.name}</span>
+                <i class="fas fa-edit edit-icon" style="cursor: pointer;" onclick="event.stopPropagation(); openEditFolder('${id}', '${folder.name}', ${folder.hue || 0})"></i>
             </div>
             <div id="children-${id}" class="folder-children" style="display: none;"></div>
         `;
@@ -284,28 +265,22 @@ function renderTree(parentId, container) {
     });
 }
 
+// Yagona va to'g'rilangan selectFolder funksiyasi
 window.selectFolder = function(id) {
-    // 1. Tanlangan papka ID-sini saqlaymiz
     activeFolderId = id;
     
-    // 2. Barcha papkalardan 'active-folder' klassini olib tashlaymiz
     document.querySelectorAll('.folder-header').forEach(el => {
         el.classList.remove('active-folder');
     });
     
-    // 3. Hozir bosilgan papka elementiga klass qo'shamiz (qalamcha chiqishi uchun)
     const currentFolderEl = document.getElementById(`folder-${id}`);
     if (currentFolderEl) {
         currentFolderEl.classList.add('active-folder');
     }
     
-    // Xaritaga o'tib ketmasligi uchun bu yerda switchTab funksiyasini chaqirmaymiz
     showToast(`Tanlandi: ${currentFolders[id].name}`);
 };
 
-
-
-// Papka ichini ochish/yopish (+/- tugmasi)
 window.toggleFolderView = function(id) {
     const childDiv = document.getElementById(`children-${id}`);
     const btn = document.querySelector(`#folder-${id} .toggle-btn`);
@@ -318,102 +293,104 @@ window.toggleFolderView = function(id) {
     }
 };
 
-// Papkani tanlash
-window.selectFolder = function(id) {
-    activeFolderId = id;
-    if(listModal) listModal.style.display = 'none';
-    showToast(`Tanlandi: ${currentFolders[id].name}`);
-};
-
-// "Ona papka" tanlash ro'yxatini yangilash
-function updateParentSelect() {
-    const select = document.getElementById('parent-folder-select');
+function updateParentSelect(selectId, excludeId = null) {
+    const select = document.getElementById(selectId);
     if(!select) return;
-    select.innerHTML = '<option value="root">Asosiy (Bosh papka)</option>';
+    select.innerHTML = '<option value="root">Asosiy (Bosh guruh)</option>';
     Object.keys(currentFolders).forEach(id => {
-        const option = document.createElement('option');
-        option.value = id;
-        option.innerText = currentFolders[id].name;
-        select.appendChild(option);
+        if (id !== excludeId) {
+            const option = document.createElement('option');
+            option.value = id;
+            option.innerText = currentFolders[id].name;
+            select.appendChild(option);
+        }
     });
 }
-  
-// Sahifa yuklanganda xaritani o'z joyiga tushirish
+
 window.addEventListener('load', function() {
-    setTimeout(function() {
-        map.invalidateSize();
-    }, 500);
+    setTimeout(function() { map.invalidateSize(); }, 500);
 });
 
-// Panel ochilganda yoki yopilganda xaritani yangilash
 function togglePanel() {
     const panel = document.getElementById('panel');
     const icon = document.getElementById('toggle-icon');
     panel.classList.toggle('minimized');
     icon.style.transform = panel.classList.contains('minimized') ? 'rotate(0deg)' : 'rotate(180deg)';
-    
-    // Panel harakatlangandan keyin xaritani to'g'irlash
     setTimeout(() => { map.invalidateSize(); }, 400);
 }
 
-// 1. Tablarni almashtirish logikasi
-document.getElementById('tab-folders').addEventListener('click', () => switchTab('folders'));
-document.getElementById('tab-items').addEventListener('click', () => switchTab('items'));
+// TAB TIZIMI (HTML dagi yangi tablarga moslandi)
+const tabFolders = document.getElementById('tab-folders');
+const tabItems = document.getElementById('tab-items');
+const foldersSection = document.getElementById('folders-section');
+const itemsSection = document.getElementById('items-section');
+const searchBox = document.getElementById('search-box');
 
-function switchTab(tab) {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+if (tabFolders && tabItems) {
+    tabFolders.addEventListener('click', () => {
+        tabFolders.classList.add('active');
+        tabItems.classList.remove('active');
+        foldersSection.classList.add('active');
+        itemsSection.classList.remove('active');
+        if(searchBox) searchBox.style.display = 'none';
+    });
 
-    if (tab === 'folders') {
-        document.getElementById('tab-folders').classList.add('active');
-        document.getElementById('folders-section').classList.add('active');
-    } else {
-        document.getElementById('tab-items').classList.add('active');
-        document.getElementById('items-section').classList.add('active');
-        // Bu yerda loadSavedPoints() kabi funksiyangiz bo'lsa, uni chaqiring
-    }
+    tabItems.addEventListener('click', () => {
+        tabItems.classList.add('active');
+        tabFolders.classList.remove('active');
+        itemsSection.classList.add('active');
+        foldersSection.classList.add('active'); // O'tib ketish xatosi tuzatildi
+        if(searchBox) searchBox.style.display = 'block';
+    });
 }
 
-// 2. Tahrirlash oynasi va Rang slayderi
-let editingFolderId = null;
+// TAHRIRLASH VA O'ZGARTIRISH PANELI
 const editColorSlider = document.getElementById('edit-color-slider');
 const editColorPreview = document.getElementById('edit-color-preview');
 
-editColorSlider.addEventListener('input', () => {
-    editColorPreview.style.background = `hsl(${editColorSlider.value}, 100%, 50%)`;
-});
+if(editColorSlider) {
+    editColorSlider.addEventListener('input', () => {
+        editColorPreview.style.background = `hsl(${editColorSlider.value}, 100%, 50%)`;
+    });
+}
 
-// Tahrirlash oynasini ochish
 window.openEditFolder = function(id, name, hue) {
     editingFolderId = id;
     document.getElementById('edit-group-name').value = name;
-    editColorSlider.value = hue || 0;
-    editColorPreview.style.background = `hsl(${hue || 0}, 100%, 50%)`;
+    if(editColorSlider) {
+        editColorSlider.value = hue || 0;
+        editColorPreview.style.background = `hsl(${hue || 0}, 100%, 50%)`;
+    }
+    updateParentSelect('edit-parent-folder-select', id);
+    if(currentFolders[id] && currentFolders[id].parentId) {
+        document.getElementById('edit-parent-folder-select').value = currentFolders[id].parentId;
+    }
     document.getElementById('edit-folder-panel').classList.remove('hidden');
 };
 
-// 3. O'chirish funksiyasi
 document.getElementById('delete-folder-btn').addEventListener('click', () => {
     if (confirm("Ushbu guruhni o'chirmoqchimisiz? Ichidagi barcha ma'lumotlar o'chib ketishi mumkin!")) {
         database.ref('Folders/' + editingFolderId).remove().then(() => {
-            alert("Guruh o'chirildi");
+            showToast("Guruh o'chirildi");
             document.getElementById('edit-folder-panel').classList.add('hidden');
         });
     }
 });
 
-// 4. Saqlash (Update) funksiyasi
 document.getElementById('update-folder-btn').addEventListener('click', () => {
     const newName = document.getElementById('edit-group-name').value;
-    const newHue = editColorSlider.value;
+    const newParentId = document.getElementById('edit-parent-folder-select').value;
+    const newHue = editColorSlider ? editColorSlider.value : 0;
 
     if (newName.trim() === "") return alert("Nomini kiriting");
 
     database.ref('Folders/' + editingFolderId).update({
         name: newName,
+        parentId: newParentId,
         hue: newHue,
         color: `hsl(${newHue}, 100%, 50%)`
     }).then(() => {
+        showToast("Guruh yangilandi!");
         document.getElementById('edit-folder-panel').classList.add('hidden');
     });
 });
