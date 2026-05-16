@@ -13,7 +13,8 @@
     border-top-left-radius: 25px;
     border-top-right-radius: 25px;
     box-shadow: 0 -5px 15px rgba(0,0,0,0.3);
-}
+    max-height: 40vh !important;
+}. 
 
 /* Panel yopilishi (Faqat ma'lumotlar yo'qoladi, tugmalar qoladi) */
 .bottom-panel.minimized .info-content {
@@ -112,7 +113,7 @@
 .map-overlay-btn {
     position: absolute;
     right: 20px;
-    bottom: 250px; /* Panel yopilganda ham tugmaning tepasida turishi uchun */
+    bottom: 80px; /* Panel yopilganda ham tugmaning tepasida turishi uchun */
     z-index: 1001;
     background: white;
     border: none;
