@@ -1,23 +1,25 @@
 /* =========================================================================
-   1. ASOSIY PANEL VA NAVIGATSIYA STILLARI
-   ========================================================================= */
+   1. ASOSIY PANEL VA NAVIGATSIYA STILLARI*/
 .bottom-panel {
     position: fixed;
     bottom: 0;
     left: 0;
     width: 100%;
-    background: #003250; /* Rasmdagi to'q ko'k */
+    background: #003250; 
+/* Rasmdagi to'q ko'k */
     color: white;
     z-index: 1000;
     transition: all 0.4s ease-in-out;
     border-top-left-radius: 25px;
     border-top-right-radius: 25px;
     box-shadow: 0 -5px 15px rgba(0,0,0,0.3);
+    height: 265px !important; /* Panel ochilgandagi umumiy balandlik */
 }
+
 
 /* Panel yopilganda balandligi (Faqat ma'lumotlar yashirinadi) */
 .bottom-panel.minimized {
-    transform: translateY(185px); /* Panel silliq pastga tushadi */
+    transform: translateY(135px); /* Panel silliq pastga tushadi */
 }
 
 /* Strelka tugmasi */
@@ -534,9 +536,3 @@
     border-radius: 10px;
 }
 
-/* O'SHA MAJBURIY BALANDLIK CHEKLOVINI TO'G'RILADIK: Panel endi erkin va chiroyli ochiladi */
-#panel, .bottom-panel {
-    max-height: 70vh !important;
-    height: auto !important;
-       }
-   
