@@ -540,3 +540,16 @@
     background: #003a61;
     border-radius: 10px;
 }
+/* PANEL ENG TEPAGA KO'TARILGANDA O'SHA KNOPKADAN PASTROQDA TO'XTACHISHI UCHUN MAJBURIY CHEKLOV */
+#panel, .bottom-panel {
+    max-height: 230px !important;
+    height: 230px !important;
+}
+
+/* Tugmani majburan o'sha panel ko'tarilganda ham tepada chiroyli ko'rinib turishi uchun */
+.map-overlay-btn {
+    position: fixed !important;
+    right: 20px !important;
+    top: 80px !important;
+    bottom: auto !important;
+}
