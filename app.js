@@ -244,6 +244,9 @@ function loadFolders() {
         currentFolders = snapshot.val() || {};
         const treeRoot = document.getElementById('tree-root');
         if(treeRoot) renderTree('root', treeRoot);
+        
+        // YANGI QO'SHILGAN FUNKSIYA: Panellar yuklanganda daraxtsimon dropdownlarni ham qayta chizadi
+        refreshTreeDropdowns();
     });
 }
 
@@ -310,6 +313,9 @@ function updateParentSelect(selectId, excludeId = null) {
             select.appendChild(option);
         }
     });
+    
+    // Asosiy select o'zgarganda dynamic daraxt dropdownlarni yangilaymiz
+    refreshTreeDropdowns(excludeId);
 }
 
 window.addEventListener('load', function() {
@@ -465,6 +471,9 @@ window.openEditFolder = function(id, name, hue) {
     if(currentFolders[id] && currentFolders[id].parentId) {
         document.getElementById('edit-parent-folder-select').value = currentFolders[id].parentId;
     }
+    
+    // Tahrirlash oynasi ochilganda ierarxik dropdownni ham yangilash
+    refreshTreeDropdowns(id);
     document.getElementById('edit-folder-panel').classList.remove('hidden');
 };
 
@@ -476,6 +485,8 @@ document.getElementById('delete-folder-btn').addEventListener('click', () => {
         });
     }
 });
+
+// 489-qatordan boshlab faylning eng oxirigacha bo'lgan qism:
 
 document.getElementById('update-folder-btn').addEventListener('click', () => {
     const newName = document.getElementById('edit-group-name').value;
@@ -494,4 +505,126 @@ document.getElementById('update-folder-btn').addEventListener('click', () => {
         document.getElementById('edit-folder-panel').classList.add('hidden');
     });
 });
+
+// =========================================================================
+// MUKAMMAL SIZ AYTGAN IERARXIK JUMLADAN DARAXTSIMON DROPDOWNLAR MANTIQI
+// =========================================================================
+function refreshTreeDropdowns(excludeId = null) {
+    buildTreeInDiv('parent-folder-tree', 'parent-folder-select', excludeId);
+    buildTreeInDiv('edit-parent-folder-tree', 'edit-parent-folder-select', excludeId);
+}
+
+function buildTreeInDiv(treeContainerId, nativeSelectId, excludeId = null) {
+    const container = document.getElementById(treeContainerId);
+    const nativeSelect = document.getElementById(nativeSelectId);
+    if (!container || !nativeSelect) return;
+
+    container.innerHTML = "";
+
+    // Bosh guruh variantini yaratish
+    const rootRow = document.createElement('div');
+    rootRow.style.cssText = "display:flex; align-items:center; padding:8px; cursor:pointer; color:white; font-size:14px; border-radius:6px;";
+    rootRow.innerHTML = `<span style="width:20px; text-align:center; color:#88a0b0; font-weight:bold; margin-right:5px;">•</span><i class="fas fa-home" style="color:#88a0b0; margin-right:8px;"></i> Asosiy (Bosh guruh)`;
     
+    if (nativeSelect.value === 'root' || !nativeSelect.value) {
+        rootRow.style.background = "#007AFF";
+    }
+    
+    rootRow.addEventListener('click', () => {
+        nativeSelect.value = 'root';
+        refreshTreeDropdownSelection(container, 'root');
+    });
+    container.appendChild(rootRow);
+
+    // Rekursiv elementlarni ierarxik chizish funksiyasi
+    function appendChildrenNodes(parentId, level) {
+        const children = Object.keys(currentFolders).filter(id => currentFolders[id].parentId === parentId);
+        
+        children.forEach(id => {
+            if (excludeId && id === excludeId) return; // O'zini o'ziga ichki guruh qilishni cheklash
+
+            const folder = currentFolders[id];
+            const hasSubFolders = Object.keys(currentFolders).some(childId => currentFolders[childId].parentId === id);
+            
+            const row = document.createElement('div');
+            row.id = `tree-item-${treeContainerId}-${id}`;
+            row.style.cssText = `display:flex; align-items:center; padding:8px; cursor:pointer; color:white; font-size:14px; border-radius:6px; margin-top:2px;`;
+            row.style.paddingLeft = `${(level + 1) * 16}px`;
+
+            // Farzandi bor papkalarga dynamic [+] yoki [-] belgisi qo'yiladi
+            const prefixIcon = hasSubFolders ? `<span class="dropdown-toggle-icon" style="width:20px; text-align:center; color:#88a0b0; font-weight:bold; margin-right:5px; cursor:pointer;">+</span>` : `<span style="width:20px; text-align:center; color:#557080; margin-right:5px;">•</span>`;
+
+            row.innerHTML = `
+                ${prefixIcon}
+                <i class="fas fa-folder" style="color: ${folder.color}; margin-right:8px;"></i>
+                <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${folder.name}</span>
+            `;
+
+            if (nativeSelect.value === id) {
+                row.style.background = "#007AFF";
+            }
+
+            // Ichki guruhlarni ochib yopish mantiqi (+/- bosilganda)
+            const toggleIconNode = row.querySelector('.dropdown-toggle-icon');
+            if (toggleIconNode) {
+                toggleIconNode.addEventListener('click', (event) => {
+                    event.stopPropagation(); // Butun satr bosilib ketishini to'xtatadi
+                    const childContainer = document.getElementById(`tree-child-box-${treeContainerId}-${id}`);
+                    if (childContainer) {
+                        if (childContainer.style.display === "none") {
+                            childContainer.style.display = "block";
+                            toggleIconNode.innerText = "-";
+                        } else {
+                            childContainer.style.display = "none";
+                            toggleIconNode.innerText = "+";
+                        }
+                    }
+                });
+            }
+
+            // Satr bosilganda papka tanlanadi va qiymat selectga uzatiladi
+            row.addEventListener('click', () => {
+                nativeSelect.value = id;
+                refreshTreeDropdownSelection(container, id);
+            });
+
+            container.appendChild(row);
+
+            // Ichki farzandlar uchun yashirin block quti yaratiladi
+            const childBox = document.createElement('div');
+            childBox.id = `tree-child-box-${treeContainerId}-${id}`;
+            childBox.style.display = "none"; // Boshida ierarxiya yopilib ixcham turadi
+            container.appendChild(childBox);
+
+            // Rekursiyani chuqurlashtirib davom ettiramiz
+            appendChildrenNodes(id, level + 1);
+            
+            // Agar farzandlar block ichida mavjud bo'lsa ularni ushbu block ichiga ko'chiramiz
+            const builtNodes = container.querySelectorAll(`[id^="tree-item-${treeContainerId}-"], [id^="tree-child-box-${treeContainerId}-"]`);
+            builtNodes.forEach(node => {
+                const nodeId = node.id.split('-').pop();
+                if (currentFolders[nodeId] && currentFolders[nodeId].parentId === id) {
+                    childBox.appendChild(node);
+                }
+            });
+        });
+    }
+
+    appendChildrenNodes('root', 0);
+}
+
+// Tanlangan element rangini ko'k qilib beruvchi yordamchi funksiya
+function refreshTreeDropdownSelection(container, selectedId) {
+    container.querySelectorAll('div[id^="tree-item-"], div').forEach(el => {
+        if(el.id.includes('tree-child-box')) return;
+        el.style.background = "transparent";
+    });
+    
+    // Tanlanganni ko'k rang bilan ajratamiz
+    const allDivs = container.querySelectorAll('div');
+    allDivs.forEach(div => {
+        if (div.id.endsWith(`-${selectedId}`) || (selectedId === 'root' && div.innerText.includes('Asosiy'))) {
+            div.style.background = "#007AFF";
+        }
+    });
+      }
