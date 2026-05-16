@@ -546,10 +546,21 @@
     height: 230px !important;
 }
 
-/* Tugmani majburan o'sha panel ko'tarilganda ham tepada chiroyli ko'rinib turishi uchun */
-.map-overlay-btn {
+/* =========================================================================
+   PASTIDAGI PANEL VA KNOPKA UCHUN MAXSUS TUZATISH
+   ========================================================================= */
+
+/* 1. Pastki panel ochilganda knopkadan pastroqda to'xtashi uchun balandligini cheklaymiz */
+#panel, .bottom-panel {
+    max-height: 250px !important; 
+    height: 250px !important;
+}
+
+/* 2. Knopkani panel ko'tarilganda ham uning ustida chiroyli turadigan qilamiz */
+.map-overlay-btn, #locate-btn {
     position: fixed !important;
     right: 20px !important;
-    top: 80px !important;
-    bottom: auto !important;
+    bottom: 270px !important; /* Panel 250px bo'lgani uchun, knopka undan 20px tepada turadi */
+    top: auto !important;      /* Tepadagi menyuga xalaqit bermaydi */
+    z-index: 2500 !important;  /* Panelning ustiga chiqishi uchun */
 }
