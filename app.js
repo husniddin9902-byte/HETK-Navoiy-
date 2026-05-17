@@ -311,16 +311,24 @@ window.addEventListener('load', function() {
 });
 
 // TUZATILGAN PANEL KO'TARILISH VA TUSHISH MANTIQI
+
 function togglePanel() {
-    const panel = document.getElementById('panel') || document.querySelector('.bottom-panel');
+    const panel = document.getElementById('panel');
     const icon = document.getElementById('toggle-icon');
+    
     if (panel) {
         panel.classList.toggle('minimized');
+        
         if (icon) {
             icon.style.transform = panel.classList.contains('minimized') ? 'rotate(0deg)' : 'rotate(180deg)';
         }
     }
-    setTimeout(() => { map.invalidateSize(); }, 400);
+    
+    setTimeout(() => { 
+        if (typeof map !== 'undefined' && map.invalidateSize) {
+            map.invalidateSize(); 
+        }
+    }, 400);
 }
 
 // KLIK HODISASINI ELEMENTLARGA ULAB QO'YISH
