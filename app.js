@@ -331,6 +331,7 @@ function togglePanel() {
     }, 400);
 }
 
+
 // KLIK HODISASINI ELEMENTLARGA ULAB QO'YISH
 document.addEventListener("DOMContentLoaded", function() {
     const toggleTrigger = document.getElementById('toggle-icon') || document.querySelector('.toggle-container');
