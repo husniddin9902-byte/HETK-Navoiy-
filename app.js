@@ -196,7 +196,6 @@ const addFolderPanel = document.getElementById('add-folder-panel');
 const cancelFolder = document.getElementById('cancel-folder');
 const hueSlider = document.getElementById('color-slider');
 
-// 2 va 3-rasmlar mosligi: Har ikkala tugma ham boshqaruv panelini ochadi
 if(listBtn) listBtn.addEventListener('click', () => { listModal.style.display = 'flex'; loadFolders(); });
 if(menuBtn) menuBtn.addEventListener('click', () => { listModal.style.display = 'flex'; loadFolders(); });
 if(closeList) closeList.addEventListener('click', () => { listModal.style.display = 'none'; });
@@ -245,7 +244,6 @@ function loadFolders() {
         const treeRoot = document.getElementById('tree-root');
         if(treeRoot) renderTree('root', treeRoot);
         
-        // YANGI QO'SHILGAN FUNKSIYA: Panellar yuklanganda daraxtsimon dropdownlarni ham qayta chizadi
         refreshTreeDropdowns();
     });
 }
@@ -273,19 +271,11 @@ function renderTree(parentId, container) {
     });
 }
 
-// Yagona va to'g'rilangan selectFolder funksiyasi
 window.selectFolder = function(id) {
     activeFolderId = id;
-    
-    document.querySelectorAll('.folder-header').forEach(el => {
-        el.classList.remove('active-folder');
-    });
-    
+    document.querySelectorAll('.folder-header').forEach(el => el.classList.remove('active-folder'));
     const currentFolderEl = document.getElementById(`folder-${id}`);
-    if (currentFolderEl) {
-        currentFolderEl.classList.add('active-folder');
-    }
-    
+    if (currentFolderEl) currentFolderEl.classList.add('active-folder');
     showToast(`Tanlandi: ${currentFolders[id].name}`);
 };
 
@@ -313,8 +303,6 @@ function updateParentSelect(selectId, excludeId = null) {
             select.appendChild(option);
         }
     });
-    
-    // Asosiy select o'zgarganda dynamic daraxt dropdownlarni yangilaymiz
     refreshTreeDropdowns(excludeId);
 }
 
@@ -322,48 +310,56 @@ window.addEventListener('load', function() {
     setTimeout(function() { map.invalidateSize(); }, 500);
 });
 
+// TUZATILGAN PANEL KO'TARILISH VA TUSHISH MANTIQI
 function togglePanel() {
-    const panel = document.getElementById('panel');
+    const panel = document.getElementById('panel') || document.querySelector('.bottom-panel');
     const icon = document.getElementById('toggle-icon');
-    panel.classList.toggle('minimized');
-    icon.style.transform = panel.classList.contains('minimized') ? 'rotate(0deg)' : 'rotate(180deg)';
+    if (panel) {
+        panel.classList.toggle('minimized');
+        if (icon) {
+            icon.style.transform = panel.classList.contains('minimized') ? 'rotate(0deg)' : 'rotate(180deg)';
+        }
+    }
     setTimeout(() => { map.invalidateSize(); }, 400);
 }
 
-// KELISHILGAN TAB TIZIMI VA DINAMIK MARKERLAR FUNKSIYASI
+// KLIK HODISASINI ELEMENTLARGA ULAB QO'YISH
+document.addEventListener("DOMContentLoaded", function() {
+    const toggleTrigger = document.getElementById('toggle-icon') || document.querySelector('.toggle-container');
+    if (toggleTrigger) {
+        toggleTrigger.addEventListener('click', togglePanel);
+    }
+});
+
+// TAB TIZIMI VA DINAMIK MARKERLAR FUNKSIYASI
 const tabFolders = document.getElementById('tab-folders');
 const tabItems = document.getElementById('tab-items');
 const foldersSection = document.getElementById('folders-section');
 const itemsSection = document.getElementById('items-section');
-const searchContainerBox = document.getElementById('search-container-box');
 
 if (tabFolders && tabItems) {
     tabFolders.addEventListener('click', () => {
         tabFolders.classList.add('active');
         tabItems.classList.remove('active');
-        foldersSection.classList.add('active');
-        itemsSection.classList.remove('active');
+        if(foldersSection) foldersSection.classList.add('active');
+        if(itemsSection) itemsSection.classList.remove('active');
     });
 
     tabItems.addEventListener('click', () => {
         tabItems.classList.add('active');
         tabFolders.classList.remove('active');
-        itemsSection.classList.add('active');
-        foldersSection.classList.remove('active');
-        
-        // Tab yuklanganda elementlarni filterlab yuklash mantiqi
+        if(itemsSection) itemsSection.classList.add('active');
+        if(foldersSection) foldersSection.classList.remove('active');
         loadFilteredPoints();
     });
 }
 
-// NUQTALARNI XARITADA O'Z RANGI BILAN CHIQARISH VA PANELNI YOPISH MANTIQI
 function loadFilteredPoints() {
     const tpListContainer = document.getElementById('tp-list');
     if (!tpListContainer) return;
     
     tpListContainer.innerHTML = "<p style='color:gray; padding:15px; text-align:center;'>Yuklanmoqda...</p>";
 
-    // Oldingi eski guruh markerlarini tozalash
     activeMapMarkers.forEach(m => map.removeLayer(m));
     activeMapMarkers = [];
 
@@ -371,7 +367,6 @@ function loadFilteredPoints() {
         const allPoints = snapshot.val() || {};
         tpListContainer.innerHTML = ""; 
 
-        // Agar biror papka tanlangan bo'lsa filterlaydi, tanlanmagan bo'lsa hamma elementlarni oladi
         const keys = Object.keys(allPoints);
         const filteredKeys = activeFolderId === 'root' ? keys : keys.filter(key => allPoints[key].folderId === activeFolderId);
 
@@ -391,11 +386,9 @@ function loadFilteredPoints() {
             if (!isNaN(lat) && !isNaN(lng)) {
                 bounds.push([lat, lng]);
 
-                // NUQTA RANGLARI FIREBASE'DAN OLINADI
                 const pointFolderId = point.folderId;
                 const folderColor = (currentFolders[pointFolderId] && currentFolders[pointFolderId].color) ? currentFolders[pointFolderId].color : '#ff4444';
 
-                // Maxsus marker dizayni (Olingan o'z rangi bilan)
                 const mIcon = L.divIcon({
                     className: 'custom-tp-marker',
                     html: `<i class="fas fa-map-marker-alt" style="color: ${folderColor}; font-size: 26px; text-shadow: 0 0 3px black;"></i>`,
@@ -407,7 +400,6 @@ function loadFilteredPoints() {
                 marker.bindPopup(`<b>${displayName}</b><br>${point.address}`);
                 activeMapMarkers.push(marker);
 
-                // Ro'yxat elementini yaratish
                 const item = document.createElement('div');
                 item.className = 'tp-item';
                 item.style.cssText = `padding: 12px; margin: 6px 0; background: #00223a; border-radius: 8px; cursor: pointer; border-left: 4px solid ${folderColor}; color: white;`;
@@ -417,9 +409,9 @@ function loadFilteredPoints() {
                     <div style="color: #88a0b0; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top:2px;">${point.address}</div>
                 `;
 
-                // Ro'yxatdagi aniq element bosilsa - boshqaruv paneli yopiladi, xarita markazlashadi
                 item.addEventListener('click', () => {
-                    if(listModal) listModal.style.display = 'none'; // Boshqaruv paneli yopiladi
+                    const listModalEl = document.getElementById('list-container');
+                    if(listModalEl) listModalEl.style.display = 'none'; 
                     map.setView([lat, lng], 18);
                     marker.openPopup();
                     updatePanelValues(lat, lng, null, true);
@@ -431,14 +423,12 @@ function loadFilteredPoints() {
             }
         });
 
-        // Agar papka tanlangan bo'lsa xaritani o'sha guruh sohasiga avtomat markazlaydi
         if (bounds.length > 0 && activeFolderId !== 'root') {
             map.fitBounds(bounds, { padding: [50, 50] });
         }
     });
 }
 
-// SIZ AYTGAN QIDIRUV TIZIMI MANTIQI
 const elementSearchInput = document.getElementById('element-search');
 if (elementSearchInput) {
     elementSearchInput.addEventListener('input', (e) => {
@@ -450,7 +440,6 @@ if (elementSearchInput) {
     });
 }
 
-// TAHRIRLASH VA O'ZGARTIRISH PANELI
 const editColorSlider = document.getElementById('edit-color-slider');
 const editColorPreview = document.getElementById('edit-color-preview');
 
@@ -472,7 +461,6 @@ window.openEditFolder = function(id, name, hue) {
         document.getElementById('edit-parent-folder-select').value = currentFolders[id].parentId;
     }
     
-    // Tahrirlash oynasi ochilganda ierarxik dropdownni ham yangilash
     refreshTreeDropdowns(id);
     document.getElementById('edit-folder-panel').classList.remove('hidden');
 };
@@ -486,34 +474,29 @@ document.getElementById('delete-folder-btn').addEventListener('click', () => {
     }
 });
 
-// 489-qatordan boshlab faylning eng oxirigacha bo'lgan qism:
-
 document.getElementById('update-folder-btn').addEventListener('click', () => {
     const newName = document.getElementById('edit-group-name').value;
     const newParentId = document.getElementById('edit-parent-folder-select').value;
     const newHue = editColorSlider ? editColorSlider.value : 0;
-    const newColor = `hsl(${newHue}, 100%, 50%)`;
 
-    if (!newName) return showToast("Guruh nomini kiriting!");
+    if (!newName || newName.trim() === "") return showToast("Nomini kiriting");
 
     database.ref('Folders/' + editingFolderId).update({
         name: newName,
         parentId: newParentId,
         hue: newHue,
-        color: newColor
+        color: `hsl(${newHue}, 100%, 50%)`
     }).then(() => {
-        showToast("Guruh o'zgartirildi!");
+        showToast("Guruh yangilandi!");
         document.getElementById('edit-folder-panel').classList.add('hidden');
     });
 });
 
-document.getElementById('cancel-edit-folder').addEventListener('click', () => {
-    document.getElementById('edit-folder-panel').classList.add('hidden');
-});
-
-// =========================================================================
-// DINAMIK IERARXIK DARAXTSIMON DROPDOWN (SELECT O'RNIGA) MANTIQLARI
-// =========================================================================
+// DINAMIK IERARXIK DROPDOWNLARNI QAYTA CHIZISH TIZIMI
+function refreshTreeDropdowns(excludeId = null) {
+    const addDropdownBox = document.getElementById('add-tree-dropdown-box');
+    const editDropdownBox = document.getElementById('edit-tree-dropdown-box');
+// DINAMIK IERARXIK DROPDOWNLARNI QAYTA CHIZISH TIZIMI
 function refreshTreeDropdowns(excludeId = null) {
     const addDropdownBox = document.getElementById('add-tree-dropdown-box');
     const editDropdownBox = document.getElementById('edit-tree-dropdown-box');
@@ -532,22 +515,18 @@ function buildTreeDropdown(parentId, container, targetSelectId, excludeId, level
     const children = Object.keys(currentFolders).filter(id => currentFolders[id].parentId === parentId);
     
     children.forEach(id => {
-        if (id === excludeId) return; // O'zini o'ziga parent qilishdan cheklov
+        if (id === excludeId) return;
 
         const folder = currentFolders[id];
         const row = document.createElement('div');
-        
-        // Ierarxiya darajasiga qarab chap tomondan joy (indent) tashlaymiz
         row.style.paddingLeft = `${level * 20 + 10}px`;
         
-        // Agar tanlangan element bo'lsa, unga ko'k fon berish logikasi
         const realSelect = document.getElementById(targetSelectId);
         if (realSelect && realSelect.value === id) {
             row.className = "selected-tree-node";
             row.style.background = "#007AFF";
         }
 
-        // Guruh ochuvchi/yopuvchi belgi (agar ichida bolalari bo'lsa)
         const hasChildren = Object.keys(currentFolders).some(childId => currentFolders[childId].parentId === id);
         const toggleIcon = hasChildren ? `<span class="dropdown-toggle-icon">▸</span>` : `<span class="dropdown-toggle-icon" style="opacity:0;">▸</span>`;
 
@@ -557,31 +536,25 @@ function buildTreeDropdown(parentId, container, targetSelectId, excludeId, level
             <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${folder.name}</span>
         `;
 
-        // Satr bosilganda yashirin select elementini o'zgartirish va vizual ajratish
         row.addEventListener('click', (event) => {
             event.stopPropagation();
-            
             const selectEl = document.getElementById(targetSelectId);
             if (selectEl) {
                 selectEl.value = id;
-                // 'change' hodisasini qo'zg'atamiz
                 selectEl.dispatchEvent(new Event('change'));
             }
-
-            // Eski ko'k fonalarni olib tashlab, yangi bosilganiga berish
             container.querySelectorAll('div').forEach(d => {
                 d.className = "";
                 d.style.background = "transparent";
             });
             row.className = "selected-tree-node";
             row.style.background = "#007AFF";
-            
             showToast(`Parent: ${folder.name}`);
         });
 
         container.appendChild(row);
-
-        // Rekursiv ravishda bolalarini ham daraxtga qo'shamiz
         buildTreeDropdown(id, container, targetSelectId, excludeId, level + 1);
     });
 }
+  
+                      
