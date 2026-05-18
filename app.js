@@ -182,7 +182,7 @@ function copyCoords() {
     const lat = document.getElementById('latitude').innerText;
     const lng = document.getElementById('longitude').innerText;
     const address = document.getElementById('address').innerText;
-    const fullText = `Широта: ${lat}\nДолгота: ${lng}\nАдрес: ${address}\nGoogle Maps: http://maps.google.com/?q=${lat},${lng}`;
+    const fullText = `Широта: ${lat}\nДолгота: ${lng}\nАдрес: ${address}\nGoogle Maps: https://maps.google.com/?q=${lat},${lng}`;
     navigator.clipboard.writeText(fullText).then(() => { showToast("Ma’lumot nusxalandi"); });
 }
 
@@ -333,18 +333,12 @@ function selectDropdownNode(id, selectId, element) {
     element.classList.add('selected-tree-node');
 }
 
-// TA'MIRLANGAN PANAL HARAKATI (Silliq ko'tarilib-tushishi uchun)
+// TA'MIRLANGAN PANEL HARAKATI (Eski kod mantiqida silliq ochilib yopiladi)
 function togglePanel() {
     const panel = document.getElementById('panel');
     const icon = document.getElementById('toggle-icon');
-    
     panel.classList.toggle('minimized');
-    
-    if(panel.classList.contains('minimized')) {
-        icon.style.transform = 'rotate(0deg)';
-    } else {
-        icon.style.transform = 'rotate(180deg)';
-    }
+    icon.style.transform = panel.classList.contains('minimized') ? 'rotate(0deg)' : 'rotate(180deg)';
     setTimeout(() => { map.invalidateSize(); }, 400);
 }
 
@@ -491,7 +485,6 @@ document.getElementById('delete-folder-btn').addEventListener('click', () => {
         });
     }
 });
-
 document.getElementById('update-folder-btn').addEventListener('click', () => {
     const newName = document.getElementById('edit-group-name').value;
     const newParentId = document.getElementById('edit-parent-folder-select').value;
