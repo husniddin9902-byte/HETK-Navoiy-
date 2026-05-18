@@ -49,51 +49,41 @@
         </div>
     </div>
 
-    <div id="list-container" class="list-modal" style="display:none;">
-    <div class="list-content full-screen">
-        <div class="list-header">
-            <h3>Boshqaruv paneli</h3>
-            <button id="close-list" style="background:none; border:none; color:white; font-size:24px;">×</button>
-        </div>
+    <div id="list-container" class="list-modal">
+        <div class="list-content full-screen">
+            <div class="list-header">
+                <h3>Boshqaruv paneli</h3>
+                <button id="close-list" style="background:none; border:none; color:white; font-size:24px;">×</button>
+            </div>
 
-        <div class="tab-control">
-            <button class="tab-btn active" id="tab-folders">Guruhlar</button>
-            <button class="tab-btn" id="tab-items">Xarita</button>
-        </div>
+            <div class="tab-control">
+                <button class="tab-btn active" id="tab-folders">Guruhlar</button>
+                <button class="tab-btn" id="tab-items">Xarita</button>
+            </div>
 
-        <div id="search-container-box" class="search-bar-wrapper" style="padding: 10px 15px; background: #001220;">
-            <div class="search-input-field" style="position: relative; display: flex; align-items: center;">
-                <i class="fas fa-search search-icon" style="position: absolute; left: 12px; color: #88a0b0;"></i>
-                <input type="text" id="element-search" placeholder="Поиск по названию местоположения" style="width: 100%; padding: 10px 12px 10px 38px; border-radius: 8px; background: #00223a; border: 1px solid rgba(255, 255, 255, 0.1); color: white; outline: none;">
+            <div id="folders-section" class="tab-content active">
+                <div id="tree-root"></div>
+                <button id="open-add-folder" class="add-main-btn">+ Yangi guruh qo'shish</button>
+            </div>
+
+            <div id="items-section" class="tab-content">
+                <div class="search-input-field">
+                    <input type="text" id="element-search" placeholder="Elementlarni qidirish...">
+                </div>
+                <div id="tp-list" class="tp-list-container"></div>
             </div>
         </div>
-
-        <div id="folders-section" class="tab-content active">
-            <div id="tree-root"></div>
-            <button id="open-add-folder" class="add-main-btn">+ Yangi guruh qo'shish</button>
-        </div>
-
-        <div id="items-section" class="tab-content">
-            <div id="tp-list" class="tp-list-container">
-                </div>
-        </div>
     </div>
-</div>
 
     <div id="edit-folder-panel" class="bottom-sheet-folder hidden">
         <div class="sheet-handle"></div>
-        
-        <div class="sheet-header" style="display: flex; justify-content: flex-start; align-items: center; gap: 15px; margin-bottom: 20px;">
-            <button type="button" onclick="document.getElementById('edit-folder-panel').classList.add('hidden')" style="background: #ff4444; border: none; color: white; font-size: 22px; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; line-height: 1; flex-shrink: 0; box-shadow: 0 2px 8px rgba(255, 68, 68, 0.3);">&times;</button>
-            <h4 style="margin: 0; font-size: 18px; font-weight: bold;">Guruhni tahrirlash</h4>
-        </div>
-        
+        <h4>Guruhni tahrirlash</h4>
         <label>Guruh nomi:</label>
         <input type="text" id="edit-group-name" style="width:100%; padding:10px; margin:10px 0; border-radius:8px; background:#001a2c; color:white; border:none;">
         
         <label>Yangi joylashuv (Ona guruh):</label>
-        <div id="edit-parent-folder-tree" class="tree-dropdown-container" style="width:100%; max-height:200px; overflow-y:auto; background:#001a2c; border-radius:8px; padding:10px; margin:10px 0; border:1px solid rgba(255, 255, 255, 0.1);"></div>
-        <input type="hidden" id="edit-parent-folder-select" value="root">
+        <select id="edit-parent-folder-select"></select>
+        <div id="edit-tree-dropdown" class="tree-dropdown-container"></div>
 
         <label>Guruh rangi:</label>
         <input type="range" id="edit-color-slider" min="0" max="360" value="0" class="hue-slider">
@@ -104,69 +94,29 @@
             <button id="update-folder-btn" style="flex:1; background:#007AFF; color:white; border:none; padding:12px; border-radius:8px;">Saqlash</button>
         </div>
     </div>
-    
+
     <div id="add-folder-panel" class="bottom-sheet-folder hidden">
         <div class="sheet-handle"></div>
-        
-        <div class="sheet-header" style="display: flex; justify-content: flex-start; align-items: center; gap: 15px; margin-bottom: 20px;">
-            <button type="button" onclick="document.getElementById('add-folder-panel').classList.add('hidden')" style="background: #ff4444; border: none; color: white; font-size: 22px; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; line-height: 1; flex-shrink: 0; box-shadow: 0 2px 8px rgba(255, 68, 68, 0.3);">&times;</button>
-            <h4 style="margin: 0; font-size: 18px; font-weight: bold;">Yangi guruh yaratish</h4>
-        </div>
-
+        <h4>Yangi guruh yaratish</h4>
         <input type="text" id="new-group-name" placeholder="Guruh nomi..." style="width:100%; padding:10px; margin:10px 0; border-radius:8px; border:none; background: #001a2c; color: white;">
         
         <label>Qaysi guruh ichiga tushsin?</label>
-        <div id="parent-folder-tree" class="tree-dropdown-container" style="width:100%; max-height:200px; overflow-y:auto; background:#001a2c; border-radius:8px; padding:10px; margin:10px 0; border:1px solid rgba(255, 255, 255, 0.1);"></div>
-        <input type="hidden" id="parent-folder-select" value="root">
-        
+        <select id="parent-folder-select"></select>
+        <div id="add-tree-dropdown" class="tree-dropdown-container"></div>
+
         <label>Guruh rangi:</label>
         <input type="range" id="color-slider" min="0" max="360" value="0" class="hue-slider">
         <div id="color-preview" style="width:40px; height:40px; border-radius:50%; margin:10px auto; border:2px solid white; background:red;"></div>
-        
-        <div class="sheet-buttons" style="margin-top:15px;">
-            <button id="save-folder" style="width:100%; padding:12px; border-radius:8px; background:#007AFF; color:white; border:none; font-weight:bold;">Saqlash</button>
+        <div class="sheet-buttons" style="display:flex; gap:10px;">
+            <button id="cancel-folder" style="flex:1; padding:12px; border-radius:8px; background:#444; color:white; border:none;">Bekor qilish</button>
+            <button id="save-folder" style="flex:1; padding:12px; border-radius:8px; background:#007AFF; color:white; border:none;">Saqlash</button>
         </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <script src="app.js"></script>
 
-    <script src="app.js?v=1.2"></script>
-    
-    <style>
-        /* Xarita fiksallangan balandlikda sening eski holatiga qaytdi */
-        #map {
-            position: absolute;
-            top: 60px;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            z-index: 1;
-        }
-
-        /* Panel ochiq holatda ekranning eng tagida z-index bilan mustahkamlandi */
-        .bottom-panel {
-            position: fixed !important;
-            bottom: 0 !important;
-            left: 0 !important;
-            width: 100% !important;
-            z-index: 2000 !important; /* Header va xarita orasida to'g'ri turishi uchun */
-            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
-            transform: translateY(0) !important;
-        }
-
-        /* Panel yopilganda (Siz ko'rsatgan 5842.jpg dagi holat) */
-        .bottom-panel.minimized {
-            transform: translateY(185px) !important; /* Faqat ma'lumotlar bloki yashirinadi, tugmalar qoladi */
-        }
-
-        /* Strelka belgisi holati */
-        .bottom-panel.minimized #toggle-icon {
-            transform: rotate(180deg) !important;
-        }
-    </style>
-    
 </body>
-            </html>
-            
+</html>
