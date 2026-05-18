@@ -182,7 +182,7 @@ function copyCoords() {
     const lat = document.getElementById('latitude').innerText;
     const lng = document.getElementById('longitude').innerText;
     const address = document.getElementById('address').innerText;
-    const fullText = `Широта: ${lat}\nДолгота: ${lng}\nАдрес: ${address}\nGoogle Maps: https://maps.google.com/?q=${lat},${lng}`;
+    const fullText = `Широта: ${lat}\nДолгота: ${lng}\nАдрес: ${address}\nGoogle Maps: http://maps.google.com/?q=${lat},${lng}`;
     navigator.clipboard.writeText(fullText).then(() => { showToast("Ma’lumot nusxalandi"); });
 }
 
@@ -333,7 +333,7 @@ function selectDropdownNode(id, selectId, element) {
     element.classList.add('selected-tree-node');
 }
 
-// TA'MIRLANGAN PANEL HARAKATI (Eski kod mantiqida silliq ochilib yopiladi)
+// TA'MIRLANGAN PANEL HARAKATI
 function togglePanel() {
     const panel = document.getElementById('panel');
     const icon = document.getElementById('toggle-icon');
@@ -345,168 +345,6 @@ function togglePanel() {
 window.addEventListener('load', function() {
     setTimeout(function() { map.invalidateSize(); }, 500);
 });
-
-// TAB TIZIMI VA DINAMIK MARKERLAR
-const tabFolders = document.getElementById('tab-folders');
-const tabItems = document.getElementById('tab-items');
-const foldersSection = document.getElementById('folders-section');
-const itemsSection = document.getElementById('items-section');
-
-if (tabFolders && tabItems) {
-    tabFolders.addEventListener('click', () => {
-        tabFolders.classList.add('active');
-        tabItems.classList.remove('active');
-        foldersSection.classList.add('active');
-        itemsSection.classList.remove('active');
-    });
-
-    tabItems.addEventListener('click', () => {
-        tabItems.classList.add('active');
-        tabFolders.classList.remove('active');
-        itemsSection.classList.add('active');
-        foldersSection.classList.remove('active');
-        loadFilteredPoints();
-    });
-}
-
-function loadFilteredPoints() {
-    const tpListContainer = document.getElementById('tp-list');
-    if (!tpListContainer) return;
-    
-    tpListContainer.innerHTML = "<p style='color:gray; padding:15px; text-align:center;'>Yuklanmoqda...</p>";
-    activeMapMarkers.forEach(m => map.removeLayer(m));
-    activeMapMarkers = [];
-
-    database.ref('TPs').once('value', (snapshot) => {
-        const allPoints = snapshot.val() || {};
-        tpListContainer.innerHTML = ""; 
-
-        const keys = Object.keys(allPoints);
-        const filteredKeys = activeFolderId === 'root' ? keys : keys.filter(key => allPoints[key].folderId === activeFolderId);
-
-        if (filteredKeys.length === 0) {
-            tpListContainer.innerHTML = "<p style='color:gray; padding:15px; text-align:center;'>Elementlar mavjud emas.</p>";
-            return;
-        }
-
-        let bounds = [];
-
-        filteredKeys.forEach(key => {
-            const point = allPoints[key];
-            const lat = parseFloat(point.lat);
-            const lng = parseFloat(point.lng);
-            const displayName = point.address.split(',')[0] || "Noma'lum element";
-
-            if (!isNaN(lat) && !isNaN(lng)) {
-                bounds.push([lat, lng]);
-                const pointFolderId = point.folderId;
-                const folderColor = (currentFolders[pointFolderId] && currentFolders[pointFolderId].color) ? currentFolders[pointFolderId].color : '#ff4444';
-
-                const mIcon = L.divIcon({
-                    className: 'custom-tp-marker',
-                    html: `<i class="fas fa-map-marker-alt" style="color: ${folderColor}; font-size: 26px; text-shadow: 0 0 3px black;"></i>`,
-                    iconSize: [26, 26],
-                    iconAnchor: [13, 26]
-                });
-
-                const marker = L.marker([lat, lng], {icon: mIcon}).addTo(map);
-                marker.bindPopup(`<b>${displayName}</b><br>${point.address}`);
-                activeMapMarkers.push(marker);
-
-                const item = document.createElement('div');
-                item.className = 'tp-item';
-                item.style.cssText = `padding: 12px; margin: 6px 0; background: #00223a; border-radius: 8px; cursor: pointer; border-left: 4px solid ${folderColor}; color: white;`;
-                
-                item.innerHTML = `
-                    <div style="font-weight: bold; font-size: 14px;">${displayName}</div>
-                    <div style="color: #88a0b0; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top:2px;">${point.address}</div>
-                `;
-
-                item.addEventListener('click', () => {
-                    if(listModal) listModal.style.display = 'none'; 
-                    map.setView([lat, lng], 18);
-                    marker.openPopup();
-                    updatePanelValues(lat, lng, null, true);
-                    updateAddress(lat, lng, true);
-                });
-
-                item.setAttribute('data-search-name', displayName.toLowerCase() + point.address.toLowerCase());
-                tpListContainer.appendChild(item);
-            }
-        });
-
-        if (bounds.length > 0 && activeFolderId !== 'root') {
-            map.fitBounds(bounds, { padding: [50, 50] });
-        }
-    });
-}
-
-const elementSearchInput = document.getElementById('element-search');
-if (elementSearchInput) {
-    elementSearchInput.addEventListener('input', (e) => {
-        const query = e.target.value.toLowerCase();
-        document.querySelectorAll('.tp-item').forEach(item => {
-            const searchStr = item.getAttribute('data-search-name') || '';
-            item.style.display = searchStr.includes(query) ? 'block' : 'none';
-        });
-    });
-}
-
-// TAHRIRLASH PANELI
-const editColorSlider = document.getElementById('edit-color-slider');
-const editColorPreview = document.getElementById('edit-color-preview');
-
-if(editColorSlider) {
-    editColorSlider.addEventListener('input', () => {
-        editColorPreview.style.background = `hsl(${editColorSlider.value}, 100%, 50%)`;
-    });
-}
-
-window.openEditFolder = function(id, name, hue) {
-    editingFolderId = id;
-    document.getElementById('edit-group-name').value = name;
-    if(editColorSlider) {
-        editColorSlider.value = hue || 0;
-        editColorPreview.style.background = `hsl(${hue || 0}, 100%, 50%)`;
-    }
-    updateParentSelect('edit-parent-folder-select', id);
-    if(currentFolders[id] && currentFolders[id].parentId) {
-        document.getElementById('edit-parent-folder-select').value = currentFolders[id].parentId;
-    }
-    refreshTreeDropdowns(id);
-    document.getElementById('edit-folder-panel').classList.remove('hidden');
-};
-
-document.getElementById('delete-folder-btn').addEventListener('click', () => {
-    if (confirm("Ushbu guruhni o'chirmoqchimisiz? Ichidagi barcha ma'lumotlar o'chib ketishi mumkin!")) {
-        database.ref('Folders/' + editingFolderId).remove().then(() => {
-            showToast("Guruh o'chirildi");
-            document.getElementById('edit-folder-panel').classList.add('hidden');
-        });
-    }
-});
-
-document.getElementById('update-folder-btn').addEventListener('click', () => {
-    const newName = document.getElementById('edit-group-name').value;
-    const newParentId = document.getElementById('edit-parent-folder-select').value;
-    const newHue = editColorSlider ? editColorSlider.value : 0;
-
-    if (!newName) return showToast("Nomini kiriting");
-
-    database.ref('Folders/' + editingFolderId).update({
-        name: newName,
-        parentId: newParentId,
-        hue: newHue,
-        color: `hsl(${newHue}, 100%, 50%)`
-    }).then(() => {
-        showToast("Guruh yangilandi!");
-        document.getElementById('edit-folder-panel').classList.add('hidden');
-    });
-});
-
-// ==========================================
-// SHU YERDAN KEYINGI TUSHIB QOLGAN HAMMA ELEMENTLAR:
-// ==========================================
 
 // TAB TIZIMI VA DINAMIK MARKERLAR
 const tabFolders = document.getElementById('tab-folders');
@@ -625,3 +463,154 @@ if(editColorSlider && editColorPreview) {
         editColorPreview.style.background = `hsl(${editColorSlider.value}, 100%, 50%)`;
     });
 }
+
+window.openEditFolder = function(id, name, hue) {
+    editingFolderId = id;
+    document.getElementById('edit-group-name').value = name;
+    if(editColorSlider) {
+        editColorSlider.value = hue || 0;
+        editColorPreview.style.background = `hsl(${hue || 0}, 100%, 50%)`;
+    }
+    updateParentSelect('edit-parent-folder-select', id);
+    if(currentFolders[id] && currentFolders[id].parentId) {
+        document.getElementById('edit-parent-folder-select').value = currentFolders[id].parentId;
+    }
+    refreshTreeDropdowns(id);
+    document.getElementById('edit-folder-panel').classList.remove('hidden');
+};
+
+document.getElementById('delete-folder-btn').addEventListener('click', () => {
+    if (confirm("Ushbu guruhni o'chirmoqchimisiz? Ichidagi barcha ma'lumotlar o'chib ketishi mumkin!")) {
+        database.ref('Folders/' + editingFolderId).remove().then(() => {
+            showToast("Guruh o'chirildi");
+      document.getElementById('update-folder-btn').addEventListener('click', () => {
+    const newName = document.getElementById('edit-group-name').value;
+    const newParentId = document.getElementById('edit-parent-folder-select').value;
+    const newHue = editColorSlider ? editColorSlider.value : 0;
+
+    if (!newName) return showToast("Nomini kiriting");
+
+    database.ref('Folders/' + editingFolderId).update({
+        name: newName,
+        parentId: newParentId,
+        hue: newHue,
+        color: `hsl(${newHue}, 100%, 50%)`
+    }).then(() => {
+        showToast("Guruh yangilandi!");
+        document.getElementById('edit-folder-panel').classList.add('hidden');
+    });
+});
+
+// ==========================================
+// TAB TIZIMI VA DINAMIK MARKERLAR
+// ==========================================
+const tabFolders = document.getElementById('tab-folders');
+const tabItems = document.getElementById('tab-items');
+const foldersSection = document.getElementById('folders-section');
+const itemsSection = document.getElementById('items-section');
+
+if (tabFolders && tabItems) {
+    tabFolders.addEventListener('click', () => {
+        tabFolders.classList.add('active');
+        tabItems.classList.remove('active');
+        foldersSection.classList.add('active');
+        itemsSection.classList.remove('active');
+    });
+
+    tabItems.addEventListener('click', () => {
+        tabItems.classList.add('active');
+        tabFolders.classList.remove('active');
+        itemsSection.classList.add('active');
+        foldersSection.classList.remove('active');
+        loadFilteredPoints();
+    });
+}
+
+function loadFilteredPoints() {
+    const tpListContainer = document.getElementById('tp-list');
+    if (!tpListContainer) return;
+    
+    tpListContainer.innerHTML = "<p style='color:gray; padding:15px; text-align:center;'>Yuklanmoqda...</p>";
+    activeMapMarkers.forEach(m => map.removeLayer(m));
+    activeMapMarkers = [];
+
+    database.ref('TPs').once('value', (snapshot) => {
+        const allPoints = snapshot.val() || {};
+        tpListContainer.innerHTML = ""; 
+
+        const keys = Object.keys(allPoints);
+        const filteredKeys = activeFolderId === 'root' ? keys : keys.filter(key => allPoints[key].folderId === activeFolderId);
+
+        if (filteredKeys.length === 0) {
+            tpListContainer.innerHTML = "<p style='color:gray; padding:15px; text-align:center;'>Elementlar mavjud emas.</p>";
+            return;
+        }
+
+        let bounds = [];
+
+        filteredKeys.forEach(key => {
+            const point = allPoints[key];
+            const lat = parseFloat(point.lat);
+            const lng = parseFloat(point.lng);
+            const displayName = point.address.split(',')[0] || "Noma'lum element";
+
+            if (!isNaN(lat) && !isNaN(lng)) {
+                bounds.push([lat, lng]);
+                const pointFolderId = point.folderId;
+                const folderColor = (currentFolders[pointFolderId] && currentFolders[pointFolderId].color) ? currentFolders[pointFolderId].color : '#ff4444';
+
+                const mIcon = L.divIcon({
+                    className: 'custom-tp-marker',
+                    html: `<i class="fas fa-map-marker-alt" style="color: ${folderColor}; font-size: 26px; text-shadow: 0 0 3px black;"></i>`,
+                    iconSize: [26, 26],
+                    iconAnchor: [13, 26]
+                });
+
+                const marker = L.marker([lat, lng], {icon: mIcon}).addTo(map);
+                marker.bindPopup(`<b>${displayName}</b><br>${point.address}`);
+                activeMapMarkers.push(marker);
+
+                const item = document.createElement('div');
+                item.className = 'tp-item';
+                item.style.cssText = `padding: 12px; margin: 6px 0; background: #00223a; border-radius: 8px; cursor: pointer; border-left: 4px solid ${folderColor}; color: white;`;
+                
+                item.innerHTML = `
+                    <div style="font-weight: bold; font-size: 14px;">${displayName}</div>
+                    <div style="color: #88a0b0; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top:2px;">${point.address}</div>
+                `;
+
+                item.addEventListener('click', () => {
+                    const listModal = document.getElementById('list-container');
+                    if(listModal) listModal.style.display = 'none'; 
+                    map.setView([lat, lng], 18);
+                    marker.openPopup();
+                    updatePanelValues(lat, lng, null, true);
+                    updateAddress(lat, lng, true);
+                });
+
+                item.setAttribute('data-search-name', displayName.toLowerCase() + point.address.toLowerCase());
+                tpListContainer.appendChild(item);
+            }
+        });
+
+        if (bounds.length > 0 && activeFolderId !== 'root') {
+            map.fitBounds(bounds, { padding: [50, 50] });
+        }
+    });
+}
+
+// QIDIRUV TIZIMI MANTIQI
+const elementSearchInput = document.getElementById('element-search');
+if (elementSearchInput) {
+    elementSearchInput.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase();
+        document.querySelectorAll('.tp-item').forEach(item => {
+            const searchStr = item.getAttribute('data-search-name') || '';
+            item.style.display = searchStr.includes(query) ? 'block' : 'none';
+        });
+    });
+}
+
+// Tizimni dastlabki ishga tushirish funksiyasi
+loadFolders();
+          
