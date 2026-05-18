@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="uz">
 <head>
@@ -134,28 +133,40 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 
     <script src="app.js?v=1.2"></script>
+    
     <style>
-        /* Panel ochiq holatda ekranning eng tagida, hamma narsadan tepada turadi */
+        /* Xarita fiksallangan balandlikda sening eski holatiga qaytdi */
+        #map {
+            position: absolute;
+            top: 60px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 1;
+        }
+
+        /* Panel ochiq holatda ekranning eng tagida z-index bilan mustahkamlandi */
         .bottom-panel {
             position: fixed !important;
             bottom: 0 !important;
             left: 0 !important;
             width: 100% !important;
-            z-index: 9999 !important; /* Menyu va xaritadan tepada turishini kafolatlaydi */
-            transition: transform 0.3s ease-in-out !important;
+            z-index: 2000 !important; /* Header va xarita orasida to'g'ri turishi uchun */
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
             transform: translateY(0) !important;
         }
 
-        /* Panel yopilganda faqat koordinatalar bloki (185px) pastga tushadi, tugmalar qoladi */
+        /* Panel yopilganda (Siz ko'rsatgan 5842.jpg dagi holat) */
         .bottom-panel.minimized {
-            transform: translateY(185px) !important;
+            transform: translateY(185px) !important; /* Faqat ma'lumotlar bloki yashirinadi, tugmalar qoladi */
         }
 
-        /* Yopilganda strelka belgisi tepaga qarashi uchun */
+        /* Strelka belgisi holati */
         .bottom-panel.minimized #toggle-icon {
             transform: rotate(180deg) !important;
         }
     </style>
     
 </body>
-</html>
+            </html>
+            
