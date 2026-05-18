@@ -483,7 +483,16 @@ document.getElementById('delete-folder-btn').addEventListener('click', () => {
     if (confirm("Ushbu guruhni o'chirmoqchimisiz? Ichidagi barcha ma'lumotlar o'chib ketishi mumkin!")) {
         database.ref('Folders/' + editingFolderId).remove().then(() => {
             showToast("Guruh o'chirildi");
-      document.getElementById('update-folder-btn').addEventListener('click', () => {
+        document.getElementById('delete-folder-btn').addEventListener('click', () => {
+    if (confirm("Ushbu guruhni o'chirmoqchimisiz? Ichidagi barcha ma'lumotlar o'chib ketishi mumkin!")) {
+        database.ref('Folders/' + editingFolderId).remove().then(() => {
+            showToast("Guruh o'chirildi");
+            document.getElementById('edit-folder-panel').classList.add('hidden');
+        });
+    }
+});
+
+document.getElementById('update-folder-btn').addEventListener('click', () => {
     const newName = document.getElementById('edit-group-name').value;
     const newParentId = document.getElementById('edit-parent-folder-select').value;
     const newHue = editColorSlider ? editColorSlider.value : 0;
@@ -611,6 +620,6 @@ if (elementSearchInput) {
     });
 }
 
-// Tizimni dastlabki ishga tushirish funksiyasi
+// Tizimni ishga tushirish
 loadFolders();
           
