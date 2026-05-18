@@ -22,7 +22,7 @@ var isManualSelection = false;
 let currentFolders = {}; 
 let activeFolderId = 'root'; 
 let editingFolderId = null;
-let activeMapMarkers = []; // Xaritadagi dinamik markerlarni nazorat qilish uchun massiv
+let activeMapMarkers = []; 
 
 // Google Satellit qatlami
 L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}',{
@@ -188,7 +188,7 @@ function copyCoords() {
 
 // PAPKALAR VA IERARXIYA MANTIQI
 const listBtn = document.getElementById('list-btn');
-const menuBtn = document.getElementById('menu-btn'); // 4 ta chiziqli menyu tugmasi
+const menuBtn = document.getElementById('menu-btn'); 
 const listModal = document.getElementById('list-container');
 const closeList = document.getElementById('close-list');
 const openAddBtn = document.getElementById('open-add-folder');
@@ -243,7 +243,6 @@ function loadFolders() {
         currentFolders = snapshot.val() || {};
         const treeRoot = document.getElementById('tree-root');
         if(treeRoot) renderTree('root', treeRoot);
-        
         refreshTreeDropdowns();
     });
 }
@@ -303,44 +302,57 @@ function updateParentSelect(selectId, excludeId = null) {
             select.appendChild(option);
         }
     });
-    refreshTreeDropdowns(excludeId);
+}
+
+function refreshTreeDropdowns(excludeId = null) {
+    const addDropdown = document.getElementById('add-tree-dropdown');
+    const editDropdown = document.getElementById('edit-tree-dropdown');
+    
+    if(addDropdown) buildTreeDropdown('root', addDropdown, 'parent-folder-select', excludeId);
+    if(editDropdown) buildTreeDropdown('root', editDropdown, 'edit-parent-folder-select', excludeId);
+}
+
+function buildTreeDropdown(parentId, container, targetSelectId, excludeId, level = 0) {
+    if(level === 0) container.innerHTML = `<div onclick="selectDropdownNode('root', '${targetSelectId}', this)" style="padding-left:10px;">Asosiy (Bosh guruh)</div>`;
+    
+    const children = Object.keys(currentFolders).filter(id => currentFolders[id].parentId === parentId && id !== excludeId);
+    children.forEach(id => {
+        const node = document.createElement('div');
+        node.style.paddingLeft = `${(level + 1) * 15}px`;
+        node.innerHTML = `<i class="fas fa-folder" style="color:${currentFolders[id].color}; margin-right:5px;"></i> ${currentFolders[id].name}`;
+        node.onclick = (e) => { e.stopPropagation(); selectDropdownNode(id, targetSelectId, node); };
+        container.appendChild(node);
+        buildTreeDropdown(id, container, targetSelectId, excludeId, level + 1);
+    });
+}
+
+function selectDropdownNode(id, selectId, element) {
+    const select = document.getElementById(selectId);
+    if(select) select.value = id;
+    element.parentNode.querySelectorAll('div').forEach(el => el.classList.remove('selected-tree-node'));
+    element.classList.add('selected-tree-node');
+}
+
+// TA'MIRLANGAN PANAL HARAKATI (Silliq ko'tarilib-tushishi uchun)
+function togglePanel() {
+    const panel = document.getElementById('panel');
+    const icon = document.getElementById('toggle-icon');
+    
+    panel.classList.toggle('minimized');
+    
+    if(panel.classList.contains('minimized')) {
+        icon.style.transform = 'rotate(0deg)';
+    } else {
+        icon.style.transform = 'rotate(180deg)';
+    }
+    setTimeout(() => { map.invalidateSize(); }, 400);
 }
 
 window.addEventListener('load', function() {
     setTimeout(function() { map.invalidateSize(); }, 500);
 });
 
-// TUZATILGAN PANEL KO'TARILISH VA TUSHISH MANTIQI
-
-function togglePanel() {
-    const panel = document.getElementById('panel');
-    const icon = document.getElementById('toggle-icon');
-    
-    if (panel) {
-        panel.classList.toggle('minimized');
-        
-        if (icon) {
-            icon.style.transform = panel.classList.contains('minimized') ? 'rotate(0deg)' : 'rotate(180deg)';
-        }
-    }
-    
-    setTimeout(() => { 
-        if (typeof map !== 'undefined' && map.invalidateSize) {
-            map.invalidateSize(); 
-        }
-    }, 400);
-}
-
-
-// KLIK HODISASINI ELEMENTLARGA ULAB QO'YISH
-document.addEventListener("DOMContentLoaded", function() {
-    const toggleTrigger = document.getElementById('toggle-icon') || document.querySelector('.toggle-container');
-    if (toggleTrigger) {
-        toggleTrigger.addEventListener('click', togglePanel);
-    }
-});
-
-// TAB TIZIMI VA DINAMIK MARKERLAR FUNKSIYASI
+// TAB TIZIMI VA DINAMIK MARKERLAR
 const tabFolders = document.getElementById('tab-folders');
 const tabItems = document.getElementById('tab-items');
 const foldersSection = document.getElementById('folders-section');
@@ -350,15 +362,15 @@ if (tabFolders && tabItems) {
     tabFolders.addEventListener('click', () => {
         tabFolders.classList.add('active');
         tabItems.classList.remove('active');
-        if(foldersSection) foldersSection.classList.add('active');
-        if(itemsSection) itemsSection.classList.remove('active');
+        foldersSection.classList.add('active');
+        itemsSection.classList.remove('active');
     });
 
     tabItems.addEventListener('click', () => {
         tabItems.classList.add('active');
         tabFolders.classList.remove('active');
-        if(itemsSection) itemsSection.classList.add('active');
-        if(foldersSection) foldersSection.classList.remove('active');
+        itemsSection.classList.add('active');
+        foldersSection.classList.remove('active');
         loadFilteredPoints();
     });
 }
@@ -368,7 +380,6 @@ function loadFilteredPoints() {
     if (!tpListContainer) return;
     
     tpListContainer.innerHTML = "<p style='color:gray; padding:15px; text-align:center;'>Yuklanmoqda...</p>";
-
     activeMapMarkers.forEach(m => map.removeLayer(m));
     activeMapMarkers = [];
 
@@ -394,7 +405,6 @@ function loadFilteredPoints() {
 
             if (!isNaN(lat) && !isNaN(lng)) {
                 bounds.push([lat, lng]);
-
                 const pointFolderId = point.folderId;
                 const folderColor = (currentFolders[pointFolderId] && currentFolders[pointFolderId].color) ? currentFolders[pointFolderId].color : '#ff4444';
 
@@ -419,8 +429,7 @@ function loadFilteredPoints() {
                 `;
 
                 item.addEventListener('click', () => {
-                    const listModalEl = document.getElementById('list-container');
-                    if(listModalEl) listModalEl.style.display = 'none'; 
+                    if(listModal) listModal.style.display = 'none'; 
                     map.setView([lat, lng], 18);
                     marker.openPopup();
                     updatePanelValues(lat, lng, null, true);
@@ -449,6 +458,7 @@ if (elementSearchInput) {
     });
 }
 
+// TAHRIRLASH PANELI
 const editColorSlider = document.getElementById('edit-color-slider');
 const editColorPreview = document.getElementById('edit-color-preview');
 
@@ -469,7 +479,6 @@ window.openEditFolder = function(id, name, hue) {
     if(currentFolders[id] && currentFolders[id].parentId) {
         document.getElementById('edit-parent-folder-select').value = currentFolders[id].parentId;
     }
-    
     refreshTreeDropdowns(id);
     document.getElementById('edit-folder-panel').classList.remove('hidden');
 };
@@ -488,7 +497,7 @@ document.getElementById('update-folder-btn').addEventListener('click', () => {
     const newParentId = document.getElementById('edit-parent-folder-select').value;
     const newHue = editColorSlider ? editColorSlider.value : 0;
 
-    if (!newName || newName.trim() === "") return showToast("Nomini kiriting");
+    if (!newName) return showToast("Nomini kiriting");
 
     database.ref('Folders/' + editingFolderId).update({
         name: newName,
@@ -500,70 +509,3 @@ document.getElementById('update-folder-btn').addEventListener('click', () => {
         document.getElementById('edit-folder-panel').classList.add('hidden');
     });
 });
-
-// DINAMIK IERARXIK DROPDOWNLARNI QAYTA CHIZISH TIZIMI
-function refreshTreeDropdowns(excludeId = null) {
-    const addDropdownBox = document.getElementById('add-tree-dropdown-box');
-    const editDropdownBox = document.getElementById('edit-tree-dropdown-box');
-// DINAMIK IERARXIK DROPDOWNLARNI QAYTA CHIZISH TIZIMI
-function refreshTreeDropdowns(excludeId = null) {
-    const addDropdownBox = document.getElementById('add-tree-dropdown-box');
-    const editDropdownBox = document.getElementById('edit-tree-dropdown-box');
-
-    if (addDropdownBox) {
-        addDropdownBox.innerHTML = "";
-        buildTreeDropdown('root', addDropdownBox, 'parent-folder-select', excludeId, 0);
-    }
-    if (editDropdownBox) {
-        editDropdownBox.innerHTML = "";
-        buildTreeDropdown('root', editDropdownBox, 'edit-parent-folder-select', excludeId, 0);
-    }
-}
-
-function buildTreeDropdown(parentId, container, targetSelectId, excludeId, level) {
-    const children = Object.keys(currentFolders).filter(id => currentFolders[id].parentId === parentId);
-    
-    children.forEach(id => {
-        if (id === excludeId) return;
-
-        const folder = currentFolders[id];
-        const row = document.createElement('div');
-        row.style.paddingLeft = `${level * 20 + 10}px`;
-        
-        const realSelect = document.getElementById(targetSelectId);
-        if (realSelect && realSelect.value === id) {
-            row.className = "selected-tree-node";
-            row.style.background = "#007AFF";
-        }
-
-        const hasChildren = Object.keys(currentFolders).some(childId => currentFolders[childId].parentId === id);
-        const toggleIcon = hasChildren ? `<span class="dropdown-toggle-icon">▸</span>` : `<span class="dropdown-toggle-icon" style="opacity:0;">▸</span>`;
-
-        row.innerHTML = `
-            ${toggleIcon}
-            <i class="fas fa-folder" style="color: ${folder.color}; margin-right: 8px; font-size: 14px;"></i>
-            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${folder.name}</span>
-        `;
-
-        row.addEventListener('click', (event) => {
-            event.stopPropagation();
-            const selectEl = document.getElementById(targetSelectId);
-            if (selectEl) {
-                selectEl.value = id;
-                selectEl.dispatchEvent(new Event('change'));
-            }
-            container.querySelectorAll('div').forEach(d => {
-                d.className = "";
-                d.style.background = "transparent";
-            });
-            row.className = "selected-tree-node";
-            row.style.background = "#007AFF";
-            showToast(`Parent: ${folder.name}`);
-        });
-
-        container.appendChild(row);
-        buildTreeDropdown(id, container, targetSelectId, excludeId, level + 1);
-    });
-}
-  
-                      
