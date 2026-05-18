@@ -1,4 +1,6 @@
-/* 1. Asosiy Panel */
+/* =========================================================================
+   1. ASOSIY PANEL VA NAVIGATSIYA STILLARI
+   ========================================================================= */
 .bottom-panel {
     position: fixed;
     bottom: 0;
@@ -11,23 +13,19 @@
     border-top-left-radius: 25px;
     border-top-right-radius: 25px;
     box-shadow: 0 -5px 15px rgba(0,0,0,0.3);
-    height: 255px; /* Standart ochilgan holatidagi balandlik */
-}
+    max-height: 40vh !important;
+}. 
 
-/* 2. PANEL YOPILISHI (Faqat ma'lumotlar yo'qoladi, tugmalar qoladi) */
-.bottom-panel.minimized {
-    height: 60px !important; /* Yopilganda panel pastga tushadi */
-}
-
+/* Panel yopilishi (Faqat ma'lumotlar yo'qoladi, tugmalar qoladi) */
 .bottom-panel.minimized .info-content {
-    height: 0 !important;
-    padding-top: 0 !important;
-    padding-bottom: 0 !important;
+    height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
     opacity: 0;
     pointer-events: none;
 }
 
-/* 3. Strelka tugmasi */
+/* Strelka tugmasi */
 .toggle-container {
     display: flex;
     justify-content: center;
@@ -45,20 +43,20 @@
     justify-content: center;
 }
 
-/* 4. Ma'lumotlar bloki (Latitude, Longitude, Address) */
+/* Ma'lumotlar bloki (Latitude, Longitude, Address) */
 .info-content {
     position: relative; /* Copy tugmasini o'ngga surish uchun shart */
     padding: 10px 20px;
-    height: 125px; 
+    height: 185px; 
     overflow: hidden;
     transition: all 0.4s ease-in-out;
 }
 
-/* 5. COPY TUGMASI (O'ng tomonda alohida blok) */
+/* COPY TUGMASI (O'ng tomonda alohida blok) */
 .copy-box {
     position: absolute;
     right: 20px;
-    top: 25px; /* Koordinatalar qarshisida turishi uchun */
+    top: 40px; /* Koordinatalar qarshisida turishi uchun */
     text-align: center;
     cursor: pointer;
     background: rgba(255, 255, 255, 0.1);
@@ -72,7 +70,7 @@
 .copy-box i { font-size: 22px; margin-bottom: 4px; }
 .copy-box span { font-size: 10px; display: block; }
 
-/* 6. Ma'lumotlar qatorlari */
+/* Ma'lumotlar qatorlari */
 .data-row {
     display: flex;
     margin-bottom: 10px;
@@ -90,11 +88,11 @@
     text-align: left;
 }
 
-/* 7. Pastki Tugmalar (Save/Share) */
+/* Pastki Tugmalar (Save/Share) */
 .action-buttons {
     display: flex;
     gap: 12px;
-    padding: 5px 20px 20px 20px;
+    padding: 10px 20px 25px 20px;
 }
 
 .main-btn {
@@ -109,11 +107,13 @@
     cursor: pointer;
 }
 
-/* 8. Xarita ustidagi elementlar */
+/* =========================================================================
+   2. XARITA VA FOYDALANUVCHI GEOLOKATSIYA NUQTASI STILLARI
+   ========================================================================= */
 .map-overlay-btn {
-    position: fixed !important;
-    right: 20px !important;
-    bottom: 275px !important; /* Panel yopilganda ham tugmaning tepasida turishi uchun */
+    position: absolute;
+    right: 20px;
+    bottom: 80px; /* Panel yopilganda ham tugmaning tepasida turishi uchun */
     z-index: 1001;
     background: white;
     border: none;
@@ -121,17 +121,10 @@
     height: 45px;
     border-radius: 10px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-    transition: bottom 0.4s ease-in-out;
-}
-
-/* Panel yopilganda GPS tugmasini ham pastga tushirish */
-.bottom-panel.minimized ~ #locate-btn {
-    bottom: 80px !important;
 }
 
 #toggle-icon { transition: transform 0.4s; }
 
-/* Foydalanuvchi ko'k nuqtasi va atrofdagi doira */
 .user-location-container {
     display: flex;
     align-items: center;
@@ -165,13 +158,13 @@
     width: 100%;
     height: 60px; /* Balandlikni qat'iy belgilaymiz */
     background: #003049; 
-    display: flex; /* Elementlarni qatordagi tartibga soladi */
-    align-items: center; /* Vertikal o'rtaga tekislaydi */
-    justify-content: space-between; /* Chap, o'rta va o'ng blokni ajratadi */
+    display: flex; 
+    align-items: center; 
+    justify-content: space-between; 
     padding: 0 15px;
     z-index: 2000;
     color: white;
-    box-sizing: border-box; /* Ichki paddingni balandlikka qo'shib yubormaydi */
+    box-sizing: border-box; 
 }
 
 .header-title {
@@ -187,7 +180,7 @@
 .header-right {
     display: flex;
     align-items: center;
-    gap: 15px; /* Ro'yxat va Xarita turi tugmasi orasidagi masofa */
+    gap: 15px; 
 }
 
 .map-type-preview {
@@ -200,46 +193,19 @@
     cursor: pointer;
 }
 
-/* Xaritani header ostidan boshlanadigan qilish */
 #map {
     position: absolute;
     top: 60px; /* Menyudan keyin boshlanishi uchun */
     left: 0;
     right: 0;
     bottom: 0;
-    height: calc(100vh - 60px) !important; /* Ekran balandligidan menyuni ayirib tashlaydi */
+    height: calc(100vh - 60px) !important; 
     z-index: 1;
 }
 
-/* Marker ustidagi o'chirish tugmasi stili */
-.marker-delete-popup {
-    background: white;
-    padding: 8px 12px;
-    border-radius: 5px;
-    cursor: pointer;
-    font-weight: bold;
-    color: #d9534f;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-    text-align: center;
-    font-size: 14px;
-    white-space: nowrap;
-}
-
-.marker-delete-popup:hover {
-    background: #f8f8f8;
-}
-
-/* Leafletning standart popup qutisini yashirish */
-.leaflet-popup-content-wrapper {
-    background: none !important;
-    box-shadow: none !important;
-    padding: 0 !important;
-}
-.leaflet-popup-tip-container {
-    display: none !important;
-}
-
-/* Popup dizayni */
+/* =========================================================================
+   3. LEAFLET POPUP VA MARKER STILLARI
+   ========================================================================= */
 .marker-delete-popup {
     background: white;
     padding: 8px 15px;
@@ -250,14 +216,20 @@
     border: 2px solid #eee;
     text-align: center;
     box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    white-space: nowrap;
+    font-size: 14px;
 }
 
-/* Standart Leaflet popup dizaynini tozalash */
+.marker-delete-popup:hover {
+    background: #f8f8f8;
+}
+
 .custom-popup .leaflet-popup-content-wrapper {
     background: transparent !important;
     box-shadow: none !important;
     padding: 0 !important;
 }
+
 .custom-popup .leaflet-popup-tip-container {
     display: none !important;
 }
@@ -268,7 +240,9 @@
     justify-content: center;
 }
 
-/* Guruhlar Ro'yxati Modali */
+/* =========================================================================
+   4. MODAL OYNA VA TAB (BO'LIMLAR) CONTROLLARI
+   ========================================================================= */
 .list-modal {
     position: fixed;
     top: 0;
@@ -294,6 +268,15 @@
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+.list-content.full-screen {
+    width: 100% !important;
+    height: 100% !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+    display: flex;
+    flex-direction: column;
+}
+
 .list-header {
     display: flex;
     justify-content: space-between;
@@ -303,7 +286,73 @@
     padding-bottom: 10px;
 }
 
-/* Daraxtsimon ierarxiya stili */
+.tab-control {
+    display: flex;
+    margin: 10px 15px 5px 15px; 
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 4px;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    background: none;
+    color: #ccc;
+    font-weight: bold;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.tab-btn.active {
+    background: #007AFF;
+    color: white;
+}
+
+.tab-content { 
+    display: none; 
+    padding: 15px; 
+    overflow-y: auto; 
+    flex: 1; 
+}
+
+.tab-content.active { 
+    display: block; 
+}
+
+/* Qidiruv maydoni */
+.search-input-field input::placeholder {
+    color: #5c7588;
+}
+
+.search-input-field input:focus {
+    border-color: #007AFF !important;
+    box-shadow: 0 0 8px rgba(0, 122, 255, 0.3);
+}
+
+/* TP Ro'yxati elementlari */
+.tp-list-container {
+    height: 100%;
+    overflow-y: auto;
+}
+
+.tp-item {
+    background: rgba(255, 255, 255, 0.05);
+    margin-bottom: 10px;
+    padding: 12px;
+    border-radius: 10px;
+    border-left: 4px solid #007AFF;
+    transition: background 0.2s;
+}
+
+.tp-item:active {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+/* =========================================================================
+   5. ASOSIY PANELDAGI ASIL IERARXIK DARAXT STILLARI
+   ========================================================================= */
 .folder-tree {
     margin: 10px 0;
 }
@@ -314,13 +363,48 @@
 }
 
 .folder-children {
-    display: none;
-    margin-left: 20px;
-    border-left: 1px dashed rgba(255, 255, 255, 0.2);
-    padding-left: 10px;
+    margin-left: 8px !important; 
+    border-left: 1px dashed rgba(255, 255, 255, 0.1); 
+    padding-left: 4px !important;
 }
 
-/* Yangi guruh ochish paneli (Bottom Sheet) */
+.folder-header {
+    padding: 2px 0px !important; 
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: 0.2s;
+}
+
+.folder-header.active-folder {
+    background: rgba(0, 122, 255, 0.15);
+}
+
+.folder-header i {
+    margin: 0 4px !important;
+    font-size: 13px;
+}
+
+/* Aktiv qalamcha - tahrirlash */
+.edit-icon {
+    display: none; 
+    margin-left: auto; 
+    color: #007AFF;
+    padding: 0 5px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.active-folder .edit-icon {
+    display: inline-block;
+}
+
+/* =========================================================================
+   6. BOTTOM SHEET VA MULTI-CHOOSE IERARXIK DROPDOWN (YANGI TUZATISH)
+   ========================================================================= */
 .bottom-sheet-folder {
     position: fixed;
     bottom: 0;
@@ -347,7 +431,6 @@
     margin: 0 auto 15px;
 }
 
-/* Rang tanlagich (Hue Slider) */
 .hue-slider {
     width: 100%;
     height: 12px;
@@ -380,110 +463,18 @@
     font-size: 14px;
 }
 
-/* To'liq ekran rejimi */
-.list-content.full-screen {
-    width: 100% !important;
-    height: 100% !important;
-    max-height: 100vh !important;
-    border-radius: 0 !important;
-    display: flex;
-    flex-direction: column;
+/* --- KODLAR REKOMENDATSIYASI: ESKI SELECTLARNI YASHIRISH --- */
+#parent-folder-select, 
+#edit-parent-folder-select {
+    display: none !important; /* Standart brauzer drayver selectini yashiramiz */
 }
 
-/* Bo'limlar (Tab) boshqaruvi */
-.tab-control {
-    display: flex;
-    margin: 10px 15px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    padding: 4px;
-}
-
-.tab-btn {
-    flex: 1;
-    padding: 10px;
-    border: none;
-    background: none;
-    color: #ccc;
-    font-weight: bold;
-    border-radius: 10px;
-    cursor: pointer;
-}
-
-.tab-btn.active {
-    background: #007AFF;
-    color: white;
-}
-
-/* Bo'limlarni yashirish/ko'rsatish */
-.tab-content { display: none; padding: 15px; overflow-y: auto; flex: 1; }
-.tab-content.active { display: block; }
-
-.search-input-field input {
-    width: 100%;
-    padding: 10px;
-    border-radius: 8px;
-    background: #001a2c;
-    color: white;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    margin-bottom: 10px;
-}
-
-.tp-list-container {
-    height: 100%;
-    overflow-y: auto;
-}
-
-/* Ierarxiya chiziqlari va masofasini minimal qilish */
-.folder-children {
-    margin-left: 8px !important; 
-    border-left: 1px dashed rgba(255, 255, 255, 0.1); 
-    padding-left: 4px !important;
-}
-
-/* Papka blokini chapga surish */
-.folder-header {
-    padding: 2px 0px !important; 
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    width: 100%;
-    cursor: pointer;
-    border-radius: 4px;
-    transition: 0.2s;
-}
-
-/* Tanlangan papka stili */
-.folder-header.active-folder {
-    background: rgba(0, 122, 255, 0.15);
-}
-
-.edit-icon {
-    display: none; 
-    margin-left: auto; 
-    color: #007AFF;
-    padding: 0 5px;
-    font-size: 14px;
-}
-
-.active-folder .edit-icon {
-    display: inline-block;
-}
-
-.folder-header i {
-    margin: 0 4px !important;
-    font-size: 13px;
-}
-
-#parent-folder-select, #edit-parent-folder-select {
-    display: none !important;
-}
-
+/* --- TAHRIRLASH/QO'SHISH OYNASIDAGI DARAXTSIMON DROPDOWN CONTAINER --- */
 .tree-dropdown-container {
     width: 100%;
-    max-height: 180px;
+    max-height: 210px;
     overflow-y: auto;
-    background: #001a2c !important;
+    background: #001a2c !important; /* To'q chiroyli fon */
     border-radius: 8px;
     padding: 8px;
     margin: 10px 0;
@@ -491,6 +482,7 @@
     box-sizing: border-box;
 }
 
+/* Daraxt ichidagi har bir satr (Guruh elementi) */
 .tree-dropdown-container div {
     display: flex;
     align-items: center;
@@ -501,14 +493,63 @@
     border-radius: 6px;
     margin-top: 2px;
     transition: background 0.2s ease;
+    user-select: none;
 }
 
 .tree-dropdown-container div:hover {
     background: rgba(255, 255, 255, 0.08);
 }
 
-.tree-dropdown-container .selected-tree-node {
+/* Tanlangan elementning ko'k fon bilan ajralishi */
+.tree-dropdown-container .selected-tree-node,
+.tree-dropdown-container div[style*="background: rgb(0, 122, 255)"],
+.tree-dropdown-container div[style*="background: #007AFF"] {
     background: #007AFF !important;
     font-weight: bold;
     color: white !important;
-   }
+}
+
+/* Ichki guruh ochuvchi/yopuvchi dynamic plus-minus belgisi */
+.dropdown-toggle-icon, .tree-toggle-icon {
+    width: 22px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #88a0b0;
+    font-weight: bold;
+    font-size: 16px;
+    margin-right: 6px;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.dropdown-toggle-icon:hover, .tree-toggle-icon:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+}
+
+/* Chiroyli qorong'u scrollbar */
+.tree-dropdown-container::-webkit-scrollbar {
+    width: 6px;
+}
+.tree-dropdown-container::-webkit-scrollbar-track {
+    background: #001a2c;
+}
+.tree-dropdown-container::-webkit-scrollbar-thumb {
+    background: #003a61;
+    border-radius: 10px;
+}
+/* PANEL ENG TEPAGA KO'TARILGANDA O'SHA KNOPKADAN PASTROQDA TO'XTACHISHI UCHUN MAJBURIY CHEKLOV */
+#panel, .bottom-panel {
+    max-height: 230px !important;
+    height: 230px !important;
+}
+
+/* Tugmani majburan o'sha panel ko'tarilganda ham tepada chiroyli ko'rinib turishi uchun */
+.map-overlay-btn {
+    position: fixed !important;
+    right: 20px !important;
+    top: 80px !important;
+    bottom: auto !important;
+    }
