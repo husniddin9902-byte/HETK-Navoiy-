@@ -3,119 +3,145 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HETK Navoiy</title>
+    <title>Energo Monitoring</title>
+    
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link rel="stylesheet" href="style.css?v=7.0" />
 </head>
 <body>
 
-    <div class="header-panel">
-        <div class="header-left">
-            <i class="fas fa-bars" id="menu-btn"></i>
-        </div>
-        <div class="header-title">Сохранить местоположение</div>
-        <div class="header-right">
-            <i class="fas fa-list-ul" id="list-btn"></i>
-            <div class="map-type-preview" id="map-type-btn"></div>
-        </div>
-    </div>
-
     <div id="map"></div>
 
-    <button id="locate-btn" class="map-overlay-btn"><i class="fas fa-crosshairs"></i></button>
-
-    <div class="bottom-panel minimized" id="panel">
-        <div class="toggle-container" onclick="togglePanel()">
-            <div class="toggle-circle">
-                <i class="fas fa-chevron-up" id="toggle-icon"></i>
-            </div>
-        </div>
-
-        <div id="detailed-info" class="info-content">
-            <p class="accuracy-text">Accurate to <span id="accuracy">0</span> meters</p>
-            <div class="copy-box" onclick="copyCoords()">
-                <i class="far fa-copy"></i>
-                <span>Copy</span>
-            </div>
-            <div class="data-row"><span class="label">Latitude</span><span class="value">: <span id="latitude">0.000000</span></span></div>
-            <div class="data-row"><span class="label">Longitude</span><span class="value">: <span id="longitude">0.000000</span></span></div>
-            <div class="data-row"><span class="label">Address</span><span class="value">: <span id="address">Aniqlanmoqda...</span></span></div>
-        </div>
-
-        <div class="action-buttons">
-            <button class="main-btn save-btn">Save Location</button>
-            <button class="main-btn share-btn">Share Location</button>
+    <div class="top-bar">
+        <button class="menu-btn" id="menu-btn">
+            <i class="fas fa-bars"></i>
+        </button>
+        <div class="app-title">Сохранить местоположение</div>
+        <button class="list-btn" id="list-btn">
+            <i class="fas fa-list-ul"></i>
+        </button>
+        <div class="map-layer-indicator">
+            <i class="fas fa-globe"></i>
         </div>
     </div>
 
-    <div id="list-container" class="list-modal" style="display:none;">
-    <div class="list-content full-screen">
-        <div class="list-header">
-            <h3>Boshqaruv paneli</h3>
-            <button id="close-list" style="background:none; border:none; color:white; font-size:24px;">×</button>
-        </div>
+    <button class="locate-btn" id="locate-btn">
+        <i class="fas fa-crosshairs"></i>
+    </button>
 
-        <div class="tab-control">
-            <button class="tab-btn active" id="tab-folders">Guruhlar</button>
-            <button class="tab-btn" id="tab-items">Xarita</button>
+    <div class="bottom-panel" id="panel">
+        <div class="panel-toggle" onclick="togglePanel()">
+            <i class="fas fa-chevron-up" id="toggle-icon"></i>
         </div>
-
-        <div id="folders-section" class="tab-content active">
-            <div id="tree-root"></div>
-            <button id="open-add-folder" class="add-main-btn">+ Yangi guruh qo'shish</button>
-        </div>
-
-        <div id="items-section" class="tab-content">
-            <div id="tp-list" class="tp-list-container">
-                </div>
-        </div>
-    </div>
-</div>
-
-    <div id="edit-folder-panel" class="bottom-sheet-folder hidden">
-    <div class="sheet-handle"></div>
-    <h4>Guruhni tahrirlash</h4>
-    
-    <label>Guruh nomi:</label>
-    <input type="text" id="edit-group-name" style="width:100%; padding:10px; margin:10px 0; border-radius:8px; background:#001a2c; color:white; border:none;">
-    
         
-    <label>Yangi joylashuv (Ona guruh):</label>
-    <select id="edit-parent-folder-select" style="width:100%; padding:10px; margin:10px 0; border-radius:8px; background: #001a2c; color: white; border: none;"></select>
+        <div class="panel-content">
+            <div class="coord-row">
+                <div class="coord-box" onclick="copyCoords()">
+                    <span class="coord-label">Широта</span>
+                    <span class="coord-val" id="latitude">0.000000</span>
+                </div>
+                <div class="coord-box" onclick="copyCoords()">
+                    <span class="coord-label">Долгота</span>
+                    <span class="coord-val" id="longitude">0.000000</span>
+                </div>
+            </div>
 
-    <label>Guruh rangi:</label>
-    <input type="range" id="edit-color-slider" min="0" max="360" value="0" class="hue-slider">
-    <div id="edit-color-preview" style="width:40px; height:40px; border-radius:50%; margin:10px auto; border:2px solid white; background:red;"></div>
-    
-    <div class="sheet-buttons" style="display:flex; gap:10px; margin-top:15px;">
-        <button id="delete-folder-btn" style="flex:1; background:#ff4444; color:white; border:none; padding:12px; border-radius:8px;">O'chirish</button>
-        <button id="update-folder-btn" style="flex:1; background:#007AFF; color:white; border:none; padding:12px; border-radius:8px;">Saqlash</button>
-    </div>
-    </div>
-    
-    
+            <div class="info-row">
+                <i class="fas fa-map-marker-alt text-blue"></i>
+                <div class="info-text" id="address">Yuklanmoqda...</div>
+            </div>
 
-    <div id="add-folder-panel" class="bottom-sheet-folder hidden">
-        <div class="sheet-handle"></div>
-        <h4>Yangi guruh yaratish</h4>
-        <input type="text" id="new-group-name" placeholder="Guruh nomi..." style="width:100%; padding:10px; margin:10px 0; border-radius:8px; border:none; background: #001a2c; color: white;">
-        <label>Qaysi guruh ichiga tushsin?</label>
-        <select id="parent-folder-select" style="width:100%; padding:10px; margin:10px 0; border-radius:8px; background: #001a2c; color: white; border: none;"></select>
-        <label>Guruh rangi:</label>
-        <input type="range" id="color-slider" min="0" max="360" value="0" class="hue-slider">
-        <div id="color-preview" style="width:40px; height:40px; border-radius:50%; margin:10px auto; border:2px solid white; background:red;"></div>
-        <div class="sheet-buttons" style="display:flex; gap:10px;">
-            <button id="cancel-folder" style="flex:1; padding:12px; border-radius:8px; background:#444; color:white; border:none;">Bekor qilish</button>
-            <button id="save-folder" style="flex:1; padding:12px; border-radius:8px; background:#007AFF; color:white; border:none;">Saqlash</button>
+            <div class="info-row">
+                <i class="fas fa-satellite text-green"></i>
+                <div class="info-text">Anuqlik: <span id="accuracy">0</span> m</div>
+            </div>
+
+            <div class="action-buttons">
+                <button class="btn save-btn">Save Location</button>
+                <button class="btn share-btn" onclick="copyCoords()">Share Location</button>
+            </div>
         </div>
     </div>
 
+    <div class="modal-container" id="list-container" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Guruhlar ierarxiyasi</h3>
+                <button class="close-modal-btn" id="close-list">&times;</button>
+            </div>
+            
+            <div class="tabs-container">
+                <button class="tab-button active" id="tab-folders">Guruhlar</button>
+                <button class="tab-button" id="tab-items">Elementlar</button>
+            </div>
+
+            <div class="modal-body">
+                <div class="tab-section active" id="folders-section">
+                    <button class="btn-primary" id="open-add-folder" style="width: 100%; margin-bottom: 15px;">
+                        <i class="fas fa-folder-plus"></i> Yangi guruh qo'shish
+                    </button>
+                    <div id="tree-root"></div>
+                </div>
+
+                <div class="tab-section" id="items-section">
+                    <div class="search-wrapper" style="margin-bottom: 15px;">
+                        <input type="text" id="element-search" placeholder="Elementlarni qidirish..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #003356; background: #00111f; color: white;">
+                    </div>
+                    <div id="tp-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="sub-panel hidden" id="add-folder-panel">
+        <div class="sub-panel-content">
+            <h4>Yangi guruh yaratish</h4>
+            <input type="text" id="new-group-name" placeholder="Guruh nomi" />
+            
+            <label>Yuqori (bosh) guruhni tanlang:</label>
+            <select id="parent-folder-select" class="hidden-select"></select>
+            <div class="tree-dropdown" id="add-tree-dropdown"></div>
+
+            <label>Guruh rangi (Belgi uchun):</label>
+            <input type="range" id="color-slider" min="0" max="360" value="0" />
+            <div class="color-preview-box" id="color-preview" style="background: hsl(0, 100%, 50%);"></div>
+
+            <div class="sub-panel-buttons">
+                <button class="btn-secondary" id="cancel-folder">Bekor qilish</button>
+                <button class="btn-primary" id="save-folder">Saqlash</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="sub-panel hidden" id="edit-folder-panel">
+        <div class="sub-panel-content">
+            <h4>Guruhni tahrirlash</h4>
+            <input type="text" id="edit-group-name" placeholder="Guruh nomi" />
+            
+            <label>Yuqori guruhni o'zgartirish:</label>
+            <select id="edit-parent-folder-select" class="hidden-select"></select>
+            <div class="tree-dropdown" id="edit-tree-dropdown"></div>
+
+            <label>Guruh rangini o'zgartirish:</label>
+            <input type="range" id="edit-color-slider" min="0" max="360" value="0" />
+            <div class="color-preview-box" id="edit-color-preview" style="background: hsl(0, 100%, 50%);"></div>
+
+            <div class="sub-panel-buttons" style="display: flex; flex-direction: column; gap: 8px;">
+                <div style="display: flex; gap: 10px; width: 100%;">
+                    <button class="btn-secondary" onclick="document.getElementById('edit-folder-panel').classList.add('hidden')" style="flex: 1;">Orqaga</button>
+                    <button class="btn-primary" id="update-folder-btn" style="flex: 1;">Yangilash</button>
+                </div>
+                <button class="btn-danger" id="delete-folder-btn" style="width: 100%; background: #ff4444; color: white; border: none; padding: 10px; border-radius: 6px;">
+                    <i class="fas fa-trash-alt"></i> Guruhni o'chirish
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
-
-    <script src="app.js?v=3.2"></script>
-
+    <script src="app.js?v=7.0"></script>
 </body>
 </html>
