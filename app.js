@@ -511,6 +511,33 @@ document.getElementById('update-folder-btn').addEventListener('click', () => {
 });
 
 // ==========================================
+// TA'MIRLANGAN PANEL HARAKATI (XATOSIZ)
+// ==========================================
+function togglePanel() {
+    const panel = document.getElementById('panel');
+    const icon = document.getElementById('toggle-icon');
+    if (panel) {
+        panel.classList.toggle('minimized');
+    }
+    if (icon && panel) {
+        icon.style.transform = panel.classList.contains('minimized') ? 'rotate(0deg)' : 'rotate(180deg)';
+    }
+    setTimeout(() => { 
+        if (typeof map !== 'undefined' && map) {
+            map.invalidateSize(); 
+        }
+    }, 400);
+}
+
+window.addEventListener('load', function() {
+    setTimeout(function() { 
+        if (typeof map !== 'undefined' && map) {
+            map.invalidateSize(); 
+        }
+    }, 500);
+});
+
+// ==========================================
 // TAB TIZIMI VA DINAMIK MARKERLAR
 // ==========================================
 const tabFolders = document.getElementById('tab-folders');
@@ -522,16 +549,18 @@ if (tabFolders && tabItems) {
     tabFolders.addEventListener('click', () => {
         tabFolders.classList.add('active');
         tabItems.classList.remove('active');
-        foldersSection.classList.add('active');
-        itemsSection.classList.remove('active');
+        if (foldersSection) foldersSection.classList.add('active');
+        if (itemsSection) itemsSection.classList.remove('active');
     });
 
     tabItems.addEventListener('click', () => {
         tabItems.classList.add('active');
         tabFolders.classList.remove('active');
-        itemsSection.classList.add('active');
-        foldersSection.classList.remove('active');
-        loadFilteredPoints();
+        if (itemsSection) itemsSection.classList.add('active');
+        if (foldersSection) foldersSection.classList.remove('active');
+        if (typeof loadFilteredPoints === 'function') {
+            loadFilteredPoints();
+        }
     });
 }
 
@@ -540,7 +569,10 @@ function loadFilteredPoints() {
     if (!tpListContainer) return;
     
     tpListContainer.innerHTML = "<p style='color:gray; padding:15px; text-align:center;'>Yuklanmoqda...</p>";
-    activeMapMarkers.forEach(m => map.removeLayer(m));
+    
+    if (typeof activeMapMarkers !== 'undefined' && typeof map !== 'undefined') {
+        activeMapMarkers.forEach(m => map.removeLayer(m));
+    }
     activeMapMarkers = [];
 
     database.ref('TPs').once('value', (snapshot) => {
@@ -593,8 +625,8 @@ function loadFilteredPoints() {
                     if(listModal) listModal.style.display = 'none'; 
                     map.setView([lat, lng], 18);
                     marker.openPopup();
-                    updatePanelValues(lat, lng, null, true);
-                    updateAddress(lat, lng, true);
+                    if (typeof updatePanelValues === 'function') updatePanelValues(lat, lng, null, true);
+                    if (typeof updateAddress === 'function') updateAddress(lat, lng, true);
                 });
 
                 item.setAttribute('data-search-name', displayName.toLowerCase() + point.address.toLowerCase());
@@ -602,7 +634,7 @@ function loadFilteredPoints() {
             }
         });
 
-        if (bounds.length > 0 && activeFolderId !== 'root') {
+        if (bounds.length > 0 && activeFolderId !== 'root' && typeof map !== 'undefined') {
             map.fitBounds(bounds, { padding: [50, 50] });
         }
     });
@@ -620,6 +652,8 @@ if (elementSearchInput) {
     });
 }
 
-// Tizimni ishga tushirish
-loadFolders();
+// Dasturni dastlabki ishga tushirish
+if (typeof loadFolders === 'function') {
+    loadFolders();
+}
           
