@@ -128,6 +128,99 @@
         </div>
     </div>
 
+    <div id="element-manage-panel" class="bottom-sheet-folder hidden">
+        <div class="sheet-handle"></div>
+        
+        <div class="sheet-header" style="display: flex; justify-content: flex-start; align-items: center; gap: 15px; margin-bottom: 15px;">
+            <button type="button" onclick="document.getElementById('element-manage-panel').classList.add('hidden')" style="background: #ff4444; border: none; color: white; font-size: 22px; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; line-height: 1; flex-shrink: 0; box-shadow: 0 2px 8px rgba(255, 68, 68, 0.3);">×</button>
+            <h4 id="element-panel-title" style="margin: 0; font-size: 18px; font-weight: bold;">Добавить местоположение</h4>
+        </div>
+
+        <form id="element-main-form" style="display: flex; flex-direction: column; gap: 12px; max-height: 75vh; overflow-y: auto; padding-bottom: 20px;">
+            
+            <div style="display: flex; gap: 15px; align-items: center; background: rgba(255,255,255,0.03); padding: 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
+                
+                <div style="position: relative; width: 85px; height: 85px; background: #001a2c; border-radius: 10px; border: 2px dashed rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <label for="element-image-input" style="cursor: pointer; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;">
+                        <i class="fas fa-camera-add" id="image-icon-placeholder" style="font-size: 24px; color: #88a0b0;"></i>
+                        <span id="image-status-text" style="font-size: 10px; color: #88a0b0; text-align: center; padding: 0 4px;">Rasm</span>
+                        <img id="element-image-preview" class="hidden" style="position: absolute; top:0; left:0; width:100%; height:100%; border-radius:8px; object-fit: cover;">
+                    </label>
+                    <input type="file" id="element-image-input" accept="image/*" capture="environment" style="display: none;">
+                    <button type="button" id="remove-image-btn" class="hidden" style="position: absolute; top: -8px; right: -8px; background: #ff4444; color: white; border: none; border-radius: 50%; width: 22px; height: 22px; font-size: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer;">×</button>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 8px; flex: 1;">
+                    <div style="display: flex; align-items: center; background: #001a2c; border-radius: 8px; padding: 2px 10px;">
+                        <span style="font-size: 12px; color: #88a0b0; width: 35px;">Шир:</span>
+                        <input type="number" id="input-latitude" step="any" style="width: 100%; background: transparent; border: none; color: white; padding: 8px 0; outline: none; font-size: 14px;" required>
+                    </div>
+                    <div style="display: flex; align-items: center; background: #001a2c; border-radius: 8px; padding: 2px 10px;">
+                        <span style="font-size: 12px; color: #88a0b0; width: 35px;">Дол:</span>
+                        <input type="number" id="input-longitude" step="any" style="width: 100%; background: transparent; border: none; color: white; padding: 8px 0; outline: none; font-size: 14px;" required>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <label style="font-size: 13px; color: #88a0b0; margin-left: 4px;">Название местоположения:</label>
+                <input type="text" id="input-element-name" placeholder="Masalan: TP-312" style="width:100%; padding:12px; margin-top:5px; border-radius:8px; background:#001a2c; color:white; border:1px solid rgba(255,255,255,0.05); outline: none;" required>
+            </div>
+
+            <div>
+                <label style="font-size: 13px; color: #88a0b0; margin-left: 4px;">Адрес:</label>
+                <textarea id="input-element-address" rows="2" placeholder="Адрес определяется автоматически..." style="width:100%; padding:10px; margin-top:5px; border-radius:8px; background:#001a2c; color:#88a0b0; border:1px solid rgba(255,255,255,0.05); resize: none; outline: none;" readonly></textarea>
+            </div>
+
+            <div>
+                <label style="font-size: 13px; color: #88a0b0; margin-left: 4px;">Контактный телефон:</label>
+                <input type="tel" id="input-element-phone" placeholder="+998" style="width:100%; padding:12px; margin-top:5px; border-radius:8px; background:#001a2c; color:white; border:1px solid rgba(255,255,255,0.05); outline: none;">
+            </div>
+
+            <div>
+                <label style="font-size: 13px; color: #88a0b0; margin-left: 4px;">Заметка:</label>
+                <textarea id="input-element-note" rows="2" placeholder="Qo'shimcha eslatmalar..." style="width:100%; padding:10px; margin-top:5px; border-radius:8px; background:#001a2c; color:white; border:1px solid rgba(255,255,255,0.05); resize: none; outline: none;"></textarea>
+            </div>
+
+            <div>
+                <label style="font-size: 13px; color: #88a0b0; margin-left: 4px;">Fider (Guruh) ni biriktirish:</label>
+                <div id="element-parent-folder-tree" class="tree-dropdown-container" style="width:100%; max-height:180px; overflow-y:auto; background:#001a2c; border-radius:8px; padding:10px; margin-top:5px; border:1px solid rgba(255, 255, 255, 0.1);"></div>
+                <input type="hidden" id="element-selected-folders" value="">
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); padding: 12px; border-radius: 8px; margin-top: 5px;">
+                <span style="font-size: 14px; font-weight: bold; color: white;">Баланс: <span id="balance-status-text" style="color: #007AFF;">ЕТК</span></span>
+                
+                <label class="switch-control" style="position: relative; display: inline-block; width: 50px; height: 26px;">
+                    <input type="checkbox" id="input-balance-toggle" style="opacity: 0; width: 0; height: 0;">
+                    <span class="slider-toggle" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px;"></span>
+                </label>
+            </div>
+
+            <div id="private-owner-info-block" class="hidden" style="display: flex; flex-direction: column; gap: 12px; background: rgba(255, 68, 68, 0.03); padding: 12px; border-radius: 10px; border: 1px dashed rgba(255, 68, 68, 0.2);">
+                <div>
+                    <input type="text" id="input-owner-firm" placeholder="Fermer xo'jaligi yoki firma nomi" style="width:100%; padding:10px; border-radius:6px; background:#001a2c; color:white; border:none; outline:none; font-size:13px;">
+                </div>
+                <div>
+                    <input type="text" id="input-owner-name" placeholder="Egasining ismi (F.I.O)" style="width:100%; padding:10px; border-radius:6px; background:#001a2c; color:white; border:none; outline:none; font-size:13px;">
+                </div>
+                <div>
+                    <input type="tel" id="input-owner-phone" placeholder="Egasining telefon raqami" style="width:100%; padding:10px; border-radius:6px; background:#001a2c; color:white; border:none; outline:none; font-size:13px;">
+                </div>
+                <div>
+                    <input type="text" id="input-meter-number" placeholder="Hisoblagich (Schotchik) raqami" style="width:100%; padding:10px; border-radius:6px; background:#001a2c; color:white; border:none; outline:none; font-size:13px;">
+                </div>
+            </div>
+
+            <div class="sheet-buttons" style="display:flex; gap:10px; margin-top:10px;">
+                <button type="button" id="delete-element-btn" class="hidden" style="flex:1; background:#ff4444; color:white; border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer;">O'chirish</button>
+                <button type="submit" id="save-element-btn" style="flex:2; background:#007AFF; color:white; border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer;">Saqlash</button>
+            </div>
+
+        </form>
+    </div>
+    
+    
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
