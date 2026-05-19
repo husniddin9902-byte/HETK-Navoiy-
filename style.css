@@ -606,4 +606,125 @@ body {
     from { opacity: 0; transform: translate(-50%, 20px); }
     to { opacity: 1; transform: translate(-50%, 0); }
    }
-       
+
+/* =========================================================================
+   ⚡ YANGI: ELEMENT (TP) KIRITISH VA TAHRIRLASH PANELINING MAXSUS STILLARI
+   ========================================================================= */
+
+/* Rasm yuklash bloki (Kamera ikonkalari uchun) */
+.image-upload-box label {
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.image-upload-box label:active {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-color: #007AFF !important;
+}
+
+/* Rasm ustidagi o'chirish (X) tugmasi animatsiyasi */
+#remove-image-btn {
+    box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+    transition: transform 0.2s;
+}
+#remove-image-btn:active {
+    transform: scale(0.85);
+}
+
+/* 🎛️ iOS USLUBIDAGI CHIROYLI TUMBLER (SWITCH) STILLARI */
+.switch-control {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 26px;
+    flex-shrink: 0;
+}
+
+.switch-control input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider-toggle {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(255, 255, 255, 0.15);
+    transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 34px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.slider-toggle:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+/* Tumbler yoqilgandagi holat (Ko'k rangga silliq o'tish) */
+.switch-control input:checked + .slider-toggle {
+    background-color: #007AFF;
+}
+
+.switch-control input:checked + .slider-toggle:before {
+    transform: translateX(24px);
+}
+
+/* 👤 XUSUSIY BLOK OCHILGANDA SILLIQ EFFEKT */
+#private-owner-info-block {
+    transition: all 0.3s ease-in-out;
+    max-height: 500px;
+    opacity: 1;
+    overflow: hidden;
+}
+
+#private-owner-info-block.hidden {
+    display: none !important;
+    max-height: 0;
+    opacity: 0;
+}
+
+/* Formaning ichki inputlari va tekstarealari fokusi */
+#element-main-form input:focus, 
+#element-main-form textarea:focus {
+    border-color: #007AFF !important;
+    background: #00223a !important;
+    outline: none;
+}
+
+/* Formalar uchun umumiy scrollbar - form ichi baland bo'lsa oynadan chiqib ketmasligi uchun */
+#element-main-form::-webkit-scrollbar {
+    width: 4px;
+}
+#element-main-form::-webkit-scrollbar-thumb {
+    background: #004c80;
+    border-radius: 10px;
+}
+
+/* Global yashirish klassi */
+.hidden {
+    display: none !important;
+}
+
+/* 🔄 MAP MARKERLARI UCHUN MILTILLASH (BLINKING) ANIMATSIYASI */
+/* Ikki fiderga ulangan TP ona papkada ochilganda shu klass orqali dynamic miltillaydi */
+.blinking-marker-icon {
+    animation: markerBlink 2s infinite steps(1, end);
+}
+
+@keyframes markerBlink {
+    0%, 100% {
+        filter: drop-shadow(0 0 6px var(--fider-color-1, #007AFF)) hue-rotate(0deg);
+    }
+    50% {
+        /* JS orqali ikkinchi fiderning rangiga mos o'zgarishi mantiqi kiritiladi */
+        filter: drop-shadow(0 0 6px var(--fider-color-2, #34C759)) saturate(2);
+    }
+}
