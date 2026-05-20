@@ -1282,3 +1282,21 @@ function loadFilteredPoints() {
         }
     });
                              }
+
+// SAYT OCHILISHI BILAN FAQAT GURUHLARNI CHAQIRISH
+window.addEventListener('load', () => {
+    console.log("Sayt to'liq yuklandi. Guruhlar tekshirilmoqda...");
+    
+    // Kodingiz ichidagi guruh yuklaydigan asosiy funksiyalar
+    const loadCore = ['loadGroups', 'fetchGroups', 'listenToGroups', 'loadUserGroups', 'listenToGroupsData'];
+    loadCore.forEach(fName => {
+        if (typeof window[fName] === "function") {
+            try { window[fName](); } catch(e) {}
+        }
+    });
+
+    // Agar sizda "Boshqaruv paneli" ochilganda ishlaydigan tayyor funksiya bo'lsa, 
+    // darchani ochmasdan faqat ma'lumot qismini shu yerda chaqiramiz
+    if (typeof initAdminPanel === "function") initAdminPanel();
+    if (typeof loadAdminData === "function") loadAdminData();
+});
