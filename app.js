@@ -1283,20 +1283,37 @@ function loadFilteredPoints() {
     });
                              }
 
-// SAYT OCHILISHI BILAN FAQAT GURUHLARNI CHAQIRISH
-window.addEventListener('load', () => {
-    console.log("Sayt to'liq yuklandi. Guruhlar tekshirilmoqda...");
-    
-    // Kodingiz ichidagi guruh yuklaydigan asosiy funksiyalar
-    const loadCore = ['loadGroups', 'fetchGroups', 'listenToGroups', 'loadUserGroups', 'listenToGroupsData'];
-    loadCore.forEach(fName => {
+// 🔥 BAZANI PANELNI OCHMASDAN ORQA FONDA YUKLASH (YAKUNIY KOD)
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("Tizim yuklanmoqda...");
+
+    // 1. Kodingiz ichidagi guruhlarni yuklaydigan funksiyalarni panelni ochmasdan, xotirada to'g'ridan-to'g'ri chaqiramiz
+    const coreFunctions = ['loadGroups', 'fetchGroups', 'listenToGroups', 'loadUserGroups', 'listenToGroupsData', 'loadFolders'];
+    coreFunctions.forEach(fName => {
         if (typeof window[fName] === "function") {
             try { window[fName](); } catch(e) {}
         }
     });
 
-    // Agar sizda "Boshqaruv paneli" ochilganda ishlaydigan tayyor funksiya bo'lsa, 
-    // darchani ochmasdan faqat ma'lumot qismini shu yerda chaqiramiz
-    if (typeof initAdminPanel === "function") initAdminPanel();
-    if (typeof loadAdminData === "function") loadAdminData();
+    // 2. KAFOLAT: Agar tizimda boshqaruv paneli ochilib ketadigan bo'lsa, uni srazi yopib qo'yamiz
+    const listContainer = document.getElementById('list-container');
+    if (listContainer) {
+        listContainer.style.display = 'none'; // Uni vizual yashiramiz
+    }
+
+    // 3. 1.5 sekund "Baza yuklanmoqda..." oynasi turadi (baza xotiraga ma'lumotlarni to'liq yuklaydi)
+    setTimeout(() => {
+        // Yuklanish oynasini o'chiramiz va xodim shundoq toza Glavniy ekranda (Xaritada) qoladi
+        const loader = document.getElementById('app-loader');
+        if (loader) {
+            loader.style.display = 'none';
+        }
+        
+        // Panel 100% yopiq turishi shart
+        if (listContainer) {
+            listContainer.style.display = 'none';
+        }
+        
+        console.log("Yuklanish tugadi. Faqat toza Glavniy ekran faol!");
+    }, 1500); // 1.5 sekund Firebase'dan guruhlar kelib tushishi uchun ideal vaqt
 });
