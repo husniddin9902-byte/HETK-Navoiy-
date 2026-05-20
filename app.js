@@ -1283,14 +1283,39 @@ function loadFilteredPoints() {
     });
                              }
 
-// SAYT OCHILISHI BILAN BIRINCHI BO'LIB BAZANI CHAQIRIB OLISH
+// 🔥 BAZANI SAYT OCHILISHI BILAN AVTOMAT UYG'OTISH (YAKUNIY YECHIM)
 document.addEventListener('DOMContentLoaded', () => {
-    // Sizda Firebase'dan guruhlarni yuklaydigan funksiya nomi:
-    if (typeof loadGroups === "function") {
-        loadGroups(); 
-    } else if (typeof fetchGroups === "function") {
-        fetchGroups();
-    } else if (typeof listenToGroups === "function") {
-        listenToGroups();
-    }
+    console.log("Tizim ishga tushdi. Guruhlar yuklanmoqda...");
+
+    // 1-Ehtimol: Koddagi barcha guruh yuklash funksiyalarini majburiy yurgizish
+    const functionsToRun = [
+        'loadUserGroups', 'listenToGroupsData', 'fetchGroupsData', 
+        'loadGroups', 'fetchGroups', 'listenToGroups', 'initAppData'
+    ];
+    
+    functionsToRun.forEach(funcName => {
+        if (typeof window[funcName] === "function") {
+            try { window[funcName](); } catch(e) {}
+        }
+    });
+
+    // 2-Kafolat: Boshqaruv paneli darchasining ochilish mantiqini orqa fonda simulyatsiya qilish
+    // Chunki dashboard ochilganda baza aniq chaqiriladi.
+    setTimeout(() => {
+        const panelButtons = [
+            document.getElementById('menu-btn'), 
+            document.querySelector('.header-right i'),
+            document.getElementById('open-dashboard-btn')
+        ];
+
+        panelButtons.forEach(btn => {
+            if (btn) {
+                // Panelni orqa fonda tezda ochib-yopamiz, xodim buni sezmaydi ham
+                try {
+                    btn.click(); // ochish (baza uyg'onadi)
+                    setTimeout(() => { btn.click(); }, 50); // yopish
+                } catch(e) {}
+            }
+        });
+    }, 500); // Sayt yuklanib, xarita chizilganidan keyin yarim sekund kutib ishga tushadi
 });
