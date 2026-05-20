@@ -1291,25 +1291,44 @@ function hideAppLoader() {
         console.log("Baza muvaffaqiyatli yuklandi, bosh ekran ochildi.");
     }
 }
-
-// Sayt ochilishi bilan Firebase drayverini majburiy uyg'otish
+// 🔥 BAZANI ZAGRUZKA ORQASIDA UYG'OTISH VA GLAVNIY EKRANGA QAYTISH
 document.addEventListener('DOMContentLoaded', () => {
-    // Koddagi Firebase guruh funksiyalarini xotirada chaqiramiz
-    const firebaseFunctions = ['loadGroups', 'fetchGroups', 'listenToGroups', 'loadUserGroups', 'listenToGroupsData'];
-    let functionFound = false;
+    console.log("Tizim yuklanishi boshlandi...");
 
-    firebaseFunctions.forEach(fName => {
-        if (typeof window[fName] === "function") {
-            try { 
-                window[fName](); 
-                functionFound = true;
-            } catch(e) {}
+    // 1. Panelni ochuvchi menyu tugmasini topamiz
+    const menuBtn = document.getElementById('menu-btn');
+    
+    if (menuBtn) {
+        // 2. Zagruzka oynasi ostida panelni majburlab ochamiz (Firebase uyg'onadi)
+        try {
+            menuBtn.click(); // Panel ochiladi, lekin loader uni to'sib turadi
+            console.log("Orqa fonda boshqaruv paneli uyg'otildi.");
+        } catch (e) {
+            console.log("Klik qilishda xato:", e);
         }
-    });
 
-    // Agar funksiyalar chaqirilgan bo'lsa, ma'lumot kelishi uchun 1.5 sekund kutib, ekranni ochamiz
-    // Agar funksiya topilmasa ham ekran qulfda qolib ketmasligi uchun baribir ochadi
-    setTimeout(() => {
-        hideAppLoader();
-    }, 1500); 
+        // 3. 1.5 sekund kutamiz (baza guruhlarni xotiraga yuklab olishga ulguradi)
+        setTimeout(() => {
+            try {
+                // 4. Panelni orqa fonda qayta yopamiz (Xodim uni ko'rmasligi uchun)
+                menuBtn.click(); 
+                console.log("Orqa fonda boshqaruv paneli yopildi.");
+            } catch (e) {}
+
+            // 5. Zagruzka oynasini butunlay yo'qotamiz va Glavniy ekranni ochamiz
+            const loader = document.getElementById('app-loader');
+            if (loader) {
+                loader.style.display = 'none';
+            }
+            console.log("Guruhlar muvaffaqiyatli yuklandi, bosh ekran ochildi!");
+        }, 1500); // 1.5 sekund bazadan ma'lumot kelishi uchun ideal vaqt
+
+    } else {
+        // Agar kutilmaganda menyu tugmasi topilmasa, ekran qulf bo'lib qolmasligi uchun ochib yuboradi
+        setTimeout(() => {
+            const loader = document.getElementById('app-loader');
+            if (loader) loader.style.display = 'none';
+        }, 1800);
+    }
 });
+
