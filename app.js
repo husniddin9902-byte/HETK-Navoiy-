@@ -1283,32 +1283,53 @@ function loadFilteredPoints() {
     });
                              }
 
-// 🔥 BAZANI TO'G'RIDAN-TO'G'RI CHAQIRISH VA GLAVNIY EKRANNI OCHISH (YAKUNIY YECHIM)
+// 🔥 FIREBASE BAZANI TO'G'RIDAN-TO'G'RI CHAQIRISH (PANELGA TEGMASDAN)
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("Tizim yuklanishi boshlandi...");
+    console.log("Tizim yuklanmoqda...");
 
-    // 1-QADAMDA TOPILGAN ASL FUNKSIYA NOMINI SHU YERDA CHAQIRING:
-    // Agar koddagi nomi boshqacha bo'lsa (masalan loadGroupsData), quyidagilar o'rniga o'sha nomni yozing
-    if (typeof loadGroups === "function") loadGroups();
-    if (typeof fetchGroups === "function") fetchGroups();
-    if (typeof listenToGroups === "function") listenToGroups();
-    if (typeof loadUserGroups === "function") loadUserGroups();
+    // 1. Agar kodingizda guruhlarni chizadigan select elementi bo'lsa, uni topamiz
+    // Skrinshotdagi "Fider (Guruh) ni biriktirish" elementining ID yoki klassini qidiradi
+    const groupSelect = document.getElementById('element-group-select') || 
+                        document.getElementById('fider-select') || 
+                        document.querySelector('select') || 
+                        document.getElementById('input-element-note')?.parentElement?.querySelector('select');
 
-    // 1.5 sekund "Baza yuklanmoqda..." oynasi turadi (baza xotiraga guruhlarni to'liq yuklaydi)
+    // 2. Koddagi Firebase drayverini (database) to'g'ridan-to'g'ri eshituvchisini uyg'otish
+    // Agar kodingizda 'groups' yoki 'fiders' deb nomlangan baza bo'lsa, uni majburlab yuklaydi
+    try {
+        if (typeof firebase !== 'undefined' && firebase.database) {
+            const dbRef = firebase.database().ref('groups') || firebase.database().ref('fiders');
+            dbRef.once('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data && groupSelect) {
+                    groupSelect.innerHTML = '<option value="" disabled selected>Fider (Guruh) ni tanlang</option>';
+                    Object.keys(data).forEach(key => {
+                        const option = document.createElement('option');
+                        option.value = key;
+                        option.textContent = data[key].name || data[key];
+                        groupSelect.appendChild(option);
+                    });
+                    console.log("Guruhlar to'g'ridan-to'g'ri Firebase'dan yuklandi!");
+                }
+            });
+        }
+    } catch(e) { console.log("Firebase direct error:", e); }
+
+    // 3. MAJBURIY QADAM: Boshqaruv paneli kirish bilanoq ochilib ketmasligini 100% ta'minlash!
+    // Agar kodingizda sahifa yuklanganda panelni ochib qo'yadigan klass bo'lsa, uni o'chiradi
+    const adminPanel = document.getElementById('admin-panel') || document.querySelector('.sidebar') || document.getElementById('dashboard') || document.querySelector('.admin-panel');
+    if (adminPanel) {
+        adminPanel.classList.remove('active');
+        adminPanel.classList.remove('show');
+        adminPanel.style.display = 'none'; // CSS bilan vizual yashirish
+    }
+
+    // 4. 1.2 sekunddan keyin yuklanish oynasini o'chirish
     setTimeout(() => {
-        // Yuklanish oynasini o'chiramiz
         const loader = document.getElementById('app-loader');
         if (loader) {
             loader.style.display = 'none';
         }
-        
-        // Boshqaruv paneli mutlaqo yopiq va daxlsiz holatda qolishi shart!
-        const adminPanel = document.getElementById('admin-panel') || document.querySelector('.sidebar') || document.getElementById('dashboard');
-        if (adminPanel) {
-            adminPanel.classList.remove('active');
-            adminPanel.style.display = 'none'; 
-        }
-
         console.log("Yuklanish tugadi. Faqat toza Glavniy ekran faol!");
-    }, 1500); 
+    }, 1200);
 });
