@@ -1282,3 +1282,15 @@ function loadFilteredPoints() {
         }
     });
                              }
+
+// SAYT OCHILISHI BILAN BIRINCHI BO'LIB BAZANI CHAQIRIB OLISH
+document.addEventListener('DOMContentLoaded', () => {
+    // Sizda Firebase'dan guruhlarni yuklaydigan funksiya nomi:
+    if (typeof loadGroups === "function") {
+        loadGroups(); 
+    } else if (typeof fetchGroups === "function") {
+        fetchGroups();
+    } else if (typeof listenToGroups === "function") {
+        listenToGroups();
+    }
+});
