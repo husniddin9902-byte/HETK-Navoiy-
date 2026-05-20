@@ -1282,47 +1282,33 @@ function loadFilteredPoints() {
         }
     });
                              }
-// 🔥 BAZANI PANELNI OCHMASDAN YUKLASH VA FAQAT GLAVNIY EKRANNI QOLDIRISH
+
+// 🔥 BAZANI TO'G'RIDAN-TO'G'RI CHAQIRISH VA GLAVNIY EKRANNI OCHISH (YAKUNIY YECHIM)
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("Tizim yuklanmoqda...");
+    console.log("Tizim yuklanishi boshlandi...");
 
-    // 1. Firebase'dan ma'lumot yuklovchi barcha ichki funksiyalarni panelni ochmasdan, xotirada uyg'otamiz
-    const firebaseFunctions = ['loadGroups', 'fetchGroups', 'listenToGroups', 'loadUserGroups', 'listenToGroupsData'];
-    firebaseFunctions.forEach(fName => {
-        if (typeof window[fName] === "function") {
-            try { window[fName](); } catch(e) {}
-        }
-    });
+    // 1-QADAMDA TOPILGAN ASL FUNKSIYA NOMINI SHU YERDA CHAQIRING:
+    // Agar koddagi nomi boshqacha bo'lsa (masalan loadGroupsData), quyidagilar o'rniga o'sha nomni yozing
+    if (typeof loadGroups === "function") loadGroups();
+    if (typeof fetchGroups === "function") fetchGroups();
+    if (typeof listenToGroups === "function") listenToGroups();
+    if (typeof loadUserGroups === "function") loadUserGroups();
 
-    // 2. Panel ochadigan tugmani topamiz va uni ochib, 0.01 sekundda srazi vizual yopib yuboramiz
-    // Bu orqali Firebase baribir uyg'onadi, lekin xodim buni ko'rishga ulgurmaydi
-    const menuBtn = document.getElementById('menu-btn');
-    if (menuBtn) {
-        try {
-            menuBtn.click(); // Baza uyg'onishi uchun ochamiz
-            setTimeout(() => {
-                menuBtn.click(); // Srazi 0.01 sekundda qayta yopamiz!
-            }, 10);
-        } catch (e) {
-            console.log("Klik xatosi:", e);
-        }
-    }
-
-    // 3. 1.5 sekund "Baza yuklanmoqda..." oynasi turadi (orqa fonda ma'lumotlar kelib tushadi)
+    // 1.5 sekund "Baza yuklanmoqda..." oynasi turadi (baza xotiraga guruhlarni to'liq yuklaydi)
     setTimeout(() => {
-        // 4. KAFOLAT: Agar boshqaruv paneli baribir ochiq qolgan bo'lsa, uni majburlab yopamiz!
-        const adminPanel = document.getElementById('admin-panel') || document.querySelector('.sidebar') || document.getElementById('dashboard') || document.querySelector('.admin-panel');
-        if (adminPanel) {
-            adminPanel.classList.remove('active');
-            adminPanel.classList.remove('show');
-            adminPanel.style.display = 'none'; // CSS bilan butunlay berkitish
-        }
-
-        // 5. Yuklanish oynasini o'chiramiz va xodim shundoq toza Glavniy ekranda (Xaritada) qoladi
+        // Yuklanish oynasini o'chiramiz
         const loader = document.getElementById('app-loader');
         if (loader) {
             loader.style.display = 'none';
         }
-        console.log("Yuklanish tugadi. Faqat Glavniy ekran faol!");
-    }, 1500); // 1.5 sekund guruhlar yuklanishi uchun yetarli
+        
+        // Boshqaruv paneli mutlaqo yopiq va daxlsiz holatda qolishi shart!
+        const adminPanel = document.getElementById('admin-panel') || document.querySelector('.sidebar') || document.getElementById('dashboard');
+        if (adminPanel) {
+            adminPanel.classList.remove('active');
+            adminPanel.style.display = 'none'; 
+        }
+
+        console.log("Yuklanish tugadi. Faqat toza Glavniy ekran faol!");
+    }, 1500); 
 });
