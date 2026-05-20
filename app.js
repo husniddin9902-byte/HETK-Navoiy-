@@ -1283,52 +1283,47 @@ function loadFilteredPoints() {
     });
                              }
 
-// Baza to'liq yuklangach, bloklash oynasini olib tashlash funksiyasi
-function hideAppLoader() {
-    const loader = document.getElementById('app-loader');
-    if (loader) {
-        loader.style.display = 'none';
-        console.log("Baza muvaffaqiyatli yuklandi, bosh ekran ochildi.");
-    }
-}
-// 🔥 BAZANI ZAGRUZKA ORQASIDA UYG'OTISH VA GLAVNIY EKRANGA QAYTISH
+// 🔥 BAZANI TO'G'RIDAN-TO'G'RI CHAQIRISH VA FAQAT GLAVNIY EKRANNI OCHISH
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("Tizim yuklanishi boshlandi...");
+    console.log("Tizim ishga tushdi. Glavniy ekran tayyorlanmoqda...");
 
-    // 1. Panelni ochuvchi menyu tugmasini topamiz
-    const menuBtn = document.getElementById('menu-btn');
-    
-    if (menuBtn) {
-        // 2. Zagruzka oynasi ostida panelni majburlab ochamiz (Firebase uyg'onadi)
-        try {
-            menuBtn.click(); // Panel ochiladi, lekin loader uni to'sib turadi
-            console.log("Orqa fonda boshqaruv paneli uyg'otildi.");
-        } catch (e) {
-            console.log("Klik qilishda xato:", e);
+    // 1. Firebase'dan ma'lumotlarni tortadigan barcha ehtimoliy ichki funksiyalarni panelni ochmasdan chaqiramiz
+    const coreFirebaseFunctions = [
+        'loadGroups', 'fetchGroups', 'listenToGroups', 
+        'loadUserGroups', 'listenToGroupsData', 'initGroups'
+    ];
+
+    coreFirebaseFunctions.forEach(fName => {
+        if (typeof window[fName] === "function") {
+            try { 
+                window[fName](); 
+                console.log(`Orqa fonda ${fName} funksiyasi ishga tushirildi.`);
+            } catch(e) {
+                console.log(`${fName} xatosi:`, e);
+            }
+        }
+    });
+
+    // 2. Agar koddagi select menyusini to'ldiradigan funksiya bo'lsa, uni ham uyg'otamiz
+    if (typeof populateGroupSelect === "function") {
+        try { populateGroupSelect(); } catch(e) {}
+    }
+
+    // 3. 1.5 sekund "Baza yuklanmoqda..." oynasi turadi (baza xotiraga kelib tushadi)
+    setTimeout(() => {
+        const loader = document.getElementById('app-loader');
+        if (loader) {
+            loader.style.display = 'none'; // Yuklanish oynasi o'chadi
+        }
+        
+        // KAFOLAT: Har qanday holatda ham boshqaruv paneli yopiq turishi va faqat Glavniy ekran ko'rinishi shart!
+        // Agar kodingizda panelni yopadigan tayyor klass yoki funksiya bo'lsa, uni xavfsizlik uchun yopib qo'yamiz
+        const adminPanel = document.getElementById('admin-panel') || document.querySelector('.sidebar') || document.getElementById('dashboard');
+        if (adminPanel) {
+            adminPanel.classList.remove('active'); // Ochiq bo'lsa yopib yuboradi
+            adminPanel.style.display = 'none';    // CSS orqali butunlay yashiradi
         }
 
-        // 3. 1.5 sekund kutamiz (baza guruhlarni xotiraga yuklab olishga ulguradi)
-        setTimeout(() => {
-            try {
-                // 4. Panelni orqa fonda qayta yopamiz (Xodim uni ko'rmasligi uchun)
-                menuBtn.click(); 
-                console.log("Orqa fonda boshqaruv paneli yopildi.");
-            } catch (e) {}
-
-            // 5. Zagruzka oynasini butunlay yo'qotamiz va Glavniy ekranni ochamiz
-            const loader = document.getElementById('app-loader');
-            if (loader) {
-                loader.style.display = 'none';
-            }
-            console.log("Guruhlar muvaffaqiyatli yuklandi, bosh ekran ochildi!");
-        }, 1500); // 1.5 sekund bazadan ma'lumot kelishi uchun ideal vaqt
-
-    } else {
-        // Agar kutilmaganda menyu tugmasi topilmasa, ekran qulf bo'lib qolmasligi uchun ochib yuboradi
-        setTimeout(() => {
-            const loader = document.getElementById('app-loader');
-            if (loader) loader.style.display = 'none';
-        }, 1800);
-    }
+        console.log("Bloklash oynasi olib tashlandi. Faqat Glavniy ekran faol!");
+    }, 1500); // 1.5 sekund xodim sezmasdan baza yuklanishi uchun yetarli
 });
-
