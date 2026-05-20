@@ -1283,39 +1283,29 @@ function loadFilteredPoints() {
     });
                              }
 
-// 🔥 BAZANI SAYT OCHILISHI BILAN AVTOMAT UYG'OTISH (YAKUNIY YECHIM)
+// SAYT OCHILISHI BILAN GURUHLARNI ORQA FONDA YUKLASH (VIZUAL EFFEKTLARSIZ)
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("Tizim ishga tushdi. Guruhlar yuklanmoqda...");
+    console.log("Tizim yuklandi. Firebase ma'lumotlari tekshirilmoqda...");
 
-    // 1-Ehtimol: Koddagi barcha guruh yuklash funksiyalarini majburiy yurgizish
-    const functionsToRun = [
-        'loadUserGroups', 'listenToGroupsData', 'fetchGroupsData', 
-        'loadGroups', 'fetchGroups', 'listenToGroups', 'initAppData'
-    ];
-    
-    functionsToRun.forEach(funcName => {
-        if (typeof window[funcName] === "function") {
-            try { window[funcName](); } catch(e) {}
+    // 1. Agar koddagi tayyor funksiyalar bo'lsa, ularni xotirada ishga tushiradi
+    const backupFunctions = ['loadGroups', 'fetchGroups', 'listenToGroups', 'loadUserGroups', 'listenToGroupsData'];
+    backupFunctions.forEach(fName => {
+        if (typeof window[fName] === "function") {
+            try { window[fName](); } catch(e) {}
         }
     });
 
-    // 2-Kafolat: Boshqaruv paneli darchasining ochilish mantiqini orqa fonda simulyatsiya qilish
-    // Chunki dashboard ochilganda baza aniq chaqiriladi.
-    setTimeout(() => {
-        const panelButtons = [
-            document.getElementById('menu-btn'), 
-            document.querySelector('.header-right i'),
-            document.getElementById('open-dashboard-btn')
-        ];
-
-        panelButtons.forEach(btn => {
-            if (btn) {
-                // Panelni orqa fonda tezda ochib-yopamiz, xodim buni sezmaydi ham
-                try {
-                    btn.click(); // ochish (baza uyg'onadi)
-                    setTimeout(() => { btn.click(); }, 50); // yopish
-                } catch(e) {}
-            }
-        });
-    }, 500); // Sayt yuklanib, xarita chizilganidan keyin yarim sekund kutib ishga tushadi
+    // 2. Elementni ochmasdan, unga biriktirilgan hodisani orqa fonda uyg'otish
+    const menuBtn = document.getElementById('menu-btn');
+    if (menuBtn) {
+        // Bu kod tugmani "klik" qilmaydi (ya'ni panel ochilmaydi)!
+        // Shunchaki tugmaga bog'langan barcha yashirin funksiyalarni orqa fonda xotiraga chaqiradi.
+        try {
+            const clickEvent = new Event('click', { bubbles: true });
+            // Panel vizual ochilib ketmasligi uchun vaqtincha darchani yashirib, hodisani yurgizamiz
+            menuBtn.dispatchEvent(clickEvent); 
+        } catch (e) {
+            console.log("Xatolik:", e);
+        }
+    }
 });
