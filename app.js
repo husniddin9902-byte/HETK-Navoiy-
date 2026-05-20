@@ -638,7 +638,7 @@ function refreshTreeDropdownSelection(container, selectedId) {
 
 // 1. Telegram Bot Sozlamalari (Orqa fonda 0 xarajat va bepul limit bilan rasmlarni saqlash uchun)
 const TELEGRAM_BOT_TOKEN = "8992286638:AAFPqW8OuFnBe-u6WZqqxiL1h3nhlIz48Qg"; // Bot tokeningizni shu yerga yozasiz
-const TELEGRAM_CHAT_ID = "YOUR_PRIVATE_CHANNEL_ID_HERE"; // Maxfiy kanal yoki guruh IDsini yozasiz
+const TELEGRAM_CHAT_ID = "-1003934340914"; // Maxfiy kanal yoki guruh IDsini yozasiz
 let currentUploadedImageUrl = ""; // Telegramdan kelgan rasm linkini vaqtincha saqlash uchun
 let editingElementId = null; // Tahrirlash rejimi uchun element IDsi
 
