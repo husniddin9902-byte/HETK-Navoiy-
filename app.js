@@ -1283,29 +1283,33 @@ function loadFilteredPoints() {
     });
                              }
 
-// SAYT OCHILISHI BILAN GURUHLARNI ORQA FONDA YUKLASH (VIZUAL EFFEKTLARSIZ)
-document.addEventListener('DOMContentLoaded', () => {
-    console.log("Tizim yuklandi. Firebase ma'lumotlari tekshirilmoqda...");
+// Baza to'liq yuklangach, bloklash oynasini olib tashlash funksiyasi
+function hideAppLoader() {
+    const loader = document.getElementById('app-loader');
+    if (loader) {
+        loader.style.display = 'none';
+        console.log("Baza muvaffaqiyatli yuklandi, bosh ekran ochildi.");
+    }
+}
 
-    // 1. Agar koddagi tayyor funksiyalar bo'lsa, ularni xotirada ishga tushiradi
-    const backupFunctions = ['loadGroups', 'fetchGroups', 'listenToGroups', 'loadUserGroups', 'listenToGroupsData'];
-    backupFunctions.forEach(fName => {
+// Sayt ochilishi bilan Firebase drayverini majburiy uyg'otish
+document.addEventListener('DOMContentLoaded', () => {
+    // Koddagi Firebase guruh funksiyalarini xotirada chaqiramiz
+    const firebaseFunctions = ['loadGroups', 'fetchGroups', 'listenToGroups', 'loadUserGroups', 'listenToGroupsData'];
+    let functionFound = false;
+
+    firebaseFunctions.forEach(fName => {
         if (typeof window[fName] === "function") {
-            try { window[fName](); } catch(e) {}
+            try { 
+                window[fName](); 
+                functionFound = true;
+            } catch(e) {}
         }
     });
 
-    // 2. Elementni ochmasdan, unga biriktirilgan hodisani orqa fonda uyg'otish
-    const menuBtn = document.getElementById('menu-btn');
-    if (menuBtn) {
-        // Bu kod tugmani "klik" qilmaydi (ya'ni panel ochilmaydi)!
-        // Shunchaki tugmaga bog'langan barcha yashirin funksiyalarni orqa fonda xotiraga chaqiradi.
-        try {
-            const clickEvent = new Event('click', { bubbles: true });
-            // Panel vizual ochilib ketmasligi uchun vaqtincha darchani yashirib, hodisani yurgizamiz
-            menuBtn.dispatchEvent(clickEvent); 
-        } catch (e) {
-            console.log("Xatolik:", e);
-        }
-    }
+    // Agar funksiyalar chaqirilgan bo'lsa, ma'lumot kelishi uchun 1.5 sekund kutib, ekranni ochamiz
+    // Agar funksiya topilmasa ham ekran qulfda qolib ketmasligi uchun baribir ochadi
+    setTimeout(() => {
+        hideAppLoader();
+    }, 1500); 
 });
