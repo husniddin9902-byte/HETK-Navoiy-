@@ -731,21 +731,29 @@ if (inputLatitude && inputLongitude) {
             inputElementAddress.value = "Yangi manzil aniqlanmoqda...";
             
             // OpenStreetMap Reverse Geocoding API
-            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
-                .then(res => res.json())
-                .then(data => {
-                    inputElementAddress.value = data.display_name || "Manzil topilmadi";
-                    // Agar xaritada marker bo'lsa uni ham yangi koordinataga ko'chiramiz
-                    if (selectedMarker) {
-                        selectedMarker.setLatLng([lat, lng]);
-                    } else {
-                        isManualSelection = true;
-                        selectedMarker = L.marker([lat, lng]).addTo(map);
-                    }
-                    map.setView([lat, lng], 17);
-                }).catch(() => {
-                    inputElementAddress.value = "Internetda xatolik yuz berdi";
-                });
+                    // 734-qator: OpenStreetMap so'roviga o'zbek tili &accept-language=uz qo'shildi
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=uz`)
+            .then(res => res.json())
+            .then(data => {
+                inputElementAddress.value = data.display_name || "Manzil topilmadi";
+                
+                // ⚡ YANGI: Matn so'z o'rtasidan bo'linib, xunuk bo'lib ketmasligi uchun stillar
+                inputElementAddress.style.wordBreak = "keep-all";
+                inputElementAddress.style.overflowWrap = "break-word";
+                inputElementAddress.style.whiteSpace = "normal";
+
+                // Agar xaritada marker bo'lsa uni yangi koordinataga suramiz
+                if (selectedMarker) {
+                    selectedMarker.setLatLng([lat, lng]);
+                } else {
+                    isManualSelection = true;
+                    selectedMarker = L.marker([lat, lng]).addTo(map);
+                }
+                map.setView([lat, lng], 17);
+            }).catch(() => {
+                inputElementAddress.value = "Internetda xatolik yuz berdi";
+            });
+          
         }
     }, 1000); // Foydalanuvchi yozib bo'lishini 1 sekund kutadi
 
