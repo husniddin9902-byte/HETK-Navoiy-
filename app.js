@@ -1430,3 +1430,40 @@ function clearImageGallery() {
     const previewContainer = document.getElementById('images-preview-container');
     if (previewContainer) previewContainer.innerHTML = '';
     }
+// 🔥 SAVE LOCATION TUGMASINI TO'G'RIDAN-TO'G'RI OYNANI OCHADIGAN QILISH
+document.addEventListener('DOMContentLoaded', () => {
+    const saveLocationBtn = document.querySelector('.save-btn');
+    const elementManagePanel = document.getElementById('element-manage-panel');
+
+    if (saveLocationBtn) {
+        // Eski bosilganda ishlaydigan mantiqlarni chalg'itish uchun yangi toza hodisa bog'laymiz
+        saveLocationBtn.addEventListener('click', function(e) {
+            // Orqa fondagi eski "Avval papka tanlang" degan shartlarni to'xtatamiz!
+            e.preventDefault();
+            e.stopPropagation();
+
+            console.log("Save Location tugmasi bosildi. Oyna ochilmoqda...");
+
+            // 1. Ma'lumot kiritish oynasini vizual ochamiz (hidden klassini olib tashlaymiz)
+            if (elementManagePanel) {
+                elementManagePanel.classList.remove('hidden');
+                elementManagePanel.style.display = 'block'; // Kafolat uchun
+            }
+
+            // 2. Har gal oyna ochilganda yangi rasmlar galereyasi toza bo'lishi shart
+            if (typeof clearImageGallery === "function") {
+                clearImageGallery();
+            }
+
+            // 3. Agar kodingizda xarita koordinatalarini avtomat inputga yozadigan funksiya bo'lsa:
+            // Masalan, xaritadagi marker koordinatalarini input-latitude va input-longitude'ga yuklaymiz
+            const inputLat = document.getElementById('input-latitude');
+            const inputLng = document.getElementById('input-longitude');
+            const currentLat = document.getElementById('latitude')?.innerText;
+            const currentLng = document.getElementById('longitude')?.innerText;
+
+            if (inputLat && currentLat && currentLat !== "0.000000") inputLat.value = currentLat;
+            if (inputLng && currentLng && currentLng !== "0.000000") inputLng.value = currentLng;
+        }, true); // 'true' – ushbu kod eski kodlardan birinchi bo'lib bajarilishini ta'minlaydi
+    }
+});
