@@ -1283,7 +1283,6 @@ function loadFilteredPoints() {
     });
                              }
 
-
 // 🔥 BAZANI PANELNI OCHMASDAN ORQA FONDA YUKLASH (YAKUNIY KOD)
 document.addEventListener('DOMContentLoaded', () => {
     console.log("Tizim yuklanmoqda...");
