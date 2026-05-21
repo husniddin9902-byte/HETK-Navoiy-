@@ -1318,21 +1318,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 1500); // 1.5 sekund Firebase'dan guruhlar kelib tushishi uchun ideal vaqt
 });
 
-// 📸 INTERFEYSDA KO'P RASMLAR BILAN ISHLASH MANTIQLARI
-let selectedImagesArray = []; 
+// ==========================================
+// 🔥 YAKUNIY TOZA TIZIM KO'RINIShI
+// ==========================================
+
+let selectedImagesArray = []; // Ko'p rasmlar uchun massiv
+let currentSelectedFolderId = null; // Tanlangan guruhni eslab qolish
 
 document.addEventListener('DOMContentLoaded', () => {
+    // ------------------------------------------
+    // 1. RASMLAR BILAN ISHLASH MANTIQI
+    // ------------------------------------------
     const imageInput = document.getElementById('element-image-input');
     if (imageInput) {
         imageInput.addEventListener('change', function(e) {
             const files = Array.from(e.target.files);
-
             files.forEach(file => {
                 const reader = new FileReader();
                 reader.onload = function(event) {
                     const base64String = event.target.result;
-                    
-                    // Rasm massivda takrorlanmasa qo'shadi
                     if (!selectedImagesArray.includes(base64String)) {
                         selectedImagesArray.push(base64String);
                         renderImagesPreview();
@@ -1340,18 +1344,58 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
                 reader.readAsDataURL(file);
             });
-            
-            // Input tozalanishi shart, aks holda bitta rasmni o'chirib qayta tanlasa ishlamay qoladi
-            imageInput.value = '';
+            imageInput.value = ''; // Inputni srazi tozalaymiz
+        });
+    }
+
+    // ------------------------------------------
+    // 2. GURUHLAR VALYUTASINI FAQAT BELGILASH (XARITAGA OTIB KETMASLIK)
+    // ------------------------------------------
+    const treeRoot = document.getElementById('tree-root');
+    if (treeRoot) {
+        treeRoot.addEventListener('click', (e) => {
+            const folderItem = e.target.closest('.tree-folder-title') || e.target.closest('.tree-item');
+            if (folderItem) {
+                // Xaritaga avtomat otib ketish funksiyalarini to'xtatamiz!
+                e.stopPropagation();
+                
+                // Vizual belgilash
+                document.querySelectorAll('.tree-folder-title, .tree-item').forEach(el => {
+                    el.style.background = 'transparent';
+                });
+                folderItem.style.background = 'rgba(0, 122, 255, 0.2)';
+                folderItem.style.borderRadius = '6px';
+
+                // Guruh ID'sini saqlab qo'yamiz
+                currentSelectedFolderId = folderItem.dataset.id || folderItem.getAttribute('id');
+                console.log("Guruh belgilandi, lekin xaritaga chiqarilmadi:", currentSelectedFolderId);
+            }
+        }, true);
+    }
+
+    // ------------------------------------------
+    // 3. "XARITA" BO'LIMI BOSILGANDA KEYIN ELEMENTLARNI KO'RSATISH
+    // ------------------------------------------
+    const tabItemsBtn = document.getElementById('tab-items');
+    if (tabItemsBtn) {
+        tabItemsBtn.addEventListener('click', () => {
+            if (currentSelectedFolderId) {
+                console.log("Xarita bo'limi faollashdi. Guruh elementlari xaritaga chiqarilmoqda...");
+                // Koddagi xaritaga chizish funksiyasini majburlab chaqiramiz
+                if (typeof window.filterMapByFolder === "function") {
+                    window.filterMapByFolder(currentSelectedFolderId);
+                } else if (typeof window.showFolderOnMap === "function") {
+                    window.showFolderOnMap(currentSelectedFolderId);
+                }
+            }
         });
     }
 });
 
-// Rasmlarni ekran yuziga bittalab "X" tugmasi bilan chizish
+// Ekranda rasmlarni "X" tugmasi bilan chizish
 function renderImagesPreview() {
     const previewContainer = document.getElementById('images-preview-container');
     if (!previewContainer) return;
-
     previewContainer.innerHTML = ''; 
 
     selectedImagesArray.forEach((imgBase64, index) => {
@@ -1362,13 +1406,11 @@ function renderImagesPreview() {
         imgElement.src = imgBase64;
         imgElement.style.cssText = 'width: 100%; height: 100%; object-fit: cover; border-radius: 8px;';
 
-        // Har bir rasm uchun qizil kichkina o'chirish tugmasi
         const deleteBtn = document.createElement('button');
         deleteBtn.type = 'button';
         deleteBtn.innerHTML = '×';
         deleteBtn.style.cssText = 'position: absolute; top: -5px; right: -5px; background: #ff4444; color: white; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 11px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.4); z-index: 10; font-weight: bold;';
         
-        // "X" bosilganda rasmni massivdan sug'urib olib tashlaydi
         deleteBtn.onclick = function(e) {
             e.preventDefault();
             e.stopPropagation();
@@ -1382,10 +1424,9 @@ function renderImagesPreview() {
     });
 }
 
-// Yangi TP qo'shish oynasi har gal yopilganda yoki ochilganda galereyani tozalash uchun eslatma
+// Oynalar ochilib yopilganda rasmlarni tozalash
 function clearImageGallery() {
     selectedImagesArray = [];
     const previewContainer = document.getElementById('images-preview-container');
     if (previewContainer) previewContainer.innerHTML = '';
-}
-  
+    }
