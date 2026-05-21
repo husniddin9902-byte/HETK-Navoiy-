@@ -13,6 +13,26 @@
         overflow-wrap: break-word !important;
         white-space: normal !important;
     }
+            #element-manage-panel ul ul,
+        #element-manage-panel .tree-branch,
+        #element-manage-panel .tree-children {
+            display: none !important;
+            padding-left: 20px;
+            margin-top: 4px;
+        }
+        #element-manage-panel ul li.open > ul,
+        #element-manage-panel ul li.active > ul,
+        #element-manage-panel .tree-node.open .tree-branch,
+        #element-manage-panel .nested.active {
+            display: block !important;
+        }
+        #element-manage-panel .tree-folder-title,
+        #element-manage-panel .caret,
+        #element-manage-panel li {
+            cursor: pointer;
+            user-select: none;
+        }
+    
 </style>    
 </head>
 <body>
