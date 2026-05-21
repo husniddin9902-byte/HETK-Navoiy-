@@ -847,33 +847,43 @@ function renderElementTreeDropdown() {
     // Avvaldan tanlangan fiderlar massivi (Tahrirlash rejimi uchun)
     let selectedArray = selectedFoldersInput.value ? selectedFoldersInput.value.split(',') : [];
 
-    function buildNode(parentId, level) {
+    function buildNode(parentId, level, targetBox) {
         const folders = Object.keys(currentFolders).filter(id => currentFolders[id].parentId === parentId);
         
         folders.forEach(id => {
             const folder = currentFolders[id];
             const isChecked = selectedArray.includes(id) ? "checked" : "";
+            const hasSubFolders = Object.keys(currentFolders).some(childId => currentFolders[childId].parentId === id);
             
+            // Har bir element va uning bolalari uchun umumiy wrapper quti
+            const nodeWrapper = document.createElement('div');
+            nodeWrapper.style.cssText = "margin: 4px 0; width: 100%; display: block;";
+
+            // Qator dizayni
             const row = document.createElement('div');
-            row.style.paddingLeft = `${level * 15}px`;
-            row.style.display = "flex";
-            row.style.alignItems = "center";
-            row.style.gap = "8px";
-            row.style.background = selectedArray.includes(id) ? "rgba(0,122,255,0.1)" : "transparent";
+            row.style.cssText = `display: flex; align-items: center; gap: 8px; padding: 6px 4px; border-radius: 6px; transition: background 0.2s;`;
+            row.style.paddingLeft = `${level * 16}px`; // Ichkariga surilish masofasi
+            row.style.background = selectedArray.includes(id) ? "rgba(0,122,255,0.15)" : "transparent";
+
+            // Ochilib yopilish belgisi dynamic yaratiladi
+            const toggleSign = hasSubFolders 
+                ? `<span class="elem-tree-toggle" style="width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; color: #88a0b0; font-weight: bold; cursor: pointer; background: rgba(255,255,255,0.07); border-radius: 4px; font-size: 13px; user-select: none;">+</span>` 
+                : `<span style="width: 20px; text-align: center; color: #4b6575; font-size: 12px;">•</span>`;
 
             row.innerHTML = `
-                <input type="checkbox" value="${id}" ${isChecked} class="element-folder-checkbox" style="width:16px; height:16px; cursor:pointer;">
-                <i class="fas fa-folder" style="color: ${folder.color}; font-size:14px;"></i>
-                <span style="font-size:13px; color:white;">${folder.name}</span>
+                ${toggleSign}
+                <input type="checkbox" value="${id}" ${isChecked} class="element-folder-checkbox" style="width:18px; height:18px; cursor:pointer; margin: 0; flex-shrink: 0;">
+                <i class="fas fa-folder" style="color: ${folder.color}; font-size:15px; flex-shrink: 0;"></i>
+                <span style="font-size:14px; color:white; cursor:pointer; user-select:none; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex-grow: 1;">${folder.name}</span>
             `;
 
-            // Checkbox o'zgarganda massivni dynamic yangilash
+            // Checkbox o'zgarganda input elementga yozish mantiqi
             const checkbox = row.querySelector('.element-folder-checkbox');
             checkbox.addEventListener('change', function() {
                 let currentSelected = selectedFoldersInput.value ? selectedFoldersInput.value.split(',') : [];
                 if (this.checked) {
                     if (!currentSelected.includes(this.value)) currentSelected.push(this.value);
-                    row.style.background = "rgba(0,122,255,0.1)";
+                    row.style.background = "rgba(0,122,255,0.15)";
                 } else {
                     currentSelected = currentSelected.filter(v => v !== this.value);
                     row.style.background = "transparent";
@@ -881,12 +891,52 @@ function renderElementTreeDropdown() {
                 selectedFoldersInput.value = currentSelected.filter(Boolean).join(',');
             });
 
-            dropdownContainer.appendChild(row);
-            buildNode(id, level + 1);
+            // Matn (Guruh nomi) bosilganda ham checkbox belgilansin
+            row.querySelector('span').addEventListener('click', () => {
+                checkbox.checked = !checkbox.checked;
+                checkbox.dispatchEvent(new Event('change'));
+            });
+
+            nodeWrapper.appendChild(row);
+
+            // Agar ichki guruhlar bo'lsa, ularni zichlab yashirin qutiga (childBox) solamiz
+            if (hasSubFolders) {
+                const childBox = document.createElement('div');
+                childBox.className = "tree-child-container";
+                childBox.style.cssText = "display: none; border-left: 1px dashed rgba(255,255,255,0.12); margin-top: 2px;";
+                childBox.style.marginLeft = `${(level * 16) + 10}px`; // Chiziq to'g'ri tushishi uchun surish
+                
+                nodeWrapper.appendChild(childBox);
+
+                // Rekursiya: Bolalarini o'zidan bitta katta level bilan yangi childBox ichiga soladi
+                buildNode(id, level + 1, childBox);
+
+                // [+] yoki [-] bosilganda ochilish va yopilish hodisasi
+                const toggleBtn = row.querySelector('.elem-tree-toggle');
+                if (toggleBtn) {
+                    toggleBtn.addEventListener('click', (event) => {
+                        event.stopPropagation(); // Checkbox yoki qatorga o'tib ketishini to'xtatadi
+                        if (childBox.style.display === "none") {
+                            childBox.style.display = "block";
+                            toggleBtn.innerText = "-";
+                            toggleBtn.style.background = "rgba(0,122,255,0.2)";
+                            toggleBtn.style.color = "#007AFF";
+                        } else {
+                            childBox.style.display = "none";
+                            toggleBtn.innerText = "+";
+                            toggleBtn.style.background = "rgba(255,255,255,0.07)";
+                            toggleBtn.style.color = "#88a0b0";
+                        }
+                    });
+                }
+            }
+
+            targetBox.appendChild(nodeWrapper);
         });
     }
 
-    buildNode('root', 0);
+    // Eng yuqori (Bosh guruh - root) elementlardan daraxtni yopiq holda yaratishni boshlaymiz
+    buildNode('root', 0, dropdownContainer);
 }
 
 // 8. Elementni Firebase Realtime Database'ga Saqlash va Tahrirlash (Many-to-Many tizimda)
