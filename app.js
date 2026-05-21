@@ -1283,6 +1283,7 @@ function loadFilteredPoints() {
     });
                              }
 
+
 // 🔥 BAZANI PANELNI OCHMASDAN ORQA FONDA YUKLASH (YAKUNIY KOD)
 document.addEventListener('DOMContentLoaded', () => {
     console.log("Tizim yuklanmoqda...");
@@ -1316,66 +1317,4 @@ document.addEventListener('DOMContentLoaded', () => {
         
         console.log("Yuklanish tugadi. Faqat toza Glavniy ekran faol!");
     }, 1500); // 1.5 sekund Firebase'dan guruhlar kelib tushishi uchun ideal vaqt
-});
-
-    // ========================================================
-// 📂 GURUHLAR RO'YXATINI ELEMENT PANELIGA CHIQARISH KODI
-// ========================================================
-
-document.addEventListener('DOMContentLoaded', () => {
-    const saveLocationBtn = document.querySelector('.save-btn');
-    const elementManagePanel = document.getElementById('element-manage-panel');
-    const parentFolderTree = document.getElementById('parent-folder-tree');
-
-    if (saveLocationBtn) {
-        saveLocationBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-
-            // 1. Element kiritish panelini ochish
-            if (elementManagePanel) {
-                elementManagePanel.classList.remove('hidden');
-                elementManagePanel.style.display = 'block';
-            }
-
-            // 2. Oyna ochilganda guruhlar (fiderlar) ro'yxatini qayta yangilab yuklash
-            if (parentFolderTree) {
-                parentFolderTree.innerHTML = '<option value="">-- Guruhni tanlang --</option>';
-                
-                // Firebase yoki mahalliy xotiradagi guruhlarni qidiramiz
-                // Agar sizda guruhlar ro'yxati saqlanadigan massiv bo'lsa (masalan: folders yoki groups)
-                const availableFolders = window.allFoldersData || []; 
-                
-                if (availableFolders.length > 0) {
-                    availableFolders.forEach(folder => {
-                        const option = document.createElement('option');
-                        option.value = folder.id;
-                        option.innerText = folder.name || folder.title;
-                        parentFolderTree.appendChild(option);
-                    });
-                } else {
-                    // Agar tayyor massiv bo'lmasa, HTML daraxtidagi mavjud guruhlarni yig'ib olamiz
-                    document.querySelectorAll('.tree-folder-title, .tree-item').forEach(item => {
-                        const id = item.dataset.id || item.getAttribute('id');
-                        const name = item.innerText || item.textContent;
-                        if (id && name) {
-                            const option = document.createElement('option');
-                            option.value = id;
-                            option.innerText = name.trim();
-                            parentFolderTree.appendChild(option);
-                        }
-                    });
-                }
-            }
-
-            // Koordinatalarni to'g'rilash
-            const inputLat = document.getElementById('input-latitude');
-            const inputLng = document.getElementById('input-longitude');
-            const currentLat = document.getElementById('latitude')?.innerText;
-            const currentLng = document.getElementById('longitude')?.innerText;
-
-            if (inputLat && currentLat && currentLat !== "0.000000") inputLat.value = currentLat;
-            if (inputLng && currentLng && currentLng !== "0.000000") inputLng.value = currentLng;
-        }, true);
-    }
 });
