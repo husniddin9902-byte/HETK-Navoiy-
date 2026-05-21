@@ -1318,91 +1318,57 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 1500); // 1.5 sekund Firebase'dan guruhlar kelib tushishi uchun ideal vaqt
 });
 
+    // ========================================================
+// 📂 GURUHLAR RO'YXATINI ELEMENT PANELIGA CHIQARISH KODI
 // ========================================================
-// 🔥 YAKUNIY VA TOZA TIZIM KO'RINISHI (URISHMAYDIGAN VARIANT)
-// ========================================================
 
-let selectedImagesArray = []; // Ko'p rasmlar uchun massiv
-let currentSelectedFolderId = null; // Tanlangan guruhni eslab qolish
-
-// 1. RASMLARNI CHIZISH FUNKSIYASI
-function renderImagesPreview() {
-    const previewContainer = document.getElementById('images-preview-container');
-    if (!previewContainer) return;
-    previewContainer.innerHTML = ''; 
-
-    selectedImagesArray.forEach((imgBase64, index) => {
-        const imgWrapper = document.createElement('div');
-        imgWrapper.style.cssText = 'position: relative; width: 75px; height: 75px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);';
-
-        const imgElement = document.createElement('img');
-        imgElement.src = imgBase64;
-        imgElement.style.cssText = 'width: 100%; height: 100%; object-fit: cover; border-radius: 8px;';
-
-        const deleteBtn = document.createElement('button');
-        deleteBtn.type = 'button';
-        deleteBtn.innerHTML = '×';
-        deleteBtn.style.cssText = 'position: absolute; top: -5px; right: -5px; background: #ff4444; color: white; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 11px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.4); z-index: 10; font-weight: bold;';
-        
-        deleteBtn.onclick = function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            selectedImagesArray.splice(index, 1); 
-            renderImagesPreview(); 
-        };
-
-        imgWrapper.appendChild(imgElement);
-        imgWrapper.appendChild(deleteBtn);
-        previewContainer.appendChild(imgWrapper);
-    });
-}
-
-function clearImageGallery() {
-    selectedImagesArray = [];
-    const previewContainer = document.getElementById('images-preview-container');
-    if (previewContainer) previewContainer.innerHTML = '';
-}
-
-// 2. TUGMALAR VA HODISALARNI BOSHQARISH
 document.addEventListener('DOMContentLoaded', () => {
-    
-    // A) Rasmlarni yuklash darchasi
-    const imageInput = document.getElementById('element-image-input');
-    if (imageInput) {
-        imageInput.addEventListener('change', function(e) {
-            const files = Array.from(e.target.files);
-            files.forEach(file => {
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    const base64String = event.target.result;
-                    if (!selectedImagesArray.includes(base64String)) {
-                        selectedImagesArray.push(base64String);
-                        renderImagesPreview();
-                    }
-                };
-                reader.readAsDataURL(file);
-            });
-            imageInput.value = ''; 
-        });
-    }
-
-    // B) "Save Location" tugmasi bosilganda to'g'ridan-to'g'ri oynani ochish
     const saveLocationBtn = document.querySelector('.save-btn');
     const elementManagePanel = document.getElementById('element-manage-panel');
+    const parentFolderTree = document.getElementById('parent-folder-tree');
 
     if (saveLocationBtn) {
         saveLocationBtn.addEventListener('click', function(e) {
-            // Esli "Avval papka tanlang" degan cheklovlarni majburlab o'chiramiz!
             e.preventDefault();
             e.stopPropagation();
 
+            // 1. Element kiritish panelini ochish
             if (elementManagePanel) {
                 elementManagePanel.classList.remove('hidden');
-                elementManagePanel.style.display = 'block'; 
+                elementManagePanel.style.display = 'block';
             }
-            clearImageGallery(); // Har gal oyna ochilganda tozalash
 
-            // Xarita koordinatalarini inputga avtomat yozish (agar mavjud bo'lsa)
+            // 2. Oyna ochilganda guruhlar (fiderlar) ro'yxatini qayta yangilab yuklash
+            if (parentFolderTree) {
+                parentFolderTree.innerHTML = '<option value="">-- Guruhni tanlang --</option>';
+                
+                // Firebase yoki mahalliy xotiradagi guruhlarni qidiramiz
+                // Agar sizda guruhlar ro'yxati saqlanadigan massiv bo'lsa (masalan: folders yoki groups)
+                const availableFolders = window.allFoldersData || []; 
+                
+                if (availableFolders.length > 0) {
+                    availableFolders.forEach(folder => {
+                        const option = document.createElement('option');
+                        option.value = folder.id;
+                        option.innerText = folder.name || folder.title;
+                        parentFolderTree.appendChild(option);
+                    });
+                } else {
+                    // Agar tayyor massiv bo'lmasa, HTML daraxtidagi mavjud guruhlarni yig'ib olamiz
+                    document.querySelectorAll('.tree-folder-title, .tree-item').forEach(item => {
+                        const id = item.dataset.id || item.getAttribute('id');
+                        const name = item.innerText || item.textContent;
+                        if (id && name) {
+                            const option = document.createElement('option');
+                            option.value = id;
+                            option.innerText = name.trim();
+                            parentFolderTree.appendChild(option);
+                        }
+                    });
+                }
+            }
+
+            // Koordinatalarni to'g'rilash
             const inputLat = document.getElementById('input-latitude');
             const inputLng = document.getElementById('input-longitude');
             const currentLat = document.getElementById('latitude')?.innerText;
@@ -1410,39 +1376,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (inputLat && currentLat && currentLat !== "0.000000") inputLat.value = currentLat;
             if (inputLng && currentLng && currentLng !== "0.000000") inputLng.value = currentLng;
-        }, true); 
-    }
-
-    // C) Guruh panelidan papka tanlanganda srazi xaritaga chiqarmaslik
-    const treeRoot = document.getElementById('tree-root');
-    if (treeRoot) {
-        treeRoot.addEventListener('click', (e) => {
-            const folderItem = e.target.closest('.tree-folder-title') || e.target.closest('.tree-item');
-            if (folderItem) {
-                e.stopPropagation();
-                
-                document.querySelectorAll('.tree-folder-title, .tree-item').forEach(el => {
-                    el.style.background = 'transparent';
-                });
-                folderItem.style.background = 'rgba(0, 122, 255, 0.2)';
-                folderItem.style.borderRadius = '6px';
-
-                currentSelectedFolderId = folderItem.dataset.id || folderItem.getAttribute('id');
-            }
         }, true);
-    }
-
-    // D) Faqat "Xarita" bo'limi bosilgandagina elementlarni xaritada ko'rsatish
-    const tabItemsBtn = document.getElementById('tab-items');
-    if (tabItemsBtn) {
-        tabItemsBtn.addEventListener('click', () => {
-            if (currentSelectedFolderId) {
-                if (typeof window.filterMapByFolder === "function") {
-                    window.filterMapByFolder(currentSelectedFolderId);
-                } else if (typeof window.showFolderOnMap === "function") {
-                    window.showFolderOnMap(currentSelectedFolderId);
-                }
-            }
-        });
     }
 });
