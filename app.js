@@ -238,6 +238,158 @@ if(saveFolderBtn) {
         });
     });
 }
+// 23 may
+// =========================================================================
+// 1. XARITA VA GURUHLAR TABLARINI DYNAMIC TANLOV ASOSIDA FILTRLASH MANTIQI
+// =========================================================================
+document.addEventListener("DOMContentLoaded", () => {
+    const btnXarita = document.getElementById('tab-xarita');
+    const btnGuruhlar = document.getElementById('tab-guruhlar');
+    const listContainer = document.getElementById('element-list-container');
+    const mapContainer = document.getElementById('map');
+
+    // Tanlangan alohida TP elementlarini IDlarini saqlash uchun massiv
+    if (!window.selectedElementIds) window.selectedElementIds = [];
+    if (!window.myMapMarkers) window.myMapMarkers = [];
+
+    // "Xarita" tabi bosilgandagi mantiq
+    if (btnXarita) {
+        btnXarita.addEventListener('click', () => {
+            btnXarita.classList.add('active');
+            if (btnGuruhlar) btnGuruhlar.classList.remove('active');
+
+            // Noto'g'ri vertikal matnli ro'yxatni yashiramiz va xarita divini ochamiz
+            if (listContainer) listContainer.style.display = 'none';
+            if (mapContainer) mapContainer.style.display = 'block';
+
+            // Xaritadagi eski hamma markerlarni tozalaymiz
+            window.myMapMarkers.forEach(m => m.setMap(null));
+            window.myMapMarkers = [];
+
+            // Aktiv tanlangan papka (guruh) ID-larini olamiz
+            const selectedFoldersInput = document.getElementById('element-selected-folders');
+            const selectedFolderId = selectedFoldersInput ? selectedFoldersInput.value.trim() : '';
+
+            let elementsToDisplay = [];
+
+            // ALOHIDA VA BIRGALIKDA TANLASH MANTIQI:
+            if (selectedFolderId !== '' || window.selectedElementIds.length > 0) {
+                const selectedFolderIdsArray = selectedFolderId !== '' ? selectedFolderId.split(',') : [];
+                
+                elementsToDisplay = Object.values(currentElements).filter(elem => {
+                    // a) Agar elementning o'zi ro'yxatdan to'g'ridan-to'g'ri tanlangan bo'lsa
+                    if (window.selectedElementIds.includes(elem.id)) return true;
+                    // b) Agar element tanlangan papkalardan biriga tegishli bo'lsa
+                    if (elem.folderId && selectedFolderIdsArray.includes(elem.folderId)) return true;
+                    if (elem.folders && elem.folders.some(id => selectedFolderIdsArray.includes(id))) return true;
+                    
+                    return false;
+                });
+            } else {
+                // Agar hech qanday papka ham, hech qanday TP ham tanlanmagan bo'lsa -> HAMMA elementlar chiqadi
+                elementsToDisplay = Object.values(currentElements);
+            }
+
+            // Google xaritaga tanlangan markerlarni joylashtirish va markazlashtirish
+            if (elementsToDisplay.length > 0 && typeof google !== 'undefined' && typeof map !== 'undefined') {
+                const bounds = new google.maps.LatLngBounds();
+
+                elementsToDisplay.forEach(elem => {
+                    if (elem.latitude && elem.longitude) {
+                        const pos = { lat: parseFloat(elem.latitude), lng: parseFloat(elem.longitude) };
+                        
+                        const marker = new google.maps.Marker({
+                            position: pos,
+                            map: map,
+                            title: elem.name
+                        });
+
+                        const info = new google.maps.InfoWindow({
+                            content: `<div style="color:black;padding:5px;"><strong>⚡ ${elem.name}</strong></div>`
+                        });
+
+                        marker.addListener('click', () => info.open(map, marker));
+                        window.myMapMarkers.push(marker);
+                        bounds.extend(pos);
+                    }
+                });
+
+                map.fitBounds(bounds);
+                const listener = google.maps.event.addListener(map, "bounds_changed", function() {
+                    if (this.getZoom() > 15) this.setZoom(15);
+                    google.maps.event.removeListener(listener);
+                });
+            }
+        });
+    }
+
+    if (btnGuruhlar) {
+        btnGuruhlar.addEventListener('click', () => {
+            btnGuruhlar.classList.add('active');
+            if (btnXarita) btnXarita.classList.remove('active');
+            if (listContainer) listContainer.style.display = 'block';
+        });
+    }
+
+    // Guruhlar ro'yxatida TP elementlari bosilganda huddi papkadek tanlanish (belgilanish) mantiqi
+    if (listContainer) {
+        listContainer.addEventListener('click', (e) => {
+            const targetRow = e.target.closest('.element-item, [data-element-id]');
+            
+            // Tahrirlash yoki o'chirish tugmalari bosilsa mantiq ishlamaydi
+            if (e.target.closest('.edit-btn') || e.target.closest('.delete-btn') || e.target.closest('input[type="checkbox"]')) {
+                return;
+            }
+
+            if (targetRow) {
+                const elementId = targetRow.getAttribute('data-element-id') || targetRow.id;
+                
+                // Agar element massivda bo'lsa - tanlovni olib tashlaymiz (Unselect), bo'lmasa - qo'shamiz (Select)
+                const index = window.selectedElementIds.indexOf(elementId);
+                if (index > -1) {
+                    window.selectedElementIds.splice(index, 1);
+                    targetRow.style.background = "transparent"; // Orqa fonni eski holiga qaytarish
+                } else {
+                    window.selectedElementIds.push(elementId);
+                    targetRow.style.background = "rgba(0, 122, 255, 0.2)"; // Tanlanganini bildirish uchun chiroyli ko'k fon
+                }
+            }
+        });
+    }
+});
+
+// =========================================================================
+// 2. "X" TUGMASI BOSILGANDA BOSHQARUV PANELINI YOPISH VA GLAVNIY EKRAZNI TOZALASH
+// =========================================================================
+document.addEventListener("DOMContentLoaded", () => {
+    // Kodingizdagi "X" (Yopish) tugmasi ID-si (masalan: close-menu yoki close-panel)
+    const closePanelBtn = document.getElementById('closeList') || document.getElementById('close-menu'); 
+    const adminPanelWrapper = document.getElementById('admin-panel-wrapper') || document.getElementById('listModal');
+
+    if (closePanelBtn) {
+        closePanelBtn.addEventListener('click', () => {
+            // 1. Boshqaruv panelini (modal oynani) butunlay yopamiz
+            if (adminPanelWrapper) adminPanelWrapper.style.display = 'none';
+            if (typeof listModal !== 'undefined' && listModal.classList) listModal.classList.add('hidden');
+
+            // 2. Tanlovlarni to'liq nollashtiramiz (tozalaymiz)
+            window.selectedElementIds = [];
+            const selectedFoldersInput = document.getElementById('element-selected-folders');
+            if (selectedFoldersInput) selectedFoldersInput.value = '';
+
+            // 3. Glavniy ekrandagi xaritada hech qanday eski marker ko'rinmasligi uchun hammasini o'chiramiz
+            if (window.myMapMarkers) {
+                window.myMapMarkers.forEach(m => m.setMap(null));
+            }
+            window.myMapMarkers = [];
+
+            // 4. Glavniy ekran xaritasini faqat yangi element kiritish (lakatsiya saqlash) rejimiga o'tkazamiz
+            console.log("Boshqaruv paneli yopildi. Glavniy ekran faqat lakatsiya saqlash uchun tayyor.");
+        });
+    }
+});
+
+// 23 may tugashi
 
 function loadFolders() {
     database.ref('Folders').on('value', (snapshot) => {
