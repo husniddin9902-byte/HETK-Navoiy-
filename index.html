@@ -1,46 +1,62 @@
 <!DOCTYPE html>
 <html lang="uz">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HETK Navoiy</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/framework7/css/framework7.bundle.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
-<style>
-    #address {
-        word-break: keep-all !important;
-        overflow-wrap: break-word !important;
-        white-space: normal !important;
-    }
-            
-</style>  
-
-<script>
-document.addEventListener("DOMContentLoaded", () => {
-    const btnXarita = document.getElementById('tab-xarita');
-    const btnGuruhlar = document.getElementById('tab-guruhlar');
     
-    if (btnXarita) {
-        btnXarita.addEventListener('click', () => {
-            // "Xarita" bosilganda ro'yxat containerlarini butunlay yo'q qilish
-            const listCont = document.getElementById('element-list-container') || document.getElementById('elementList');
-            const mapCont = document.getElementById('map');
-            
-            if (listCont) {
-                listCont.style.setProperty('display', 'none', 'important');
-                listCont.innerHTML = ""; // Ichidagi haligi adashib chiqayotgan matnlarni tozalash
-            }
-            if (mapCont) {
-                mapCont.style.setProperty('display', 'block', 'important');
-            }
-        });
-    }
-});
-</script>
+    <style>
+        #address {
+            word-break: keep-all !important;
+            overflow-wrap: break-word !important;
+            white-space: normal !important;
+        }
 
- 
+        /* CSS orqali xarita bosilganda ro'yxatni majburiy yashirish */
+        #tab-xarita.active ~ #element-list-container,
+        #tab-xarita.active ~ #elementList,
+        body:has(#tab-xarita.active) #element-list-container,
+        body:has(#tab-xarita.active) #elementList {
+            display: none !important;
+        }
+
+        body:has(#tab-xarita.active) #map {
+            display: block !important;
+        }
+    </style>
+
+    <script>
+    document.addEventListener("DOMContentLoaded", () => {
+        try {
+            const btnXarita = document.getElementById('tab-xarita');
+            const btnGuruhlar = document.getElementById('tab-guruhlar');
+            
+            if (btnXarita) {
+                btnXarita.addEventListener('click', () => {
+                    const listCont = document.getElementById('element-list-container') || document.getElementById('elementList');
+                    const mapCont = document.getElementById('map');
+                    
+                    if (listCont) {
+                        listCont.style.setProperty('display', 'none', 'important');
+                        listCont.innerHTML = ""; // Ro'yxat elementlarini tozalash
+                    }
+                    if (mapCont) {
+                        mapCont.style.setProperty('display', 'block', 'important');
+                    }
+                });
+            }
+        } catch (error) {
+            console.log("Tab almashtirishda xatolik:", error);
+        }
+    });
+    </script>
 </head>
+    
+    
 <body>
 
      <div id="app-loader" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0f172a; z-index: 999999 !important; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; font-family: sans-serif;">
