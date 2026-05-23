@@ -196,34 +196,175 @@ const addFolderPanel = document.getElementById('add-folder-panel');
 const cancelFolder = document.getElementById('cancel-folder');
 const hueSlider = document.getElementById('color-slider');
 
-// 2 va 3-rasmlar mosligi: Har ikkala tugma ham boshqaruv panelini ochadi
-if(listBtn) listBtn.addEventListener('click', () => { listModal.style.display = 'flex'; loadFolders(); });
-if(menuBtn) menuBtn.addEventListener('click', () => { listModal.style.display = 'flex'; loadFolders(); });
-if(closeList) closeList.addEventListener('click', () => { listModal.style.display = 'none'; });
+// =========================================================================
+// PAPKALAR, TABLAR VA ELEMENTLARNI XARITADA FILTRLASH MARKAZIY TIZIMI
+// =========================================================================
 
-if(openAddBtn) openAddBtn.addEventListener('click', () => { 
-    addFolderPanel.classList.remove('hidden'); 
-    updateParentSelect('parent-folder-select'); 
-});
-if(cancelFolder) cancelFolder.addEventListener('click', () => { addFolderPanel.classList.add('hidden'); });
+// Global o'zgaruvchilar (Tanlangan TP elementlarini saqlash uchun)
+if (!window.selectedElementIds) window.selectedElementIds = [];
+if (!window.myMapMarkers) window.myMapMarkers = [];
 
-if(hueSlider) {
-    hueSlider.addEventListener('input', (e) => {
-        const color = `hsl(${e.target.value}, 100%, 50%)`;
-        const preview = document.getElementById('color-preview');
-        if(preview) preview.style.background = color;
+// Elementlarni boshqarish elementlari (Sizning HTML ID raqamlar bo'yicha)
+const btnXarita = document.getElementById('tab-xarita');
+const btnGuruhlar = document.getElementById('tab-guruhlar');
+const listContainer = document.getElementById('element-list-container') || document.getElementById('elementList');
+const mapContainer = document.getElementById('map');
+
+// 1. "Xarita" tabi bosilganda ishlaydigan filtr mantiqi
+if (btnXarita) {
+    btnXarita.addEventListener('click', () => {
+        if (btnXarita) btnXarita.classList.add('active');
+        if (btnGuruhlar) btnGuruhlar.classList.remove('active');
+
+        // Ro'yxat chiqib qolmasligi uchun uni yashiramiz va xarita divini ochamiz
+        if (listContainer) listContainer.style.display = 'none';
+        if (mapContainer) mapContainer.style.display = 'block';
+
+        // Xaritadagi eski hamma markerlarni tozalaymiz
+        window.myMapMarkers.forEach(m => m.setMap(null));
+        window.myMapMarkers = [];
+
+        // Tanlangan guruh/papka ID larini aniqlash
+        const selectedFoldersInput = document.getElementById('element-selected-folders');
+        const selectedFolderId = selectedFoldersInput ? selectedFoldersInput.value.trim() : '';
+
+        let elementsToDisplay = [];
+
+        // MANTIQ: Guruh yoki yakka TP tanlanganligini tekshirish
+        if (selectedFolderId !== '' || window.selectedElementIds.length > 0) {
+            const selectedFolderIdsArray = selectedFolderId !== '' ? selectedFolderId.split(',') : [];
+            
+            elementsToDisplay = Object.values(currentElements).filter(elem => {
+                // a) Agar TP ro'yxatdan shunchaki bosib tanlangan bo'lsa
+                if (window.selectedElementIds.includes(elem.id)) return true;
+                // b) Agar TP tanlangan guruhlardan biriga tegishli bo'lsa
+                if (elem.folderId && selectedFolderIdsArray.includes(elem.folderId)) return true;
+                if (elem.folders && elem.folders.some(id => selectedFolderIdsArray.includes(id))) return true;
+                return false;
+            });
+        } else {
+            // Hech narsa tanlanmagan bo'lsa -> HAMMA elementlarni ko'rsatish
+            elementsToDisplay = Object.values(currentElements);
+        }
+
+        // Google Kartaga markerlarni joylashtirish va o'sha yerga markazlash (fitBounds)
+        if (elementsToDisplay.length > 0 && typeof google !== 'undefined' && typeof map !== 'undefined') {
+            const bounds = new google.maps.LatLngBounds();
+
+            elementsToDisplay.forEach(elem => {
+                if (elem.latitude && elem.longitude) {
+                    const pos = { lat: parseFloat(elem.latitude), lng: parseFloat(elem.longitude) };
+                    
+                    const marker = new google.maps.Marker({
+                        position: pos,
+                        map: map,
+                        title: elem.name
+                    });
+
+                    const info = new google.maps.InfoWindow({
+                        content: `<div style="color:black;padding:5px;"><strong>⚡ ${elem.name}</strong></div>`
+                    });
+
+                    marker.addListener('click', () => info.open(map, marker));
+                    window.myMapMarkers.push(marker);
+                    bounds.extend(pos);
+                }
+            });
+
+            map.fitBounds(bounds);
+            const listener = google.maps.event.addListener(map, "bounds_changed", function() {
+                if (this.getZoom() > 15) this.setZoom(15);
+                google.maps.event.removeListener(listener);
+            });
+        }
     });
 }
 
-const saveFolderBtn = document.getElementById('save-folder');
-if(saveFolderBtn) {
+// 2. "Guruhlar" tabi bosilganda ro'yxatni qaytarish
+if (btnGuruhlar) {
+    btnGuruhlar.addEventListener('click', () => {
+        if (btnGuruhlar) btnGuruhlar.classList.add('active');
+        if (btnXarita) btnXarita.classList.remove('active');
+        if (listContainer) listContainer.style.display = 'block';
+    });
+}
+
+// 3. Guruh ichidagi TP bosilganda huddi papkadek shunchaki belgilanish (tanlanish) mantiqi
+if (listContainer) {
+    listContainer.addEventListener('click', (e) => {
+        const targetRow = e.target.closest('.element-item, [data-element-id]') || e.target.closest('div[style*="flex"]');
+        if (e.target.closest('.edit-btn') || e.target.closest('.delete-btn') || e.target.closest('input')) return;
+
+        if (targetRow) {
+            const elementId = targetRow.getAttribute('data-element-id') || targetRow.id;
+            if (!elementId || elementId === "element-list-container") return;
+
+            const index = window.selectedElementIds.indexOf(elementId);
+            if (index > -1) {
+                // Tanlovni olib tashlash (Unselect)
+                window.selectedElementIds.splice(index, 1);
+                targetRow.style.border = "none";
+                targetRow.style.background = "transparent";
+            } else {
+                // Tanlash (Select)
+                window.selectedElementIds.push(elementId);
+                targetRow.style.border = "1px solid #007AFF";
+                targetRow.style.background = "rgba(0, 122, 255, 0.15)";
+            }
+        }
+    });
+}
+
+// 4. "X" TUGMASI BOSILGANDA PANELNI YOPISH VA ASOSIY EKRAZNI TOZALASH (SAQLASH REJIMI)
+if (closeList) {
+    closeList.addEventListener('click', () => {
+        if (listModal) listModal.style.display = 'none';
+
+        // Barcha tanlovlarni o'chirish (Nollashtirish)
+        window.selectedElementIds = [];
+        const selectedFoldersInput = document.getElementById('element-selected-folders');
+        if (selectedFoldersInput) selectedFoldersInput.value = '';
+
+        // Glavniy ekrandagi xaritadan barcha eski markerlarni tozalash (Toza ekran)
+        window.myMapMarkers.forEach(m => m.setMap(null));
+        window.myMapMarkers = [];
+
+        // Xaritani boshlang'ich kiritish markaziga qaytarish
+        if (typeof map !== 'undefined' && typeof currentLat !== 'undefined' && typeof currentLng !== 'undefined') {
+            map.setCenter({ lat: currentLat, lng: currentLng });
+            map.setZoom(15);
+        }
+    });
+}
+
+// 5. QOLGAN TUGMALAR EVENT TINGLOVCHILARI (ESKI KODDAN SAQLAB QOLINGANLAR)
+if (openAddBtn) openAddBtn.addEventListener('click', () => {
+    if (addFolderPanel) addFolderPanel.classList.remove('hidden');
+    if (typeof updateParentSelect === 'function') updateParentSelect('parent-folder-select');
+});
+
+if (cancelFolder) cancelFolder.addEventListener('click', () => {
+    if (addFolderPanel) addFolderPanel.classList.add('hidden');
+});
+
+if (hueSlider) {
+    hueSlider.addEventListener('input', (e) => {
+        const color = `hsl(${e.target.value}, 100%, 50%)`;
+        const preview = document.getElementById('folder-color-preview');
+        if (preview) preview.style.backgroundColor = color;
+    });
+}
+
+if (saveFolderBtn) {
     saveFolderBtn.addEventListener('click', () => {
-        const name = document.getElementById('new-group-name').value;
-        const parentId = document.getElementById('parent-folder-select').value;
+        const nameInput = document.getElementById('new-folder-name');
+        const parentSelect = document.getElementById('parent-folder-select');
+        const name = nameInput ? nameInput.value.trim() : '';
+        const parentId = parentSelect ? parentSelect.value : 'root';
         const hue = hueSlider ? hueSlider.value : 0;
         const color = `hsl(${hue}, 100%, 50%)`;
 
-        if (!name) return showToast("Guruh nomini yozing!");
+        if (!name) return showToast("Guruh nomini kiriting!");
 
         database.ref('Folders').push({
             name: name,
@@ -233,11 +374,12 @@ if(saveFolderBtn) {
             createdAt: Date.now()
         }).then(() => {
             showToast("Guruh yaratildi!");
-            document.getElementById('new-group-name').value = "";
-            addFolderPanel.classList.add('hidden');
+            if (nameInput) nameInput.value = '';
+            if (addFolderPanel) addFolderPanel.classList.add('hidden');
         });
     });
-}
+          }
+
 // 23 may
 // =========================================================================
 // 1. XARITA VA GURUHLAR TABLARINI DYNAMIC TANLOV ASOSIDA FILTRLASH MANTIQI
