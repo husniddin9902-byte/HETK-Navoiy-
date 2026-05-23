@@ -310,11 +310,11 @@ if (listContainer) {
                 window.selectedElementIds.push(elementId);
                 targetRow.style.border = "1px solid #007AFF";
                 targetRow.style.background = "rgba(0, 122, 255, 0.15)";
-            }
+            
         }
     });
 }
-
+}
 // 4. "X" TUGMASI BOSILGANDA PANELNI YOPISH VA ASOSIY EKRAZNI TOZALASH (SAQLASH REJIMI)
 if (closeList) {
     closeList.addEventListener('click', () => {
