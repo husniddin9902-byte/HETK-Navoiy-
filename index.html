@@ -14,7 +14,36 @@
         white-space: normal !important;
     }
             
-</style>    
+</style>  
+
+</style> <script>
+document.addEventListener("DOMContentLoaded", () => {
+    const btnXarita = document.getElementById('tab-xarita');
+    const btnGuruhlar = document.getElementById('tab-guruhlar');
+    
+    if (btnXarita) {
+        btnXarita.addEventListener('click', () => {
+            // "Xarita" bosilganda ro'yxat containerlarini butunlay yo'q qilish
+            const listCont = document.getElementById('element-list-container') || document.getElementById('elementList');
+            const mapCont = document.getElementById('map');
+            
+            if (listCont) {
+                listCont.style.setProperty('display', 'none', 'important');
+                listCont.innerHTML = ""; // Ichidagi haligi adashib chiqayotgan matnlarni tozalash
+            }
+            if (mapCont) {
+                mapCont.style.setProperty('display', 'block', 'important');
+            }
+        });
+    }
+});
+</script>
+
+</head> ```
+
+Mana shu koʻrinishda qoʻshib bitta `Commit` qiling, aka. Shunda JavaScript brauzerda eng birinchi boʻlib kuchga kiradi va "Xarita" tabini bosganingizda roʻyxatni majburlab yopib, Google xaritangizni ochib beradi!
+    
+    
 </head>
 <body>
 
