@@ -165,6 +165,241 @@ function showToast(message) {
 // 7. SAQLASH, NUSXA OLISH VA XARITADA MARKERLARNI KO'RSATISH
 // ========================================================
 
+// Dinamik markerlarni saqlash uchun massiv (agar yuqorida e'lon qilinmagan bo'lsa)
+if (typeof activeMapMarkers === 'undefined') {
+    var activeMapMarkers = [];
+}
+
+// Nuqtani Firebase'ga saqlash va Xaritani yangilash
+document.querySelector('.save-btn').addEventListener('click', function() {
+    const latEl = document.getElementById('latitude');
+    const lngEl = document.getElementById('longitude');
+    const addrEl = document.getElementById('address');
+
+    if (!latEl || !lngEl) return;
+
+    // Xato bermasligi uchun koordinatalarni haqiqiy Songa (Number) o'giramiz
+    const currentLat = parseFloat(latEl.innerText);
+    const currentLng = parseFloat(lngEl.innerText);
+    const addr = addrEl ? addrEl.innerText : "Manzil topilmadi";
+    
+    if (activeFolderId === 'root') return showToast("Avval papka tanlang!");
+    if (isNaN(currentLat) || isNaN(currentLng)) return showToast("Koordinata xato!");
+
+    database.ref('TPs/' + Date.now()).set({
+        lat: currentLat,
+        lng: currentLng,
+        address: addr,
+        folderId: activeFolderId,
+        time: new Date().toLocaleString()
+    }).then(() => { 
+        showToast("Guruhga saqlandi!"); 
+        // Nuqta saqlangach, xaritada markerlarni avtomatik yangilash
+        loadMarkersForFolder(activeFolderId);
+    });
+});
+
+// Xaritada tanlangan guruhga tegishli markerlarni ko'rsatish (LEAFLET uchun)
+function loadMarkersForFolder(folderId) {
+    // Eski markerlarni xaritadan o'chirish
+    activeMapMarkers.forEach(m => map.removeLayer(m));
+    activeMapMarkers = [];
+
+    if (!folderId || folderId === 'root') return;
+
+    database.ref('TPs').orderByChild('folderId').equalTo(folderId).once('value', (snapshot) => {
+        const data = snapshot.val();
+        if (!data) return;
+
+        const bounds = [];
+
+        Object.keys(data).forEach(key => {
+            const item = data[key];
+            if (item.lat && item.lng) {
+                // Leaflet marker yaratish (Stringlarni raqamga o'girib)
+                const m = L.marker([parseFloat(item.lat), parseFloat(item.lng)]).addTo(map);
+                
+                m.bindPopup(`
+                    <div style="font-family: sans-serif; font-size:13px; line-height:1.4;">
+                        <b style="color:#007AFF;">Saqlangan Nuqta</b><br>
+                        <b>Sana:</b> ${item.time || 'Noma\'lum'}<br>
+                        <b>Manzil:</b> ${item.address || 'Mavjud emas'}
+                    </div>
+                `);
+
+                activeMapMarkers.push(m);
+                bounds.push([parseFloat(item.lat), parseFloat(item.lng)]);
+            }
+        });
+
+        // Xaritani markerlar ko'rinadigan qilib yaqinlashtirish
+        if (bounds.length > 0) {
+            map.fitBounds(bounds, { padding: [50, 50], maxZoom: 17 });
+        }
+    });
+}
+
+function copyCoords() {
+    const lat = document.getElementById('latitude').innerText;
+    const lng = document.getElementById('longitude').innerText;
+    const address = document.getElementById('address').innerText;
+    const fullText = `Широта: ${lat}\nДолгота: ${lng}\nАдрес: ${address}\nGoogle Maps: https://www.google.com/maps?q=${lat},${lng}`;
+    navigator.clipboard.writeText(fullText).then(() => { showToast("Ma’lumot nusxalandi"); });
+}
+
+// ========================================================
+// PAPKALAR VA IERARXIYA MANTIQI
+// ========================================================
+const listBtn = document.getElementById('list-btn');
+const menuBtn = document.getElementById('menu-btn'); 
+const listModal = document.getElementById('list-container');
+const closeList = document.getElementById('close-list');
+const openAddBtn = document.getElementById('open-add-folder');
+const addFolderPanel = document.getElementById('add-folder-panel');
+const cancelFolder = document.getElementById('cancel-folder');
+const hueSlider = document.getElementById('color-slider');
+
+if(listBtn) listBtn.addEventListener('click', () => { listModal.style.display = 'flex'; loadFolders(); });
+if(menuBtn) menuBtn.addEventListener('click', () => { listModal.style.display = 'flex'; loadFolders(); });
+if(closeList) closeList.addEventListener('click', () => { listModal.style.display = 'none'; });
+
+if(openAddBtn) openAddBtn.addEventListener('click', () => { 
+    addFolderPanel.classList.remove('hidden'); 
+    updateParentSelect('parent-folder-select'); 
+});
+if(cancelFolder) cancelFolder.addEventListener('click', () => { addFolderPanel.classList.add('hidden'); });
+
+if(hueSlider) {
+    hueSlider.addEventListener('input', (e) => {
+        const color = `hsl(${e.target.value}, 100%, 50%)`;
+        const preview = document.getElementById('color-preview');
+        if(preview) preview.style.background = color;
+    });
+}
+
+const saveFolderBtn = document.getElementById('save-folder');
+if(saveFolderBtn) {
+    saveFolderBtn.addEventListener('click', () => {
+        const name = document.getElementById('new-group-name').value;
+        const parentId = document.getElementById('parent-folder-select').value;
+        const hue = hueSlider ? hueSlider.value : 0;
+        const color = `hsl(${hue}, 100%, 50%)`;
+
+        if (!name) return showToast("Guruh nomini yozing!");
+
+        database.ref('Folders').push({
+            name: name,
+            parentId: parentId,
+            hue: hue,
+            color: color,
+            createdAt: Date.now()
+        }).then(() => {
+            showToast("Guruh yaratildi!");
+            document.getElementById('new-group-name').value = "";
+            addFolderPanel.classList.add('hidden');
+        });
+    });
+}
+
+function loadFolders() {
+    database.ref('Folders').on('value', (snapshot) => {
+        currentFolders = snapshot.val() || {};
+        const treeRoot = document.getElementById('tree-root');
+        if(treeRoot) renderTree('root', treeRoot);
+        
+        if (typeof refreshTreeDropdowns === 'function') {
+            refreshTreeDropdowns();
+        }
+    });
+}
+
+function renderTree(parentId, container) {
+    container.innerHTML = "";
+    const children = Object.keys(currentFolders).filter(id => currentFolders[id].parentId === parentId);
+    
+    children.forEach(id => {
+        const folder = currentFolders[id];
+        const item = document.createElement('div');
+        item.className = 'folder-item';
+        
+        item.innerHTML = `
+            <div class="folder-header" id="folder-${id}" onclick="selectFolder('${id}')">
+                <span class="toggle-btn" style="width: 20px; text-align: center; font-size: 16px; display: inline-block;" onclick="event.stopPropagation(); toggleFolderView('${id}')">+</span>
+                <i class="fas fa-folder" style="color: ${folder.color}; margin-right: 5px;"></i>
+                <span style="flex-grow: 1; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline-block;">${folder.name}</span>
+                <i class="fas fa-edit edit-icon" style="cursor: pointer;" onclick="event.stopPropagation(); openEditFolder('${id}', '${folder.name}', ${folder.hue || 0})"></i>
+            </div>
+            <div id="children-${id}" class="folder-children" style="display: none;"></div>
+        `;
+        container.appendChild(item);
+        renderTree(id, item.querySelector(`#children-${id}`));
+    });
+}
+
+window.selectFolder = function(id) {
+    activeFolderId = id;
+    
+    document.querySelectorAll('.folder-header').forEach(el => {
+        el.classList.remove('active-folder');
+    });
+    
+    const currentFolderEl = document.getElementById(`folder-${id}`);
+    if (currentFolderEl) {
+        currentFolderEl.classList.add('active-folder');
+    }
+    
+    showToast(`Tanlandi: ${currentFolders[id].name}`);
+    
+    // Guruh tanlanishi bilan xaritada uning nuqtalarini avtomatik chiqarish
+    loadMarkersForFolder(id);
+};
+
+window.toggleFolderView = function(id) {
+    const childDiv = document.getElementById(`children-${id}`);
+    const btn = document.querySelector(`#folder-${id} .toggle-btn`);
+    if (childDiv.style.display === "none") {
+        childDiv.style.display = "block";
+        btn.innerText = "-";
+    } else {
+        childDiv.style.display = "none";
+        btn.innerText = "+";
+    }
+};
+
+function updateParentSelect(selectId, excludeId = null) {
+    const select = document.getElementById(selectId);
+    if(!select) return;
+    select.innerHTML = '<option value="root">Asosiy (Bosh guruh)</option>';
+    Object.keys(currentFolders).forEach(id => {
+        if (id !== excludeId) {
+            const option = document.createElement('option');
+            option.value = id;
+            option.innerText = currentFolders[id].name;
+            select.appendChild(option);
+        }
+    });
+    
+    if (typeof refreshTreeDropdowns === 'function') {
+        refreshTreeDropdowns(excludeId);
+    }
+}
+
+window.addEventListener('load', function() {
+    setTimeout(function() { map.invalidateSize(); }, 500);
+});
+
+function togglePanel() {
+    const panel = document.getElementById('panel');
+    const icon = document.getElementById('toggle-icon');
+    panel.classList.toggle('minimized');
+    if (icon) icon.style.transform = panel.classList.contains('minimized') ? 'rotate(0deg)' : 'rotate(180deg)';
+    setTimeout(() => { map.invalidateSize(); }, 400);
+}
+
+// ========================================================
+// 7. SAQLASH, NUSXA OLISH VA XARITADA MARKERLARNI KO'RSATISH
+// ========================================================
+
 // Dinamik markerlarni saqlash uchun massiv (agar tepada e'lon qilinmagan bo'lsa)
 if (typeof activeMapMarkers === 'undefined') {
     var activeMapMarkers = [];
@@ -363,37 +598,7 @@ window.toggleFolderView = function(id) {
         childDiv.style.display = "none";
         btn.innerText = "+";
     }
-};
 
-function updateParentSelect(selectId, excludeId = null) {
-    const select = document.getElementById(selectId);
-    if(!select) return;
-    select.innerHTML = '<option value="root">Asosiy (Bosh guruh)</option>';
-    Object.keys(currentFolders).forEach(id => {
-        if (id !== excludeId) {
-            const option = document.createElement('option');
-            option.value = id;
-            option.innerText = currentFolders[id].name;
-            select.appendChild(option);
-        }
-    });
-    
-    if (typeof refreshTreeDropdowns === 'function') {
-        refreshTreeDropdowns(excludeId);
-    }
-}
-
-window.addEventListener('load', function() {
-    setTimeout(function() { map.invalidateSize(); }, 500);
-});
-
-function togglePanel() {
-    const panel = document.getElementById('panel');
-    const icon = document.getElementById('toggle-icon');
-    panel.classList.toggle('minimized');
-    if (icon) icon.style.transform = panel.classList.contains('minimized') ? 'rotate(0deg)' : 'rotate(180deg)';
-    setTimeout(() => { map.invalidateSize(); }, 400);
-                                    }
                                                          
 
 // 7. Saqlash va Nusxa olish
