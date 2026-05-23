@@ -16,45 +16,23 @@
             white-space: normal !important;
         }
 
-        /* CSS orqali xarita bosilganda ro'yxatni majburiy yashirish */
+        /* Xarita tabi faollashganda matnli ro'yxatni mutlaqo yashirish */
         #tab-xarita.active ~ #element-list-container,
         #tab-xarita.active ~ #elementList,
-        body:has(#tab-xarita.active) #element-list-container,
-        body:has(#tab-xarita.active) #elementList {
+        #tab-xarita.active ~ #element-list-container * {
             display: none !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
         }
 
+        /* Xarita tabi faollashganda Google xarita oynasini majburiy ochish */
+        #tab-xarita.active ~ #map,
         body:has(#tab-xarita.active) #map {
             display: block !important;
         }
     </style>
-
-    <script>
-    document.addEventListener("DOMContentLoaded", () => {
-        try {
-            const btnXarita = document.getElementById('tab-xarita');
-            const btnGuruhlar = document.getElementById('tab-guruhlar');
-            
-            if (btnXarita) {
-                btnXarita.addEventListener('click', () => {
-                    const listCont = document.getElementById('element-list-container') || document.getElementById('elementList');
-                    const mapCont = document.getElementById('map');
-                    
-                    if (listCont) {
-                        listCont.style.setProperty('display', 'none', 'important');
-                        listCont.innerHTML = ""; // Ro'yxat elementlarini tozalash
-                    }
-                    if (mapCont) {
-                        mapCont.style.setProperty('display', 'block', 'important');
-                    }
-                });
-            }
-        } catch (error) {
-            console.log("Tab almashtirishda xatolik:", error);
-        }
-    });
-    </script>
 </head>
+    
     
     
 <body>
