@@ -1364,47 +1364,33 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 1500); // 1.5 sekund Firebase'dan guruhlar kelib tushishi uchun ideal vaqt
 });                                                 
 
-
 // =========================================================================
-// XARITA TABI BOSILGANDA PANELNI YOPISH, RANG BILAN MARKER CHIZISH VA MARKAZLASHTIRISH
+// SIZ AYTGAN ASOSIY SHART: "XARITA" TABI BOSILGANDA PANEL YOPILADI VA ELEMENTLAR CHIQADI
 // =========================================================================
-const tabXaritaTugmasi = document.getElementById('tab-items');
-const kattaPanel = document.getElementById('list-container');
-const xaritaKonteyner = document.getElementById('map');
+const xaritaTabTugmasi = document.getElementById('tab-items');
 
-if (tabXaritaTugmasi) {
-    tabXaritaTugmasi.addEventListener('click', () => {
-        // 1. Tepadagi "Guruhlar | Xarita" tugmalari dizayni buzilmasligi uchun eski mantiqni ham ushlab turamiz
-        tabXaritaTugmasi.classList.add('active');
-        const tabFolders = document.getElementById('tab-folders');
-        if (tabFolders) tabFolders.classList.remove('active');
-        
-        const itemsSection = document.getElementById('items-section');
-        const foldersSection = document.getElementById('folders-section');
-        if (itemsSection) itemsSection.classList.add('active');
-        if (foldersSection) foldersSection.classList.remove('active');
+if (xaritaTabTugmasi) {
+    xaritaTabTugmasi.addEventListener('click', (e) => {
+        // Koddagi eski chalkashliklarni to'xtatish uchun:
+        e.stopPropagation();
 
-        // 2. Elementlarni o'z rangi bilan xaritaga chizish funksiyasini ishga tushiramiz
+        // 1. Katta boshqaruv panelini (qora oyna) butunlay yopamiz
+        const qoraOyna = document.getElementById('list-container');
+        if (qoraOyna) {
+            qoraOyna.style.display = 'none';
+        }
+
+        // 2. Elementlarni o'z rangi bilan asosiy xaritaga chizishni buyuramiz
         if (typeof loadFilteredPoints === 'function') {
             loadFilteredPoints();
         }
 
-        // 3. Katta qora boshqaruv panelini yopamiz (Xarita to'liq ko'rinishi uchun)
-        if (kattaPanel) {
-            kattaPanel.style.display = 'none';
-        }
-        
-        // 4. Xarita konteynerini ekranda ko'rsatamiz
-        if (xaritaKonteyner) {
-            xaritaKonteyner.style.visibility = 'visible';
-        }
-        
-        // 5. Leaflet xaritasi qotib qolmasdan o'z o'lchamini to'g'rilab, markerlarga markazlashishi uchun yangilaymiz
+        // 3. Leaflet xaritasi qotib qolmasligi va markerlarga markazlashishi uchun:
         setTimeout(() => {
             if (typeof map !== 'undefined' && map) {
                 map.invalidateSize();
                 
-                // Agar faol guruh bo'lsa va markerlar chizilgan bo'lsa, xaritani o'sha sohaga markazlashtirish
+                // Tanlangan guruhdagi markerlarni hisoblab, xaritani o'sha yerga yaqinlashtirish
                 if (typeof activeMapMarkers !== 'undefined' && activeMapMarkers.length > 0) {
                     const bounds = [];
                     activeMapMarkers.forEach(m => {
@@ -1416,7 +1402,7 @@ if (tabXaritaTugmasi) {
                 }
             }
         }, 300);
-        
-        showToast("Xarita yangilandi va markazlashtirildi");
+
+        showToast("Xarita yangilandi va markerlar chiqdi");
     });
-}
+            }
