@@ -1363,3 +1363,30 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log("Yuklanish tugadi. Faqat toza Glavniy ekran faol!");
     }, 1500); // 1.5 sekund Firebase'dan guruhlar kelib tushishi uchun ideal vaqt
 });                                                 
+
+
+// =========================================================================
+// ELEMENTAR ELEMENT: XARITA TUGMASI BOSILGANDA PANELNI YOPISH VA XARITANI OCHISH
+// =========================================================================
+const btnXarita = document.getElementById('btn-xarita');
+const mapContainer = document.getElementById('map');
+
+if (btnXarita) {
+    btnXarita.addEventListener('click', () => {
+        // 1. Katta ro'yxat panelini yopamiz (ekranni to'sib turmasligi uchun)
+        const listModal = document.getElementById('list-container');
+        if (listModal) listModal.style.display = 'none';
+        
+        // 2. Leaflet xaritasini ekranda ko'rsatamiz
+        if (mapContainer) mapContainer.style.visibility = 'visible';
+        
+        // 3. Leaflet qotib qolmasdan o'z o'lchamini to'g'rilab olishi uchun yangilaymiz
+        setTimeout(() => {
+            if (typeof map !== 'undefined' && map) {
+                map.invalidateSize();
+            }
+        }, 250);
+        
+        showToast("Xarita ko'rinishi faollashdi");
+    });
+}
