@@ -1366,27 +1366,57 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 // =========================================================================
-// ELEMENTAR ELEMENT: XARITA TUGMASI BOSILGANDA PANELNI YOPISH VA XARITANI OCHISH
+// XARITA TABI BOSILGANDA PANELNI YOPISH, RANG BILAN MARKER CHIZISH VA MARKAZLASHTIRISH
 // =========================================================================
-const btnXarita = document.getElementById('btn-xarita');
-const mapContainer = document.getElementById('map');
+const tabXaritaTugmasi = document.getElementById('tab-items');
+const kattaPanel = document.getElementById('list-container');
+const xaritaKonteyner = document.getElementById('map');
 
-if (btnXarita) {
-    btnXarita.addEventListener('click', () => {
-        // 1. Katta ro'yxat panelini yopamiz (ekranni to'sib turmasligi uchun)
-        const listModal = document.getElementById('list-container');
-        if (listModal) listModal.style.display = 'none';
+if (tabXaritaTugmasi) {
+    tabXaritaTugmasi.addEventListener('click', () => {
+        // 1. Tepadagi "Guruhlar | Xarita" tugmalari dizayni buzilmasligi uchun eski mantiqni ham ushlab turamiz
+        tabXaritaTugmasi.classList.add('active');
+        const tabFolders = document.getElementById('tab-folders');
+        if (tabFolders) tabFolders.classList.remove('active');
         
-        // 2. Leaflet xaritasini ekranda ko'rsatamiz
-        if (mapContainer) mapContainer.style.visibility = 'visible';
+        const itemsSection = document.getElementById('items-section');
+        const foldersSection = document.getElementById('folders-section');
+        if (itemsSection) itemsSection.classList.add('active');
+        if (foldersSection) foldersSection.classList.remove('active');
+
+        // 2. Elementlarni o'z rangi bilan xaritaga chizish funksiyasini ishga tushiramiz
+        if (typeof loadFilteredPoints === 'function') {
+            loadFilteredPoints();
+        }
+
+        // 3. Katta qora boshqaruv panelini yopamiz (Xarita to'liq ko'rinishi uchun)
+        if (kattaPanel) {
+            kattaPanel.style.display = 'none';
+        }
         
-        // 3. Leaflet qotib qolmasdan o'z o'lchamini to'g'rilab olishi uchun yangilaymiz
+        // 4. Xarita konteynerini ekranda ko'rsatamiz
+        if (xaritaKonteyner) {
+            xaritaKonteyner.style.visibility = 'visible';
+        }
+        
+        // 5. Leaflet xaritasi qotib qolmasdan o'z o'lchamini to'g'rilab, markerlarga markazlashishi uchun yangilaymiz
         setTimeout(() => {
             if (typeof map !== 'undefined' && map) {
                 map.invalidateSize();
+                
+                // Agar faol guruh bo'lsa va markerlar chizilgan bo'lsa, xaritani o'sha sohaga markazlashtirish
+                if (typeof activeMapMarkers !== 'undefined' && activeMapMarkers.length > 0) {
+                    const bounds = [];
+                    activeMapMarkers.forEach(m => {
+                        bounds.push(m.getLatLng());
+                    });
+                    if (bounds.length > 0) {
+                        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 17 });
+                    }
+                }
             }
-        }, 250);
+        }, 300);
         
-        showToast("Xarita ko'rinishi faollashdi");
+        showToast("Xarita yangilandi va markazlashtirildi");
     });
 }
