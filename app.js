@@ -1365,44 +1365,74 @@ document.addEventListener('DOMContentLoaded', () => {
 });                                                 
 
 // =========================================================================
-// SIZ AYTGAN ASOSIY SHART: "XARITA" TABI BOSILGANDA PANEL YOPILADI VA ELEMENTLAR CHIQADI
+// BOSHQRUV PANELIDAGI ICHKI XARITA MANTIQI (GLAVNIYGA TA'SIR QILMAYDI)
 // =========================================================================
-const xaritaTabTugmasi = document.getElementById('tab-items');
+var panelMap = null;
+var panelMarkersArray = [];
 
-if (xaritaTabTugmasi) {
-    xaritaTabTugmasi.addEventListener('click', (e) => {
-        // Koddagi eski chalkashliklarni to'xtatish uchun:
-        e.stopPropagation();
+const tabItemsBtn = document.getElementById('tab-items');
 
-        // 1. Katta boshqaruv panelini (qora oyna) butunlay yopamiz
-        const qoraOyna = document.getElementById('list-container');
-        if (qoraOyna) {
-            qoraOyna.style.display = 'none';
+if (tabItemsBtn) {
+    // Sizning kodingizdagi eski click mantiqini butunlay yangilaymiz va boyitamiz
+    tabItemsBtn.addEventListener('click', () => {
+        // 1. Panel ichidagi kichik xarita hali yaratilmagan bo'lsa, uni ishga tushiramiz
+        if (!panelMap) {
+            panelMap = L.map('panel-map', { zoomControl: true }).setView([40.10, 65.81], 14);
+            
+            // Unga ham loyihangizdagi Google Satellit qatlamini beramiz
+            L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
+                maxZoom: 20,
+                subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+            }).addTo(panelMap);
         }
 
-        // 2. Elementlarni o'z rangi bilan asosiy xaritaga chizishni buyuramiz
-        if (typeof loadFilteredPoints === 'function') {
-            loadFilteredPoints();
-        }
+        // 2. Ichki xaritadagi eski markerlarni tozalaymiz (Glavniy xaritaga tegmaydi)
+        panelMarkersArray.forEach(m => panelMap.removeLayer(m));
+        panelMarkersArray = [];
 
-        // 3. Leaflet xaritasi qotib qolmasligi va markerlarga markazlashishi uchun:
-        setTimeout(() => {
-            if (typeof map !== 'undefined' && map) {
-                map.invalidateSize();
-                
-                // Tanlangan guruhdagi markerlarni hisoblab, xaritani o'sha yerga yaqinlashtirish
-                if (typeof activeMapMarkers !== 'undefined' && activeMapMarkers.length > 0) {
-                    const bounds = [];
-                    activeMapMarkers.forEach(m => {
-                        bounds.push(m.getLatLng());
+        // 3. Ma'lumotlar bazasidan tanlangan guruh elementlarini olamiz
+        database.ref('TPs').once('value', (snapshot) => {
+            const allPoints = snapshot.val() || {};
+            const keys = Object.keys(allPoints);
+            
+            // Faqat siz tanlagan guruh (activeFolderId) elementlarini filterlaymiz
+            const filteredKeys = activeFolderId === 'root' ? keys : keys.filter(key => allPoints[key].folderId === activeFolderId);
+            
+            let bounds = [];
+
+            filteredKeys.forEach(key => {
+                const point = allPoints[key];
+                const lat = parseFloat(point.lat);
+                const lng = parseFloat(point.lng);
+                const displayName = point.address.split(',')[0] || "Noma'lum";
+
+                if (!isNaN(lat) && !isNaN(lng)) {
+                    bounds.push([lat, lng]);
+
+                    // Guruh rangini koddagi o'zgaruvchidan olamiz
+                    const folderColor = (currentFolders[point.folderId] && currentFolders[point.folderId].color) ? currentFolders[point.folderId].color : '#ff4444';
+
+                    // Faqat shu ichki xarita uchun marker dizayni (o'z rangi bilan)
+                    const pIcon = L.divIcon({
+                        className: 'panel-internal-marker',
+                        html: `<i class="fas fa-map-marker-alt" style="color: ${folderColor}; font-size: 22px; text-shadow: 0 0 3px black;"></i>`,
+                        iconSize: [22, 22],
+                        iconAnchor: [11, 22]
                     });
-                    if (bounds.length > 0) {
-                        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 17 });
-                    }
-                }
-            }
-        }, 300);
 
-        showToast("Xarita yangilandi va markerlar chiqdi");
+                    const marker = L.marker([lat, lng], { icon: pIcon }).addTo(panelMap);
+                    marker.bindPopup(`<b>${displayName}</b><br>${point.address}`);
+                    panelMarkersArray.push(marker);
+                }
+            });
+
+            // 4. Xarita qotib qolmasligi va faqat o'sha elementlarga markazlashishi (Yaqinlashishi)
+            setTimeout(() => {
+                panelMap.invalidateSize();
+                if (bounds.length > 0) {
+                    panelMap.fitBounds(bounds, { padding: [20, 20], maxZoom: 16 });
+                }
+            }, 300);
+        });
     });
-            }
+}
