@@ -1436,3 +1436,95 @@ if (tabItemsBtn) {
         });
     });
 }
+
+// =========================================================================
+// UNIVERSAL ICHKI XARITA: FAQAT "XARITA" TABI BOSILGANDA ISHLAYDI
+// =========================================================================
+const panelTabFolders = document.getElementById('tab-folders');
+const panelTabItems = document.getElementById('tab-items');
+const panelSecFolders = document.getElementById('folders-section');
+const panelSecItems = document.getElementById('items-section');
+
+// 1. "Guruhlar" bo'limi bosilganda (Xarita butunlay yo'qoladi, ro'yxat pastgacha ochiladi)
+if (panelTabFolders) {
+    panelTabFolders.addEventListener('click', () => {
+        panelTabFolders.classList.add('active');
+        if (panelTabItems) panelTabItems.classList.remove('active');
+        
+        if (panelSecFolders) panelSecFolders.style.display = 'block';
+        if (panelSecItems) panelSecItems.style.display = 'none';
+    });
+}
+
+// 2. "Xarita" bo'limi bosilganda (Panel ichida universal to'liq xarita ochiladi)
+var panelInternalMap = null;
+var panelInternalMarkers = [];
+
+if (panelTabItems) {
+    panelTabItems.addEventListener('click', () => {
+        if (panelTabItems) panelTabItems.classList.add('active');
+        if (panelTabFolders) panelTabFolders.classList.remove('active');
+        
+        if (panelSecFolders) panelSecFolders.style.display = 'none';
+        if (panelSecItems) panelSecItems.style.display = 'block';
+
+        // Ichki xaritani bir marta yaratib olamiz
+        if (!panelInternalMap) {
+            panelInternalMap = L.map('panel-map', { zoomControl: true }).setView([40.10, 65.81], 14);
+            
+            L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
+                maxZoom: 20,
+                subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+            }).addTo(panelInternalMap);
+        }
+
+        // Har safar bosilganda eski markerlarni tozalash
+        panelInternalMarkers.forEach(m => panelInternalMap.removeLayer(m));
+        panelInternalMarkers = [];
+
+        // Bazadan faqat tanlangan guruh ma'lumotlarini filtrlash
+        database.ref('TPs').once('value', (snapshot) => {
+            const allPoints = snapshot.val() || {};
+            const keys = Object.keys(allPoints);
+            const filteredKeys = activeFolderId === 'root' ? keys : keys.filter(key => allPoints[key].folderId === activeFolderId);
+            
+            let bounds = [];
+
+            filteredKeys.forEach(key => {
+                const point = allPoints[key];
+                const lat = parseFloat(point.lat);
+                const lng = parseFloat(point.lng);
+                const displayName = point.address.split(',')[0] || "Element";
+
+                if (!isNaN(lat) && !isNaN(lng)) {
+                    bounds.push([lat, lng]);
+                    
+                    // Guruh rangini aniqlash
+                    const folderColor = (currentFolders[point.folderId] && currentFolders[point.folderId].color) ? currentFolders[point.folderId].color : '#ff4444';
+
+                    // Marker dizayni (O'z rangi bilan)
+                    const pIcon = L.divIcon({
+                        className: 'panel-internal-marker',
+                        html: `<i class="fas fa-map-marker-alt" style="color: ${folderColor}; font-size: 24px; text-shadow: 0 0 3px black;"></i>`,
+                        iconSize: [24, 24],
+                        iconAnchor: [12, 24]
+                    });
+
+                    const marker = L.marker([lat, lng], { icon: pIcon }).addTo(panelInternalMap);
+                    marker.bindPopup(`<b>${displayName}</b><br>${point.address}`);
+                    panelInternalMarkers.push(marker);
+                }
+            });
+
+            // Universal o'lchamlarni yangilab, markerlarga markazlashtirish (Yaqinlashtirish)
+            setTimeout(() => {
+                if (panelInternalMap) {
+                    panelInternalMap.invalidateSize();
+                    if (bounds.length > 0) {
+                        panelInternalMap.fitBounds(bounds, { padding: [30, 30], maxZoom: 16 });
+                    }
+                }
+            }, 300);
+        });
+    });
+}
