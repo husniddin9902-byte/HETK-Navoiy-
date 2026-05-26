@@ -737,10 +737,3 @@ body {
         filter: drop-shadow(0 0 6px var(--fider-color-2, #34C759)) saturate(2);
     }
 }
-
-/* Xarita bo'limi ochilganda qidiruv maydonini avtomat yashirish */
-.tab-content:nth-of-type(2).active ~ .search-input-field,
-.tab-content[style*="display: block"] ~ .search-input-field,
-#map:not(.hidden) ~ .search-input-field {
-    display: none !important;
-}
