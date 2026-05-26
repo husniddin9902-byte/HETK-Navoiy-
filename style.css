@@ -309,7 +309,7 @@ body {
     box-sizing: border-box;
 }
 
-.list-content.full-screen {
+ .list-content.full-screen {
     width: 100% !important;
     height: 100% !important;
     max-height: 100vh !important;
@@ -317,7 +317,9 @@ body {
     border-radius: 0 !important;
     display: flex;
     flex-direction: column;
-}
+    padding: 0px !important; /* Ichki 20px paddingni butunlay yo'qotamiz, shunda tepadagi qism chetga taqalib ingichkalashadi */
+ }
+
 
 .list-header {
     display: flex;
@@ -338,7 +340,7 @@ body {
 
 .tab-control {
     display: flex;
-    margin: 4px 15px 4px 15px; 
+    margin: 8px 16px 4px 16px; 
     background: rgba(255, 255, 255, 0.1);
     border-radius: 12px;
     padding: 4px;
