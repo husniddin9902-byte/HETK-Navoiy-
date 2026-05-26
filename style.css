@@ -737,3 +737,9 @@ body {
         filter: drop-shadow(0 0 6px var(--fider-color-2, #34C759)) saturate(2);
     }
 }
+
+/* Xarita bo'limi faol bo'lganda qidiruv maydonini avtomat yashirish */
+#map-tab-content-id.active ~ .search-input-field, /* ID va klasslar nomiga e'tibor bering */
+.tab-content:nth-child(2).active .search-input-field { 
+    display: none !important;
+}
