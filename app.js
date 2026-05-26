@@ -1529,21 +1529,3 @@ if (panelTabItems) {
     });
 }
 
-// Tab tugmalari bosilganda qidiruv tizimini avtomat boshqarish
-document.addEventListener('DOMContentLoaded', () => {
-    const tabButtons = document.querySelectorAll('.tab-btn');
-    const searchField = document.querySelector('.search-input-field');
-
-    if (tabButtons.length && searchField) {
-        tabButtons.forEach(btn => {
-            btn.addEventListener('click', function() {
-                if (this.textContent.includes('Xarita') || this.getAttribute('data-tab') === 'map') {
-                    searchField.style.setProperty('display', 'none', 'important');
-                } else {
-                    searchField.style.setProperty('display', 'block', 'important');
-                }
-            });
-        });
-    }
-});
-                                                  
