@@ -1,11 +1,11 @@
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_DOMAIN",
-    databaseURL: "YOUR_DATABASE_URL",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_STORAGE_BUCKET",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
+    apiKey: "AIzaSyBF0oT_ZhvE1tT1Qglh5GjPPhs8ZsyRWoc",
+    authDomain: "energo-monitoring.firebaseapp.com",
+    databaseURL: "https://energo-monitoring-default-rtdb.firebaseio.com",
+    projectId: "energo-monitoring",
+    storageBucket: "energo-monitoring.firebasestorage.app",
+    messagingSenderId: "514032923022",
+    appId: "1:514032923022:web:fe2f57b81a30d0c2f0"
 };
 
 firebase.initializeApp(firebaseConfig);
