@@ -35,7 +35,7 @@
 
         <div class="spinner"></div>
 
-        <p>Baza yuklanmoqda...</p>
+        <p>Monitoring yuklanmoqda...</p>
 
     </div>
 
@@ -46,42 +46,43 @@
 
         <div class="sidebar-header">
 
-            <h2>Monitoring Panel</h2>
+            <h2>Menu</h2>
 
             <button onclick="closeSidebar()">
+
                 <i class="fa-solid fa-xmark"></i>
+
             </button>
 
         </div>
 
-        <div class="sidebar-tabs">
+        <div class="sidebar-content">
 
-            <button class="tab-btn active">
-                Guruhlar
+            <button class="menu-item">
+
+                <i class="fa-solid fa-folder"></i>
+
+                Papkalar
+
             </button>
 
-            <button class="tab-btn">
-                Xarita
+            <button class="menu-item">
+
+                <i class="fa-solid fa-location-dot"></i>
+
+                Lokatsiyalar
+
+            </button>
+
+            <button class="menu-item">
+
+                <i class="fa-solid fa-gear"></i>
+
+                Sozlamalar
+
             </button>
 
         </div>
-
-        <div class="sidebar-search">
-
-            <input type="text"
-                   placeholder="Guruh yoki lokatsiya qidirish">
-        </div>
-
-        <button class="new-group-btn"
-                onclick="openSaveModal()">
-
-            <i class="fa-solid fa-folder-plus"></i>
-
-            Yangi guruh
-
-        </button>
-
-        <div id="groupsList"></div>
 
     </div>
 
@@ -89,7 +90,7 @@
 
     <div class="topbar">
 
-        <button class="icon-btn"
+        <button class="top-btn"
                 onclick="openSidebar()">
 
             <i class="fa-solid fa-bars"></i>
@@ -98,16 +99,16 @@
 
         <h1>HETK Monitoring</h1>
 
-        <div class="topbar-right">
+        <div class="top-actions">
 
-            <button class="icon-btn"
+            <button class="top-btn"
                     onclick="searchLocation()">
 
                 <i class="fa-solid fa-magnifying-glass"></i>
 
             </button>
 
-            <button class="icon-btn"
+            <button class="top-btn"
                     onclick="toggleLayer()">
 
                 <i class="fa-solid fa-layer-group"></i>
@@ -120,7 +121,7 @@
 
     <!-- SEARCH -->
 
-    <div class="search-box">
+    <div class="search-container">
 
         <input type="text"
                id="searchInput"
@@ -141,116 +142,54 @@
 
     </button>
 
-    <!-- BOTTOM PANEL -->
+    <!-- BOTTOM SHEET -->
 
-    <div class="bottom-panel">
+    <div class="bottom-sheet"
+         id="bottomSheet">
 
-        <div class="drag-line"></div>
+        <div class="sheet-handle"></div>
 
-        <div class="info-box">
+        <div class="sheet-content">
 
-            <span>Latitude</span>
+            <div class="info-card">
 
-            <h3 id="latitude">0.000000</h3>
+                <span>Latitude</span>
 
-        </div>
-
-        <div class="info-box">
-
-            <span>Longitude</span>
-
-            <h3 id="longitude">0.000000</h3>
-
-        </div>
-
-        <div class="info-box">
-
-            <span>Address</span>
-
-            <h3 id="address">Aniqlanmoqda...</h3>
-
-        </div>
-
-        <button class="copy-btn"
-                onclick="copyCoordinates()">
-
-            <i class="fa-regular fa-copy"></i>
-
-            Copy
-
-        </button>
-
-        <button class="share-btn"
-                onclick="shareLocation()">
-
-            <i class="fa-solid fa-share"></i>
-
-            Share
-
-        </button>
-
-        <button class="save-btn"
-                onclick="openSaveModal()">
-
-            <i class="fa-regular fa-floppy-disk"></i>
-
-            Save
-
-        </button>
-
-    </div>
-
-    <!-- SAVE MODAL -->
-
-    <div class="modal"
-         id="saveModal">
-
-        <div class="modal-content">
-
-            <div class="modal-header">
-
-                <h2>Lokatsiya</h2>
-
-                <button onclick="closeSaveModal()">
-
-                    <i class="fa-solid fa-xmark"></i>
-
-                </button>
+                <h2 id="latitude">0.000000</h2>
 
             </div>
 
-            <input type="text"
-                   id="locationName"
-                   placeholder="Lokatsiya nomi">
+            <div class="info-card">
 
-            <input type="text"
-                   id="locationPhone"
-                   placeholder="+998">
+                <span>Longitude</span>
 
-            <textarea id="locationNote"
-                      placeholder="Izoh"></textarea>
+                <h2 id="longitude">0.000000</h2>
 
-            <input type="text"
-                   id="modalAddress"
-                   placeholder="Manzil">
+            </div>
 
-            <input type="text"
-                   id="groupName"
-                   placeholder="Yangi guruh nomi">
+            <div class="info-card">
 
-            <button class="new-group-btn"
-                    onclick="saveGroup()">
+                <span>Address</span>
 
-                + Guruh qo‘shish
+                <p id="address">Aniqlanmoqda...</p>
+
+            </div>
+
+            <button class="action-btn blue-btn"
+                    onclick="copyCoordinates()">
+
+                <i class="fa-regular fa-copy"></i>
+
+                Copy
 
             </button>
 
-            <select id="locationGroup"></select>
+            <button class="action-btn green-btn"
+                    onclick="shareLocation()">
 
-            <button class="share-btn"
-                    onclick="saveLocation()">
+                <i class="fa-solid fa-share"></i>
 
-                Saqlash
+                Share
 
             </button>
 
@@ -258,11 +197,11 @@
 
     </div>
 
-    <!-- LEAFLET JS -->
+    <!-- LEAFLET -->
 
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
-    <!-- APP JS -->
+    <!-- APP -->
 
     <script src="app.js"></script>
 
