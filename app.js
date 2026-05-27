@@ -13,6 +13,33 @@ firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
 // 2. O'zgaruvchilar
+const appState = {
+
+    selectedNodeId: null,
+    selectedNodeType: null,
+
+    activeFolderId: null,
+    activeElementId: null,
+
+    folders: {},
+    elements: {},
+
+    mainMap: {
+        map: null,
+        markers: []
+    },
+
+    panelMap: {
+        map: null,
+        markers: []
+    },
+
+    ui: {
+        activeTab: 'folders',
+        openedFolders: {}
+    }
+
+};
 var map = L.map('map', { zoomControl: false }).setView([40.10, 65.81], 16);
 var userMarker = null; 
 var selectedMarker = null;
