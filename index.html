@@ -12,6 +12,128 @@
 </head>
 <body>
 
+<!-- LOADER -->
+<div id="app-loader" style="
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:#001b2e;
+z-index:99999;
+display:flex;
+align-items:center;
+justify-content:center;
+flex-direction:column;
+color:white;
+font-size:24px;
+">
+
+<div style="
+width:70px;
+height:70px;
+border:6px solid #0d6efd;
+border-top:6px solid transparent;
+border-radius:50%;
+animation:spin 1s linear infinite;
+margin-bottom:20px;
+"></div>
+
+<div>Baza yuklanmoqda...</div>
+
+</div>
+
+
+<!-- HEADER -->
+<div class="header-panel">
+
+<button id="list-btn">☰</button>
+
+<div class="header-title">
+HETK Navoiy
+</div>
+
+<button id="map-type-btn">🛰️</button>
+
+</div>
+
+
+<!-- XARITA -->
+<div id="map"></div>
+
+
+<!-- PANEL -->
+<div id="list-container" class="list-modal">
+
+<div class="list-content full-screen">
+
+<div class="list-header">
+
+<h3>Boshqaruv paneli</h3>
+
+<button id="close-list">✕</button>
+
+</div>
+
+
+<div class="tab-control">
+
+<button id="tab-folders" class="tab-btn active">
+Guruhlar
+</button>
+
+<button id="tab-items" class="tab-btn">
+Xarita
+</button>
+
+</div>
+
+
+<!-- GURUHLAR -->
+<div id="folders-section" class="tab-content active">
+
+<div id="tree-root"></div>
+
+</div>
+
+
+<!-- XARITA -->
+<div id="items-section"
+class="tab-content"
+style="display:none;">
+
+<div id="panel-map"
+style="
+width:100%;
+height:500px;
+border-radius:16px;
+"></div>
+
+</div>
+
+</div>
+
+</div>
+
+
+<!-- GPS -->
+<button id="locate-btn"
+style="
+position:fixed;
+right:20px;
+bottom:100px;
+z-index:9999;
+width:60px;
+height:60px;
+border:none;
+border-radius:50%;
+background:#0d6efd;
+color:white;
+font-size:24px;
+">
+📍
+</button>
+    
 <div id="app-loader">
     <div class="loader-circle"></div>
     <p>Baza yuklanmoqda...</p>
