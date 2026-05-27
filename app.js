@@ -1,5 +1,5 @@
 // ===============================
-// FIREBASE SOZLAMALARI
+// FIREBASE
 // ===============================
 
 const firebaseConfig = {
@@ -18,7 +18,7 @@ const db = firebase.database();
 
 
 // ===============================
-// ASOSIY O'ZGARUVCHILAR
+// APP HOLATI
 // ===============================
 
 const appState = {
@@ -26,10 +26,12 @@ const appState = {
     folders: {},
     elements: {},
 
-    selectedFolderId: null,
+    selectedFolder: null,
 
     mainMap: null,
     panelMap: null,
+
+    currentMapType: 'satellite',
 
     panelMarkers: [],
     mainMarkers: []
@@ -38,19 +40,36 @@ const appState = {
 
 
 // ===============================
+// XARITA QATLAMLARI
+// ===============================
+
+const satelliteLayer = L.tileLayer(
+    'https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+    {
+        maxZoom: 20,
+        subdomains:['mt0','mt1','mt2','mt3']
+    }
+);
+
+const normalLayer = L.tileLayer(
+    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    {
+        maxZoom: 20
+    }
+);
+
+
+// ===============================
 // ASOSIY XARITA
 // ===============================
 
 function initMainMap() {
 
-    appState.mainMap = L.map('map').setView([40.100, 65.350], 11);
+    appState.mainMap = L.map('map', {
+        zoomControl: false
+    }).setView([40.100, 65.350], 10);
 
-    L.tileLayer(
-        'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-        {
-            maxZoom: 20
-        }
-    ).addTo(appState.mainMap);
+    satelliteLayer.addTo(appState.mainMap);
 
 }
 
@@ -61,14 +80,177 @@ function initMainMap() {
 
 function initPanelMap() {
 
-    appState.panelMap = L.map('panel-map').setView([40.100, 65.350], 11);
+    const panelMapDiv = document.getElementById('panel-map');
 
-    L.tileLayer(
-        'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-        {
-            maxZoom: 20
+    if(!panelMapDiv) return;
+
+    appState.panelMap = L.map('panel-map').setView([40.100, 65.350], 10);
+
+    satelliteLayer.addTo(appState.panelMap);
+
+}
+
+
+// ===============================
+// LOADER
+// ===============================
+
+function hideLoader() {
+
+    const loader = document.getElementById('app-loader');
+
+    if(loader){
+
+        loader.style.display = 'none';
+
+    }
+
+}
+
+
+// ===============================
+// PANEL
+// ===============================
+
+function initPanel() {
+
+    const panel = document.getElementById('list-container');
+
+    const openBtn = document.getElementById('list-btn');
+
+    const closeBtn = document.getElementById('close-list');
+
+
+    if(openBtn){
+
+        openBtn.onclick = () => {
+
+            panel.style.display = 'flex';
+
+            setTimeout(() => {
+
+                if(appState.panelMap){
+
+                    appState.panelMap.invalidateSize();
+
+                }
+
+            }, 300);
+
+        };
+
+    }
+
+
+    if(closeBtn){
+
+        closeBtn.onclick = () => {
+
+            panel.style.display = 'none';
+
+        };
+
+    }
+
+}
+
+
+// ===============================
+// TABLAR
+// ===============================
+
+function initTabs() {
+
+    const foldersBtn = document.getElementById('tab-folders');
+
+    const mapBtn = document.getElementById('tab-items');
+
+    const foldersSection = document.getElementById('folders-section');
+
+    const mapSection = document.getElementById('items-section');
+
+
+    if(foldersBtn){
+
+        foldersBtn.onclick = () => {
+
+            foldersBtn.classList.add('active');
+
+            mapBtn.classList.remove('active');
+
+            foldersSection.style.display = 'block';
+
+            mapSection.style.display = 'none';
+
+        };
+
+    }
+
+
+    if(mapBtn){
+
+        mapBtn.onclick = () => {
+
+            mapBtn.classList.add('active');
+
+            foldersBtn.classList.remove('active');
+
+            foldersSection.style.display = 'none';
+
+            mapSection.style.display = 'block';
+
+            setTimeout(() => {
+
+                if(appState.panelMap){
+
+                    appState.panelMap.invalidateSize();
+
+                }
+
+            }, 300);
+
+        };
+
+    }
+
+}
+
+
+// ===============================
+// XARITA TURINI ALMASHTIRISH
+// ===============================
+
+function initMapSwitcher() {
+
+    const mapBtn = document.getElementById('map-type-btn');
+
+    if(!mapBtn) return;
+
+
+    mapBtn.onclick = () => {
+
+        appState.mainMap.eachLayer(layer => {
+
+            appState.mainMap.removeLayer(layer);
+
+        });
+
+
+        if(appState.currentMapType === 'satellite'){
+
+            normalLayer.addTo(appState.mainMap);
+
+            appState.currentMapType = 'normal';
+
+        } else {
+
+            satelliteLayer.addTo(appState.mainMap);
+
+            appState.currentMapType = 'satellite';
+
         }
-    ).addTo(appState.panelMap);
+
+    };
 
 }
 
@@ -85,7 +267,32 @@ function loadFolders() {
 
         renderFolders();
 
-        hideLoader();
+    });
+
+}
+
+
+// ===============================
+// PAPKALARNI CHIQARISH
+// ===============================
+
+function renderFolders() {
+
+    const treeRoot = document.getElementById('tree-root');
+
+    if(!treeRoot) return;
+
+    treeRoot.innerHTML = '';
+
+    Object.entries(appState.folders).forEach(([id, folder]) => {
+
+        if(folder.parentId === 'root'){
+
+            const item = createFolderItem(id, folder);
+
+            treeRoot.appendChild(item);
+
+        }
 
     });
 
@@ -93,7 +300,84 @@ function loadFolders() {
 
 
 // ===============================
-// ELEMENTLARNI YUKLASH
+// PAPKA ELEMENTI
+// ===============================
+
+function createFolderItem(id, folder) {
+
+    const wrapper = document.createElement('div');
+
+    wrapper.className = 'folder-item';
+
+
+    const header = document.createElement('div');
+
+    header.className = 'folder-header';
+
+
+    header.innerHTML = `
+        <span style="
+            width:14px;
+            height:14px;
+            border-radius:50%;
+            background:${folder.color || '#00ff88'};
+            display:inline-block;
+            margin-right:10px;
+        "></span>
+
+        <span>${folder.name}</span>
+    `;
+
+
+    header.onclick = () => {
+
+        document.querySelectorAll('.folder-header').forEach(el => {
+
+            el.classList.remove('active-folder');
+
+        });
+
+        header.classList.add('active-folder');
+
+        appState.selectedFolder = id;
+
+        renderPanelMarkers();
+
+    };
+
+
+    wrapper.appendChild(header);
+
+
+    const children = document.createElement('div');
+
+    children.className = 'folder-children';
+
+
+    Object.entries(appState.folders).forEach(([childId, child]) => {
+
+        if(child.parentId === id){
+
+            children.appendChild(
+
+                createFolderItem(childId, child)
+
+            );
+
+        }
+
+    });
+
+
+    wrapper.appendChild(children);
+
+    return wrapper;
+
+}
+
+
+// ===============================
+// ELEMENTLAR
 // ===============================
 
 function loadElements() {
@@ -110,118 +394,13 @@ function loadElements() {
 
 
 // ===============================
-// PAPKALARNI CHIQARISH
-// ===============================
-
-function renderFolders() {
-
-    const root = document.getElementById('tree-root');
-
-    root.innerHTML = '';
-
-    Object.entries(appState.folders).forEach(([id, folder]) => {
-
-        if (folder.parentId === 'root') {
-
-            const item = createFolderElement(id, folder);
-
-            root.appendChild(item);
-
-        }
-
-    });
-
-}
-
-
-// ===============================
-// BIRTA PAPKA ELEMENTI
-// ===============================
-
-function createFolderElement(id, folder) {
-
-    const wrapper = document.createElement('div');
-
-    wrapper.className = 'folder-item';
-
-
-    const header = document.createElement('div');
-
-    header.className = 'folder-header';
-
-
-    header.innerHTML = `
-        <span style="color:${folder.color}">
-            📁
-        </span>
-
-        <span>
-            ${folder.name}
-        </span>
-    `;
-
-
-    header.onclick = () => {
-
-        appState.selectedFolderId = id;
-
-        selectFolder(header);
-
-        renderPanelMarkers();
-
-    };
-
-
-    wrapper.appendChild(header);
-
-
-    const children = document.createElement('div');
-
-    children.className = 'folder-children';
-
-
-    Object.entries(appState.folders).forEach(([childId, childFolder]) => {
-
-        if (childFolder.parentId === id) {
-
-            children.appendChild(
-                createFolderElement(childId, childFolder)
-            );
-
-        }
-
-    });
-
-
-    wrapper.appendChild(children);
-
-    return wrapper;
-
-}
-
-
-// ===============================
-// PAPKANI TANLASH
-// ===============================
-
-function selectFolder(activeHeader) {
-
-    document.querySelectorAll('.folder-header').forEach(el => {
-
-        el.classList.remove('active-folder');
-
-    });
-
-    activeHeader.classList.add('active-folder');
-
-}
-
-
-// ===============================
-// PANEL MARKERLARI
+// MARKERLAR
 // ===============================
 
 function renderPanelMarkers() {
+
+    if(!appState.panelMap) return;
+
 
     appState.panelMarkers.forEach(marker => {
 
@@ -234,13 +413,14 @@ function renderPanelMarkers() {
 
     Object.entries(appState.elements).forEach(([id, element]) => {
 
-        if (!element.folderIds) return;
+        if(!element.lat || !element.lng) return;
 
 
-        if (
-            appState.selectedFolderId &&
-            !element.folderIds.includes(appState.selectedFolderId)
-        ) {
+        if(
+            appState.selectedFolder &&
+            element.folderIds &&
+            !element.folderIds.includes(appState.selectedFolder)
+        ){
             return;
         }
 
@@ -252,7 +432,7 @@ function renderPanelMarkers() {
 
 
         marker.bindPopup(`
-            <b>${element.name}</b>
+            <b>${element.name || 'TP'}</b>
             <br>
             ${element.note || ''}
         `);
@@ -266,91 +446,31 @@ function renderPanelMarkers() {
 
 
 // ===============================
-// PANELNI OCHISH
+// GPS
 // ===============================
 
-function initPanel() {
+function initLocateButton() {
 
-    const panel = document.getElementById('panel-overlay');
+    const locateBtn = document.getElementById('locate-btn');
 
-    document.getElementById('list-btn').onclick = () => {
+    if(!locateBtn) return;
 
-        panel.classList.remove('hidden');
 
-        setTimeout(() => {
+    locateBtn.onclick = () => {
 
-            appState.panelMap.invalidateSize();
+        navigator.geolocation.getCurrentPosition(pos => {
 
-        }, 300);
+            const lat = pos.coords.latitude;
+
+            const lng = pos.coords.longitude;
+
+            appState.mainMap.setView([lat, lng], 16);
+
+            L.marker([lat, lng]).addTo(appState.mainMap);
+
+        });
 
     };
-
-
-    document.getElementById('close-list').onclick = () => {
-
-        panel.classList.add('hidden');
-
-    };
-
-}
-
-
-// ===============================
-// TABLAR
-// ===============================
-
-function initTabs() {
-
-    const folderBtn = document.getElementById('tab-folders');
-
-    const mapBtn = document.getElementById('tab-items');
-
-    const foldersTab = document.getElementById('folders-section');
-
-    const mapTab = document.getElementById('items-section');
-
-
-    folderBtn.onclick = () => {
-
-        folderBtn.classList.add('active');
-
-        mapBtn.classList.remove('active');
-
-        foldersTab.style.display = 'block';
-
-        mapTab.style.display = 'none';
-
-    };
-
-
-    mapBtn.onclick = () => {
-
-        mapBtn.classList.add('active');
-
-        folderBtn.classList.remove('active');
-
-        foldersTab.style.display = 'none';
-
-        mapTab.style.display = 'block';
-
-        setTimeout(() => {
-
-            appState.panelMap.invalidateSize();
-
-        }, 300);
-
-    };
-
-}
-
-
-// ===============================
-// LOADERNI YOPISH
-// ===============================
-
-function hideLoader() {
-
-    document.getElementById('app-loader').style.display = 'none';
 
 }
 
@@ -361,76 +481,36 @@ function hideLoader() {
 
 window.onload = () => {
 
-    initMainMap();
+    try {
 
-    initPanelMap();
+        initMainMap();
 
-    initPanel();
+        initPanelMap();
 
-    initTabs();
-initMapSwitcher();
-    loadFolders();
+        initPanel();
 
-    loadElements();
+        initTabs();
+
+        initMapSwitcher();
+
+        initLocateButton();
+
+        loadFolders();
+
+        loadElements();
+
+        setTimeout(() => {
+
+            hideLoader();
+
+        }, 1000);
+
+    } catch(err){
+
+        console.log(err);
+
+        hideLoader();
+
+    }
 
 };
-// ===============================
-// XARITA TURINI ALMASHTIRISH
-// ===============================
-
-let currentMapType = 'normal';
-
-const normalLayer = L.tileLayer(
-    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    {
-        maxZoom: 20
-    }
-);
-
-const satelliteLayer = L.tileLayer(
-    'https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-    {
-        maxZoom: 20,
-        subdomains:['mt0','mt1','mt2','mt3']
-    }
-);
-
-
-function initMapSwitcher() {
-
-    const mapBtn = document.getElementById('map-type-btn');
-
-    if(!mapBtn) return;
-
-
-    mapBtn.onclick = () => {
-
-        if(currentMapType === 'normal') {
-
-            appState.mainMap.eachLayer(layer => {
-
-                appState.mainMap.removeLayer(layer);
-
-            });
-
-            satelliteLayer.addTo(appState.mainMap);
-
-            currentMapType = 'satellite';
-
-        } else {
-
-            appState.mainMap.eachLayer(layer => {
-
-                appState.mainMap.removeLayer(layer);
-
-            });
-
-            normalLayer.addTo(appState.mainMap);
-
-            currentMapType = 'normal';
-
-        }
-
-    };
-
-}
