@@ -368,9 +368,69 @@ window.onload = () => {
     initPanel();
 
     initTabs();
-
+initMapSwitcher();
     loadFolders();
 
     loadElements();
 
 };
+// ===============================
+// XARITA TURINI ALMASHTIRISH
+// ===============================
+
+let currentMapType = 'normal';
+
+const normalLayer = L.tileLayer(
+    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    {
+        maxZoom: 20
+    }
+);
+
+const satelliteLayer = L.tileLayer(
+    'https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+    {
+        maxZoom: 20,
+        subdomains:['mt0','mt1','mt2','mt3']
+    }
+);
+
+
+function initMapSwitcher() {
+
+    const mapBtn = document.getElementById('map-type-btn');
+
+    if(!mapBtn) return;
+
+
+    mapBtn.onclick = () => {
+
+        if(currentMapType === 'normal') {
+
+            appState.mainMap.eachLayer(layer => {
+
+                appState.mainMap.removeLayer(layer);
+
+            });
+
+            satelliteLayer.addTo(appState.mainMap);
+
+            currentMapType = 'satellite';
+
+        } else {
+
+            appState.mainMap.eachLayer(layer => {
+
+                appState.mainMap.removeLayer(layer);
+
+            });
+
+            normalLayer.addTo(appState.mainMap);
+
+            currentMapType = 'normal';
+
+        }
+
+    };
+
+}
