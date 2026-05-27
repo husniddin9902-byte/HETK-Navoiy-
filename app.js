@@ -913,3 +913,44 @@ window.onload = () => {
     }, 1000);
 
 };
+
+// ======================
+// SIDEBAR SYSTEM
+// ======================
+
+const sidebar =
+document.getElementById("sidebar");
+
+const sidebarBackdrop =
+document.getElementById("sidebarBackdrop");
+
+// MENU BUTTON
+const menuButton =
+document.getElementById("menuBtn");
+
+function openSidebar(){
+
+    sidebar.classList.add("open");
+
+    sidebarBackdrop.classList.add("show");
+}
+
+function closeSidebar(){
+
+    sidebar.classList.remove("open");
+
+    sidebarBackdrop.classList.remove("show");
+}
+
+if(menuButton){
+
+    menuButton.addEventListener(
+        "click",
+        openSidebar
+    );
+}
+
+sidebarBackdrop.addEventListener(
+    "click",
+    closeSidebar
+);
