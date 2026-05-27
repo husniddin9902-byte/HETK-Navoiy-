@@ -1,18 +1,50 @@
+/* =========================
+   RESET
+========================= */
+
 *{
     margin:0;
     padding:0;
     box-sizing:border-box;
 }
 
+/* =========================
+   ROOT
+========================= */
+
+:root{
+
+    --bg:#001426;
+    --panel:#001a33;
+    --card:#00284d;
+
+    --blue:#1f6fff;
+    --green:#1dbf73;
+    --red:#ff4d5a;
+
+    --text:#ffffff;
+    --muted:#9db3c9;
+
+}
+
+/* =========================
+   HTML BODY
+========================= */
+
 html,
 body{
+
     width:100%;
     height:100%;
+
     overflow:hidden;
 
-    font-family:Arial,sans-serif;
+    background:var(--bg);
 
-    background:#001b33;
+    font-family:
+    Arial,
+    sans-serif;
+
 }
 
 /* =========================
@@ -20,10 +52,25 @@ body{
 ========================= */
 
 #map{
+
     width:100%;
     height:100vh;
 
     z-index:1;
+
+}
+
+/* =========================
+   MINI MAP
+========================= */
+
+#miniMap{
+
+    width:100%;
+    height:260px;
+
+    border-radius:22px;
+
 }
 
 /* =========================
@@ -31,42 +78,68 @@ body{
 ========================= */
 
 #loader{
+
     position:fixed;
 
     inset:0;
 
-    background:#001b33;
+    background:var(--bg);
 
-    z-index:99999;
+    z-index:999999;
 
     display:flex;
     flex-direction:column;
     justify-content:center;
     align-items:center;
 
-    gap:20px;
+    gap:18px;
 
-    color:white;
 }
 
-.spinner{
-    width:80px;
-    height:80px;
+.loader-ring{
 
-    border:7px solid rgba(255,255,255,.15);
-
-    border-top:7px solid #1f6fff;
+    width:90px;
+    height:90px;
 
     border-radius:50%;
 
-    animation:spin 1s linear infinite;
+    border:
+    7px solid
+    rgba(255,255,255,.12);
+
+    border-top:
+    7px solid
+    var(--blue);
+
+    animation:
+    loaderSpin 1s linear infinite;
+
 }
 
-@keyframes spin{
+@keyframes loaderSpin{
 
     100%{
-        transform:rotate(360deg);
+
+        transform:
+        rotate(360deg);
+
     }
+
+}
+
+#loader h2{
+
+    color:white;
+
+    font-size:34px;
+
+}
+
+#loader p{
+
+    color:var(--muted);
+
+    font-size:18px;
 
 }
 
@@ -75,6 +148,7 @@ body{
 ========================= */
 
 .topbar{
+
     position:fixed;
 
     top:0;
@@ -83,7 +157,11 @@ body{
     width:100%;
     height:78px;
 
-    background:#001a33;
+    background:
+    rgba(0,26,51,.88);
+
+    backdrop-filter:
+    blur(18px);
 
     z-index:9999;
 
@@ -93,15 +171,19 @@ body{
 
     padding:0 18px;
 
-    box-shadow:0 4px 20px rgba(0,0,0,.35);
+    box-shadow:
+    0 5px 25px rgba(0,0,0,.35);
+
 }
 
 .topbar h1{
+
     color:white;
 
     font-size:20px;
 
     font-weight:700;
+
 }
 
 /* =========================
@@ -109,62 +191,75 @@ body{
 ========================= */
 
 .top-btn{
-    width:54px;
-    height:54px;
 
-    border:none;
-    border-radius:18px;
-
-    background:#00284d;
-
-    color:white;
-
-    font-size:22px;
-
-    transition:.2s;
-}
-
-.top-btn:active{
-    transform:scale(.95);
-}
-
-/* =========================
-   TOP ACTIONS
-========================= */
-
-.top-actions{
-    display:flex;
-
-    gap:10px;
-}
-
-/* =========================
-   SEARCH
-========================= */
-
-.search-container{
-    position:fixed;
-
-    top:92px;
-    left:50%;
-
-    transform:translateX(-50%);
-
-    width:92%;
-
-    z-index:999;
-}
-
-.search-container input{
-    width:100%;
-    height:58px;
+    width:56px;
+    height:56px;
 
     border:none;
     outline:none;
 
     border-radius:20px;
 
-    background:#00284d;
+    background:var(--card);
+
+    color:white;
+
+    font-size:22px;
+
+    transition:.2s;
+
+}
+
+.top-btn:active{
+
+    transform:scale(.94);
+
+}
+
+/* =========================
+   TOP ACTIONS
+========================= */
+
+.topbar-actions{
+
+    display:flex;
+
+    gap:10px;
+
+}
+
+/* =========================
+   FLOATING SEARCH
+========================= */
+
+.floating-search{
+
+    position:fixed;
+
+    top:92px;
+    left:50%;
+
+    transform:
+    translateX(-50%);
+
+    width:92%;
+
+    z-index:999;
+
+}
+
+.floating-search input{
+
+    width:100%;
+    height:60px;
+
+    border:none;
+    outline:none;
+
+    border-radius:22px;
+
+    background:
+    rgba(0,40,77,.95);
 
     color:white;
 
@@ -172,11 +267,15 @@ body{
 
     font-size:18px;
 
-    box-shadow:0 5px 20px rgba(0,0,0,.25);
+    box-shadow:
+    0 5px 25px rgba(0,0,0,.25);
+
 }
 
-.search-container input::placeholder{
-    color:#a5b7c8;
+.floating-search input::placeholder{
+
+    color:var(--muted);
+
 }
 
 /* =========================
@@ -184,18 +283,20 @@ body{
 ========================= */
 
 .gps-btn{
+
     position:fixed;
 
     right:20px;
-    bottom:300px;
+    bottom:310px;
 
-    width:70px;
-    height:70px;
+    width:72px;
+    height:72px;
 
     border:none;
+
     border-radius:50%;
 
-    background:#1f6fff;
+    background:var(--blue);
 
     color:white;
 
@@ -203,13 +304,17 @@ body{
 
     z-index:9999;
 
-    box-shadow:0 8px 25px rgba(0,0,0,.35);
+    box-shadow:
+    0 10px 25px rgba(0,0,0,.35);
 
     transition:.2s;
+
 }
 
 .gps-btn:active{
+
     transform:scale(.92);
+
 }
 
 /* =========================
@@ -217,6 +322,7 @@ body{
 ========================= */
 
 .bottom-sheet{
+
     position:fixed;
 
     left:0;
@@ -224,9 +330,14 @@ body{
 
     width:100%;
 
-    background:#001a33;
+    background:
+    rgba(0,26,51,.97);
 
-    border-radius:35px 35px 0 0;
+    backdrop-filter:
+    blur(18px);
+
+    border-radius:
+    34px 34px 0 0;
 
     z-index:9999;
 
@@ -238,7 +349,9 @@ body{
 
     overflow:auto;
 
-    box-shadow:0 -8px 30px rgba(0,0,0,.4);
+    box-shadow:
+    0 -8px 30px rgba(0,0,0,.45);
+
 }
 
 /* =========================
@@ -246,89 +359,146 @@ body{
 ========================= */
 
 .sheet-handle{
-    width:70px;
-    height:7px;
 
-    background:white;
+    width:74px;
+    height:7px;
 
     border-radius:10px;
 
-    margin:0 auto 18px;
+    background:white;
+
+    margin:
+    0 auto 18px;
+
 }
 
 /* =========================
-   CARD
+   CONTENT
+========================= */
+
+.sheet-content{
+
+    width:100%;
+
+}
+
+/* =========================
+   INFO CARD
 ========================= */
 
 .info-card{
-    background:#00284d;
 
-    border-radius:22px;
+    background:var(--card);
+
+    border-radius:24px;
 
     padding:18px;
 
     margin-bottom:16px;
+
+    box-shadow:
+    inset 0 0 0 1px
+    rgba(255,255,255,.03);
+
 }
 
 .info-card span{
-    color:#9fb4c7;
+
+    color:var(--muted);
 
     font-size:16px;
+
 }
 
 .info-card h2{
-    color:white;
 
-    margin-top:8px;
-
-    font-size:34px;
-}
-
-.info-card p{
     color:white;
 
     margin-top:10px;
 
-    line-height:1.5;
+    font-size:34px;
+
+    word-break:break-word;
+
+}
+
+.info-card p{
+
+    color:white;
+
+    margin-top:12px;
 
     font-size:17px;
+
+    line-height:1.5;
+
 }
 
 /* =========================
-   BUTTONS
+   ACTION GRID
+========================= */
+
+.action-grid{
+
+    display:grid;
+
+    grid-template-columns:
+    repeat(3,1fr);
+
+    gap:12px;
+
+}
+
+/* =========================
+   ACTION BUTTON
 ========================= */
 
 .action-btn{
-    width:100%;
+
     height:58px;
 
     border:none;
+    outline:none;
+
     border-radius:18px;
 
     color:white;
 
-    font-size:20px;
+    font-size:18px;
     font-weight:600;
 
-    margin-top:12px;
-
     transition:.2s;
+
+}
+
+.action-btn i{
+
+    margin-right:8px;
+
 }
 
 .action-btn:active{
-    transform:scale(.98);
+
+    transform:scale(.97);
+
 }
 
 .blue-btn{
-    background:#1f6fff;
+
+    background:var(--blue);
+
 }
 
 .green-btn{
-    background:#1dbf73;
+
+    background:var(--green);
+
 }
 
 .red-btn{
-    background:#ff4d5a;
+
+    background:var(--red);
+
 }
 
 /* =========================
@@ -336,17 +506,22 @@ body{
 ========================= */
 
 .sidebar{
+
     position:fixed;
 
     top:0;
     left:-100%;
 
-    width:88%;
-    max-width:420px;
+    width:92%;
+    max-width:450px;
 
     height:100%;
 
-    background:#001a33;
+    background:
+    rgba(0,26,51,.98);
+
+    backdrop-filter:
+    blur(20px);
 
     z-index:10000;
 
@@ -354,13 +529,17 @@ body{
 
     overflow:auto;
 
-    padding:20px;
+    padding:18px;
 
-    box-shadow:0 0 30px rgba(0,0,0,.45);
+    box-shadow:
+    0 0 35px rgba(0,0,0,.45);
+
 }
 
 .sidebar.active{
+
     left:0;
+
 }
 
 /* =========================
@@ -368,75 +547,278 @@ body{
 ========================= */
 
 .sidebar-header{
-    display:flex;
 
+    display:flex;
     align-items:center;
     justify-content:space-between;
 
-    margin-bottom:25px;
+    margin-bottom:24px;
+
 }
 
 .sidebar-header h2{
+
     color:white;
 
-    font-size:34px;
+    font-size:28px;
+
 }
 
-.sidebar-header button{
-    width:60px;
-    height:60px;
+.sidebar-header span{
+
+    color:var(--muted);
+
+    font-size:14px;
+
+}
+
+.close-sidebar-btn{
+
+    width:58px;
+    height:58px;
 
     border:none;
+
     border-radius:18px;
 
-    background:#00284d;
+    background:var(--card);
 
     color:white;
 
     font-size:24px;
+
 }
 
 /* =========================
-   SIDEBAR CONTENT
+   SIDEBAR TABS
 ========================= */
 
-.sidebar-content{
+.sidebar-tabs{
+
     display:flex;
-    flex-direction:column;
 
-    gap:16px;
+    gap:12px;
+
+    margin-bottom:22px;
+
 }
 
-/* =========================
-   MENU ITEM
-========================= */
+.sidebar-tab{
 
-.menu-item{
-    width:100%;
+    flex:1;
 
-    height:62px;
+    height:58px;
 
     border:none;
+
     border-radius:18px;
 
-    background:#00284d;
+    background:var(--card);
 
     color:white;
 
-    font-size:19px;
+    font-size:18px;
+
+}
+
+.sidebar-tab.active{
+
+    background:var(--blue);
+
+}
+
+/* =========================
+   SIDEBAR SEARCH
+========================= */
+
+.sidebar-search{
+
+    position:relative;
+
+    margin-bottom:22px;
+
+}
+
+.sidebar-search i{
+
+    position:absolute;
+
+    left:18px;
+    top:50%;
+
+    transform:
+    translateY(-50%);
+
+    color:var(--muted);
+
+}
+
+.sidebar-search input{
+
+    width:100%;
+    height:58px;
+
+    border:none;
+    outline:none;
+
+    border-radius:18px;
+
+    background:var(--card);
+
+    color:white;
+
+    padding:
+    0 18px 0 48px;
+
+    font-size:16px;
+
+}
+
+/* =========================
+   SIDEBAR PAGE
+========================= */
+
+.sidebar-page{
+
+    display:none;
+
+}
+
+.sidebar-page.active{
+
+    display:block;
+
+}
+
+/* =========================
+   TREE
+========================= */
+
+.tree-container{
+
+    width:100%;
+
+}
+
+/* =========================
+   TREE NODE
+========================= */
+
+.tree-node{
+
+    margin-bottom:10px;
+
+}
+
+/* =========================
+   TREE TITLE
+========================= */
+
+.tree-title{
 
     display:flex;
     align-items:center;
 
-    gap:14px;
+    gap:12px;
 
-    padding:0 18px;
+    background:var(--card);
 
-    transition:.2s;
+    padding:16px;
+
+    border-radius:18px;
+
+    color:white;
+
+    font-size:17px;
+
 }
 
-.menu-item:active{
-    transform:scale(.98);
+/* =========================
+   TREE TOGGLE
+========================= */
+
+.tree-toggle{
+
+    width:22px;
+
+    display:flex;
+    justify-content:center;
+
+}
+
+/* =========================
+   TREE COLORS
+========================= */
+
+.tree-green{color:#1dbf73;}
+.tree-red{color:#ff4d5a;}
+.tree-purple{color:#8b5cf6;}
+.tree-orange{color:#ff8c42;}
+.tree-lime{color:#84cc16;}
+.tree-pink{color:#ec4899;}
+.tree-yellow{color:#facc15;}
+.tree-blue{color:#3b82f6;}
+.tree-cyan{color:#06b6d4;}
+.tree-electric{color:#00e5ff;}
+
+/* =========================
+   TREE CHILDREN
+========================= */
+
+.tree-children{
+
+    padding-left:22px;
+
+    margin-top:10px;
+
+}
+
+/* =========================
+   TREE ITEM
+========================= */
+
+.tree-item{
+
+    display:flex;
+    align-items:center;
+
+    gap:12px;
+
+    background:var(--card);
+
+    padding:14px;
+
+    border-radius:16px;
+
+    margin-bottom:10px;
+
+    color:white;
+
+    font-size:16px;
+
+}
+
+.tree-plus{
+
+    width:20px;
+
+    display:flex;
+    justify-content:center;
+
+}
+
+/* =========================
+   MINI MAP
+========================= */
+
+.mini-map-container{
+
+    background:var(--card);
+
+    padding:14px;
+
+    border-radius:24px;
+
 }
 
 /* =========================
@@ -444,7 +826,9 @@ body{
 ========================= */
 
 .leaflet-control-zoom{
-    margin-top:160px !important;
+
+    margin-top:170px !important;
+
 }
 
 /* =========================
@@ -454,20 +838,35 @@ body{
 @media(max-width:768px){
 
     .topbar h1{
+
         font-size:18px;
+
     }
 
-    .info-card h2{
-        font-size:26px;
+    .action-grid{
+
+        grid-template-columns:
+        1fr;
+
     }
 
     .bottom-sheet{
-        max-height:55vh;
+
+        max-height:58vh;
+
     }
 
     .sidebar{
+
         width:100%;
         max-width:100%;
+
+    }
+
+    .info-card h2{
+
+        font-size:26px;
+
     }
 
 }
