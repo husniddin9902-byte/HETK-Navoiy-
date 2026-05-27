@@ -1,956 +1,401 @@
-// ======================================
-// FIREBASE
-// ======================================
+// =========================
+// HETK Monitoring PRO v3
+// =========================
 
-const firebaseConfig = {
+// -------------------------
+// GLOBAL VARIABLES
+// -------------------------
 
-    apiKey: "AIzaSyBF0oT_ZhvE1tT1Qglh5GjPPhs8ZsyRWoc",
+let map;
+let currentMarker = null;
+let selectedLat = null;
+let selectedLng = null;
 
-    authDomain: "energo-monitoring.firebaseapp.com",
+let groups = JSON.parse(localStorage.getItem("hetk_groups")) || [];
+let locations = JSON.parse(localStorage.getItem("hetk_locations")) || [];
 
-    databaseURL:
-    "https://energo-monitoring-default-rtdb.firebaseio.com",
+let currentLayer = "satellite";
 
-    projectId: "energo-monitoring",
+const markersLayer = L.layerGroup();
 
-    storageBucket:
-    "energo-monitoring.appspot.com",
-
-    messagingSenderId: "514032923022",
-
-    appId:
-    "1:514032923022:web:fe2f57b81a30d0c2f0"
-
-};
-
-firebase.initializeApp(firebaseConfig);
-
-const db = firebase.database();
-
-const storage = firebase.storage();
-
-
-// ======================================
-// GLOBAL STATE
-// ======================================
-
-const appState = {
-
-    folders: {},
-
-    elements: {},
-
-    selectedFolderId: null,
-
-    selectedElementId: null,
-
-    currentLat: null,
-
-    currentLng: null,
-
-    currentAddress: '',
-
-    mainMap: null,
-
-    panelMap: null,
-
-    currentMapType: 'satellite',
-
-    mainMarkers: [],
-
-    panelMarkers: []
-
-};
-
-
-// ======================================
-// TILE LAYERS
-// ======================================
+// -------------------------
+// MAP LAYERS
+// -------------------------
 
 const satelliteLayer = L.tileLayer(
-
-    'https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-
-    {
-        maxZoom: 22,
-        subdomains:['mt0','mt1','mt2','mt3']
-    }
-
+  "https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+  {
+    maxZoom: 20,
+    subdomains: ["mt0", "mt1", "mt2", "mt3"],
+  }
 );
 
-const normalLayer = L.tileLayer(
-
-    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-
-    {
-        maxZoom: 22
-    }
-
+const hybridLayer = L.tileLayer(
+  "https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+  {
+    maxZoom: 20,
+    subdomains: ["mt0", "mt1", "mt2", "mt3"],
+  }
 );
 
+// -------------------------
+// INIT MAP
+// -------------------------
 
-// ======================================
-// INIT MAIN MAP
-// ======================================
+function initMap() {
+  map = L.map("map", {
+    zoomControl: false,
+    attributionControl: true,
+  }).setView([41.3111, 69.2797], 7);
 
-function initMainMap(){
+  satelliteLayer.addTo(map);
 
-    appState.mainMap = L.map('map', {
+  L.control.zoom({
+    position: "topleft",
+  }).addTo(map);
 
-        zoomControl:false
+  markersLayer.addTo(map);
 
-    }).setView([40.100, 65.350], 10);
+  setTimeout(() => {
+    map.invalidateSize();
+  }, 300);
 
+  map.on("click", async function (e) {
+    const lat = e.latlng.lat;
+    const lng = e.latlng.lng;
 
-    satelliteLayer.addTo(appState.mainMap);
+    selectedLat = lat;
+    selectedLng = lng;
 
+    updateBottomPanel(lat, lng);
 
-    appState.mainMap.on('click', e => {
-
-        const lat = e.latlng.lat;
-
-        const lng = e.latlng.lng;
-
-        updateCoords(lat, lng);
-
-    });
-
-}
-
-
-// ======================================
-// INIT PANEL MAP
-// ======================================
-
-function initPanelMap(){
-
-    appState.panelMap = L.map('panel-map')
-    .setView([40.100, 65.350], 10);
-
-    satelliteLayer.addTo(appState.panelMap);
-
-}
-
-
-// ======================================
-// UPDATE COORDS
-// ======================================
-
-function updateCoords(lat, lng){
-
-    appState.currentLat = lat;
-
-    appState.currentLng = lng;
-
-
-    document.getElementById('latitude')
-    .innerText = lat.toFixed(6);
-
-    document.getElementById('longitude')
-    .innerText = lng.toFixed(6);
-
-
-    reverseGeocode(lat, lng);
-
-}
-
-
-// ======================================
-// REVERSE GEOCODE
-// ======================================
-
-async function reverseGeocode(lat, lng){
-
-    try{
-
-        const url =
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`;
-
-        const res = await fetch(url);
-
-        const data = await res.json();
-
-        const address =
-        data.display_name || 'Aniqlanmadi';
-
-        appState.currentAddress = address;
-
-        document.getElementById('address')
-        .innerText = address;
-
-    }catch(err){
-
-        console.log(err);
-
+    if (currentMarker) {
+      map.removeLayer(currentMarker);
     }
 
+    currentMarker = L.marker([lat, lng]).addTo(map);
+
+    await getAddress(lat, lng);
+
+    openSaveModal();
+  });
+
+  renderSavedLocations();
 }
 
+// -------------------------
+// MAP RESIZE FIX
+// -------------------------
 
-// ======================================
-// GPS
-// ======================================
-
-function initLocate(){
-
-    const btn =
-    document.getElementById('locate-btn');
-
-    btn.onclick = () => {
-
-        navigator.geolocation.getCurrentPosition(
-
-            pos => {
-
-                const lat =
-                pos.coords.latitude;
-
-                const lng =
-                pos.coords.longitude;
-
-                appState.mainMap.setView(
-                    [lat, lng],
-                    17
-                );
-
-                updateCoords(lat, lng);
-
-                L.marker([lat, lng])
-                .addTo(appState.mainMap);
-
-            },
-
-            err => {
-
-                alert(
-                    'GPS ruxsat berilmadi'
-                );
-
-            }
-
-        );
-
-    };
-
+function refreshMap() {
+  setTimeout(() => {
+    map.invalidateSize();
+  }, 400);
 }
 
+// -------------------------
+// LAYER SWITCH
+// -------------------------
 
-// ======================================
-// PANEL
-// ======================================
-
-function initPanel(){
-
-    const panel =
-    document.getElementById('side-panel');
-
-    const openBtn =
-    document.getElementById('menu-btn');
-
-    const closeBtn =
-    document.getElementById('close-panel-btn');
-
-
-    openBtn.onclick = () => {
-
-        panel.classList.add('active');
-
-        setTimeout(() => {
-
-            appState.panelMap.invalidateSize();
-
-        }, 300);
-
-    };
-
-
-    closeBtn.onclick = () => {
-
-        panel.classList.remove('active');
-
-    };
-
-
-    panel.querySelector('.side-overlay')
-    .onclick = () => {
-
-        panel.classList.remove('active');
-
-    };
-
+function toggleLayer() {
+  if (currentLayer === "satellite") {
+    map.removeLayer(satelliteLayer);
+    hybridLayer.addTo(map);
+    currentLayer = "hybrid";
+  } else {
+    map.removeLayer(hybridLayer);
+    satelliteLayer.addTo(map);
+    currentLayer = "satellite";
+  }
 }
 
+// -------------------------
+// GET ADDRESS
+// -------------------------
 
-// ======================================
-// TABS
-// ======================================
+async function getAddress(lat, lng) {
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`;
 
-function initTabs(){
+    const response = await fetch(url);
 
-    const foldersBtn =
-    document.getElementById(
-        'folders-tab-btn'
-    );
+    const data = await response.json();
 
-    const mapBtn =
-    document.getElementById(
-        'map-tab-btn'
-    );
+    const address =
+      data.display_name || "Manzil topilmadi";
 
-    const foldersTab =
-    document.getElementById(
-        'folders-tab'
-    );
+    document.getElementById("address").innerText = address;
 
-    const mapTab =
-    document.getElementById(
-        'map-tab'
-    );
+    document.getElementById("modalAddress").value =
+      address;
 
+  } catch (error) {
+    console.log(error);
 
-    foldersBtn.onclick = () => {
-
-        foldersBtn.classList.add('active');
-
-        mapBtn.classList.remove('active');
-
-        foldersTab.classList.add('active');
-
-        mapTab.classList.remove('active');
-
-    };
-
-
-    mapBtn.onclick = () => {
-
-        mapBtn.classList.add('active');
-
-        foldersBtn.classList.remove('active');
-
-        mapTab.classList.add('active');
-
-        foldersTab.classList.remove('active');
-
-
-        setTimeout(() => {
-
-            appState.panelMap.invalidateSize();
-
-        }, 300);
-
-    };
-
+    document.getElementById("address").innerText =
+      "Aniqlanmadi";
+  }
 }
 
+// -------------------------
+// UPDATE PANEL
+// -------------------------
 
-// ======================================
-// MAP SWITCH
-// ======================================
+function updateBottomPanel(lat, lng) {
+  document.getElementById("latitude").innerText =
+    lat.toFixed(6);
 
-function initMapSwitcher(){
-
-    const btn =
-    document.getElementById(
-        'map-type-btn'
-    );
-
-    btn.onclick = () => {
-
-        appState.mainMap.eachLayer(layer => {
-
-            appState.mainMap.removeLayer(layer);
-
-        });
-
-
-        if(
-            appState.currentMapType
-            === 'satellite'
-        ){
-
-            normalLayer.addTo(
-                appState.mainMap
-            );
-
-            appState.currentMapType =
-            'normal';
-
-        }else{
-
-            satelliteLayer.addTo(
-                appState.mainMap
-            );
-
-            appState.currentMapType =
-            'satellite';
-
-        }
-
-    };
-
+  document.getElementById("longitude").innerText =
+    lng.toFixed(6);
 }
 
+// -------------------------
+// SEARCH LOCATION
+// -------------------------
 
-// ======================================
-// BOTTOM PANEL
-// ======================================
+async function searchLocation() {
+  const query =
+    document.getElementById("searchInput").value;
 
-function initBottomPanel(){
+  if (!query) return;
 
-    const panel =
-    document.getElementById(
-        'bottom-panel'
-    );
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${query}`;
 
-    const toggle =
-    document.getElementById(
-        'panel-toggle'
-    );
+    const response = await fetch(url);
 
-    toggle.onclick = () => {
+    const data = await response.json();
 
-        panel.classList.toggle(
-            'minimized'
-        );
+    if (data.length > 0) {
+      const lat = parseFloat(data[0].lat);
+      const lng = parseFloat(data[0].lon);
 
-    };
+      map.setView([lat, lng], 14);
 
+      if (currentMarker) {
+        map.removeLayer(currentMarker);
+      }
+
+      currentMarker = L.marker([lat, lng]).addTo(map);
+
+      updateBottomPanel(lat, lng);
+
+      await getAddress(lat, lng);
+    }
+
+  } catch (error) {
+    console.log(error);
+  }
 }
 
+// -------------------------
+// GROUPS
+// -------------------------
 
-// ======================================
-// COPY COORDS
-// ======================================
+function saveGroup() {
+  const name =
+    document.getElementById("groupName").value;
 
-function initCopy(){
+  if (!name) return;
 
-    const btn =
-    document.getElementById(
-        'copy-btn'
-    );
+  groups.push(name);
 
-    btn.onclick = () => {
+  localStorage.setItem(
+    "hetk_groups",
+    JSON.stringify(groups)
+  );
 
-        const text =
+  renderGroups();
 
-`Latitude: ${appState.currentLat}
-Longitude: ${appState.currentLng}`;
-
-        navigator.clipboard.writeText(
-            text
-        );
-
-        alert('Nusxalandi');
-
-    };
-
+  document.getElementById("groupName").value = "";
 }
 
+function renderGroups() {
+  const container =
+    document.getElementById("groupsList");
 
-// ======================================
-// SHARE
-// ======================================
+  const select =
+    document.getElementById("locationGroup");
 
-function initShare(){
+  if (!container || !select) return;
 
-    const btn =
-    document.getElementById(
-        'share-btn'
-    );
+  container.innerHTML = "";
+  select.innerHTML = "";
 
-    btn.onclick = async () => {
+  groups.forEach((group) => {
+    const item = document.createElement("div");
 
-        const text =
+    item.className = "group-item";
 
-`${appState.currentAddress}
-
-https://maps.google.com/?q=${appState.currentLat},${appState.currentLng}`;
-
-        if(navigator.share){
-
-            navigator.share({
-
-                title:'Lokatsiya',
-
-                text:text
-
-            });
-
-        }else{
-
-            alert(text);
-
-        }
-
-    };
-
-}
-
-
-// ======================================
-// SEARCH
-// ======================================
-
-function initSearch(){
-
-    const input =
-    document.getElementById(
-        'folder-search-input'
-    );
-
-    input.addEventListener(
-        'input',
-        () => {
-
-            renderFolders(
-                input.value
-                .toLowerCase()
-            );
-
-        }
-    );
-
-}
-
-
-// ======================================
-// LOAD FOLDERS
-// ======================================
-
-function loadFolders(){
-
-    db.ref('folders')
-    .on('value', snapshot => {
-
-        appState.folders =
-        snapshot.val() || {};
-
-        renderFolders();
-
-    });
-
-}
-
-
-// ======================================
-// RENDER FOLDERS
-// ======================================
-
-function renderFolders(search=''){
-
-    const root =
-    document.getElementById(
-        'tree-root'
-    );
-
-    root.innerHTML = '';
-
-    Object.entries(appState.folders)
-    .forEach(([id, folder]) => {
-
-        if(folder.parentId === 'root'){
-
-            if(
-                search &&
-                !folder.name
-                .toLowerCase()
-                .includes(search)
-            ){
-                return;
-            }
-
-            root.appendChild(
-
-                createFolderNode(
-                    id,
-                    folder
-                )
-
-            );
-
-        }
-
-    });
-
-}
-
-
-// ======================================
-// CREATE FOLDER NODE
-// ======================================
-
-function createFolderNode(id, folder){
-
-    const wrapper =
-    document.createElement('div');
-
-    wrapper.className =
-    'folder-item';
-
-
-    const header =
-    document.createElement('div');
-
-    header.className =
-    'folder-header';
-
-
-    header.innerHTML = `
-
-    <div style="
-    width:14px;
-    height:14px;
-    border-radius:50%;
-    background:${folder.color || '#00aaff'};
-    "></div>
-
-    <div>
-        ${folder.name}
-    </div>
-
+    item.innerHTML = `
+      <span>${group}</span>
     `;
 
+    container.appendChild(item);
 
-    header.onclick = () => {
+    const option = document.createElement("option");
 
-        document
-        .querySelectorAll(
-            '.folder-header'
-        )
-        .forEach(el => {
+    option.value = group;
+    option.innerText = group;
 
-            el.classList.remove(
-                'active-folder'
-            );
-
-        });
-
-        header.classList.add(
-            'active-folder'
-        );
-
-        appState.selectedFolderId =
-        id;
-
-        renderMarkers();
-
-    };
-
-
-    wrapper.appendChild(header);
-
-
-    const children =
-    document.createElement('div');
-
-    children.className =
-    'folder-children';
-
-
-    Object.entries(appState.folders)
-    .forEach(([childId, child]) => {
-
-        if(child.parentId === id){
-
-            children.appendChild(
-
-                createFolderNode(
-                    childId,
-                    child
-                )
-
-            );
-
-        }
-
-    });
-
-
-    wrapper.appendChild(children);
-
-    return wrapper;
-
+    select.appendChild(option);
+  });
 }
 
+// -------------------------
+// SAVE LOCATION
+// -------------------------
 
-// ======================================
-// LOAD ELEMENTS
-// ======================================
+function saveLocation() {
+  const name =
+    document.getElementById("locationName").value;
 
-function loadElements(){
+  const phone =
+    document.getElementById("locationPhone").value;
 
-    db.ref('elements')
-    .on('value', snapshot => {
+  const note =
+    document.getElementById("locationNote").value;
 
-        appState.elements =
-        snapshot.val() || {};
+  const group =
+    document.getElementById("locationGroup").value;
 
-        renderMarkers();
+  if (!name || !selectedLat || !selectedLng)
+    return;
 
-    });
+  const item = {
+    id: Date.now(),
+    name,
+    phone,
+    note,
+    group,
+    lat: selectedLat,
+    lng: selectedLng,
+  };
 
+  locations.push(item);
+
+  localStorage.setItem(
+    "hetk_locations",
+    JSON.stringify(locations)
+  );
+
+  renderSavedLocations();
+
+  closeSaveModal();
+
+  clearModal();
 }
 
-
-// ======================================
-// CLEAR MARKERS
-// ======================================
-
-function clearMarkers(){
-
-    appState.mainMarkers
-    .forEach(marker => {
-
-        appState.mainMap
-        .removeLayer(marker);
-
-    });
-
-    appState.panelMarkers
-    .forEach(marker => {
-
-        appState.panelMap
-        .removeLayer(marker);
-
-    });
-
-    appState.mainMarkers = [];
-
-    appState.panelMarkers = [];
-
-}
-
-
-// ======================================
+// -------------------------
 // RENDER MARKERS
-// ======================================
+// -------------------------
 
-function renderMarkers(){
+function renderSavedLocations() {
+  markersLayer.clearLayers();
 
-    clearMarkers();
-
-    Object.entries(appState.elements)
-    .forEach(([id, element]) => {
-
-        if(
-            appState.selectedFolderId &&
-            element.folderIds &&
-            !element.folderIds.includes(
-                appState.selectedFolderId
-            )
-        ){
-            return;
-        }
-
-        if(
-            !element.lat ||
-            !element.lng
-        ){
-            return;
-        }
-
-
-        const marker1 =
-        createMarker(element)
-        .addTo(appState.mainMap);
-
-        const marker2 =
-        createMarker(element)
-        .addTo(appState.panelMap);
-
-
-        appState.mainMarkers
-        .push(marker1);
-
-        appState.panelMarkers
-        .push(marker2);
-
-    });
-
-}
-
-
-// ======================================
-// CREATE MARKER
-// ======================================
-
-function createMarker(element){
-
+  locations.forEach((item) => {
     const marker = L.marker([
-
-        element.lat,
-
-        element.lng
-
-    ]);
-
+      item.lat,
+      item.lng,
+    ]).addTo(markersLayer);
 
     marker.bindPopup(`
-
-    <div style="
-    min-width:220px;
-    ">
-
-        <div style="
-        font-size:16px;
-        font-weight:700;
-        margin-bottom:8px;
-        ">
-            ${element.name || 'TP'}
-        </div>
-
-        <div style="
-        font-size:13px;
-        margin-bottom:6px;
-        ">
-            ${element.phone || ''}
-        </div>
-
-        <div style="
-        font-size:13px;
-        ">
-            ${element.note || ''}
-        </div>
-
-    </div>
-
+      <div style="min-width:200px">
+        <h3>${item.name}</h3>
+        <p>${item.phone || ""}</p>
+        <p>${item.note || ""}</p>
+        <small>${item.group || ""}</small>
+      </div>
     `);
-
-    return marker;
-
+  });
 }
 
+// -------------------------
+// COPY COORDINATES
+// -------------------------
 
-// ======================================
-// SAVE LOCATION BUTTON
-// ======================================
+function copyCoordinates() {
+  const lat =
+    document.getElementById("latitude").innerText;
 
-function initSaveButton(){
+  const lng =
+    document.getElementById("longitude").innerText;
 
-    const btn =
-    document.getElementById(
-        'save-btn'
-    );
-
-    btn.onclick = () => {
-
-        document
-        .getElementById(
-            'element-modal'
-        )
-        .classList.remove('hidden');
-
-
-        document
-        .getElementById(
-            'element-lat-input'
-        )
-        .value = appState.currentLat;
-
-
-        document
-        .getElementById(
-            'element-lng-input'
-        )
-        .value = appState.currentLng;
-
-    };
-
+  navigator.clipboard.writeText(`${lat}, ${lng}`);
 }
 
+// -------------------------
+// SHARE
+// -------------------------
 
-// ======================================
-// LOADER
-// ======================================
+function shareLocation() {
+  const lat =
+    document.getElementById("latitude").innerText;
 
-function hideLoader(){
+  const lng =
+    document.getElementById("longitude").innerText;
 
-    document
-    .getElementById(
-        'app-loader'
-    )
-    .style.display = 'none';
+  const url =
+    `https://maps.google.com/?q=${lat},${lng}`;
 
+  navigator.share({
+    title: "Lokatsiya",
+    text: url,
+  });
 }
 
+// -------------------------
+// MODAL
+// -------------------------
 
-// ======================================
-// START
-// ======================================
+function openSaveModal() {
+  document
+    .getElementById("saveModal")
+    .classList.add("active");
+}
+
+function closeSaveModal() {
+  document
+    .getElementById("saveModal")
+    .classList.remove("active");
+}
+
+// -------------------------
+// CLEAR MODAL
+// -------------------------
+
+function clearModal() {
+  document.getElementById("locationName").value = "";
+  document.getElementById("locationPhone").value = "";
+  document.getElementById("locationNote").value = "";
+}
+
+// -------------------------
+// SIDEBAR
+// -------------------------
+
+function openSidebar() {
+  document
+    .getElementById("sidebar")
+    .classList.add("active");
+
+  refreshMap();
+}
+
+function closeSidebar() {
+  document
+    .getElementById("sidebar")
+    .classList.remove("active");
+
+  refreshMap();
+}
+
+// -------------------------
+// INIT
+// -------------------------
 
 window.onload = () => {
+  initMap();
 
-    initMainMap();
-
-    initPanelMap();
-
-    initLocate();
-
-    initPanel();
-
-    initTabs();
-
-    initMapSwitcher();
-
-    initBottomPanel();
-
-    initCopy();
-
-    initShare();
-
-    initSearch();
-
-    initSaveButton();
-
-    loadFolders();
-
-    loadElements();
-
-    setTimeout(() => {
-
-        hideLoader();
-
-    }, 1000);
-
+  renderGroups();
 };
-
-// ======================
-// SIDEBAR SYSTEM
-// ======================
-
-const sidebar =
-document.getElementById("sidebar");
-
-const sidebarBackdrop =
-document.getElementById("sidebarBackdrop");
-
-// MENU BUTTON
-const menuButton =
-document.getElementById("menuBtn");
-
-function openSidebar(){
-
-    sidebar.classList.add("open");
-
-    sidebarBackdrop.classList.add("show");
-}
-
-function closeSidebar(){
-
-    sidebar.classList.remove("open");
-
-    sidebarBackdrop.classList.remove("show");
-}
-
-if(menuButton){
-
-    menuButton.addEventListener(
-        "click",
-        openSidebar
-    );
-}
-
-sidebarBackdrop.addEventListener(
-    "click",
-    closeSidebar
-);
