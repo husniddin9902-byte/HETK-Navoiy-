@@ -3,399 +3,252 @@
 
 <head>
 
-<meta charset="UTF-8">
+    <meta charset="UTF-8">
 
-<meta name="viewport"
-content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
 
-<title>HETK Monitoring</title>
+    <title>HETK Monitoring</title>
 
-<!-- LEAFLET -->
-<link rel="stylesheet"
-href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <!-- LEAFLET -->
 
-<!-- FONT AWESOME -->
-<link rel="stylesheet"
-href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
+    <link rel="stylesheet"
+          href="https://unpkg.com/leaflet/dist/leaflet.css" />
 
-<!-- CSS -->
-<link rel="stylesheet" href="style.css">
+    <!-- ICONS -->
+
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- CSS -->
+
+    <link rel="stylesheet"
+          href="style.css">
 
 </head>
 
 <body>
 
-<!-- SIDEBAR -->
-<div id="sidebar">
+    <!-- LOADER -->
 
-    <div class="sidebar-header">
-        HETK MENU
-    </div>
+    <div id="loader">
 
-    <div class="sidebar-content">
+        <div class="spinner"></div>
 
-        <button class="menu-item">
-            📁 Papkalar
-        </button>
-
-        <button class="menu-item">
-            ➕ Element qo‘shish
-        </button>
-
-        <button class="menu-item">
-            ⚙ Sozlamalar
-        </button>
-  <div id="groupsList"></div>
-    </div>
-
-</div>
-
-<div id="sidebarBackdrop"></div>
-    
-<!-- ========================= -->
-<!-- LOADER -->
-<!-- ========================= -->
-
-<div id="app-loader">
-
-    <div class="loader-circle"></div>
-
-    <div class="loader-text">
-        Baza yuklanmoqda...
-    </div>
-
-</div>
-
-
-<!-- ========================= -->
-<!-- TOP HEADER -->
-<!-- ========================= -->
-
-<header class="top-header">
-
-    <div class="header-left">
-
-        <button id="menu-btn" class="icon-btn">
-            <i class="fas fa-bars"></i>
-        </button>
+        <p>Baza yuklanmoqda...</p>
 
     </div>
 
+    <!-- SIDEBAR -->
 
-    <div class="header-title">
+    <div class="sidebar"
+         id="sidebar">
 
-        HETK Monitoring
+        <div class="sidebar-header">
+
+            <h2>Monitoring Panel</h2>
+
+            <button onclick="closeSidebar()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+        </div>
+
+        <div class="sidebar-tabs">
+
+            <button class="tab-btn active">
+                Guruhlar
+            </button>
+
+            <button class="tab-btn">
+                Xarita
+            </button>
+
+        </div>
+
+        <div class="sidebar-search">
+
+            <input type="text"
+                   placeholder="Guruh yoki lokatsiya qidirish">
+        </div>
+
+        <button class="new-group-btn"
+                onclick="openSaveModal()">
+
+            <i class="fa-solid fa-folder-plus"></i>
+
+            Yangi guruh
+
+        </button>
+
+        <div id="groupsList"></div>
 
     </div>
 
+    <!-- TOPBAR -->
 
-    <div class="header-right">
+    <div class="topbar">
 
-        <button id="search-btn" class="icon-btn">
-            <i class="fas fa-search"></i>
+        <button class="icon-btn"
+                onclick="openSidebar()">
+
+            <i class="fa-solid fa-bars"></i>
+
         </button>
 
-        <button id="map-type-btn" class="icon-btn">
-            <i class="fas fa-layer-group"></i>
-        </button>
+        <h1>HETK Monitoring</h1>
+
+        <div class="topbar-right">
+
+            <button class="icon-btn"
+                    onclick="searchLocation()">
+
+                <i class="fa-solid fa-magnifying-glass"></i>
+
+            </button>
+
+            <button class="icon-btn"
+                    onclick="toggleLayer()">
+
+                <i class="fa-solid fa-layer-group"></i>
+
+            </button>
+
+        </div>
 
     </div>
 
-</header>
-
-
-<!-- ========================= -->
-<!-- SEARCH PANEL -->
-<!-- ========================= -->
-
-<div id="search-panel" class="hidden">
+    <!-- SEARCH -->
 
     <div class="search-box">
 
-        <i class="fas fa-search"></i>
-
-        <input
-        type="text"
-        id="global-search-input"
-        placeholder="Qidirish...">
+        <input type="text"
+               id="searchInput"
+               placeholder="Lokatsiya qidirish...">
 
     </div>
 
-</div>
+    <!-- MAP -->
 
+    <div id="map"></div>
 
-<!-- ========================= -->
-<!-- MAIN MAP -->
-<!-- ========================= -->
+    <!-- GPS -->
 
-<div id="map"></div>
+    <button class="gps-btn"
+            onclick="getCurrentLocation()">
 
+        <i class="fa-solid fa-location-crosshairs"></i>
 
-<!-- ========================= -->
-<!-- GPS BUTTON -->
-<!-- ========================= -->
+    </button>
 
-<button id="locate-btn">
+    <!-- BOTTOM PANEL -->
 
-    <i class="fas fa-location-crosshairs"></i>
+    <div class="bottom-panel">
 
-</button>
+        <div class="drag-line"></div>
 
+        <div class="info-box">
 
-<!-- ========================= -->
-<!-- BOTTOM INFO PANEL -->
-<!-- ========================= -->
+            <span>Latitude</span>
 
-<div id="bottom-panel" class="minimized">
+            <h3 id="latitude">0.000000</h3>
 
-    <div id="panel-toggle">
+        </div>
 
-        <i class="fas fa-chevron-up"></i>
+        <div class="info-box">
+
+            <span>Longitude</span>
+
+            <h3 id="longitude">0.000000</h3>
+
+        </div>
+
+        <div class="info-box">
+
+            <span>Address</span>
+
+            <h3 id="address">Aniqlanmoqda...</h3>
+
+        </div>
+
+        <button class="copy-btn"
+                onclick="copyCoordinates()">
+
+            <i class="fa-regular fa-copy"></i>
+
+            Copy
+
+        </button>
+
+        <button class="share-btn"
+                onclick="shareLocation()">
+
+            <i class="fa-solid fa-share"></i>
+
+            Share
+
+        </button>
+
+        <button class="save-btn"
+                onclick="openSaveModal()">
+
+            <i class="fa-regular fa-floppy-disk"></i>
+
+            Save
+
+        </button>
 
     </div>
 
+    <!-- SAVE MODAL -->
 
-    <div id="panel-content">
+    <div class="modal"
+         id="saveModal">
 
-        <div class="coords-grid">
+        <div class="modal-content">
 
-            <div class="coord-item">
+            <div class="modal-header">
 
-                <div class="coord-label">
-                    Latitude
-                </div>
+                <h2>Lokatsiya</h2>
 
-                <div id="latitude" class="coord-value">
-                    0.000000
-                </div>
+                <button onclick="closeSaveModal()">
 
-            </div>
+                    <i class="fa-solid fa-xmark"></i>
 
-
-            <div class="coord-item">
-
-                <div class="coord-label">
-                    Longitude
-                </div>
-
-                <div id="longitude" class="coord-value">
-                    0.000000
-                </div>
+                </button>
 
             </div>
 
-        </div>
+            <input type="text"
+                   id="locationName"
+                   placeholder="Lokatsiya nomi">
 
+            <input type="text"
+                   id="locationPhone"
+                   placeholder="+998">
 
-        <div class="address-box">
+            <textarea id="locationNote"
+                      placeholder="Izoh"></textarea>
 
-            <div class="address-label">
-                Address
-            </div>
+            <input type="text"
+                   id="modalAddress"
+                   placeholder="Manzil">
 
-            <div id="address">
-                Aniqlanmoqda...
-            </div>
+            <input type="text"
+                   id="groupName"
+                   placeholder="Yangi guruh nomi">
 
-        </div>
+            <button class="new-group-btn"
+                    onclick="saveGroup()">
 
-
-        <div class="bottom-actions">
-
-            <button id="copy-btn" class="action-btn blue-btn">
-
-                <i class="fas fa-copy"></i>
-
-                Copy
-
-            </button>
-
-
-            <button id="share-btn" class="action-btn green-btn">
-
-                <i class="fas fa-share"></i>
-
-                Share
+                + Guruh qo‘shish
 
             </button>
 
+            <select id="locationGroup"></select>
 
-            <button id="save-btn" class="action-btn red-btn">
-
-                <i class="fas fa-floppy-disk"></i>
-
-                Save
-
-            </button>
-
-        </div>
-
-    </div>
-
-</div>
-
-
-<!-- ========================= -->
-<!-- SIDE PANEL -->
-<!-- ========================= -->
-
-<div id="side-panel">
-
-    <div class="side-overlay"></div>
-
-    <div class="side-content">
-
-
-        <!-- HEADER -->
-
-        <div class="side-header">
-
-            <div class="side-title">
-
-                Monitoring Panel
-
-            </div>
-
-
-            <button id="close-panel-btn">
-
-                <i class="fas fa-xmark"></i>
-
-            </button>
-
-        </div>
-
-
-        <!-- TABS -->
-
-        <div class="panel-tabs">
-
-            <button id="folders-tab-btn"
-            class="panel-tab active">
-
-                Guruhlar
-
-            </button>
-
-
-            <button id="map-tab-btn"
-            class="panel-tab">
-
-                Xarita
-
-            </button>
-
-        </div>
-
-
-        <!-- SEARCH -->
-
-        <div class="panel-search">
-
-            <i class="fas fa-search"></i>
-
-            <input
-            type="text"
-            id="folder-search-input"
-            placeholder="Guruh yoki lokatsiya qidirish">
-
-        </div>
-
-
-        <!-- FOLDERS TAB -->
-
-        <div id="folders-tab"
-        class="tab-page active">
-
-            <div id="tree-root"></div>
-
-
-            <button id="add-folder-btn"
-            class="main-add-btn">
-
-                <i class="fas fa-folder-plus"></i>
-
-                Yangi guruh
-
-            </button>
-
-        </div>
-
-
-        <!-- MAP TAB -->
-
-        <div id="map-tab"
-        class="tab-page">
-
-            <div id="panel-map"></div>
-
-        </div>
-
-    </div>
-
-</div>
-
-
-<!-- ========================= -->
-<!-- ADD FOLDER MODAL -->
-<!-- ========================= -->
-
-<div id="folder-modal"
-class="modal hidden">
-
-    <div class="modal-content">
-
-        <div class="modal-header">
-
-            <div class="modal-title">
-
-                Yangi guruh
-
-            </div>
-
-
-            <button class="close-modal-btn">
-
-                <i class="fas fa-xmark"></i>
-
-            </button>
-
-        </div>
-
-
-        <div class="modal-body">
-
-            <input
-            type="text"
-            id="folder-name-input"
-            class="custom-input"
-            placeholder="Guruh nomi">
-
-
-            <label class="custom-label">
-
-                Rang
-
-            </label>
-
-            <input
-            type="color"
-            id="folder-color-input"
-            value="#00aaff">
-
-
-            <label class="custom-label">
-
-                Ona guruh
-
-            </label>
-
-            <div id="folder-parent-tree"
-            class="tree-select"></div>
-
-
-            <button id="save-folder-btn"
-            class="save-main-btn">
+            <button class="share-btn"
+                    onclick="saveLocation()">
 
                 Saqlash
 
@@ -405,208 +258,14 @@ class="modal hidden">
 
     </div>
 
-</div>
+    <!-- LEAFLET JS -->
 
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
-<!-- ========================= -->
-<!-- ELEMENT MODAL -->
-<!-- ========================= -->
+    <!-- APP JS -->
 
-<div id="element-modal"
-class="modal hidden">
+    <script src="app.js"></script>
 
-    <div class="modal-content large-modal">
-
-        <div class="modal-header">
-
-            <div class="modal-title">
-
-                Lokatsiya
-
-            </div>
-
-
-            <button class="close-element-modal">
-
-                <i class="fas fa-xmark"></i>
-
-            </button>
-
-        </div>
-
-
-        <div class="modal-body">
-
-
-            <!-- IMAGE -->
-
-            <div class="image-upload-box">
-
-                <input
-                type="file"
-                id="element-image-input"
-                accept="image/*">
-
-                <img
-                id="element-image-preview"
-                src="">
-
-            </div>
-
-
-            <!-- NAME -->
-
-            <input
-            type="text"
-            id="element-name-input"
-            class="custom-input"
-            placeholder="Lokatsiya nomi">
-
-
-            <!-- PHONE -->
-
-            <input
-            type="tel"
-            id="element-phone-input"
-            class="custom-input"
-            placeholder="+998">
-
-
-            <!-- NOTE -->
-
-            <textarea
-            id="element-note-input"
-            class="custom-textarea"
-            placeholder="Izoh"></textarea>
-
-
-            <!-- COORDS -->
-
-            <div class="coords-double">
-
-                <input
-                type="number"
-                id="element-lat-input"
-                class="custom-input"
-                placeholder="Latitude">
-
-
-                <input
-                type="number"
-                id="element-lng-input"
-                class="custom-input"
-                placeholder="Longitude">
-
-            </div>
-
-
-            <!-- MULTI FOLDER -->
-
-            <div class="custom-label">
-
-                Guruhlar
-
-            </div>
-
-            <div id="element-folder-tree"
-            class="tree-select"></div>
-
-
-            <!-- BUTTONS -->
-
-            <div class="element-actions">
-
-                <button id="delete-element-btn"
-                class="danger-btn">
-
-                    O‘chirish
-
-                </button>
-
-
-                <button id="save-element-btn"
-                class="save-main-btn">
-
-                    Saqlash
-
-                </button>
-
-            </div>
-
-        </div>
-
-    </div>
-
-</div>
-
-
-<!-- ========================= -->
-<!-- FIREBASE -->
-<!-- ========================= -->
-
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
-
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
-
-
-<!-- LEAFLET -->
-
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-
-<!-- APP -->
-
-<script src="app.js"></script>
-
-<!-- SAVE MODAL -->
-
-<div class="modal" id="saveModal">
-
-    <div class="modal-content">
-
-        <h2>Lokatsiya</h2>
-
-        <input type="text"
-               id="locationName"
-               placeholder="Lokatsiya nomi">
-
-        <input type="text"
-               id="locationPhone"
-               placeholder="+998">
-
-        <textarea id="locationNote"
-                  placeholder="Izoh"></textarea>
-
-        <input type="text"
-               id="modalAddress"
-               placeholder="Manzil">
-
-        <input type="text"
-               id="groupName"
-               placeholder="Yangi guruh nomi">
-
-        <button class="primary-btn"
-                onclick="saveGroup()">
-            + Guruh qo‘shish
-        </button>
-
-        <select id="locationGroup"></select>
-
-        <button class="green-btn"
-                onclick="saveLocation()">
-            Saqlash
-        </button>
-
-        <button class="red-btn"
-                onclick="closeSaveModal()">
-            Bekor qilish
-        </button>
-
-    </div>
-
-</div>
-    
 </body>
+
 </html>
