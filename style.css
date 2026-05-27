@@ -756,3 +756,84 @@ grid-template-columns:1fr;
 }
 
     }
+
+/* ===================== */
+/* SIDEBAR */
+/* ===================== */
+
+#sidebar{
+
+    position:fixed;
+    top:0;
+    left:-280px;
+
+    width:280px;
+    height:100vh;
+
+    background:#021b33;
+
+    z-index:5000;
+
+    transition:0.3s;
+
+    box-shadow:0 0 20px rgba(0,0,0,0.5);
+
+}
+
+#sidebar.open{
+    left:0;
+}
+
+.sidebar-header{
+
+    padding:25px;
+
+    font-size:22px;
+    font-weight:bold;
+
+    color:white;
+
+    border-bottom:1px solid rgba(255,255,255,0.1);
+
+}
+
+.sidebar-content{
+    padding:15px;
+}
+
+.menu-item{
+
+    width:100%;
+
+    padding:16px;
+
+    margin-bottom:10px;
+
+    border:none;
+
+    border-radius:14px;
+
+    background:#06345f;
+
+    color:white;
+
+    font-size:16px;
+
+}
+
+#sidebarBackdrop{
+
+    position:fixed;
+    inset:0;
+
+    background:rgba(0,0,0,0.5);
+
+    z-index:4000;
+
+    display:none;
+
+}
+
+#sidebarBackdrop.show{
+    display:block;
+    }
