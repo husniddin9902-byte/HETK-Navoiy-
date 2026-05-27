@@ -560,5 +560,53 @@ class="modal hidden">
 
 <script src="app.js"></script>
 
+<!-- SAVE MODAL -->
+
+<div class="modal" id="saveModal">
+
+    <div class="modal-content">
+
+        <h2>Lokatsiya</h2>
+
+        <input type="text"
+               id="locationName"
+               placeholder="Lokatsiya nomi">
+
+        <input type="text"
+               id="locationPhone"
+               placeholder="+998">
+
+        <textarea id="locationNote"
+                  placeholder="Izoh"></textarea>
+
+        <input type="text"
+               id="modalAddress"
+               placeholder="Manzil">
+
+        <input type="text"
+               id="groupName"
+               placeholder="Yangi guruh nomi">
+
+        <button class="primary-btn"
+                onclick="saveGroup()">
+            + Guruh qo‘shish
+        </button>
+
+        <select id="locationGroup"></select>
+
+        <button class="green-btn"
+                onclick="saveLocation()">
+            Saqlash
+        </button>
+
+        <button class="red-btn"
+                onclick="closeSaveModal()">
+            Bekor qilish
+        </button>
+
+    </div>
+
+</div>
+    
 </body>
 </html>
