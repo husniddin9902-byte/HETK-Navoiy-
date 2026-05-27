@@ -1,233 +1,360 @@
-// ===============================
+// ======================================
 // FIREBASE
-// ===============================
+// ======================================
 
 const firebaseConfig = {
+
     apiKey: "AIzaSyBF0oT_ZhvE1tT1Qglh5GjPPhs8ZsyRWoc",
+
     authDomain: "energo-monitoring.firebaseapp.com",
-    databaseURL: "https://energo-monitoring-default-rtdb.firebaseio.com",
+
+    databaseURL:
+    "https://energo-monitoring-default-rtdb.firebaseio.com",
+
     projectId: "energo-monitoring",
-    storageBucket: "energo-monitoring.firebasestorage.app",
+
+    storageBucket:
+    "energo-monitoring.appspot.com",
+
     messagingSenderId: "514032923022",
-    appId: "1:514032923022:web:fe2f57b81a30d0c2f0"
+
+    appId:
+    "1:514032923022:web:fe2f57b81a30d0c2f0"
+
 };
 
 firebase.initializeApp(firebaseConfig);
 
 const db = firebase.database();
 
+const storage = firebase.storage();
 
-// ===============================
-// APP HOLATI
-// ===============================
+
+// ======================================
+// GLOBAL STATE
+// ======================================
 
 const appState = {
 
     folders: {},
+
     elements: {},
 
-    selectedFolder: null,
+    selectedFolderId: null,
+
+    selectedElementId: null,
+
+    currentLat: null,
+
+    currentLng: null,
+
+    currentAddress: '',
 
     mainMap: null,
+
     panelMap: null,
 
     currentMapType: 'satellite',
 
-    panelMarkers: [],
-    mainMarkers: []
+    mainMarkers: [],
+
+    panelMarkers: []
 
 };
 
 
-// ===============================
-// XARITA QATLAMLARI
-// ===============================
+// ======================================
+// TILE LAYERS
+// ======================================
 
 const satelliteLayer = L.tileLayer(
+
     'https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+
     {
-        maxZoom: 20,
+        maxZoom: 22,
         subdomains:['mt0','mt1','mt2','mt3']
     }
+
 );
 
 const normalLayer = L.tileLayer(
+
     'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+
     {
-        maxZoom: 20
+        maxZoom: 22
     }
+
 );
 
 
-// ===============================
-// ASOSIY XARITA
-// ===============================
+// ======================================
+// INIT MAIN MAP
+// ======================================
 
-function initMainMap() {
+function initMainMap(){
 
     appState.mainMap = L.map('map', {
-        zoomControl: false
+
+        zoomControl:false
+
     }).setView([40.100, 65.350], 10);
 
+
     satelliteLayer.addTo(appState.mainMap);
+
+
+    appState.mainMap.on('click', e => {
+
+        const lat = e.latlng.lat;
+
+        const lng = e.latlng.lng;
+
+        updateCoords(lat, lng);
+
+    });
 
 }
 
 
-// ===============================
-// PANEL XARITASI
-// ===============================
+// ======================================
+// INIT PANEL MAP
+// ======================================
 
-function initPanelMap() {
+function initPanelMap(){
 
-    const panelMapDiv = document.getElementById('panel-map');
-
-    if(!panelMapDiv) return;
-
-    appState.panelMap = L.map('panel-map').setView([40.100, 65.350], 10);
+    appState.panelMap = L.map('panel-map')
+    .setView([40.100, 65.350], 10);
 
     satelliteLayer.addTo(appState.panelMap);
 
 }
 
 
-// ===============================
-// LOADER
-// ===============================
+// ======================================
+// UPDATE COORDS
+// ======================================
 
-function hideLoader() {
+function updateCoords(lat, lng){
 
-    const loader = document.getElementById('app-loader');
+    appState.currentLat = lat;
 
-    if(loader){
+    appState.currentLng = lng;
 
-        loader.style.display = 'none';
+
+    document.getElementById('latitude')
+    .innerText = lat.toFixed(6);
+
+    document.getElementById('longitude')
+    .innerText = lng.toFixed(6);
+
+
+    reverseGeocode(lat, lng);
+
+}
+
+
+// ======================================
+// REVERSE GEOCODE
+// ======================================
+
+async function reverseGeocode(lat, lng){
+
+    try{
+
+        const url =
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`;
+
+        const res = await fetch(url);
+
+        const data = await res.json();
+
+        const address =
+        data.display_name || 'Aniqlanmadi';
+
+        appState.currentAddress = address;
+
+        document.getElementById('address')
+        .innerText = address;
+
+    }catch(err){
+
+        console.log(err);
 
     }
 
 }
 
 
-// ===============================
+// ======================================
+// GPS
+// ======================================
+
+function initLocate(){
+
+    const btn =
+    document.getElementById('locate-btn');
+
+    btn.onclick = () => {
+
+        navigator.geolocation.getCurrentPosition(
+
+            pos => {
+
+                const lat =
+                pos.coords.latitude;
+
+                const lng =
+                pos.coords.longitude;
+
+                appState.mainMap.setView(
+                    [lat, lng],
+                    17
+                );
+
+                updateCoords(lat, lng);
+
+                L.marker([lat, lng])
+                .addTo(appState.mainMap);
+
+            },
+
+            err => {
+
+                alert(
+                    'GPS ruxsat berilmadi'
+                );
+
+            }
+
+        );
+
+    };
+
+}
+
+
+// ======================================
 // PANEL
-// ===============================
+// ======================================
 
-function initPanel() {
+function initPanel(){
 
-    const panel = document.getElementById('list-container');
+    const panel =
+    document.getElementById('side-panel');
 
-    const openBtn = document.getElementById('list-btn');
+    const openBtn =
+    document.getElementById('menu-btn');
 
-    const closeBtn = document.getElementById('close-list');
-
-
-    if(openBtn){
-
-        openBtn.onclick = () => {
-
-            panel.style.display = 'flex';
-
-            setTimeout(() => {
-
-                if(appState.panelMap){
-
-                    appState.panelMap.invalidateSize();
-
-                }
-
-            }, 300);
-
-        };
-
-    }
+    const closeBtn =
+    document.getElementById('close-panel-btn');
 
 
-    if(closeBtn){
+    openBtn.onclick = () => {
 
-        closeBtn.onclick = () => {
+        panel.classList.add('active');
 
-            panel.style.display = 'none';
+        setTimeout(() => {
 
-        };
+            appState.panelMap.invalidateSize();
 
-    }
+        }, 300);
 
-}
-
-
-// ===============================
-// TABLAR
-// ===============================
-
-function initTabs() {
-
-    const foldersBtn = document.getElementById('tab-folders');
-
-    const mapBtn = document.getElementById('tab-items');
-
-    const foldersSection = document.getElementById('folders-section');
-
-    const mapSection = document.getElementById('items-section');
+    };
 
 
-    if(foldersBtn){
+    closeBtn.onclick = () => {
 
-        foldersBtn.onclick = () => {
+        panel.classList.remove('active');
 
-            foldersBtn.classList.add('active');
-
-            mapBtn.classList.remove('active');
-
-            foldersSection.style.display = 'block';
-
-            mapSection.style.display = 'none';
-
-        };
-
-    }
+    };
 
 
-    if(mapBtn){
+    panel.querySelector('.side-overlay')
+    .onclick = () => {
 
-        mapBtn.onclick = () => {
+        panel.classList.remove('active');
 
-            mapBtn.classList.add('active');
-
-            foldersBtn.classList.remove('active');
-
-            foldersSection.style.display = 'none';
-
-            mapSection.style.display = 'block';
-
-            setTimeout(() => {
-
-                if(appState.panelMap){
-
-                    appState.panelMap.invalidateSize();
-
-                }
-
-            }, 300);
-
-        };
-
-    }
+    };
 
 }
 
 
-// ===============================
-// XARITA TURINI ALMASHTIRISH
-// ===============================
+// ======================================
+// TABS
+// ======================================
 
-function initMapSwitcher() {
+function initTabs(){
 
-    const mapBtn = document.getElementById('map-type-btn');
+    const foldersBtn =
+    document.getElementById(
+        'folders-tab-btn'
+    );
 
-    if(!mapBtn) return;
+    const mapBtn =
+    document.getElementById(
+        'map-tab-btn'
+    );
+
+    const foldersTab =
+    document.getElementById(
+        'folders-tab'
+    );
+
+    const mapTab =
+    document.getElementById(
+        'map-tab'
+    );
+
+
+    foldersBtn.onclick = () => {
+
+        foldersBtn.classList.add('active');
+
+        mapBtn.classList.remove('active');
+
+        foldersTab.classList.add('active');
+
+        mapTab.classList.remove('active');
+
+    };
 
 
     mapBtn.onclick = () => {
+
+        mapBtn.classList.add('active');
+
+        foldersBtn.classList.remove('active');
+
+        mapTab.classList.add('active');
+
+        foldersTab.classList.remove('active');
+
+
+        setTimeout(() => {
+
+            appState.panelMap.invalidateSize();
+
+        }, 300);
+
+    };
+
+}
+
+
+// ======================================
+// MAP SWITCH
+// ======================================
+
+function initMapSwitcher(){
+
+    const btn =
+    document.getElementById(
+        'map-type-btn'
+    );
+
+    btn.onclick = () => {
 
         appState.mainMap.eachLayer(layer => {
 
@@ -236,17 +363,26 @@ function initMapSwitcher() {
         });
 
 
-        if(appState.currentMapType === 'satellite'){
+        if(
+            appState.currentMapType
+            === 'satellite'
+        ){
 
-            normalLayer.addTo(appState.mainMap);
+            normalLayer.addTo(
+                appState.mainMap
+            );
 
-            appState.currentMapType = 'normal';
+            appState.currentMapType =
+            'normal';
 
-        } else {
+        }else{
 
-            satelliteLayer.addTo(appState.mainMap);
+            satelliteLayer.addTo(
+                appState.mainMap
+            );
 
-            appState.currentMapType = 'satellite';
+            appState.currentMapType =
+            'satellite';
 
         }
 
@@ -255,15 +391,139 @@ function initMapSwitcher() {
 }
 
 
-// ===============================
-// PAPKALARNI YUKLASH
-// ===============================
+// ======================================
+// BOTTOM PANEL
+// ======================================
 
-function loadFolders() {
+function initBottomPanel(){
 
-    db.ref('folders').on('value', snapshot => {
+    const panel =
+    document.getElementById(
+        'bottom-panel'
+    );
 
-        appState.folders = snapshot.val() || {};
+    const toggle =
+    document.getElementById(
+        'panel-toggle'
+    );
+
+    toggle.onclick = () => {
+
+        panel.classList.toggle(
+            'minimized'
+        );
+
+    };
+
+}
+
+
+// ======================================
+// COPY COORDS
+// ======================================
+
+function initCopy(){
+
+    const btn =
+    document.getElementById(
+        'copy-btn'
+    );
+
+    btn.onclick = () => {
+
+        const text =
+
+`Latitude: ${appState.currentLat}
+Longitude: ${appState.currentLng}`;
+
+        navigator.clipboard.writeText(
+            text
+        );
+
+        alert('Nusxalandi');
+
+    };
+
+}
+
+
+// ======================================
+// SHARE
+// ======================================
+
+function initShare(){
+
+    const btn =
+    document.getElementById(
+        'share-btn'
+    );
+
+    btn.onclick = async () => {
+
+        const text =
+
+`${appState.currentAddress}
+
+https://maps.google.com/?q=${appState.currentLat},${appState.currentLng}`;
+
+        if(navigator.share){
+
+            navigator.share({
+
+                title:'Lokatsiya',
+
+                text:text
+
+            });
+
+        }else{
+
+            alert(text);
+
+        }
+
+    };
+
+}
+
+
+// ======================================
+// SEARCH
+// ======================================
+
+function initSearch(){
+
+    const input =
+    document.getElementById(
+        'folder-search-input'
+    );
+
+    input.addEventListener(
+        'input',
+        () => {
+
+            renderFolders(
+                input.value
+                .toLowerCase()
+            );
+
+        }
+    );
+
+}
+
+
+// ======================================
+// LOAD FOLDERS
+// ======================================
+
+function loadFolders(){
+
+    db.ref('folders')
+    .on('value', snapshot => {
+
+        appState.folders =
+        snapshot.val() || {};
 
         renderFolders();
 
@@ -272,25 +532,41 @@ function loadFolders() {
 }
 
 
-// ===============================
-// PAPKALARNI CHIQARISH
-// ===============================
+// ======================================
+// RENDER FOLDERS
+// ======================================
 
-function renderFolders() {
+function renderFolders(search=''){
 
-    const treeRoot = document.getElementById('tree-root');
+    const root =
+    document.getElementById(
+        'tree-root'
+    );
 
-    if(!treeRoot) return;
+    root.innerHTML = '';
 
-    treeRoot.innerHTML = '';
-
-    Object.entries(appState.folders).forEach(([id, folder]) => {
+    Object.entries(appState.folders)
+    .forEach(([id, folder]) => {
 
         if(folder.parentId === 'root'){
 
-            const item = createFolderItem(id, folder);
+            if(
+                search &&
+                !folder.name
+                .toLowerCase()
+                .includes(search)
+            ){
+                return;
+            }
 
-            treeRoot.appendChild(item);
+            root.appendChild(
+
+                createFolderNode(
+                    id,
+                    folder
+                )
+
+            );
 
         }
 
@@ -299,49 +575,64 @@ function renderFolders() {
 }
 
 
-// ===============================
-// PAPKA ELEMENTI
-// ===============================
+// ======================================
+// CREATE FOLDER NODE
+// ======================================
 
-function createFolderItem(id, folder) {
+function createFolderNode(id, folder){
 
-    const wrapper = document.createElement('div');
+    const wrapper =
+    document.createElement('div');
 
-    wrapper.className = 'folder-item';
+    wrapper.className =
+    'folder-item';
 
 
-    const header = document.createElement('div');
+    const header =
+    document.createElement('div');
 
-    header.className = 'folder-header';
+    header.className =
+    'folder-header';
 
 
     header.innerHTML = `
-        <span style="
-            width:14px;
-            height:14px;
-            border-radius:50%;
-            background:${folder.color || '#00ff88'};
-            display:inline-block;
-            margin-right:10px;
-        "></span>
 
-        <span>${folder.name}</span>
+    <div style="
+    width:14px;
+    height:14px;
+    border-radius:50%;
+    background:${folder.color || '#00aaff'};
+    "></div>
+
+    <div>
+        ${folder.name}
+    </div>
+
     `;
 
 
     header.onclick = () => {
 
-        document.querySelectorAll('.folder-header').forEach(el => {
+        document
+        .querySelectorAll(
+            '.folder-header'
+        )
+        .forEach(el => {
 
-            el.classList.remove('active-folder');
+            el.classList.remove(
+                'active-folder'
+            );
 
         });
 
-        header.classList.add('active-folder');
+        header.classList.add(
+            'active-folder'
+        );
 
-        appState.selectedFolder = id;
+        appState.selectedFolderId =
+        id;
 
-        renderPanelMarkers();
+        renderMarkers();
 
     };
 
@@ -349,18 +640,24 @@ function createFolderItem(id, folder) {
     wrapper.appendChild(header);
 
 
-    const children = document.createElement('div');
+    const children =
+    document.createElement('div');
 
-    children.className = 'folder-children';
+    children.className =
+    'folder-children';
 
 
-    Object.entries(appState.folders).forEach(([childId, child]) => {
+    Object.entries(appState.folders)
+    .forEach(([childId, child]) => {
 
         if(child.parentId === id){
 
             children.appendChild(
 
-                createFolderItem(childId, child)
+                createFolderNode(
+                    childId,
+                    child
+                )
 
             );
 
@@ -376,141 +673,243 @@ function createFolderItem(id, folder) {
 }
 
 
-// ===============================
-// ELEMENTLAR
-// ===============================
+// ======================================
+// LOAD ELEMENTS
+// ======================================
 
-function loadElements() {
+function loadElements(){
 
-    db.ref('elements').on('value', snapshot => {
+    db.ref('elements')
+    .on('value', snapshot => {
 
-        appState.elements = snapshot.val() || {};
+        appState.elements =
+        snapshot.val() || {};
 
-        renderPanelMarkers();
+        renderMarkers();
 
     });
 
 }
 
 
-// ===============================
-// MARKERLAR
-// ===============================
+// ======================================
+// CLEAR MARKERS
+// ======================================
 
-function renderPanelMarkers() {
+function clearMarkers(){
 
-    if(!appState.panelMap) return;
+    appState.mainMarkers
+    .forEach(marker => {
 
-
-    appState.panelMarkers.forEach(marker => {
-
-        appState.panelMap.removeLayer(marker);
+        appState.mainMap
+        .removeLayer(marker);
 
     });
 
+    appState.panelMarkers
+    .forEach(marker => {
+
+        appState.panelMap
+        .removeLayer(marker);
+
+    });
+
+    appState.mainMarkers = [];
+
     appState.panelMarkers = [];
 
+}
 
-    Object.entries(appState.elements).forEach(([id, element]) => {
 
-        if(!element.lat || !element.lng) return;
+// ======================================
+// RENDER MARKERS
+// ======================================
 
+function renderMarkers(){
+
+    clearMarkers();
+
+    Object.entries(appState.elements)
+    .forEach(([id, element]) => {
 
         if(
-            appState.selectedFolder &&
+            appState.selectedFolderId &&
             element.folderIds &&
-            !element.folderIds.includes(appState.selectedFolder)
+            !element.folderIds.includes(
+                appState.selectedFolderId
+            )
+        ){
+            return;
+        }
+
+        if(
+            !element.lat ||
+            !element.lng
         ){
             return;
         }
 
 
-        const marker = L.marker([
-            element.lat,
-            element.lng
-        ]).addTo(appState.panelMap);
+        const marker1 =
+        createMarker(element)
+        .addTo(appState.mainMap);
+
+        const marker2 =
+        createMarker(element)
+        .addTo(appState.panelMap);
 
 
-        marker.bindPopup(`
-            <b>${element.name || 'TP'}</b>
-            <br>
-            ${element.note || ''}
-        `);
+        appState.mainMarkers
+        .push(marker1);
 
-
-        appState.panelMarkers.push(marker);
+        appState.panelMarkers
+        .push(marker2);
 
     });
 
 }
 
 
-// ===============================
-// GPS
-// ===============================
+// ======================================
+// CREATE MARKER
+// ======================================
 
-function initLocateButton() {
+function createMarker(element){
 
-    const locateBtn = document.getElementById('locate-btn');
+    const marker = L.marker([
 
-    if(!locateBtn) return;
+        element.lat,
+
+        element.lng
+
+    ]);
 
 
-    locateBtn.onclick = () => {
+    marker.bindPopup(`
 
-        navigator.geolocation.getCurrentPosition(pos => {
+    <div style="
+    min-width:220px;
+    ">
 
-            const lat = pos.coords.latitude;
+        <div style="
+        font-size:16px;
+        font-weight:700;
+        margin-bottom:8px;
+        ">
+            ${element.name || 'TP'}
+        </div>
 
-            const lng = pos.coords.longitude;
+        <div style="
+        font-size:13px;
+        margin-bottom:6px;
+        ">
+            ${element.phone || ''}
+        </div>
 
-            appState.mainMap.setView([lat, lng], 16);
+        <div style="
+        font-size:13px;
+        ">
+            ${element.note || ''}
+        </div>
 
-            L.marker([lat, lng]).addTo(appState.mainMap);
+    </div>
 
-        });
+    `);
+
+    return marker;
+
+}
+
+
+// ======================================
+// SAVE LOCATION BUTTON
+// ======================================
+
+function initSaveButton(){
+
+    const btn =
+    document.getElementById(
+        'save-btn'
+    );
+
+    btn.onclick = () => {
+
+        document
+        .getElementById(
+            'element-modal'
+        )
+        .classList.remove('hidden');
+
+
+        document
+        .getElementById(
+            'element-lat-input'
+        )
+        .value = appState.currentLat;
+
+
+        document
+        .getElementById(
+            'element-lng-input'
+        )
+        .value = appState.currentLng;
 
     };
 
 }
 
 
-// ===============================
-// SAYT ISHGA TUSHISHI
-// ===============================
+// ======================================
+// LOADER
+// ======================================
+
+function hideLoader(){
+
+    document
+    .getElementById(
+        'app-loader'
+    )
+    .style.display = 'none';
+
+}
+
+
+// ======================================
+// START
+// ======================================
 
 window.onload = () => {
 
-    try {
+    initMainMap();
 
-        initMainMap();
+    initPanelMap();
 
-        initPanelMap();
+    initLocate();
 
-        initPanel();
+    initPanel();
 
-        initTabs();
+    initTabs();
 
-        initMapSwitcher();
+    initMapSwitcher();
 
-        initLocateButton();
+    initBottomPanel();
 
-        loadFolders();
+    initCopy();
 
-        loadElements();
+    initShare();
 
-        setTimeout(() => {
+    initSearch();
 
-            hideLoader();
+    initSaveButton();
 
-        }, 1000);
+    loadFolders();
 
-    } catch(err){
+    loadElements();
 
-        console.log(err);
+    setTimeout(() => {
 
         hideLoader();
 
-    }
+    }, 1000);
 
 };
