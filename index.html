@@ -15,7 +15,7 @@
     <link rel="stylesheet"
           href="https://unpkg.com/leaflet/dist/leaflet.css" />
 
-    <!-- ICONS -->
+    <!-- FONT AWESOME -->
 
     <link rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -29,26 +29,41 @@
 
 <body>
 
+    <!-- ========================= -->
     <!-- LOADER -->
+    <!-- ========================= -->
 
     <div id="loader">
 
-        <div class="spinner"></div>
+        <div class="loader-ring"></div>
 
-        <p>Monitoring yuklanmoqda...</p>
+        <h2>HETK Monitoring</h2>
+
+        <p>Monitoring tizimi yuklanmoqda...</p>
 
     </div>
 
+    <!-- ========================= -->
     <!-- SIDEBAR -->
+    <!-- ========================= -->
 
-    <div class="sidebar"
-         id="sidebar">
+    <aside class="sidebar"
+           id="sidebar">
+
+        <!-- HEADER -->
 
         <div class="sidebar-header">
 
-            <h2>Menu</h2>
+            <div>
 
-            <button onclick="closeSidebar()">
+                <h2>Boshqaruv paneli</h2>
+
+                <span>Monitoring tizimi</span>
+
+            </div>
+
+            <button class="close-sidebar-btn"
+                    onclick="closeSidebar()">
 
                 <i class="fa-solid fa-xmark"></i>
 
@@ -56,39 +71,201 @@
 
         </div>
 
-        <div class="sidebar-content">
+        <!-- TABS -->
 
-            <button class="menu-item">
+        <div class="sidebar-tabs">
 
-                <i class="fa-solid fa-folder"></i>
+            <button class="sidebar-tab active"
+                    id="groupsTabBtn">
 
-                Papkalar
-
-            </button>
-
-            <button class="menu-item">
-
-                <i class="fa-solid fa-location-dot"></i>
-
-                Lokatsiyalar
+                Guruhlar
 
             </button>
 
-            <button class="menu-item">
+            <button class="sidebar-tab"
+                    id="mapTabBtn">
 
-                <i class="fa-solid fa-gear"></i>
-
-                Sozlamalar
+                Xarita
 
             </button>
 
         </div>
 
-    </div>
+        <!-- SEARCH -->
 
+        <div class="sidebar-search">
+
+            <i class="fa-solid fa-magnifying-glass"></i>
+
+            <input type="text"
+                   id="sidebarSearch"
+                   placeholder="Lokatsiya yoki guruh qidirish">
+
+        </div>
+
+        <!-- GROUPS PANEL -->
+
+        <div class="sidebar-page active"
+             id="groupsPage">
+
+            <div class="tree-container">
+
+                <!-- COUNTRY -->
+
+                <div class="tree-node open">
+
+                    <div class="tree-title">
+
+                        <span class="tree-toggle">−</span>
+
+                        <i class="fa-solid fa-folder tree-green"></i>
+
+                        <span>O‘zbekiston</span>
+
+                    </div>
+
+                    <!-- REGION -->
+
+                    <div class="tree-children">
+
+                        <div class="tree-node open">
+
+                            <div class="tree-title">
+
+                                <span class="tree-toggle">−</span>
+
+                                <i class="fa-solid fa-folder tree-red"></i>
+
+                                <span>Navoiy</span>
+
+                            </div>
+
+                            <div class="tree-children">
+
+                                <!-- DISTRICT -->
+
+                                <div class="tree-node open">
+
+                                    <div class="tree-title">
+
+                                        <span class="tree-toggle">−</span>
+
+                                        <i class="fa-solid fa-folder tree-purple"></i>
+
+                                        <span>Xatirchi RES</span>
+
+                                    </div>
+
+                                    <div class="tree-children">
+
+                                        <!-- ITEM -->
+
+                                        <div class="tree-item">
+
+                                            <span class="tree-plus">+</span>
+
+                                            <i class="fa-solid fa-folder tree-orange"></i>
+
+                                            <span>Zarafshon U/J</span>
+
+                                        </div>
+
+                                        <div class="tree-item">
+
+                                            <span class="tree-plus">+</span>
+
+                                            <i class="fa-solid fa-folder tree-lime"></i>
+
+                                            <span>OqOltin fediri</span>
+
+                                        </div>
+
+                                        <div class="tree-item">
+
+                                            <span class="tree-plus">+</span>
+
+                                            <i class="fa-solid fa-folder tree-pink"></i>
+
+                                            <span>Mirzo Ulug‘bek fediri</span>
+
+                                        </div>
+
+                                        <div class="tree-item">
+
+                                            <span class="tree-plus">+</span>
+
+                                            <i class="fa-solid fa-folder tree-yellow"></i>
+
+                                            <span>Xatirchi 1 U/J</span>
+
+                                        </div>
+
+                                        <div class="tree-item">
+
+                                            <span class="tree-plus">+</span>
+
+                                            <i class="fa-solid fa-folder tree-blue"></i>
+
+                                            <span>Shovvot U/J</span>
+
+                                        </div>
+
+                                        <div class="tree-item">
+
+                                            <span class="tree-plus">+</span>
+
+                                            <i class="fa-solid fa-folder tree-cyan"></i>
+
+                                            <span>Xatirchi 2 U/J</span>
+
+                                        </div>
+
+                                        <div class="tree-item">
+
+                                            <span class="tree-plus">+</span>
+
+                                            <i class="fa-solid fa-bolt tree-electric"></i>
+
+                                            <span>TP</span>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- MAP PANEL -->
+
+        <div class="sidebar-page"
+             id="mapPage">
+
+            <div class="mini-map-container">
+
+                <div id="miniMap"></div>
+
+            </div>
+
+        </div>
+
+    </aside>
+
+    <!-- ========================= -->
     <!-- TOPBAR -->
+    <!-- ========================= -->
 
-    <div class="topbar">
+    <header class="topbar">
 
         <button class="top-btn"
                 onclick="openSidebar()">
@@ -99,7 +276,7 @@
 
         <h1>HETK Monitoring</h1>
 
-        <div class="top-actions">
+        <div class="topbar-actions">
 
             <button class="top-btn"
                     onclick="searchLocation()">
@@ -117,11 +294,13 @@
 
         </div>
 
-    </div>
+    </header>
 
+    <!-- ========================= -->
     <!-- SEARCH -->
+    <!-- ========================= -->
 
-    <div class="search-container">
+    <div class="floating-search">
 
         <input type="text"
                id="searchInput"
@@ -129,11 +308,15 @@
 
     </div>
 
+    <!-- ========================= -->
     <!-- MAP -->
+    <!-- ========================= -->
 
     <div id="map"></div>
 
+    <!-- ========================= -->
     <!-- GPS -->
+    <!-- ========================= -->
 
     <button class="gps-btn"
             onclick="getCurrentLocation()">
@@ -142,7 +325,9 @@
 
     </button>
 
+    <!-- ========================= -->
     <!-- BOTTOM SHEET -->
+    <!-- ========================= -->
 
     <div class="bottom-sheet"
          id="bottomSheet">
@@ -150,6 +335,8 @@
         <div class="sheet-handle"></div>
 
         <div class="sheet-content">
+
+            <!-- LATITUDE -->
 
             <div class="info-card">
 
@@ -159,6 +346,8 @@
 
             </div>
 
+            <!-- LONGITUDE -->
+
             <div class="info-card">
 
                 <span>Longitude</span>
@@ -167,37 +356,59 @@
 
             </div>
 
+            <!-- ADDRESS -->
+
             <div class="info-card">
 
                 <span>Address</span>
 
-                <p id="address">Aniqlanmoqda...</p>
+                <p id="address">
+
+                    Aniqlanmoqda...
+
+                </p>
 
             </div>
 
-            <button class="action-btn blue-btn"
-                    onclick="copyCoordinates()">
+            <!-- BUTTONS -->
 
-                <i class="fa-regular fa-copy"></i>
+            <div class="action-grid">
 
-                Copy
+                <button class="action-btn blue-btn"
+                        onclick="copyCoordinates()">
 
-            </button>
+                    <i class="fa-regular fa-copy"></i>
 
-            <button class="action-btn green-btn"
-                    onclick="shareLocation()">
+                    Copy
 
-                <i class="fa-solid fa-share"></i>
+                </button>
 
-                Share
+                <button class="action-btn green-btn"
+                        onclick="shareLocation()">
 
-            </button>
+                    <i class="fa-solid fa-share"></i>
+
+                    Share
+
+                </button>
+
+                <button class="action-btn red-btn">
+
+                    <i class="fa-regular fa-floppy-disk"></i>
+
+                    Save
+
+                </button>
+
+            </div>
 
         </div>
 
     </div>
 
+    <!-- ========================= -->
     <!-- LEAFLET -->
+    <!-- ========================= -->
 
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
