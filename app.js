@@ -40,7 +40,7 @@ const appState = {
     }
 
 };
-var map = L.map('map', { zoomControl: false }).setView([40.10, 65.81], 16);
+appState.mainMap.map = L.map('map', { zoomControl: false }).setView([40.10, 65.81], 16);
 var userMarker = null; 
 var selectedMarker = null;
 var lastPos = null;
@@ -56,7 +56,7 @@ appState.panelMap.markers = [];
 L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}',{
     maxZoom: 20,
     subdomains:['mt0','mt1','mt2','mt3']
-}).addTo(map);
+}).addTo(appState.mainMap.map);
 
 // 3. Panelni yangilovchi asosiy funksiya
 function updatePanelValues(lat, lng, acc = null, force = false) {
