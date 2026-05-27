@@ -1,401 +1,522 @@
 // =========================
-// HETK Monitoring PRO v3
+// HETK MONITORING
+// STAGE 1 + STAGE 2
 // =========================
 
-// -------------------------
-// GLOBAL VARIABLES
-// -------------------------
+// =========================
+// VARIABLES
+// =========================
 
 let map;
-let currentMarker = null;
-let selectedLat = null;
-let selectedLng = null;
 
-let groups = JSON.parse(localStorage.getItem("hetk_groups")) || [];
-let locations = JSON.parse(localStorage.getItem("hetk_locations")) || [];
+let currentMarker = null;
 
 let currentLayer = "satellite";
 
-const markersLayer = L.layerGroup();
-
-// -------------------------
+// =========================
 // MAP LAYERS
-// -------------------------
+// =========================
 
 const satelliteLayer = L.tileLayer(
-  "https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
-  {
-    maxZoom: 20,
-    subdomains: ["mt0", "mt1", "mt2", "mt3"],
-  }
+    "https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+    {
+        maxZoom: 20,
+        subdomains: ["mt0", "mt1", "mt2", "mt3"]
+    }
 );
 
 const hybridLayer = L.tileLayer(
-  "https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
-  {
-    maxZoom: 20,
-    subdomains: ["mt0", "mt1", "mt2", "mt3"],
-  }
+    "https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+    {
+        maxZoom: 20,
+        subdomains: ["mt0", "mt1", "mt2", "mt3"]
+    }
 );
 
-// -------------------------
+// =========================
 // INIT MAP
-// -------------------------
+// =========================
 
-function initMap() {
-  map = L.map("map", {
-    zoomControl: false,
-    attributionControl: true,
-  }).setView([41.3111, 69.2797], 7);
+function initMap(){
 
-  satelliteLayer.addTo(map);
+    map = L.map("map",{
+        zoomControl:false,
+        attributionControl:true
+    }).setView([41.3111,69.2797],7);
 
-  L.control.zoom({
-    position: "topleft",
-  }).addTo(map);
-
-  markersLayer.addTo(map);
-
-  setTimeout(() => {
-    map.invalidateSize();
-  }, 300);
-
-  map.on("click", async function (e) {
-    const lat = e.latlng.lat;
-    const lng = e.latlng.lng;
-
-    selectedLat = lat;
-    selectedLng = lng;
-
-    updateBottomPanel(lat, lng);
-
-    if (currentMarker) {
-      map.removeLayer(currentMarker);
-    }
-
-    currentMarker = L.marker([lat, lng]).addTo(map);
-
-    await getAddress(lat, lng);
-
-    openSaveModal();
-  });
-
-  renderSavedLocations();
-}
-
-// -------------------------
-// MAP RESIZE FIX
-// -------------------------
-
-function refreshMap() {
-  setTimeout(() => {
-    map.invalidateSize();
-  }, 400);
-}
-
-// -------------------------
-// LAYER SWITCH
-// -------------------------
-
-function toggleLayer() {
-  if (currentLayer === "satellite") {
-    map.removeLayer(satelliteLayer);
-    hybridLayer.addTo(map);
-    currentLayer = "hybrid";
-  } else {
-    map.removeLayer(hybridLayer);
     satelliteLayer.addTo(map);
-    currentLayer = "satellite";
-  }
+
+    // =========================
+    // CUSTOM ZOOM
+    // =========================
+
+    L.control.zoom({
+        position:"topleft"
+    }).addTo(map);
+
+    // =========================
+    // MAP CLICK
+    // =========================
+
+    map.on("click", async function(e){
+
+        const lat = e.latlng.lat;
+
+        const lng = e.latlng.lng;
+
+        // =========================
+        // UPDATE PANEL
+        // =========================
+
+        updateCoordinates(lat,lng);
+
+        // =========================
+        // REMOVE OLD MARKER
+        // =========================
+
+        if(currentMarker){
+
+            map.removeLayer(currentMarker);
+
+        }
+
+        // =========================
+        // CREATE MARKER
+        // =========================
+
+        currentMarker = L.marker([lat,lng])
+        .addTo(map);
+
+        // =========================
+        // GET ADDRESS
+        // =========================
+
+        await getAddress(lat,lng);
+
+    });
+
+    // =========================
+    // HIDE LOADER
+    // =========================
+
+    setTimeout(()=>{
+
+        document.getElementById("loader")
+        .style.display = "none";
+
+        map.invalidateSize();
+
+    },1200);
+
 }
 
-// -------------------------
+// =========================
+// UPDATE COORDINATES
+// =========================
+
+function updateCoordinates(lat,lng){
+
+    document.getElementById("latitude")
+    .innerText = lat.toFixed(6);
+
+    document.getElementById("longitude")
+    .innerText = lng.toFixed(6);
+
+}
+
+// =========================
 // GET ADDRESS
-// -------------------------
+// =========================
 
-async function getAddress(lat, lng) {
-  try {
-    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`;
+async function getAddress(lat,lng){
 
-    const response = await fetch(url);
+    try{
 
-    const data = await response.json();
+        const url =
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`;
 
-    const address =
-      data.display_name || "Manzil topilmadi";
+        const response =
+        await fetch(url);
 
-    document.getElementById("address").innerText = address;
+        const data =
+        await response.json();
 
-    document.getElementById("modalAddress").value =
-      address;
+        const address =
+        data.display_name || "Aniqlanmadi";
 
-  } catch (error) {
-    console.log(error);
+        document.getElementById("address")
+        .innerText = address;
 
-    document.getElementById("address").innerText =
-      "Aniqlanmadi";
-  }
-}
+    }
+    catch(error){
 
-// -------------------------
-// UPDATE PANEL
-// -------------------------
+        console.log(error);
 
-function updateBottomPanel(lat, lng) {
-  document.getElementById("latitude").innerText =
-    lat.toFixed(6);
+        document.getElementById("address")
+        .innerText = "Manzil topilmadi";
 
-  document.getElementById("longitude").innerText =
-    lng.toFixed(6);
-}
-
-// -------------------------
-// SEARCH LOCATION
-// -------------------------
-
-async function searchLocation() {
-  const query =
-    document.getElementById("searchInput").value;
-
-  if (!query) return;
-
-  try {
-    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${query}`;
-
-    const response = await fetch(url);
-
-    const data = await response.json();
-
-    if (data.length > 0) {
-      const lat = parseFloat(data[0].lat);
-      const lng = parseFloat(data[0].lon);
-
-      map.setView([lat, lng], 14);
-
-      if (currentMarker) {
-        map.removeLayer(currentMarker);
-      }
-
-      currentMarker = L.marker([lat, lng]).addTo(map);
-
-      updateBottomPanel(lat, lng);
-
-      await getAddress(lat, lng);
     }
 
-  } catch (error) {
-    console.log(error);
-  }
 }
 
-// -------------------------
-// GROUPS
-// -------------------------
+// =========================
+// SEARCH LOCATION
+// =========================
 
-function saveGroup() {
-  const name =
-    document.getElementById("groupName").value;
+async function searchLocation(){
 
-  if (!name) return;
+    const query =
+    document.getElementById("searchInput")
+    .value;
 
-  groups.push(name);
+    if(!query) return;
 
-  localStorage.setItem(
-    "hetk_groups",
-    JSON.stringify(groups)
-  );
+    try{
 
-  renderGroups();
+        const url =
+        `https://nominatim.openstreetmap.org/search?format=json&q=${query}`;
 
-  document.getElementById("groupName").value = "";
+        const response =
+        await fetch(url);
+
+        const data =
+        await response.json();
+
+        if(data.length > 0){
+
+            const lat =
+            parseFloat(data[0].lat);
+
+            const lng =
+            parseFloat(data[0].lon);
+
+            map.setView([lat,lng],14);
+
+            // =========================
+            // REMOVE OLD MARKER
+            // =========================
+
+            if(currentMarker){
+
+                map.removeLayer(currentMarker);
+
+            }
+
+            // =========================
+            // NEW MARKER
+            // =========================
+
+            currentMarker =
+            L.marker([lat,lng])
+            .addTo(map);
+
+            // =========================
+            // UPDATE PANEL
+            // =========================
+
+            updateCoordinates(lat,lng);
+
+            // =========================
+            // GET ADDRESS
+            // =========================
+
+            await getAddress(lat,lng);
+
+        }
+
+    }
+    catch(error){
+
+        console.log(error);
+
+    }
+
 }
 
-function renderGroups() {
-  const container =
-    document.getElementById("groupsList");
+// =========================
+// TOGGLE MAP LAYER
+// =========================
 
-  const select =
-    document.getElementById("locationGroup");
+function toggleLayer(){
 
-  if (!container || !select) return;
+    if(currentLayer === "satellite"){
 
-  container.innerHTML = "";
-  select.innerHTML = "";
+        map.removeLayer(satelliteLayer);
 
-  groups.forEach((group) => {
-    const item = document.createElement("div");
+        hybridLayer.addTo(map);
 
-    item.className = "group-item";
+        currentLayer = "hybrid";
 
-    item.innerHTML = `
-      <span>${group}</span>
-    `;
+    }
+    else{
 
-    container.appendChild(item);
+        map.removeLayer(hybridLayer);
 
-    const option = document.createElement("option");
+        satelliteLayer.addTo(map);
 
-    option.value = group;
-    option.innerText = group;
+        currentLayer = "satellite";
 
-    select.appendChild(option);
-  });
+    }
+
 }
 
-// -------------------------
-// SAVE LOCATION
-// -------------------------
+// =========================
+// OPEN SIDEBAR
+// =========================
 
-function saveLocation() {
-  const name =
-    document.getElementById("locationName").value;
+function openSidebar(){
 
-  const phone =
-    document.getElementById("locationPhone").value;
+    document.getElementById("sidebar")
+    .classList.add("active");
 
-  const note =
-    document.getElementById("locationNote").value;
-
-  const group =
-    document.getElementById("locationGroup").value;
-
-  if (!name || !selectedLat || !selectedLng)
-    return;
-
-  const item = {
-    id: Date.now(),
-    name,
-    phone,
-    note,
-    group,
-    lat: selectedLat,
-    lng: selectedLng,
-  };
-
-  locations.push(item);
-
-  localStorage.setItem(
-    "hetk_locations",
-    JSON.stringify(locations)
-  );
-
-  renderSavedLocations();
-
-  closeSaveModal();
-
-  clearModal();
 }
 
-// -------------------------
-// RENDER MARKERS
-// -------------------------
+// =========================
+// CLOSE SIDEBAR
+// =========================
 
-function renderSavedLocations() {
-  markersLayer.clearLayers();
+function closeSidebar(){
 
-  locations.forEach((item) => {
-    const marker = L.marker([
-      item.lat,
-      item.lng,
-    ]).addTo(markersLayer);
+    document.getElementById("sidebar")
+    .classList.remove("active");
 
-    marker.bindPopup(`
-      <div style="min-width:200px">
-        <h3>${item.name}</h3>
-        <p>${item.phone || ""}</p>
-        <p>${item.note || ""}</p>
-        <small>${item.group || ""}</small>
-      </div>
-    `);
-  });
 }
 
-// -------------------------
+// =========================
 // COPY COORDINATES
-// -------------------------
+// =========================
 
-function copyCoordinates() {
-  const lat =
-    document.getElementById("latitude").innerText;
+function copyCoordinates(){
 
-  const lng =
-    document.getElementById("longitude").innerText;
+    const lat =
+    document.getElementById("latitude")
+    .innerText;
 
-  navigator.clipboard.writeText(`${lat}, ${lng}`);
+    const lng =
+    document.getElementById("longitude")
+    .innerText;
+
+    navigator.clipboard.writeText(
+        `${lat}, ${lng}`
+    );
+
 }
 
-// -------------------------
-// SHARE
-// -------------------------
+// =========================
+// SHARE LOCATION
+// =========================
 
-function shareLocation() {
-  const lat =
-    document.getElementById("latitude").innerText;
+function shareLocation(){
 
-  const lng =
-    document.getElementById("longitude").innerText;
+    const lat =
+    document.getElementById("latitude")
+    .innerText;
 
-  const url =
+    const lng =
+    document.getElementById("longitude")
+    .innerText;
+
+    const url =
     `https://maps.google.com/?q=${lat},${lng}`;
 
-  navigator.share({
-    title: "Lokatsiya",
-    text: url,
-  });
+    if(navigator.share){
+
+        navigator.share({
+            title:"Lokatsiya",
+            text:url
+        });
+
+    }
+    else{
+
+        window.open(url);
+
+    }
+
 }
 
-// -------------------------
-// MODAL
-// -------------------------
+// =========================
+// CURRENT LOCATION
+// =========================
 
-function openSaveModal() {
-  document
-    .getElementById("saveModal")
-    .classList.add("active");
+function getCurrentLocation(){
+
+    if(!navigator.geolocation){
+
+        alert("GPS qo‘llab-quvvatlanmaydi");
+
+        return;
+
+    }
+
+    navigator.geolocation.getCurrentPosition(
+
+        async function(position){
+
+            const lat =
+            position.coords.latitude;
+
+            const lng =
+            position.coords.longitude;
+
+            // =========================
+            // MOVE MAP
+            // =========================
+
+            map.setView([lat,lng],16);
+
+            // =========================
+            // REMOVE OLD MARKER
+            // =========================
+
+            if(currentMarker){
+
+                map.removeLayer(currentMarker);
+
+            }
+
+            // =========================
+            // NEW MARKER
+            // =========================
+
+            currentMarker =
+            L.marker([lat,lng])
+            .addTo(map);
+
+            // =========================
+            // UPDATE PANEL
+            // =========================
+
+            updateCoordinates(lat,lng);
+
+            // =========================
+            // ADDRESS
+            // =========================
+
+            await getAddress(lat,lng);
+
+        },
+
+        function(error){
+
+            console.log(error);
+
+            alert("GPS aniqlanmadi");
+
+        }
+
+    );
+
 }
 
-function closeSaveModal() {
-  document
-    .getElementById("saveModal")
-    .classList.remove("active");
-}
+// =========================
+// DRAG BOTTOM SHEET
+// =========================
 
-// -------------------------
-// CLEAR MODAL
-// -------------------------
+const bottomSheet =
+document.getElementById("bottomSheet");
 
-function clearModal() {
-  document.getElementById("locationName").value = "";
-  document.getElementById("locationPhone").value = "";
-  document.getElementById("locationNote").value = "";
-}
+let startY = 0;
 
-// -------------------------
-// SIDEBAR
-// -------------------------
+bottomSheet.addEventListener(
 
-function openSidebar() {
-  document
-    .getElementById("sidebar")
-    .classList.add("active");
+    "touchstart",
 
-  refreshMap();
-}
+    function(e){
 
-function closeSidebar() {
-  document
-    .getElementById("sidebar")
-    .classList.remove("active");
+        startY =
+        e.touches[0].clientY;
 
-  refreshMap();
-}
+    }
 
-// -------------------------
+);
+
+bottomSheet.addEventListener(
+
+    "touchmove",
+
+    function(e){
+
+        const currentY =
+        e.touches[0].clientY;
+
+        const diff =
+        startY - currentY;
+
+        // =========================
+        // OPEN
+        // =========================
+
+        if(diff > 50){
+
+            bottomSheet.style.maxHeight =
+            "85vh";
+
+        }
+
+        // =========================
+        // CLOSE
+        // =========================
+
+        if(diff < -50){
+
+            bottomSheet.style.maxHeight =
+            "52vh";
+
+        }
+
+    }
+
+);
+
+// =========================
+// ENTER SEARCH
+// =========================
+
+document
+.getElementById("searchInput")
+.addEventListener(
+
+    "keypress",
+
+    function(e){
+
+        if(e.key === "Enter"){
+
+            searchLocation();
+
+        }
+
+    }
+
+);
+
+// =========================
+// MAP RESIZE FIX
+// =========================
+
+window.addEventListener(
+
+    "resize",
+
+    function(){
+
+        setTimeout(()=>{
+
+            map.invalidateSize();
+
+        },300);
+
+    }
+
+);
+
+// =========================
 // INIT
-// -------------------------
+// =========================
 
-window.onload = () => {
-  initMap();
+window.onload = function(){
 
-  renderGroups();
+    initMap();
+
 };
