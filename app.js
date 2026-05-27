@@ -47,7 +47,6 @@ var lastPos = null;
 var isUserInteracting = false; 
 var isManualSelection = false; 
 let currentFolders = {}; 
-//let activeFolderId = 'root'; 
 appState.activeFolderId = 'root';
 let editingFolderId = null;
 let activeMapMarkers = []; // Xaritadagi dinamik markerlarni nazorat qilish uchun massiv
