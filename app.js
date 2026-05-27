@@ -1,3 +1,7 @@
+// ===============================
+// FIREBASE SOZLAMALARI
+// ===============================
+
 const firebaseConfig = {
     apiKey: "AIzaSyBF0oT_ZhvE1tT1Qglh5GjPPhs8ZsyRWoc",
     authDomain: "energo-monitoring.firebaseapp.com",
@@ -12,43 +16,66 @@ firebase.initializeApp(firebaseConfig);
 
 const db = firebase.database();
 
-const appState = {
 
-    selectedNodeId: null,
-    selectedNodeType: null,
+// ===============================
+// ASOSIY O'ZGARUVCHILAR
+// ===============================
+
+const appState = {
 
     folders: {},
     elements: {},
 
-    mainMap: {
-        map: null,
-        markers: []
-    },
+    selectedFolderId: null,
 
-    panelMap: {
-        map: null,
-        markers: []
-    }
+    mainMap: null,
+    panelMap: null,
+
+    panelMarkers: [],
+    mainMarkers: []
+
 };
 
-appState.mainMap.map = L.map('map', {
-    zoomControl: false
-}).setView([40.1, 65.3], 12);
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 20
-}).addTo(appState.mainMap.map);
+// ===============================
+// ASOSIY XARITA
+// ===============================
+
+function initMainMap() {
+
+    appState.mainMap = L.map('map').setView([40.100, 65.350], 11);
+
+    L.tileLayer(
+        'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        {
+            maxZoom: 20
+        }
+    ).addTo(appState.mainMap);
+
+}
+
+
+// ===============================
+// PANEL XARITASI
+// ===============================
 
 function initPanelMap() {
 
-    appState.panelMap.map = L.map('panel-map', {
-        zoomControl: true
-    }).setView([40.1, 65.3], 10);
+    appState.panelMap = L.map('panel-map').setView([40.100, 65.350], 11);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 20
-    }).addTo(appState.panelMap.map);
+    L.tileLayer(
+        'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        {
+            maxZoom: 20
+        }
+    ).addTo(appState.panelMap);
+
 }
+
+
+// ===============================
+// PAPKALARNI YUKLASH
+// ===============================
 
 function loadFolders() {
 
@@ -56,9 +83,18 @@ function loadFolders() {
 
         appState.folders = snapshot.val() || {};
 
-        renderTree();
+        renderFolders();
+
+        hideLoader();
+
     });
+
 }
+
+
+// ===============================
+// ELEMENTLARNI YUKLASH
+// ===============================
 
 function loadElements() {
 
@@ -66,11 +102,18 @@ function loadElements() {
 
         appState.elements = snapshot.val() || {};
 
-        renderPanelMap();
+        renderPanelMarkers();
+
     });
+
 }
 
-function renderTree() {
+
+// ===============================
+// PAPKALARNI CHIQARISH
+// ===============================
+
+function renderFolders() {
 
     const root = document.getElementById('tree-root');
 
@@ -79,176 +122,255 @@ function renderTree() {
     Object.entries(appState.folders).forEach(([id, folder]) => {
 
         if (folder.parentId === 'root') {
-            root.appendChild(buildFolderNode(id, folder));
+
+            const item = createFolderElement(id, folder);
+
+            root.appendChild(item);
+
         }
+
     });
+
 }
 
-function buildFolderNode(id, folder) {
+
+// ===============================
+// BIRTA PAPKA ELEMENTI
+// ===============================
+
+function createFolderElement(id, folder) {
 
     const wrapper = document.createElement('div');
+
     wrapper.className = 'folder-item';
 
+
     const header = document.createElement('div');
+
     header.className = 'folder-header';
 
+
     header.innerHTML = `
-        <span style="color:${folder.color}">📁</span>
-        <span>${folder.name}</span>
+        <span style="color:${folder.color}">
+            📁
+        </span>
+
+        <span>
+            ${folder.name}
+        </span>
     `;
+
 
     header.onclick = () => {
 
-        appState.selectedNodeId = id;
-        appState.selectedNodeType = 'folder';
+        appState.selectedFolderId = id;
 
-        renderPanelMap();
+        selectFolder(header);
 
-        document.querySelectorAll('.folder-header').forEach(el => {
-            el.classList.remove('active');
-        });
+        renderPanelMarkers();
 
-        header.classList.add('active');
     };
+
 
     wrapper.appendChild(header);
 
+
     const children = document.createElement('div');
+
     children.className = 'folder-children';
+
 
     Object.entries(appState.folders).forEach(([childId, childFolder]) => {
 
         if (childFolder.parentId === id) {
-            children.appendChild(buildFolderNode(childId, childFolder));
+
+            children.appendChild(
+                createFolderElement(childId, childFolder)
+            );
+
         }
+
     });
+
 
     wrapper.appendChild(children);
 
     return wrapper;
+
 }
 
-function renderPanelMap() {
 
-    appState.panelMap.markers.forEach(marker => {
-        appState.panelMap.map.removeLayer(marker);
+// ===============================
+// PAPKANI TANLASH
+// ===============================
+
+function selectFolder(activeHeader) {
+
+    document.querySelectorAll('.folder-header').forEach(el => {
+
+        el.classList.remove('active-folder');
+
     });
 
-    appState.panelMap.markers = [];
+    activeHeader.classList.add('active-folder');
+
+}
+
+
+// ===============================
+// PANEL MARKERLARI
+// ===============================
+
+function renderPanelMarkers() {
+
+    appState.panelMarkers.forEach(marker => {
+
+        appState.panelMap.removeLayer(marker);
+
+    });
+
+    appState.panelMarkers = [];
+
 
     Object.entries(appState.elements).forEach(([id, element]) => {
 
         if (!element.folderIds) return;
 
+
         if (
-            appState.selectedNodeId &&
-            !element.folderIds.includes(appState.selectedNodeId)
+            appState.selectedFolderId &&
+            !element.folderIds.includes(appState.selectedFolderId)
         ) {
             return;
         }
 
+
         const marker = L.marker([
             element.lat,
             element.lng
-        ]).addTo(appState.panelMap.map);
+        ]).addTo(appState.panelMap);
+
 
         marker.bindPopup(`
-            <b>${element.name}</b><br>
+            <b>${element.name}</b>
+            <br>
             ${element.note || ''}
         `);
 
-        appState.panelMap.markers.push(marker);
+
+        appState.panelMarkers.push(marker);
+
     });
+
 }
 
-function initTabs() {
 
-    const buttons = document.querySelectorAll('.tab-btn');
-
-    buttons.forEach(button => {
-
-        button.onclick = () => {
-
-            buttons.forEach(btn => {
-                btn.classList.remove('active');
-            });
-
-            button.classList.add('active');
-
-            document.querySelectorAll('.tab-content').forEach(content => {
-                content.classList.remove('active');
-            });
-
-            if (button.dataset.tab === 'folders') {
-                document.getElementById('folders-tab').classList.add('active');
-            }
-
-            if (button.dataset.tab === 'panel-map') {
-
-                document.getElementById('panel-map-tab').classList.add('active');
-
-                setTimeout(() => {
-                    appState.panelMap.map.invalidateSize();
-                }, 200);
-            }
-        };
-    });
-}
+// ===============================
+// PANELNI OCHISH
+// ===============================
 
 function initPanel() {
 
-    document.getElementById('panel-btn').onclick = () => {
-        document.getElementById('panel-overlay').classList.remove('hidden');
+    const panel = document.getElementById('panel-overlay');
+
+    document.getElementById('list-btn').onclick = () => {
+
+        panel.classList.remove('hidden');
+
+        setTimeout(() => {
+
+            appState.panelMap.invalidateSize();
+
+        }, 300);
+
     };
 
-    document.getElementById('close-panel-btn').onclick = () => {
-        document.getElementById('panel-overlay').classList.add('hidden');
+
+    document.getElementById('close-list').onclick = () => {
+
+        panel.classList.add('hidden');
+
     };
+
 }
 
-function initBottomPanel() {
 
-    const panel = document.getElementById('bottom-panel');
+// ===============================
+// TABLAR
+// ===============================
 
-    document.getElementById('panel-toggle').onclick = () => {
-        panel.classList.toggle('minimized');
+function initTabs() {
+
+    const folderBtn = document.getElementById('tab-folders');
+
+    const mapBtn = document.getElementById('tab-items');
+
+    const foldersTab = document.getElementById('folders-section');
+
+    const mapTab = document.getElementById('items-section');
+
+
+    folderBtn.onclick = () => {
+
+        folderBtn.classList.add('active');
+
+        mapBtn.classList.remove('active');
+
+        foldersTab.style.display = 'block';
+
+        mapTab.style.display = 'none';
+
     };
+
+
+    mapBtn.onclick = () => {
+
+        mapBtn.classList.add('active');
+
+        folderBtn.classList.remove('active');
+
+        foldersTab.style.display = 'none';
+
+        mapTab.style.display = 'block';
+
+        setTimeout(() => {
+
+            appState.panelMap.invalidateSize();
+
+        }, 300);
+
+    };
+
 }
 
-function initLocate() {
 
-    document.getElementById('locate-btn').onclick = () => {
+// ===============================
+// LOADERNI YOPISH
+// ===============================
 
-        navigator.geolocation.getCurrentPosition(position => {
+function hideLoader() {
 
-            const lat = position.coords.latitude;
-            const lng = position.coords.longitude;
+    document.getElementById('app-loader').style.display = 'none';
 
-            document.getElementById('latitude').innerText = lat;
-            document.getElementById('longitude').innerText = lng;
-
-            appState.mainMap.map.setView([lat, lng], 17);
-
-            L.marker([lat, lng]).addTo(appState.mainMap.map);
-        });
-    };
 }
+
+
+// ===============================
+// SAYT ISHGA TUSHISHI
+// ===============================
 
 window.onload = () => {
 
-    initPanelMap();
+    initMainMap();
 
-    initTabs();
+    initPanelMap();
 
     initPanel();
 
-    initBottomPanel();
-
-    initLocate();
+    initTabs();
 
     loadFolders();
 
     loadElements();
 
-    document.getElementById('app-loader').style.display = 'none';
 };
