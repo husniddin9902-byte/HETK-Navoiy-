@@ -1,299 +1,537 @@
 <!DOCTYPE html>
 <html lang="uz">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Energo Monitoring</title>
 
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<meta charset="UTF-8">
 
-    <link rel="stylesheet" href="style.css">
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<title>HETK Monitoring</title>
+
+<!-- LEAFLET -->
+<link rel="stylesheet"
+href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+<!-- FONT AWESOME -->
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
+
+<!-- CSS -->
+<link rel="stylesheet" href="style.css">
+
 </head>
+
 <body>
 
+<!-- ========================= -->
 <!-- LOADER -->
-<div id="app-loader" style="
-position:fixed;
-top:0;
-left:0;
-width:100%;
-height:100%;
-background:#001b2e;
-z-index:99999;
-display:flex;
-align-items:center;
-justify-content:center;
-flex-direction:column;
-color:white;
-font-size:24px;
-">
+<!-- ========================= -->
 
-<div style="
-width:70px;
-height:70px;
-border:6px solid #0d6efd;
-border-top:6px solid transparent;
-border-radius:50%;
-animation:spin 1s linear infinite;
-margin-bottom:20px;
-"></div>
-
-<div>Baza yuklanmoqda...</div>
-
-</div>
-
-
-<!-- HEADER -->
-<div class="header-panel">
-
-<button id="list-btn">☰</button>
-
-<div class="header-title">
-HETK Navoiy
-</div>
-
-<button id="map-type-btn">🛰️</button>
-
-</div>
-
-
-<!-- XARITA -->
-<div id="map"></div>
-
-
-<!-- PANEL -->
-<div id="list-container" class="list-modal">
-
-<div class="list-content full-screen">
-
-<div class="list-header">
-
-<h3>Boshqaruv paneli</h3>
-
-<button id="close-list">✕</button>
-
-</div>
-
-
-<div class="tab-control">
-
-<button id="tab-folders" class="tab-btn active">
-Guruhlar
-</button>
-
-<button id="tab-items" class="tab-btn">
-Xarita
-</button>
-
-</div>
-
-
-<!-- GURUHLAR -->
-<div id="folders-section" class="tab-content active">
-
-<div id="tree-root"></div>
-
-</div>
-
-
-<!-- XARITA -->
-<div id="items-section"
-class="tab-content"
-style="display:none;">
-
-<div id="panel-map"
-style="
-width:100%;
-height:500px;
-border-radius:16px;
-"></div>
-
-</div>
-
-</div>
-
-</div>
-
-
-<!-- GPS -->
-<button id="locate-btn"
-style="
-position:fixed;
-right:20px;
-bottom:100px;
-z-index:9999;
-width:60px;
-height:60px;
-border:none;
-border-radius:50%;
-background:#0d6efd;
-color:white;
-font-size:24px;
-">
-📍
-</button>
-    
 <div id="app-loader">
+
     <div class="loader-circle"></div>
-    <p>Baza yuklanmoqda...</p>
+
+    <div class="loader-text">
+        Baza yuklanmoqda...
+    </div>
+
 </div>
 
-<header class="topbar">
-    <button id="menu-btn">
-        <i class="fas fa-bars"></i>
-    </button>
 
-    <h1>Energo Monitoring</h1>
+<!-- ========================= -->
+<!-- TOP HEADER -->
+<!-- ========================= -->
 
-    <button id="panel-btn">
-        <i class="fas fa-list"></i>
-    </button>
+<header class="top-header">
+
+    <div class="header-left">
+
+        <button id="menu-btn" class="icon-btn">
+            <i class="fas fa-bars"></i>
+        </button>
+
+    </div>
+
+
+    <div class="header-title">
+
+        HETK Monitoring
+
+    </div>
+
+
+    <div class="header-right">
+
+        <button id="search-btn" class="icon-btn">
+            <i class="fas fa-search"></i>
+        </button>
+
+        <button id="map-type-btn" class="icon-btn">
+            <i class="fas fa-layer-group"></i>
+        </button>
+
+    </div>
+
 </header>
 
+
+<!-- ========================= -->
+<!-- SEARCH PANEL -->
+<!-- ========================= -->
+
+<div id="search-panel" class="hidden">
+
+    <div class="search-box">
+
+        <i class="fas fa-search"></i>
+
+        <input
+        type="text"
+        id="global-search-input"
+        placeholder="Qidirish...">
+
+    </div>
+
+</div>
+
+
+<!-- ========================= -->
+<!-- MAIN MAP -->
+<!-- ========================= -->
+
 <div id="map"></div>
 
+
+<!-- ========================= -->
+<!-- GPS BUTTON -->
+<!-- ========================= -->
+
 <button id="locate-btn">
-    <i class="fas fa-crosshairs"></i>
+
+    <i class="fas fa-location-crosshairs"></i>
+
 </button>
 
-<section class="bottom-panel minimized" id="bottom-panel">
 
-    <div class="panel-toggle" id="panel-toggle">
+<!-- ========================= -->
+<!-- BOTTOM INFO PANEL -->
+<!-- ========================= -->
+
+<div id="bottom-panel" class="minimized">
+
+    <div id="panel-toggle">
+
         <i class="fas fa-chevron-up"></i>
-    </div>
-
-    <div class="panel-content">
-
-        <div class="coord-row">
-            <span>Latitude</span>
-            <span id="latitude">0</span>
-        </div>
-
-        <div class="coord-row">
-            <span>Longitude</span>
-            <span id="longitude">0</span>
-        </div>
-
-        <div class="coord-row address-row">
-            <span>Address</span>
-            <span id="address">Aniqlanmoqda...</span>
-        </div>
 
     </div>
 
-    <div class="bottom-actions">
-        <button id="save-location-btn" class="blue-btn">
-            Save Location
-        </button>
 
-        <button id="share-location-btn" class="green-btn">
-            Share Location
-        </button>
+    <div id="panel-content">
+
+        <div class="coords-grid">
+
+            <div class="coord-item">
+
+                <div class="coord-label">
+                    Latitude
+                </div>
+
+                <div id="latitude" class="coord-value">
+                    0.000000
+                </div>
+
+            </div>
+
+
+            <div class="coord-item">
+
+                <div class="coord-label">
+                    Longitude
+                </div>
+
+                <div id="longitude" class="coord-value">
+                    0.000000
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="address-box">
+
+            <div class="address-label">
+                Address
+            </div>
+
+            <div id="address">
+                Aniqlanmoqda...
+            </div>
+
+        </div>
+
+
+        <div class="bottom-actions">
+
+            <button id="copy-btn" class="action-btn blue-btn">
+
+                <i class="fas fa-copy"></i>
+
+                Copy
+
+            </button>
+
+
+            <button id="share-btn" class="action-btn green-btn">
+
+                <i class="fas fa-share"></i>
+
+                Share
+
+            </button>
+
+
+            <button id="save-btn" class="action-btn red-btn">
+
+                <i class="fas fa-floppy-disk"></i>
+
+                Save
+
+            </button>
+
+        </div>
+
     </div>
 
-</section>
+</div>
 
-<div class="panel-overlay hidden" id="panel-overlay">
 
-    <div class="management-panel">
+<!-- ========================= -->
+<!-- SIDE PANEL -->
+<!-- ========================= -->
 
-        <div class="management-header">
-            <h2>Boshqaruv paneli</h2>
+<div id="side-panel">
+
+    <div class="side-overlay"></div>
+
+    <div class="side-content">
+
+
+        <!-- HEADER -->
+
+        <div class="side-header">
+
+            <div class="side-title">
+
+                Monitoring Panel
+
+            </div>
+
 
             <button id="close-panel-btn">
-                ×
+
+                <i class="fas fa-xmark"></i>
+
             </button>
+
         </div>
 
-        <div class="tabs">
-            <button class="tab-btn active" data-tab="folders">
+
+        <!-- TABS -->
+
+        <div class="panel-tabs">
+
+            <button id="folders-tab-btn"
+            class="panel-tab active">
+
                 Guruhlar
+
             </button>
 
-            <button class="tab-btn" data-tab="panel-map">
+
+            <button id="map-tab-btn"
+            class="panel-tab">
+
                 Xarita
+
             </button>
+
         </div>
 
-        <div class="search-box">
-            <input type="text" id="search-input" placeholder="Qidirish...">
+
+        <!-- SEARCH -->
+
+        <div class="panel-search">
+
+            <i class="fas fa-search"></i>
+
+            <input
+            type="text"
+            id="folder-search-input"
+            placeholder="Guruh yoki lokatsiya qidirish">
+
         </div>
 
-        <div id="folders-tab" class="tab-content active">
+
+        <!-- FOLDERS TAB -->
+
+        <div id="folders-tab"
+        class="tab-page active">
 
             <div id="tree-root"></div>
 
-            <button id="add-folder-btn" class="main-action-btn">
-                + Yangi guruh qo'shish
+
+            <button id="add-folder-btn"
+            class="main-add-btn">
+
+                <i class="fas fa-folder-plus"></i>
+
+                Yangi guruh
+
             </button>
 
         </div>
 
-        <div id="panel-map-tab" class="tab-content">
+
+        <!-- MAP TAB -->
+
+        <div id="map-tab"
+        class="tab-page">
+
             <div id="panel-map"></div>
+
         </div>
 
     </div>
 
 </div>
 
-<div class="bottom-sheet hidden" id="folder-sheet">
 
-    <div class="sheet-header">
-        <h3>Guruh yaratish</h3>
+<!-- ========================= -->
+<!-- ADD FOLDER MODAL -->
+<!-- ========================= -->
+
+<div id="folder-modal"
+class="modal hidden">
+
+    <div class="modal-content">
+
+        <div class="modal-header">
+
+            <div class="modal-title">
+
+                Yangi guruh
+
+            </div>
+
+
+            <button class="close-modal-btn">
+
+                <i class="fas fa-xmark"></i>
+
+            </button>
+
+        </div>
+
+
+        <div class="modal-body">
+
+            <input
+            type="text"
+            id="folder-name-input"
+            class="custom-input"
+            placeholder="Guruh nomi">
+
+
+            <label class="custom-label">
+
+                Rang
+
+            </label>
+
+            <input
+            type="color"
+            id="folder-color-input"
+            value="#00aaff">
+
+
+            <label class="custom-label">
+
+                Ona guruh
+
+            </label>
+
+            <div id="folder-parent-tree"
+            class="tree-select"></div>
+
+
+            <button id="save-folder-btn"
+            class="save-main-btn">
+
+                Saqlash
+
+            </button>
+
+        </div>
+
     </div>
-
-    <input type="text" id="folder-name" placeholder="Guruh nomi">
-
-    <input type="color" id="folder-color" value="#00ff00">
-
-    <button id="save-folder-btn" class="blue-btn">
-        Saqlash
-    </button>
 
 </div>
 
-<div class="bottom-sheet hidden" id="element-sheet">
 
-    <div class="sheet-header">
-        <h3>Element qo'shish</h3>
+<!-- ========================= -->
+<!-- ELEMENT MODAL -->
+<!-- ========================= -->
+
+<div id="element-modal"
+class="modal hidden">
+
+    <div class="modal-content large-modal">
+
+        <div class="modal-header">
+
+            <div class="modal-title">
+
+                Lokatsiya
+
+            </div>
+
+
+            <button class="close-element-modal">
+
+                <i class="fas fa-xmark"></i>
+
+            </button>
+
+        </div>
+
+
+        <div class="modal-body">
+
+
+            <!-- IMAGE -->
+
+            <div class="image-upload-box">
+
+                <input
+                type="file"
+                id="element-image-input"
+                accept="image/*">
+
+                <img
+                id="element-image-preview"
+                src="">
+
+            </div>
+
+
+            <!-- NAME -->
+
+            <input
+            type="text"
+            id="element-name-input"
+            class="custom-input"
+            placeholder="Lokatsiya nomi">
+
+
+            <!-- PHONE -->
+
+            <input
+            type="tel"
+            id="element-phone-input"
+            class="custom-input"
+            placeholder="+998">
+
+
+            <!-- NOTE -->
+
+            <textarea
+            id="element-note-input"
+            class="custom-textarea"
+            placeholder="Izoh"></textarea>
+
+
+            <!-- COORDS -->
+
+            <div class="coords-double">
+
+                <input
+                type="number"
+                id="element-lat-input"
+                class="custom-input"
+                placeholder="Latitude">
+
+
+                <input
+                type="number"
+                id="element-lng-input"
+                class="custom-input"
+                placeholder="Longitude">
+
+            </div>
+
+
+            <!-- MULTI FOLDER -->
+
+            <div class="custom-label">
+
+                Guruhlar
+
+            </div>
+
+            <div id="element-folder-tree"
+            class="tree-select"></div>
+
+
+            <!-- BUTTONS -->
+
+            <div class="element-actions">
+
+                <button id="delete-element-btn"
+                class="danger-btn">
+
+                    O‘chirish
+
+                </button>
+
+
+                <button id="save-element-btn"
+                class="save-main-btn">
+
+                    Saqlash
+
+                </button>
+
+            </div>
+
+        </div>
+
     </div>
 
-    <input type="text" id="element-name" placeholder="Element nomi">
-
-    <input type="number" id="element-lat" placeholder="Latitude">
-
-    <input type="number" id="element-lng" placeholder="Longitude">
-
-    <textarea id="element-note" placeholder="Izoh"></textarea>
-
-    <button id="save-element-btn" class="blue-btn">
-        Saqlash
-    </button>
-
 </div>
+
+
+<!-- ========================= -->
+<!-- FIREBASE -->
+<!-- ========================= -->
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+
+
+<!-- LEAFLET -->
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+
+<!-- APP -->
 
 <script src="app.js"></script>
-<style>
 
-@keyframes spin{
-
-0%{
-transform:rotate(0deg);
-}
-
-100%{
-transform:rotate(360deg);
-}
-
-}
-
-</style>r
 </body>
 </html>
