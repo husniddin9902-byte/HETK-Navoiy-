@@ -2,246 +2,162 @@
 <html lang="uz">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HETK Navoiy</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Energo Monitoring</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
     <link rel="stylesheet" href="style.css">
-<style>
-    #address {
-        word-break: keep-all !important;
-        overflow-wrap: break-word !important;
-        white-space: normal !important;
-    }
-            
-</style>    
 </head>
 <body>
 
-     <div id="app-loader" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0f172a; z-index: 999999 !important; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; font-family: sans-serif;">
-    <div style="border: 4px solid #3b82f6; border-top: 4px solid transparent; border-radius: 50%; width: 45px; height: 45px; animation: spin 1s linear infinite;"></div>
-    <p style="margin-top: 15px; font-size: 16px; font-weight: bold;">Baza yuklanmoqda...</p>
+<div id="app-loader">
+    <div class="loader-circle"></div>
+    <p>Baza yuklanmoqda...</p>
 </div>
-<style> @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } } </style>
-    
-      
-    <div class="header-panel">
-        <div class="header-left">
-            <i class="fas fa-bars" id="menu-btn"></i>
-        </div>
-        <div class="header-title">Сохранить местоположение</div>
-        <div class="header-right">
-            <i class="fas fa-list-ul" id="list-btn"></i>
-            <div class="map-type-preview" id="map-type-btn"></div>
-        </div>
+
+<header class="topbar">
+    <button id="menu-btn">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <h1>Energo Monitoring</h1>
+
+    <button id="panel-btn">
+        <i class="fas fa-list"></i>
+    </button>
+</header>
+
+<div id="map"></div>
+
+<button id="locate-btn">
+    <i class="fas fa-crosshairs"></i>
+</button>
+
+<section class="bottom-panel minimized" id="bottom-panel">
+
+    <div class="panel-toggle" id="panel-toggle">
+        <i class="fas fa-chevron-up"></i>
     </div>
 
-    <div id="map"></div>
+    <div class="panel-content">
 
-    <button id="locate-btn" class="map-overlay-btn"><i class="fas fa-crosshairs"></i></button>
-
-    <div class="bottom-panel minimized" id="panel">
-        <div class="toggle-container" onclick="togglePanel()">
-            <div class="toggle-circle">
-                <i class="fas fa-chevron-up" id="toggle-icon"></i>
-            </div>
+        <div class="coord-row">
+            <span>Latitude</span>
+            <span id="latitude">0</span>
         </div>
 
-        <div id="detailed-info" class="info-content">
-            <p class="accuracy-text">Accurate to <span id="accuracy">0</span> meters</p>
-            <div class="copy-box" onclick="copyCoords()">
-                <i class="far fa-copy"></i>
-                <span>Copy</span>
-            </div>
-            <div class="data-row"><span class="label">Latitude</span><span class="value">: <span id="latitude">0.000000</span></span></div>
-            <div class="data-row"><span class="label">Longitude</span><span class="value">: <span id="longitude">0.000000</span></span></div>
-            <div class="data-row"><span class="label">Address</span><span class="value">: <span id="address">Aniqlanmoqda...</span></span></div>
+        <div class="coord-row">
+            <span>Longitude</span>
+            <span id="longitude">0</span>
         </div>
 
-        <div class="action-buttons">
-            <button class="main-btn save-btn">Save Location</button>
-            <button class="main-btn share-btn">Share Location</button>
+        <div class="coord-row address-row">
+            <span>Address</span>
+            <span id="address">Aniqlanmoqda...</span>
         </div>
+
     </div>
 
-    <div id="list-container" class="list-modal" style="display:none;">
-    <div class="list-content full-screen">
-        <div class="list-header">
-            <h3>Boshqaruv paneli</h3>
-            <button id="close-list" style="background:none; border:none; color:white; font-size:24px;">×</button>
+    <div class="bottom-actions">
+        <button id="save-location-btn" class="blue-btn">
+            Save Location
+        </button>
+
+        <button id="share-location-btn" class="green-btn">
+            Share Location
+        </button>
+    </div>
+
+</section>
+
+<div class="panel-overlay hidden" id="panel-overlay">
+
+    <div class="management-panel">
+
+        <div class="management-header">
+            <h2>Boshqaruv paneli</h2>
+
+            <button id="close-panel-btn">
+                ×
+            </button>
         </div>
 
-        <div class="tab-control">
-    <button class="tab-btn active" id="tab-folders" onclick="document.getElementById('search-container-box').style.display='block'">Guruhlar</button>
-    <button class="tab-btn" id="tab-items" onclick="document.getElementById('search-container-box').style.display='none'">Xarita</button>
-        </div>
-        
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="folders">
+                Guruhlar
+            </button>
 
-        <div id="search-container-box" class="search-bar-wrapper" style="padding: 10px 15px; background: #001220;">
-            <div class="search-input-field" style="position: relative; display: flex; align-items: center;">
-                <i class="fas fa-search search-icon" style="position: absolute; left: 12px; color: #88a0b0;"></i>
-                <input type="text" id="element-search" placeholder="Поиск по названию местоположения" style="width: 100%; padding: 10px 12px 10px 38px; border-radius: 8px; background: #00223a; border: 1px solid rgba(255, 255, 255, 0.1); color: white; outline: none;">
-            </div>
+            <button class="tab-btn" data-tab="panel-map">
+                Xarita
+            </button>
         </div>
 
-        <div id="folders-section" class="tab-content active">
+        <div class="search-box">
+            <input type="text" id="search-input" placeholder="Qidirish...">
+        </div>
+
+        <div id="folders-tab" class="tab-content active">
+
             <div id="tree-root"></div>
-            <button id="open-add-folder" class="add-main-btn">+ Yangi guruh qo'shish</button>
+
+            <button id="add-folder-btn" class="main-action-btn">
+                + Yangi guruh qo'shish
+            </button>
+
         </div>
 
-                       <div id="items-section" class="tab-content" style="display: none; height: calc(100% - 110px); padding: 5px;">
-            <div id="panel-map" style="width: 100%; height: 100%; border-radius: 12px; background: #001a2c; border: 1px solid rgba(255,255,255,0.1); z-index: 10;"></div>
-                       </div>
-        
+        <div id="panel-map-tab" class="tab-content">
+            <div id="panel-map"></div>
+        </div>
+
     </div>
+
 </div>
 
-    <div id="edit-folder-panel" class="bottom-sheet-folder hidden">
-        <div class="sheet-handle"></div>
-        
-        <div class="sheet-header" style="display: flex; justify-content: flex-start; align-items: center; gap: 15px; margin-bottom: 20px;">
-            <button type="button" onclick="document.getElementById('edit-folder-panel').classList.add('hidden')" style="background: #ff4444; border: none; color: white; font-size: 22px; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; line-height: 1; flex-shrink: 0; box-shadow: 0 2px 8px rgba(255, 68, 68, 0.3);">×</button>
-            <h4 style="margin: 0; font-size: 18px; font-weight: bold;">Guruhni tahrirlash</h4>
-        </div>
-        
-        <label>Guruh nomi:</label>
-        <input type="text" id="edit-group-name" style="width:100%; padding:10px; margin:10px 0; border-radius:8px; background:#001a2c; color:white; border:none;">
-        
-        <label>Yangi joylashuv (Ona guruh):</label>
-        <div id="edit-parent-folder-tree" class="tree-dropdown-container" style="width:100%; max-height:200px; overflow-y:auto; background:#001a2c; border-radius:8px; padding:10px; margin:10px 0; border:1px solid rgba(255, 255, 255, 0.1);"></div>
-        <input type="hidden" id="edit-parent-folder-select" value="root">
+<div class="bottom-sheet hidden" id="folder-sheet">
 
-        <label>Guruh rangi:</label>
-        <input type="range" id="edit-color-slider" min="0" max="360" value="0" class="hue-slider">
-        <div id="edit-color-preview" style="width:40px; height:40px; border-radius:50%; margin:10px auto; border:2px solid white; background:red;"></div>
-        
-        <div class="sheet-buttons" style="display:flex; gap:10px; margin-top:15px;">
-            <button id="delete-folder-btn" style="flex:1; background:#ff4444; color:white; border:none; padding:12px; border-radius:8px;">O'chirish</button>
-            <button id="update-folder-btn" style="flex:1; background:#007AFF; color:white; border:none; padding:12px; border-radius:8px;">Saqlash</button>
-        </div>
-    </div>
-    
-    <div id="add-folder-panel" class="bottom-sheet-folder hidden">
-        <div class="sheet-handle"></div>
-        
-        <div class="sheet-header" style="display: flex; justify-content: flex-start; align-items: center; gap: 15px; margin-bottom: 20px;">
-            <button type="button" onclick="document.getElementById('add-folder-panel').classList.add('hidden')" style="background: #ff4444; border: none; color: white; font-size: 22px; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; line-height: 1; flex-shrink: 0; box-shadow: 0 2px 8px rgba(255, 68, 68, 0.3);">×</button>
-            <h4 style="margin: 0; font-size: 18px; font-weight: bold;">Yangi guruh yaratish</h4>
-        </div>
-
-        <input type="text" id="new-group-name" placeholder="Guruh nomi..." style="width:100%; padding:10px; margin:10px 0; border-radius:8px; border:none; background: #001a2c; color: white;">
-        
-        <label>Qaysi guruh ichiga tushsin?</label>
-        <div id="parent-folder-tree" class="tree-dropdown-container" style="width:100%; max-height:200px; overflow-y:auto; background:#001a2c; border-radius:8px; padding:10px; margin:10px 0; border:1px solid rgba(255, 255, 255, 0.1);"></div>
-        <input type="hidden" id="parent-folder-select" value="root">
-        
-        <label>Guruh rangi:</label>
-        <input type="range" id="color-slider" min="0" max="360" value="0" class="hue-slider">
-        <div id="color-preview" style="width:40px; height:40px; border-radius:50%; margin:10px auto; border:2px solid white; background:red;"></div>
-        
-        <div class="sheet-buttons" style="margin-top:15px;">
-            <button id="save-folder" style="width:100%; padding:12px; border-radius:8px; background:#007AFF; color:white; border:none; font-weight:bold;">Saqlash</button>
-        </div>
+    <div class="sheet-header">
+        <h3>Guruh yaratish</h3>
     </div>
 
-    <div id="element-manage-panel" class="bottom-sheet-folder hidden">
-        <div class="sheet-handle"></div>
-        
-        <div class="sheet-header" style="display: flex; justify-content: flex-start; align-items: center; gap: 15px; margin-bottom: 15px;">
-            <button type="button" onclick="document.getElementById('element-manage-panel').classList.add('hidden')" style="background: #ff4444; border: none; color: white; font-size: 22px; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; line-height: 1; flex-shrink: 0; box-shadow: 0 2px 8px rgba(255, 68, 68, 0.3);">×</button>
-            <h4 id="element-panel-title" style="margin: 0; font-size: 18px; font-weight: bold;">Добавить местоположение</h4>
-        </div>
+    <input type="text" id="folder-name" placeholder="Guruh nomi">
 
-        <form id="element-main-form" style="display: flex; flex-direction: column; gap: 12px; max-height: 75vh; overflow-y: auto; padding-bottom: 20px;">
-            
-            <div style="display: flex; gap: 15px; align-items: center; background: rgba(255,255,255,0.03); padding: 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
-                
-                <div style="position: relative; width: 85px; height: 85px; background: #001a2c; border-radius: 10px; border: 2px dashed rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                    <label for="element-image-input" style="cursor: pointer; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;">
-                        <i class="fas fa-camera-add" id="image-icon-placeholder" style="font-size: 24px; color: #88a0b0;"></i>
-                        <span id="image-status-text" style="font-size: 10px; color: #88a0b0; text-align: center; padding: 0 4px;">Rasm</span>
-                        <img id="element-image-preview" class="hidden" style="position: absolute; top:0; left:0; width:100%; height:100%; border-radius:8px; object-fit: cover;">
-                    </label>
-                    <input type="file" id="element-image-input" accept="image/*" capture="environment" style="display: none;">
-                    <button type="button" id="remove-image-btn" class="hidden" style="position: absolute; top: -8px; right: -8px; background: #ff4444; color: white; border: none; border-radius: 50%; width: 22px; height: 22px; font-size: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer;">×</button>
-                </div>
+    <input type="color" id="folder-color" value="#00ff00">
 
-                <div style="display: flex; flex-direction: column; gap: 8px; flex: 1;">
-                    <div style="display: flex; align-items: center; background: #001a2c; border-radius: 8px; padding: 2px 10px;">
-                        <span style="font-size: 12px; color: #88a0b0; width: 35px;">Шир:</span>
-                        <input type="number" id="input-latitude" step="any" style="width: 100%; background: transparent; border: none; color: white; padding: 8px 0; outline: none; font-size: 14px;" required>
-                    </div>
-                    <div style="display: flex; align-items: center; background: #001a2c; border-radius: 8px; padding: 2px 10px;">
-                        <span style="font-size: 12px; color: #88a0b0; width: 35px;">Дол:</span>
-                        <input type="number" id="input-longitude" step="any" style="width: 100%; background: transparent; border: none; color: white; padding: 8px 0; outline: none; font-size: 14px;" required>
-                    </div>
-                </div>
-            </div>
+    <button id="save-folder-btn" class="blue-btn">
+        Saqlash
+    </button>
 
-            <div>
-                <label style="font-size: 13px; color: #88a0b0; margin-left: 4px;">Название местоположения:</label>
-                <input type="text" id="input-element-name" placeholder="Masalan: TP-312" style="width:100%; padding:12px; margin-top:5px; border-radius:8px; background:#001a2c; color:white; border:1px solid rgba(255,255,255,0.05); outline: none;" required>
-            </div>
+</div>
 
-            <div>
-                <label style="font-size: 13px; color: #88a0b0; margin-left: 4px;">Адрес:</label>
-                <textarea id="input-element-address" rows="2" placeholder="Адрес определяется автоматически..." style="width:100%; padding:10px; margin-top:5px; border-radius:8px; background:#001a2c; color:#88a0b0; border:1px solid rgba(255,255,255,0.05); resize: none; outline: none;" readonly></textarea>
-            </div>
+<div class="bottom-sheet hidden" id="element-sheet">
 
-            <div>
-                <label style="font-size: 13px; color: #88a0b0; margin-left: 4px;">Контактный телефон:</label>
-                <input type="tel" id="input-element-phone" placeholder="+998" style="width:100%; padding:12px; margin-top:5px; border-radius:8px; background:#001a2c; color:white; border:1px solid rgba(255,255,255,0.05); outline: none;">
-            </div>
-
-            <div>
-                <label style="font-size: 13px; color: #88a0b0; margin-left: 4px;">Заметка:</label>
-                <textarea id="input-element-note" rows="2" placeholder="Qo'shimcha eslatmalar..." style="width:100%; padding:10px; margin-top:5px; border-radius:8px; background:#001a2c; color:white; border:1px solid rgba(255,255,255,0.05); resize: none; outline: none;"></textarea>
-            </div>
-
-            <div>
-                <label style="font-size: 13px; color: #88a0b0; margin-left: 4px;">Fider (Guruh) ni biriktirish:</label>
-                <div id="element-parent-folder-tree" class="tree-dropdown-container" style="width:100%; max-height:180px; overflow-y:auto; background:#001a2c; border-radius:8px; padding:10px; margin-top:5px; border:1px solid rgba(255, 255, 255, 0.1);"></div>
-                <input type="hidden" id="element-selected-folders" value="">
-            </div>
-
-            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); padding: 12px; border-radius: 8px; margin-top: 5px;">
-                <span style="font-size: 14px; font-weight: bold; color: white;">Баланс: <span id="balance-status-text" style="color: #007AFF;">ЕТК</span></span>
-                
-                <label class="switch-control" style="position: relative; display: inline-block; width: 50px; height: 26px;">
-                    <input type="checkbox" id="input-balance-toggle" style="opacity: 0; width: 0; height: 0;">
-                    <span class="slider-toggle" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px;"></span>
-                </label>
-            </div>
-
-            <div id="private-owner-info-block" class="hidden" style="display: flex; flex-direction: column; gap: 12px; background: rgba(255, 68, 68, 0.03); padding: 12px; border-radius: 10px; border: 1px dashed rgba(255, 68, 68, 0.2);">
-                <div>
-                    <input type="text" id="input-owner-firm" placeholder="Fermer xo'jaligi yoki firma nomi" style="width:100%; padding:10px; border-radius:6px; background:#001a2c; color:white; border:none; outline:none; font-size:13px;">
-                </div>
-                <div>
-                    <input type="text" id="input-owner-name" placeholder="Egasining ismi (F.I.O)" style="width:100%; padding:10px; border-radius:6px; background:#001a2c; color:white; border:none; outline:none; font-size:13px;">
-                </div>
-                <div>
-                    <input type="tel" id="input-owner-phone" placeholder="Egasining telefon raqami" style="width:100%; padding:10px; border-radius:6px; background:#001a2c; color:white; border:none; outline:none; font-size:13px;">
-                </div>
-                <div>
-                    <input type="text" id="input-meter-number" placeholder="Hisoblagich (Schotchik) raqami" style="width:100%; padding:10px; border-radius:6px; background:#001a2c; color:white; border:none; outline:none; font-size:13px;">
-                </div>
-            </div>
-
-            <div class="sheet-buttons" style="display:flex; gap:10px; margin-top:10px;">
-                <button type="button" id="delete-element-btn" class="hidden" style="flex:1; background:#ff4444; color:white; border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer;">O'chirish</button>
-                <button type="submit" id="save-element-btn" style="flex:2; background:#007AFF; color:white; border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer;">Saqlash</button>
-            </div>
-
-        </form>
+    <div class="sheet-header">
+        <h3>Element qo'shish</h3>
     </div>
-    
-    
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 
-    <script src="app.js?v=1.2"></script>
+    <input type="text" id="element-name" placeholder="Element nomi">
+
+    <input type="number" id="element-lat" placeholder="Latitude">
+
+    <input type="number" id="element-lng" placeholder="Longitude">
+
+    <textarea id="element-note" placeholder="Izoh"></textarea>
+
+    <button id="save-element-btn" class="blue-btn">
+        Saqlash
+    </button>
+
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+
+<script src="app.js"></script>
 
 </body>
 </html>
