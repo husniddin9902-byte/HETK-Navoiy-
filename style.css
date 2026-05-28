@@ -1,872 +1,739 @@
-/* =========================
-   RESET
-========================= */
-
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
+/* =========================================================================
+   1. ASOSIY PANEL VA NAVIGATSIYA STILLARI
+   ========================================================================= */
+body {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #001220;
+    overflow: hidden;
 }
 
-/* =========================
-   ROOT
-========================= */
-
-:root{
-
-    --bg:#001426;
-    --panel:#001a33;
-    --card:#00284d;
-
-    --blue:#1f6fff;
-    --green:#1dbf73;
-    --red:#ff4d5a;
-
-    --text:#ffffff;
-    --muted:#9db3c9;
-
+.bottom-panel {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: #003250; /* Rasmdagi to'q ko'k */
+    color: white;
+    z-index: 1000;
+    transition: all 0.4s ease-in-out;
+    border-top-left-radius: 25px;
+    border-top-right-radius: 25px;
+    box-shadow: 0 -5px 15px rgba(0,0,0,0.3);
 }
 
-/* =========================
-   HTML BODY
-========================= */
-
-html,
-body{
-
-    width:100%;
-    height:100%;
-
-    overflow:hidden;
-
-    background:var(--bg);
-
-    font-family:
-    Arial,
-    sans-serif;
-
+/* Panel yopilishi (Faqat ma'lumotlar yo'qoladi, tugmalar qoladi) */
+.bottom-panel.minimized .info-content {
+    height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    opacity: 0;
+    pointer-events: none;
 }
 
-/* =========================
-   MAP
-========================= */
-
-#map{
-
-    width:100%;
-    height:100vh;
-
-    z-index:1;
-
+/* Strelka tugmasi */
+.toggle-container {
+    display: flex;
+    justify-content: center;
+    margin-top: -22px;
+    cursor: pointer;
 }
 
-/* =========================
-   MINI MAP
-========================= */
-
-#miniMap{
-
-    width:100%;
-    height:260px;
-
-    border-radius:22px;
-
+.toggle-circle {
+    background: #003250;
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 -3px 10px rgba(0,0,0,0.2);
 }
 
-/* =========================
-   LOADER
-========================= */
-
-#loader{
-
-    position:fixed;
-
-    inset:0;
-
-    background:var(--bg);
-
-    z-index:999999;
-
-    display:flex;
-    flex-direction:column;
-    justify-content:center;
-    align-items:center;
-
-    gap:18px;
-
+/* Ma'lumotlar bloki (Latitude, Longitude, Address) */
+.info-content {
+    position: relative; /* Copy tugmasini o'ngga surish uchun shart */
+    padding: 10px 20px;
+    height: 185px; 
+    overflow: hidden;
+    transition: all 0.4s ease-in-out;
+    box-sizing: border-box;
 }
 
-.loader-ring{
-
-    width:90px;
-    height:90px;
-
-    border-radius:50%;
-
-    border:
-    7px solid
-    rgba(255,255,255,.12);
-
-    border-top:
-    7px solid
-    var(--blue);
-
-    animation:
-    loaderSpin 1s linear infinite;
-
+/* COPY TUGMASI (O'ng tomonda alohida blok) */
+.copy-box {
+    position: absolute;
+    right: 20px;
+    top: 40px; /* Koordinatalar qarshisida turishi uchun */
+    text-align: center;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 10px;
+    border-radius: 12px;
+    width: 55px;
+    transition: background 0.3s;
 }
 
-@keyframes loaderSpin{
+.copy-box:active { background: rgba(255, 255, 255, 0.3); }
+.copy-box i { font-size: 22px; margin-bottom: 4px; }
+.copy-box span { font-size: 10px; display: block; }
 
-    100%{
+/* Ma'lumotlar qatorlari */
+.data-row {
+    display: flex;
+    margin-bottom: 10px;
+    font-size: 14px;
+    padding-right: 80px; /* Matn Copy tugmasining ustiga chiqib ketmasligi uchun */
+}
 
-        transform:
-        rotate(360deg);
+.label { width: 85px; color: #adadad; flex-shrink: 0; }
+.value { flex: 1; word-break: break-all; }
 
+.accuracy-text {
+    font-size: 13px;
+    opacity: 0.8;
+    margin-bottom: 15px;
+    text-align: left;
+}
+
+/* Pastki Tugmalar (Save/Share) */
+.action-buttons {
+    display: flex;
+    gap: 12px;
+    padding: 10px 20px 25px 20px;
+}
+
+.main-btn {
+    flex: 1;
+    padding: 14px;
+    border: none;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.15); /* Shaffofroq */
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.main-btn:active {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* Save va Share uchun maxsus tuslar */
+.save-btn {
+    background: #007AFF !important;
+}
+.save-btn:active {
+    background: #0056b3 !important;
+}
+.share-btn {
+    background: #34C759 !important;
+}
+.share-btn:active {
+    background: #248A3D !important;
+}
+
+/* =========================================================================
+   2. XARITA VA FOYDALANUVCHI GEOLOKATSIYA NUQTASI STILLARI
+   ========================================================================= */
+.map-overlay-btn {
+    position: absolute;
+    right: 20px;
+    bottom: 250px; /* Panel yopilganda ham tugmaning tepasida turishi uchun */
+    z-index: 1001;
+    background: white;
+    border: none;
+    width: 45px;
+    height: 45px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: #333;
+    cursor: pointer;
+}
+
+.map-overlay-btn:active {
+    background: #f0f0f0;
+}
+
+#toggle-icon { transition: transform 0.4s; }
+
+.user-location-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.user-dot {
+    width: 12px;
+    height: 12px;
+    background-color: #007AFF;
+    border: 2px solid white;
+    border-radius: 50%;
+    z-index: 2;
+    box-shadow: 0 0 5px rgba(0,0,0,0.5);
+}
+
+.user-acc-circle {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    background-color: rgba(0, 122, 255, 0.2); /* Shaffof ko'k zona */
+    border: 1px solid rgba(0, 122, 255, 0.4);
+    border-radius: 50%;
+    z-index: 1;
+}
+
+.header-panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 60px; /* Balandlikni qat'iy belgilaymiz */
+    background: #003049; 
+    display: flex; 
+    align-items: center; 
+    justify-content: space-between; 
+    padding: 0 15px;
+    z-index: 2000;
+    color: white;
+    box-sizing: border-box; 
+}
+
+.header-title {
+    font-size: 18px;
+    font-weight: 500;
+}
+
+.header-left i, .header-right i {
+    font-size: 22px;
+    cursor: pointer;
+    padding: 5px;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 15px; 
+}
+
+.map-type-preview {
+    width: 35px;
+    height: 35px;
+    border-radius: 4px;
+    border: 2px solid white;
+    background: url('https://mt1.google.com/vt/lyrs=s&x=0&y=0&z=0'); /* Satellite kichik rasmi */
+    background-size: cover;
+    cursor: pointer;
+}
+
+#map {
+    position: absolute;
+    top: 60px; /* Menyudan keyin boshlanishi uchun */
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: calc(100vh - 60px) !important; 
+    height: calc(100dvh - 60px) !important; /* Dynamic mobile viewport uchun sug'urta */
+    z-index: 1;
+}
+
+/* =========================================================================
+   3. LEAFLET POPUP VA MARKER STILLARI
+   ========================================================================= */
+.marker-delete-popup {
+    background: white;
+    padding: 8px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    color: #ff4444;
+    border: 2px solid #eee;
+    text-align: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    white-space: nowrap;
+    font-size: 14px;
+}
+
+.marker-delete-popup:hover {
+    background: #f8f8f8;
+}
+
+.custom-popup .leaflet-popup-content-wrapper {
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+}
+
+.custom-popup .leaflet-popup-tip-container {
+    display: none !important;
+}
+
+.custom-tp-marker {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* =========================================================================
+   4. MODAL OYNA VA TAB (BO'LIMLAR) CONTROLLARI
+   ========================================================================= */
+.list-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 5000;
+    display: none; 
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(5px);
+}
+
+.list-content {
+    background: #002135; 
+    color: white;
+    width: 90%;
+    max-height: 80%;
+    border-radius: 20px;
+    padding: 20px;
+    overflow-y: auto;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-sizing: border-box;
+}
+
+ .list-content.full-screen {
+    width: 100% !important;
+    height: 100% !important;
+    max-height: 100vh !important;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+    display: flex;
+    flex-direction: column;
+    padding: 0px !important; /* Ichki 20px paddingni butunlay yo'qotamiz, shunda tepadagi qism chetga taqalib ingichkalashadi */
+ }
+
+
+.list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 38px !important;
+    margin-bottom: 5px !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0 16px !important;
+    flex-shrink: 0;
+}
+
+.list-header h3 {
+    font-size: 15px !important;
+    margin: 0 !important;
+}
+
+
+.tab-control {
+    display: flex;
+    margin: 8px 16px 4px 16px; 
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 4px;
+    flex-shrink: 0;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    background: none;
+    color: #ccc;
+    font-weight: bold;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.tab-btn.active {
+    background: #007AFF;
+    color: white;
+}
+
+.tab-content { 
+    display: none; 
+    padding: 15px; 
+    overflow-y: auto; 
+    flex: 1; 
+}
+
+.tab-content.active { 
+    display: block; 
+}
+
+/* Qidiruv maydoni */
+.search-input-field input::placeholder {
+    color: #5c7588;
+}
+
+.search-input-field input:focus {
+    border-color: #007AFF !important;
+    box-shadow: 0 0 8px rgba(0, 122, 255, 0.3);
+}
+
+/* TP Ro'yxati elementlari */
+.tp-list-container {
+    height: 100%;
+    overflow-y: auto;
+}
+
+.tp-item {
+    background: rgba(255, 255, 255, 0.05);
+    margin-bottom: 10px;
+    padding: 12px;
+    border-radius: 10px;
+    border-left: 4px solid #007AFF;
+    transition: background 0.2s;
+}
+
+.tp-item:active {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+/* =========================================================================
+   5. ASOSIY PANELDAGI ASIL IERARXIK DARAXT STILLARI
+   ========================================================================= */
+.folder-tree {
+    margin: 10px 0;
+}
+
+.folder-item {
+    margin: 5px 0;
+    font-size: 16px;
+}
+
+.folder-children {
+    margin-left: 8px !important; 
+    border-left: 1px dashed rgba(255, 255, 255, 0.1); 
+    padding-left: 4px !important;
+}
+
+.folder-header {
+    padding: 6px 8px !important; /* Mobil teginish uchun biroz kattartirildi */
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: 0.2s;
+    box-sizing: border-box;
+}
+
+.folder-header.active-folder {
+    background: rgba(0, 122, 255, 0.15);
+}
+
+.folder-header i {
+    margin: 0 6px !important;
+    font-size: 14px;
+}
+
+/* Aktiv qalamcha - tahrirlash */
+.edit-icon {
+    display: none; 
+    margin-left: auto; 
+    color: #007AFF;
+    padding: 5px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.active-folder .edit-icon {
+    display: inline-block;
+}
+
+/* =========================================================================
+   6. BOTTOM SHEET VA MULTI-CHOOSE IERARXIK DROPDOWN
+   ========================================================================= */
+.bottom-sheet-folder {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: #002135;
+    color: white;
+    border-radius: 25px 25px 0 0;
+    z-index: 6000;
+    padding: 20px;
+    box-shadow: 0 -5px 25px rgba(0,0,0,0.6);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-sizing: border-box;
+}
+
+.bottom-sheet-folder.hidden {
+    transform: translateY(100%);
+}
+
+.sheet-handle {
+    width: 40px;
+    height: 5px;
+    background: #555;
+    border-radius: 10px;
+    margin: 0 auto 15px;
+}
+
+.hue-slider {
+    width: 100%;
+    height: 12px;
+    border-radius: 10px;
+    appearance: none;
+    background: linear-gradient(to right, red, yellow, lime, cyan, blue, magenta, red);
+    outline: none;
+    margin: 15px 0;
+}
+
+.hue-slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    background: white;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 5px rgba(0,0,0,0.5);
+}
+
+.add-main-btn {
+    width: 100%;
+    padding: 12px;
+    background: #007AFF;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    margin-top: 15px;
+    font-weight: bold;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+/* --- ESKI SELECTLARNI YASHIRISH --- */
+#parent-folder-select, 
+#edit-parent-folder-select {
+    display: none !important; 
+}
+
+/* --- TAHRIRLASH/QO'SHISH OYNASIDAGI DARAXTSIMON DROPDOWN CONTAINER --- */
+.tree-dropdown-container {
+    width: 100%;
+    max-height: 210px;
+    overflow-y: auto;
+    background: #001a2c !important; 
+    border-radius: 8px;
+    padding: 8px;
+    margin: 10px 0;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-sizing: border-box;
+}
+
+/* Daraxt ichidagi har bir satr */
+.tree-dropdown-container div {
+    display: flex;
+    align-items: center;
+    padding: 7px 9px;
+    cursor: pointer;
+    color: white;
+    font-size: 14px;
+    border-radius: 6px;
+    margin-top: 2px;
+    transition: background 0.2s ease;
+    user-select: none;
+}
+
+.tree-dropdown-container div:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+/* Tanlangan elementning ko'k fon bilan ajralishi */
+.tree-dropdown-container .selected-tree-node,
+.tree-dropdown-container div[style*="background: rgb(0, 122, 255)"],
+.tree-dropdown-container div[style*="background: #007AFF"] {
+    background: #007AFF !important;
+    font-weight: bold;
+    color: white !important;
+}
+
+/* Ichki guruh ochuvchi/yopuvchi dynamic plus-minus belgisi */
+.dropdown-toggle-icon, .tree-toggle-icon {
+    width: 22px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #88a0b0;
+    font-weight: bold;
+    font-size: 16px;
+    margin-right: 6px;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.dropdown-toggle-icon:hover, .tree-toggle-icon:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+}
+
+/* ALL GLOBAL SCROLLBARS FOR CLEAN DARK LOOK */
+.tree-dropdown-container::-webkit-scrollbar,
+.list-content::-webkit-scrollbar,
+.tab-content::-webkit-scrollbar,
+.tp-list-container::-webkit-scrollbar {
+    width: 6px;
+}
+.tree-dropdown-container::-webkit-scrollbar-track,
+.list-content::-webkit-scrollbar-track,
+.tab-content::-webkit-scrollbar-track,
+.tp-list-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+.tree-dropdown-container::-webkit-scrollbar-thumb,
+.list-content::-webkit-scrollbar-thumb,
+.tab-content::-webkit-scrollbar-thumb,
+.tp-list-container::-webkit-scrollbar-thumb {
+    background: #003a61;
+    border-radius: 10px;
+}
+
+/* TOAST MESSAGE ANIMATION */
+.toast-message {
+    animation: toastFadeIn 0.3s ease forwards;
+}
+@keyframes toastFadeIn {
+    from { opacity: 0; transform: translate(-50%, 20px); }
+    to { opacity: 1; transform: translate(-50%, 0); }
+   }
+
+/* =========================================================================
+   ⚡ YANGI: ELEMENT (TP) KIRITISH VA TAHRIRLASH PANELINING MAXSUS STILLARI
+   ========================================================================= */
+
+/* Rasm yuklash bloki (Kamera ikonkalari uchun) */
+.image-upload-box label {
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.image-upload-box label:active {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-color: #007AFF !important;
+}
+
+/* Rasm ustidagi o'chirish (X) tugmasi animatsiyasi */
+#remove-image-btn {
+    box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+    transition: transform 0.2s;
+}
+#remove-image-btn:active {
+    transform: scale(0.85);
+}
+
+/* 🎛️ iOS USLUBIDAGI CHIROYLI TUMBLER (SWITCH) STILLARI */
+.switch-control {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 26px;
+    flex-shrink: 0;
+}
+
+.switch-control input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider-toggle {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(255, 255, 255, 0.15);
+    transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 34px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.slider-toggle:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+/* Tumbler yoqilgandagi holat (Ko'k rangga silliq o'tish) */
+.switch-control input:checked + .slider-toggle {
+    background-color: #007AFF;
+}
+
+.switch-control input:checked + .slider-toggle:before {
+    transform: translateX(24px);
+}
+
+/* 👤 XUSUSIY BLOK OCHILGANDA SILLIQ EFFEKT */
+#private-owner-info-block {
+    transition: all 0.3s ease-in-out;
+    max-height: 500px;
+    opacity: 1;
+    overflow: hidden;
+}
+
+#private-owner-info-block.hidden {
+    display: none !important;
+    max-height: 0;
+    opacity: 0;
+}
+
+/* Formaning ichki inputlari va tekstarealari fokusi */
+#element-main-form input:focus, 
+#element-main-form textarea:focus {
+    border-color: #007AFF !important;
+    background: #00223a !important;
+    outline: none;
+}
+
+/* Formalar uchun umumiy scrollbar - form ichi baland bo'lsa oynadan chiqib ketmasligi uchun */
+#element-main-form::-webkit-scrollbar {
+    width: 4px;
+}
+#element-main-form::-webkit-scrollbar-thumb {
+    background: #004c80;
+    border-radius: 10px;
+}
+
+/* Global yashirish klassi */
+.hidden {
+    display: none !important;
+}
+
+/* 🔄 MAP MARKERLARI UCHUN MILTILLASH (BLINKING) ANIMATSIYASI */
+/* Ikki fiderga ulangan TP ona papkada ochilganda shu klass orqali dynamic miltillaydi */
+.blinking-marker-icon {
+    animation: markerBlink 2s infinite steps(1, end);
+}
+
+@keyframes markerBlink {
+    0%, 100% {
+        filter: drop-shadow(0 0 6px var(--fider-color-1, #007AFF)) hue-rotate(0deg);
     }
-
-}
-
-#loader h2{
-
-    color:white;
-
-    font-size:34px;
-
-}
-
-#loader p{
-
-    color:var(--muted);
-
-    font-size:18px;
-
-}
-
-/* =========================
-   TOPBAR
-========================= */
-
-.topbar{
-
-    position:fixed;
-
-    top:0;
-    left:0;
-
-    width:100%;
-    height:78px;
-
-    background:
-    rgba(0,26,51,.88);
-
-    backdrop-filter:
-    blur(18px);
-
-    z-index:9999;
-
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-
-    padding:0 18px;
-
-    box-shadow:
-    0 5px 25px rgba(0,0,0,.35);
-
-}
-
-.topbar h1{
-
-    color:white;
-
-    font-size:20px;
-
-    font-weight:700;
-
-}
-
-/* =========================
-   TOP BUTTON
-========================= */
-
-.top-btn{
-
-    width:56px;
-    height:56px;
-
-    border:none;
-    outline:none;
-
-    border-radius:20px;
-
-    background:var(--card);
-
-    color:white;
-
-    font-size:22px;
-
-    transition:.2s;
-
-}
-
-.top-btn:active{
-
-    transform:scale(.94);
-
-}
-
-/* =========================
-   TOP ACTIONS
-========================= */
-
-.topbar-actions{
-
-    display:flex;
-
-    gap:10px;
-
-}
-
-/* =========================
-   FLOATING SEARCH
-========================= */
-
-.floating-search{
-
-    position:fixed;
-
-    top:92px;
-    left:50%;
-
-    transform:
-    translateX(-50%);
-
-    width:92%;
-
-    z-index:999;
-
-}
-
-.floating-search input{
-
-    width:100%;
-    height:60px;
-
-    border:none;
-    outline:none;
-
-    border-radius:22px;
-
-    background:
-    rgba(0,40,77,.95);
-
-    color:white;
-
-    padding:0 20px;
-
-    font-size:18px;
-
-    box-shadow:
-    0 5px 25px rgba(0,0,0,.25);
-
-}
-
-.floating-search input::placeholder{
-
-    color:var(--muted);
-
-}
-
-/* =========================
-   GPS BUTTON
-========================= */
-
-.gps-btn{
-
-    position:fixed;
-
-    right:20px;
-    bottom:310px;
-
-    width:72px;
-    height:72px;
-
-    border:none;
-
-    border-radius:50%;
-
-    background:var(--blue);
-
-    color:white;
-
-    font-size:28px;
-
-    z-index:9999;
-
-    box-shadow:
-    0 10px 25px rgba(0,0,0,.35);
-
-    transition:.2s;
-
-}
-
-.gps-btn:active{
-
-    transform:scale(.92);
-
-}
-
-/* =========================
-   BOTTOM SHEET
-========================= */
-
-.bottom-sheet{
-
-    position:fixed;
-
-    left:0;
-    bottom:0;
-
-    width:100%;
-
-    background:
-    rgba(0,26,51,.97);
-
-    backdrop-filter:
-    blur(18px);
-
-    border-radius:
-    34px 34px 0 0;
-
-    z-index:9999;
-
-    padding:18px;
-
-    transition:.35s;
-
-    max-height:52vh;
-
-    overflow:auto;
-
-    box-shadow:
-    0 -8px 30px rgba(0,0,0,.45);
-
-}
-
-/* =========================
-   HANDLE
-========================= */
-
-.sheet-handle{
-
-    width:74px;
-    height:7px;
-
-    border-radius:10px;
-
-    background:white;
-
-    margin:
-    0 auto 18px;
-
-}
-
-/* =========================
-   CONTENT
-========================= */
-
-.sheet-content{
-
-    width:100%;
-
-}
-
-/* =========================
-   INFO CARD
-========================= */
-
-.info-card{
-
-    background:var(--card);
-
-    border-radius:24px;
-
-    padding:18px;
-
-    margin-bottom:16px;
-
-    box-shadow:
-    inset 0 0 0 1px
-    rgba(255,255,255,.03);
-
-}
-
-.info-card span{
-
-    color:var(--muted);
-
-    font-size:16px;
-
-}
-
-.info-card h2{
-
-    color:white;
-
-    margin-top:10px;
-
-    font-size:34px;
-
-    word-break:break-word;
-
-}
-
-.info-card p{
-
-    color:white;
-
-    margin-top:12px;
-
-    font-size:17px;
-
-    line-height:1.5;
-
-}
-
-/* =========================
-   ACTION GRID
-========================= */
-
-.action-grid{
-
-    display:grid;
-
-    grid-template-columns:
-    repeat(3,1fr);
-
-    gap:12px;
-
-}
-
-/* =========================
-   ACTION BUTTON
-========================= */
-
-.action-btn{
-
-    height:58px;
-
-    border:none;
-    outline:none;
-
-    border-radius:18px;
-
-    color:white;
-
-    font-size:18px;
-    font-weight:600;
-
-    transition:.2s;
-
-}
-
-.action-btn i{
-
-    margin-right:8px;
-
-}
-
-.action-btn:active{
-
-    transform:scale(.97);
-
-}
-
-.blue-btn{
-
-    background:var(--blue);
-
-}
-
-.green-btn{
-
-    background:var(--green);
-
-}
-
-.red-btn{
-
-    background:var(--red);
-
-}
-
-/* =========================
-   SIDEBAR
-========================= */
-
-.sidebar{
-
-    position:fixed;
-
-    top:0;
-    left:-100%;
-
-    width:92%;
-    max-width:450px;
-
-    height:100%;
-
-    background:
-    rgba(0,26,51,.98);
-
-    backdrop-filter:
-    blur(20px);
-
-    z-index:10000;
-
-    transition:.35s ease;
-
-    overflow:auto;
-
-    padding:18px;
-
-    box-shadow:
-    0 0 35px rgba(0,0,0,.45);
-
-}
-
-.sidebar.active{
-
-    left:0;
-
-}
-
-/* =========================
-   SIDEBAR HEADER
-========================= */
-
-.sidebar-header{
-
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-
-    margin-bottom:24px;
-
-}
-
-.sidebar-header h2{
-
-    color:white;
-
-    font-size:28px;
-
-}
-
-.sidebar-header span{
-
-    color:var(--muted);
-
-    font-size:14px;
-
-}
-
-.close-sidebar-btn{
-
-    width:58px;
-    height:58px;
-
-    border:none;
-
-    border-radius:18px;
-
-    background:var(--card);
-
-    color:white;
-
-    font-size:24px;
-
-}
-
-/* =========================
-   SIDEBAR TABS
-========================= */
-
-.sidebar-tabs{
-
-    display:flex;
-
-    gap:12px;
-
-    margin-bottom:22px;
-
-}
-
-.sidebar-tab{
-
-    flex:1;
-
-    height:58px;
-
-    border:none;
-
-    border-radius:18px;
-
-    background:var(--card);
-
-    color:white;
-
-    font-size:18px;
-
-}
-
-.sidebar-tab.active{
-
-    background:var(--blue);
-
-}
-
-/* =========================
-   SIDEBAR SEARCH
-========================= */
-
-.sidebar-search{
-
-    position:relative;
-
-    margin-bottom:22px;
-
-}
-
-.sidebar-search i{
-
-    position:absolute;
-
-    left:18px;
-    top:50%;
-
-    transform:
-    translateY(-50%);
-
-    color:var(--muted);
-
-}
-
-.sidebar-search input{
-
-    width:100%;
-    height:58px;
-
-    border:none;
-    outline:none;
-
-    border-radius:18px;
-
-    background:var(--card);
-
-    color:white;
-
-    padding:
-    0 18px 0 48px;
-
-    font-size:16px;
-
-}
-
-/* =========================
-   SIDEBAR PAGE
-========================= */
-
-.sidebar-page{
-
-    display:none;
-
-}
-
-.sidebar-page.active{
-
-    display:block;
-
-}
-
-/* =========================
-   TREE
-========================= */
-
-.tree-container{
-
-    width:100%;
-
-}
-
-/* =========================
-   TREE NODE
-========================= */
-
-.tree-node{
-
-    margin-bottom:10px;
-
-}
-
-/* =========================
-   TREE TITLE
-========================= */
-
-.tree-title{
-
-    display:flex;
-    align-items:center;
-
-    gap:12px;
-
-    background:var(--card);
-
-    padding:16px;
-
-    border-radius:18px;
-
-    color:white;
-
-    font-size:17px;
-
-}
-
-/* =========================
-   TREE TOGGLE
-========================= */
-
-.tree-toggle{
-
-    width:22px;
-
-    display:flex;
-    justify-content:center;
-
-}
-
-/* =========================
-   TREE COLORS
-========================= */
-
-.tree-green{color:#1dbf73;}
-.tree-red{color:#ff4d5a;}
-.tree-purple{color:#8b5cf6;}
-.tree-orange{color:#ff8c42;}
-.tree-lime{color:#84cc16;}
-.tree-pink{color:#ec4899;}
-.tree-yellow{color:#facc15;}
-.tree-blue{color:#3b82f6;}
-.tree-cyan{color:#06b6d4;}
-.tree-electric{color:#00e5ff;}
-
-/* =========================
-   TREE CHILDREN
-========================= */
-
-.tree-children{
-
-    padding-left:22px;
-
-    margin-top:10px;
-
-}
-
-/* =========================
-   TREE ITEM
-========================= */
-
-.tree-item{
-
-    display:flex;
-    align-items:center;
-
-    gap:12px;
-
-    background:var(--card);
-
-    padding:14px;
-
-    border-radius:16px;
-
-    margin-bottom:10px;
-
-    color:white;
-
-    font-size:16px;
-
-}
-
-.tree-plus{
-
-    width:20px;
-
-    display:flex;
-    justify-content:center;
-
-}
-
-/* =========================
-   MINI MAP
-========================= */
-
-.mini-map-container{
-
-    background:var(--card);
-
-    padding:14px;
-
-    border-radius:24px;
-
-}
-
-/* =========================
-   LEAFLET
-========================= */
-
-.leaflet-control-zoom{
-
-    margin-top:170px !important;
-
-}
-
-/* =========================
-   MOBILE
-========================= */
-
-@media(max-width:768px){
-
-    .topbar h1{
-
-        font-size:18px;
-
+    50% {
+        /* JS orqali ikkinchi fiderning rangiga mos o'zgarishi mantiqi kiritiladi */
+        filter: drop-shadow(0 0 6px var(--fider-color-2, #34C759)) saturate(2);
     }
-
-    .action-grid{
-
-        grid-template-columns:
-        1fr;
-
-    }
-
-    .bottom-sheet{
-
-        max-height:58vh;
-
-    }
-
-    .sidebar{
-
-        width:100%;
-        max-width:100%;
-
-    }
-
-    .info-card h2{
-
-        font-size:26px;
-
-    }
-
-}
+       }
