@@ -1210,3 +1210,323 @@ function loadFilteredPoints() {
             // Element tegishli bo'lgan barcha fiderlar massivi
             let tpFoldersArr = point.folders ? Object.keys(point.folders) : (point.folderId ? [point.folderId] : []);
           
+            // FILTRLASH ssenariylari:
+            let isVisible = false;
+            if (activeFolderId === 'root') {
+                isVisible = true; // Hamma elementlar ko'rinadi
+            } else {
+                // Agar tanlangan fiderlar ro'yxatida elementning kamida bitta fideri bo'lsa xaritaga chiqadi
+                isVisible = tpFoldersArr.some(id => allowedFolderIds.includes(id));
+            }
+
+            if (!isVisible) return;
+
+            // 📍 DUBLIKAT NUQTALARNI OLDINI OLISH VA SCADA MILTILLASH MANTIQI
+            const coordKey = `${lat.toFixed(6)}_${lng.toFixed(6)}`;
+
+            if (displayedPointsMap.has(coordKey)) {
+                // Agar ona papka ochilganda ushbu koordinatada rasm allaqachon chizilgan bo'lsa, uni miltillovchi ro'yxatga olamiz
+                const existingMarkerObj = displayedPointsMap.get(coordKey);
+                existingMarkerObj.associatedFolders = [...existingMarkerObj.associatedFolders, ...tpFoldersArr];
+                return; 
+            }
+
+            bounds.push([lat, lng]);
+            const displayName = point.name || point.address.split(',')[0] || "TP";
+
+            // Markerning standart fider rangini aniqlash
+            const primaryFolderId = tpFoldersArr[0];
+            const primaryColor = (currentFolders[primaryFolderId] && currentFolders[primaryFolderId].color) ? currentFolders[primaryFolderId].color : '#007AFF';
+
+            // Xususiy yoki ETK ekanligiga qarab sarlavha tayyorlash
+            const balanceBadge = point.isPrivate ? `<span style="color:#ff4444; font-weight:bold;">[Xususiy - ${point.ownerFirm || ''}]</span>` : `<span style="color:#007AFF; font-weight:bold;">[ЕТК balansi]</span>`;
+
+            // Maxsus divIcon marker yaratish
+            const markerDiv = document.createElement('div');
+            markerDiv.className = 'custom-tp-marker';
+            
+            // Agar element 1 tadan ko'p fiderga ulangan bo'lsa va ona papka ochiq bo'lsa dynamic CSS o'zgaruvchilarni biriktiramiz (Blinking uchun)
+            if (tpFoldersArr.length > 1) {
+                markerDiv.classList.add('blinking-marker-icon');
+                const secondFolderId = tpFoldersArr[1];
+                const secondaryColor = (currentFolders[secondFolderId] && currentFolders[secondFolderId].color) ? currentFolders[secondFolderId].color : '#34C759';
+                markerDiv.style.setProperty('--fider-color-1', primaryColor);
+                markerDiv.style.setProperty('--fider-color-2', secondaryColor);
+            }
+
+            markerDiv.innerHTML = `<i class="fas fa-map-marker-alt" style="color: ${primaryColor}; font-size: 28px; text-shadow: 0 0 4px black;"></i>`;
+
+            const mIcon = L.divIcon({
+                className: 'custom-leaflet-tp-wrapper',
+                html: markerDiv,
+                iconSize: [28, 28],
+                iconAnchor: [14, 28]
+            });
+
+            const marker = L.marker([lat, lng], {icon: mIcon}).addTo(map);
+            
+            // Popup oynasida barcha muhandislik va schotchik ma'lumotlarini chiroyli chiqarish
+            let popupHtml = `
+                <div style="color:white; background:#001a2c; padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); min-width:200px;">
+                    <b style="font-size:15px; color:#fff; display:block; margin-bottom:4px;">⚡ ${displayName}</b>
+                    ${balanceBadge}<br>
+                    <span style="font-size:12px; color:#88a0b0; display:block; margin-top:5px;"><b>Адрес:</b> ${point.address}</span>
+            `;
+            if (point.isPrivate) {
+                popupHtml += `
+                    <div style="border-top:1px dashed rgba(255,255,255,0.1); margin-top:6px; padding-top:6px; font-size:11px; color:#ffcc00;">
+                        👤 <b>Egasining ismi:</b> ${point.ownerName || '-'}<br>
+                        📞 <b>Tel:</b> ${point.ownerPhone || '-'}<br>
+                        🔢 <b>Hisoblagich №:</b> ${point.meterNumber || '-'}
+                    </div>
+                `;
+            }
+            if (point.imageUrl) {
+                popupHtml += `<div style="margin-top:8px; text-align:center;"><img src="${point.imageUrl}" style="width:100%; max-height:100px; border-radius:6px; object-fit:cover; cursor:pointer;" onclick="window.open('${point.imageUrl}', '_blank')"></div>`;
+            }
+            popupHtml += `</div>`;
+
+            marker.bindPopup(popupHtml, { className: 'custom-popup-scada' });
+            activeMapMarkers.push(marker);
+
+            // Obyektimizni xaritaga (Map) saqlaymiz (keyingi dublikat daxldorliklarni tekshirish uchun)
+            displayedPointsMap.set(coordKey, { marker: marker, associatedFolders: tpFoldersArr });
+
+            // Pastki ro'yxat elementini (Tab items) yaratish va bo'yash
+            const item = document.createElement('div');
+            item.className = 'tp-item';
+            item.style.cssText = `padding: 12px; margin: 6px 0; background: #00223a; border-radius: 8px; cursor: pointer; border-left: 4px solid ${primaryColor}; color: white;`;
+            
+            item.innerHTML = `
+                <div style="font-weight: bold; font-size: 14px; display:flex; justify-content:space-between; align-items:center;">
+                    <span>⚡ ${displayName}</span> 
+                    <span style="font-size:10px; opacity:0.6;">${point.isPrivate ? 'Xususiy' : 'ETK'}</span>
+                </div>
+                <div style="color: #88a0b0; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top:2px;">${point.address}</div>
+            `;
+
+            // Ro'yxat elementi bosilganda xaritani focus qilib yopish
+            item.addEventListener('click', () => {
+                if(listModal) listModal.style.display = 'none';
+                map.setView([lat, lng], 18);
+                marker.openPopup();
+                updatePanelValues(lat, lng, null, true);
+                updateAddress(lat, lng, true);
+            });
+
+            item.setAttribute('data-search-name', displayName.toLowerCase() + point.address.toLowerCase());
+            tpListContainer.appendChild(item);
+        });
+
+        // Agar biror papka ichiga kirilgan bo'lsa, xaritani shundoq o'sha fiderlar hududiga o'tkazish
+        if (bounds.length > 0 && activeFolderId !== 'root') {
+            map.fitBounds(bounds, { padding: [50, 50] });
+        }
+
+        if (tpListContainer.innerHTML === "") {
+            tpListContainer.innerHTML = "<p style='color:gray; padding:15px; text-align:center;'>Elementlar mavjud emas.</p>";
+        }
+    });
+                             }
+
+// 🔥 BAZANI PANELNI OCHMASDAN ORQA FONDA YUKLASH (YAKUNIY KOD)
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("Tizim yuklanmoqda...");
+
+    // 1. Kodingiz ichidagi guruhlarni yuklaydigan funksiyalarni panelni ochmasdan, xotirada to'g'ridan-to'g'ri chaqiramiz
+    const coreFunctions = ['loadGroups', 'fetchGroups', 'listenToGroups', 'loadUserGroups', 'listenToGroupsData', 'loadFolders'];
+    coreFunctions.forEach(fName => {
+        if (typeof window[fName] === "function") {
+            try { window[fName](); } catch(e) {}
+        }
+    });
+
+    // 2. KAFOLAT: Agar tizimda boshqaruv paneli ochilib ketadigan bo'lsa, uni srazi yopib qo'yamiz
+    const listContainer = document.getElementById('list-container');
+    if (listContainer) {
+        listContainer.style.display = 'none'; // Uni vizual yashiramiz
+    }
+
+    // 3. 1.5 sekund "Baza yuklanmoqda..." oynasi turadi (baza xotiraga ma'lumotlarni to'liq yuklaydi)
+    setTimeout(() => {
+        // Yuklanish oynasini o'chiramiz va xodim shundoq toza Glavniy ekranda (Xaritada) qoladi
+        const loader = document.getElementById('app-loader');
+        if (loader) {
+            loader.style.display = 'none';
+        }
+        
+        // Panel 100% yopiq turishi shart
+        if (listContainer) {
+            listContainer.style.display = 'none';
+        }
+        
+        console.log("Yuklanish tugadi. Faqat toza Glavniy ekran faol!");
+    }, 1500); // 1.5 sekund Firebase'dan guruhlar kelib tushishi uchun ideal vaqt
+});                                                 
+
+// =========================================================================
+// BOSHQRUV PANELIDAGI ICHKI XARITA MANTIQI (GLAVNIYGA TA'SIR QILMAYDI)
+// =========================================================================
+var panelMap = null;
+var panelMarkersArray = [];
+
+const tabItemsBtn = document.getElementById('tab-items');
+
+if (tabItemsBtn) {
+    // Sizning kodingizdagi eski click mantiqini butunlay yangilaymiz va boyitamiz
+    tabItemsBtn.addEventListener('click', () => {
+        // 1. Panel ichidagi kichik xarita hali yaratilmagan bo'lsa, uni ishga tushiramiz
+        if (!panelMap) {
+            panelMap = L.map('panel-map', { zoomControl: true }).setView([40.10, 65.81], 14);
+            
+            // Unga ham loyihangizdagi Google Satellit qatlamini beramiz
+            L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
+                maxZoom: 20,
+                subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+            }).addTo(panelMap);
+        }
+
+        // 2. Ichki xaritadagi eski markerlarni tozalaymiz (Glavniy xaritaga tegmaydi)
+        panelMarkersArray.forEach(m => panelMap.removeLayer(m));
+        panelMarkersArray = [];
+
+        // 3. Ma'lumotlar bazasidan tanlangan guruh elementlarini olamiz
+        database.ref('TPs').once('value', (snapshot) => {
+            const allPoints = snapshot.val() || {};
+            const keys = Object.keys(allPoints);
+            
+            // Faqat siz tanlagan guruh (activeFolderId) elementlarini filterlaymiz
+            const filteredKeys = activeFolderId === 'root' ? keys : keys.filter(key => allPoints[key].folderId === activeFolderId);
+            
+            let bounds = [];
+
+            filteredKeys.forEach(key => {
+                const point = allPoints[key];
+                const lat = parseFloat(point.lat);
+                const lng = parseFloat(point.lng);
+                const displayName = point.address.split(',')[0] || "Noma'lum";
+
+                if (!isNaN(lat) && !isNaN(lng)) {
+                    bounds.push([lat, lng]);
+
+                    // Guruh rangini koddagi o'zgaruvchidan olamiz
+                    const folderColor = (currentFolders[point.folderId] && currentFolders[point.folderId].color) ? currentFolders[point.folderId].color : '#ff4444';
+
+                    // Faqat shu ichki xarita uchun marker dizayni (o'z rangi bilan)
+                    const pIcon = L.divIcon({
+                        className: 'panel-internal-marker',
+                        html: `<i class="fas fa-map-marker-alt" style="color: ${folderColor}; font-size: 22px; text-shadow: 0 0 3px black;"></i>`,
+                        iconSize: [22, 22],
+                        iconAnchor: [11, 22]
+                    });
+
+                    const marker = L.marker([lat, lng], { icon: pIcon }).addTo(panelMap);
+                    marker.bindPopup(`<b>${displayName}</b><br>${point.address}`);
+                    panelMarkersArray.push(marker);
+                }
+            });
+
+            // 4. Xarita qotib qolmasligi va faqat o'sha elementlarga markazlashishi (Yaqinlashishi)
+            setTimeout(() => {
+                panelMap.invalidateSize();
+                if (bounds.length > 0) {
+                    panelMap.fitBounds(bounds, { padding: [20, 20], maxZoom: 16 });
+                }
+            }, 300);
+        });
+    });
+}
+
+// =========================================================================
+// UNIVERSAL ICHKI XARITA: FAQAT "XARITA" TABI BOSILGANDA ISHLAYDI
+// =========================================================================
+const panelTabFolders = document.getElementById('tab-folders');
+const panelTabItems = document.getElementById('tab-items');
+const panelSecFolders = document.getElementById('folders-section');
+const panelSecItems = document.getElementById('items-section');
+
+// 1. "Guruhlar" bo'limi bosilganda (Xarita butunlay yo'qoladi, ro'yxat pastgacha ochiladi)
+if (panelTabFolders) {
+    panelTabFolders.addEventListener('click', () => {
+        panelTabFolders.classList.add('active');
+        if (panelTabItems) panelTabItems.classList.remove('active');
+        
+        if (panelSecFolders) panelSecFolders.style.display = 'block';
+        if (panelSecItems) panelSecItems.style.display = 'none';
+    });
+}
+
+// 2. "Xarita" bo'limi bosilganda (Panel ichida universal to'liq xarita ochiladi)
+var panelInternalMap = null;
+var panelInternalMarkers = [];
+
+if (panelTabItems) {
+    panelTabItems.addEventListener('click', () => {
+        if (panelTabItems) panelTabItems.classList.add('active');
+        if (panelTabFolders) panelTabFolders.classList.remove('active');
+        
+        if (panelSecFolders) panelSecFolders.style.display = 'none';
+        if (panelSecItems) panelSecItems.style.display = 'block';
+
+        // Ichki xaritani bir marta yaratib olamiz
+        if (!panelInternalMap) {
+            panelInternalMap = L.map('panel-map', { zoomControl: true }).setView([40.10, 65.81], 14);
+            
+            L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
+                maxZoom: 20,
+                subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+            }).addTo(panelInternalMap);
+        }
+
+        // Har safar bosilganda eski markerlarni tozalash
+        panelInternalMarkers.forEach(m => panelInternalMap.removeLayer(m));
+        panelInternalMarkers = [];
+
+        // Bazadan faqat tanlangan guruh ma'lumotlarini filtrlash
+        database.ref('TPs').once('value', (snapshot) => {
+            const allPoints = snapshot.val() || {};
+            const keys = Object.keys(allPoints);
+            const filteredKeys = activeFolderId === 'root' ? keys : keys.filter(key => allPoints[key].folderId === activeFolderId);
+            
+            let bounds = [];
+
+            filteredKeys.forEach(key => {
+                const point = allPoints[key];
+                const lat = parseFloat(point.lat);
+                const lng = parseFloat(point.lng);
+                const displayName = point.address.split(',')[0] || "Element";
+
+                if (!isNaN(lat) && !isNaN(lng)) {
+                    bounds.push([lat, lng]);
+                    
+                    // Guruh rangini aniqlash
+                    const folderColor = (currentFolders[point.folderId] && currentFolders[point.folderId].color) ? currentFolders[point.folderId].color : '#ff4444';
+
+                    // Marker dizayni (O'z rangi bilan)
+                    const pIcon = L.divIcon({
+                        className: 'panel-internal-marker',
+                        html: `<i class="fas fa-map-marker-alt" style="color: ${folderColor}; font-size: 24px; text-shadow: 0 0 3px black;"></i>`,
+                        iconSize: [24, 24],
+                        iconAnchor: [12, 24]
+                    });
+
+                    const marker = L.marker([lat, lng], { icon: pIcon }).addTo(panelInternalMap);
+                    marker.bindPopup(`<b>${displayName}</b><br>${point.address}`);
+                    panelInternalMarkers.push(marker);
+                }
+            });
+
+            // Universal o'lchamlarni yangilab, markerlarga markazlashtirish (Yaqinlashtirish)
+            setTimeout(() => {
+                if (panelInternalMap) {
+                    panelInternalMap.invalidateSize();
+                    if (bounds.length > 0) {
+                        panelInternalMap.fitBounds(bounds, { padding: [30, 30], maxZoom: 16 });
+                    }
+                }
+            }, 300);
+        });
+    });
+}
+
+  
