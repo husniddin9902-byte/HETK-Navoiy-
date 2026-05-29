@@ -766,6 +766,33 @@ function debounce(func, delay) {
         timer = setTimeout(() => func.apply(this, args), delay);
     };
 }
+// =========================
+// MULTI IMAGE STORAGE
+// =========================
+
+function renderMultiImagePreview() {
+    const preview = document.getElementById('multi-image-preview');
+    if (!preview) return;
+    preview.innerHTML = '';
+    currentUploadedImages.forEach((url, index) => {
+        const box = document.createElement('div');
+      box.className = 'multi-image-box';
+    box.innerHTML = `
+            <img src="${url}">
+            <button
+                class="multi-image-remove"
+                onclick="removeUploadedImage(${index})">
+                ✕
+            </button>
+        `;
+        preview.appendChild(box);
+    });
+
+}
+function removeUploadedImage(index){
+    currentUploadedImages.splice(index,1);
+    renderMultiImagePreview();
+}
 // 6. Rasm yuklash va uni orqa fonda xarajatsiz Telegram Botga yuborish mantiqi
 if (elementImageInput) {
     elementImageInput.addEventListener('change', function(e) {
