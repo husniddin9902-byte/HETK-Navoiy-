@@ -804,9 +804,10 @@ if (!files.length) return;
         imageStatusText.style.color = "#ffcc00";
 
         const formData = new FormData();
-        formData.append("chat_id", TELEGRAM_CHAT_ID);
-        formData.append("photo", file);
+formData.append("chat_id", TELEGRAM_CHAT_ID);
 
+const file = files[0];
+formData.append("photo", file);
         // Telegram API orqali rasmni yuborib doimiy Link olish
         fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`, {
             method: "POST",
