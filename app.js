@@ -636,6 +636,7 @@ function refreshTreeDropdownSelection(container, selectedId) {
 const TELEGRAM_BOT_TOKEN = "8992286638:AAFPqW8OuFnBe-u6WZqqxiL1h3nhlIz48Qg"; // Bot tokeningizni shu yerga yozasiz
 const TELEGRAM_CHAT_ID = "-1003934340914"; // Maxfiy kanal yoki guruh IDsini yozasiz
 let currentUploadedImages = []; // Telegramdan kelgan rasm linkini vaqtincha saqlash uchun
+let telegramMessageIds = [];
 let editingElementId = null; // Tahrirlash rejimi uchun element IDsi
 
 // 2. Global Element Kiritish Oynasini Boshqarish Elementlari
