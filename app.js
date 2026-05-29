@@ -796,8 +796,8 @@ function removeUploadedImage(index){
 // 6. Rasm yuklash va uni orqa fonda xarajatsiz Telegram Botga yuborish mantiqi
 if (elementImageInput) {
     elementImageInput.addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (!file) return;
+       const files = Array.from(e.target.files);
+if (!files.length) return; 
 
         // Vizual yuklanish holati
         imageStatusText.innerText = "Yuklanmoqda...";
