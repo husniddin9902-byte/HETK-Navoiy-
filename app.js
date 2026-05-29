@@ -826,6 +826,7 @@ formData.append("photo", file);
                 .then(fResult => {
                     if (fResult.ok) {
                         currentUploadedImageUrl = `https://api.telegram.org/file/bot${TELEGRAM_BOT_TOKEN}/${fResult.result.file_path}`;
+                      currentUploadedImages.push(currentUploadedImageUrl); renderMultiImagePreview();
                         
                         // Ekrandagi preview rasm elementini yangilash
                         elementImagePreview.src = currentUploadedImageUrl;
