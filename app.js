@@ -23,6 +23,12 @@ let currentFolders = {};
 let activeFolderId = 'root'; 
 let editingFolderId = null;
 let activeMapMarkers = []; // Xaritadagi dinamik markerlarni nazorat qilish uchun massiv
+let currentUploadedImages = [];
+let telegramMessageIds = [];
+let editingElementId = null;
+
+let selectedFiles = [];
+let uploadedTelegramImages = [];
 
 // Google Satellit qatlami
 L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}',{
