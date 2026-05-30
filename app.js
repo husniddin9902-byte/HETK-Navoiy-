@@ -322,7 +322,7 @@ function updateParentSelect(selectId, excludeId = null) {
     
     // Asosiy select o'zgarganda dynamic daraxt dropdownlarni yangilaymiz
     refreshTreeDropdowns(excludeId);
-}
+
 
 window.addEventListener('load', function() {
     setTimeout(function() { map.invalidateSize(); }, 500);
