@@ -803,7 +803,7 @@ if(file.type.startsWith('image/')){
 selectedFiles.push(file);
 }
 });
-imageStatusText.innerText=`${selectedFiles.length} ta rasm tanlandi`;
+imageStatusText.innerText=`${selectedFiles.length} ta rasm tanlandi    +`;
 imageStatusText.style.color="#34C759";
 renderMultiImagePreview();
 this.value="";
