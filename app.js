@@ -491,4 +491,385 @@ document.getElementById('delete-folder-btn').addEventListener('click', () => {
 document.getElementById('update-folder-btn').addEventListener('click', () => {
     const newName = document.getElementById('edit-group-name').value;
     const newParentId = document.getElementById('edit-parent-folder-select').value;
+    const newHue = editColorSlider ? editColorSlider.value : 0;
+
+    if (newName.trim() === "") return alert("Nomini kiriting");
+
+    database.ref('Folders/' + editingFolderId).update({
+        name: newName,
+        parentId: newParentId,
+        hue: newHue,
+        color: `hsl(${newHue}, 100%, 50%)`
+    }).then(() => {
+        showToast("Guruh yangilandi!");
+        document.getElementById('edit-folder-panel').classList.add('hidden');
+    });
+});
+
+// =========================================================================
+// MUKAMMAL SIZ AYTGAN IERARXIK JUMLADAN DARAXTSIMON DROPDOWNLAR MANTIQI
+// =========================================================================
+// =========================================================================
+// MUKAMMAL IERARXIK DARAXTSIMON DROPDOWNLAR MANTIQI (TUGLAR TO'G'RI ISHLAYDI)
+// =========================================================================
+function refreshTreeDropdowns(excludeId = null) {
+    buildTreeInDiv('parent-folder-tree', 'parent-folder-select', excludeId);
+    buildTreeInDiv('edit-parent-folder-tree', 'edit-parent-folder-select', excludeId);
+}
+
+function buildTreeInDiv(treeContainerId, nativeSelectId, excludeId = null) {
+    const container = document.getElementById(treeContainerId);
+    const nativeSelect = document.getElementById(nativeSelectId);
+    if (!container || !nativeSelect) return;
+
+    container.innerHTML = "";
+
+    // 1. Asosiy (Bosh guruh) variantini yaratish
+    const rootRow = document.createElement('div');
+    rootRow.style.cssText = "display:flex; align-items:center; padding:8px; cursor:pointer; color:white; font-size:14px; border-radius:6px;";
+    rootRow.innerHTML = `<span style="width:20px; text-align:center; color:#88a0b0; font-weight:bold; margin-right:5px;">•</span><i class="fas fa-home" style="color:#88a0b0; margin-right:8px;"></i> Asosiy (Bosh guruh)`;
     
+    if (nativeSelect.value === 'root' || !nativeSelect.value) {
+        rootRow.style.background = "#007AFF";
+    }
+    
+    rootRow.addEventListener('click', () => {
+        nativeSelect.value = 'root';
+        refreshTreeDropdownSelection(container, 'root');
+    });
+    container.appendChild(rootRow);
+
+    // 2. To'g'ri ierarxik rekursiya funksiyasi
+    function appendChildrenNodes(parentId, level, targetBox) {
+        const children = Object.keys(currentFolders).filter(id => currentFolders[id].parentId === parentId);
+        
+        children.forEach(id => {
+            if (excludeId && id === excludeId) return; // O'zini o'ziga ichki guruh qilishni cheklash
+
+            const folder = currentFolders[id];
+            const hasSubFolders = Object.keys(currentFolders).some(childId => currentFolders[childId].parentId === id);
+            
+            const rowWrapper = document.createElement('div');
+            rowWrapper.style.margin = "2px 0";
+
+            const row = document.createElement('div');
+            row.id = `tree-item-${treeContainerId}-${id}`;
+            row.style.cssText = `display:flex; align-items:center; padding:8px; cursor:pointer; color:white; font-size:14px; border-radius:6px;`;
+            row.style.paddingLeft = `${(level + 1) * 16}px`;
+
+            // Farzandi bor guruhlarga dynamic [+] aks holda nuqta [•]
+            const prefixIcon = hasSubFolders ? `<span class="dropdown-toggle-icon" style="width:20px; text-align:center; color:#88a0b0; font-weight:bold; margin-right:5px; cursor:pointer; background:rgba(255,255,255,0.05); border-radius:4px;">+</span>` : `<span style="width:20px; text-align:center; color:#557080; margin-right:5px;">•</span>`;
+
+            row.innerHTML = `
+                ${prefixIcon}
+                <i class="fas fa-folder" style="color: ${folder.color}; margin-right:8px;"></i>
+                <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${folder.name}</span>
+            `;
+
+            if (nativeSelect.value === id) {
+                row.style.background = "#007AFF";
+            }
+
+            rowWrapper.appendChild(row);
+
+            // Guruh tanlanishi mantiqi
+            row.addEventListener('click', () => {
+                nativeSelect.value = id;
+                refreshTreeDropdownSelection(container, id);
+            });
+
+            // Agar ichki guruhlari bo'lsa, ularni yashirin qutiga (childBox) joylash
+            if (hasSubFolders) {
+                const childBox = document.createElement('div');
+                childBox.id = `tree-child-box-${treeContainerId}-${id}`;
+                childBox.style.display = "none"; // BOSHIDA HAMMASI ZICX VA YASHIRIN TURADI
+                childBox.style.borderLeft = "1px dashed rgba(255,255,255,0.1)";
+                childBox.style.marginLeft = `${(level + 1) * 10}px`;
+                
+                rowWrapper.appendChild(childBox);
+
+                // Rekursiv ravishda bolalarini shu yashirin qutiga voris qilib biriktiramiz
+                appendChildrenNodes(id, level + 1, childBox);
+
+                // [+] yoki [-] bosilganda ochilish/yopilish hodisasi
+                const toggleIconNode = row.querySelector('.dropdown-toggle-icon');
+                if (toggleIconNode) {
+                    toggleIconNode.addEventListener('click', (event) => {
+                        event.stopPropagation(); // Satr bosilib ketishini to'xtatadi
+                        if (childBox.style.display === "none") {
+                            childBox.style.display = "block";
+                            toggleIconNode.innerText = "-";
+                        } else {
+                            childBox.style.display = "none";
+                            toggleIconNode.innerText = "+";
+                        }
+                    });
+                }
+            }
+
+            // Elementni target qutiga qo'shish
+            targetBox.appendChild(rowWrapper);
+        });
+    }
+
+    // Eng yuqori darajadagi guruhlarni (root) asosiy konteynerga chizish
+    appendChildrenNodes('root', 0, container);
+}
+
+// Tanlangan guruhni ko'k rang bilan belgilash funksiyasi
+function refreshTreeDropdownSelection(container, selectedId) {
+    container.querySelectorAll('div[id^="tree-item-"]').forEach(el => {
+        el.style.background = "transparent";
+    });
+    
+    const targetDiv = container.querySelector(`[id$="-${selectedId}"]`);
+    
+    if (targetDiv) {
+        targetDiv.style.background = "#007AFF";
+    } else if (selectedId === 'root') {
+        const firstDiv = container.querySelector('div');
+        if (firstDiv) firstDiv.style.background = "#007AFF";
+    }
+}
+
+// 1. Telegram Bot Sozlamalari (Orqa fonda 0 xarajat va bepul limit bilan rasmlarni saqlash uchun)
+const TELEGRAM_BOT_TOKEN = "8992286638:AAFPqW8OuFnBe-u6WZqqxiL1h3nhlIz48Qg"; // Bot tokeningizni shu yerga yozasiz
+const TELEGRAM_CHAT_ID = "-1003934340914"; // Maxfiy kanal yoki guruh IDsini yozasiz
+let currentUploadedImageUrl = ""; // Telegramdan kelgan rasm linkini vaqtincha saqlash uchun
+let editingElementId = null; // Tahrirlash rejimi uchun element IDsi
+
+// 2. Global Element Kiritish Oynasini Boshqarish Elementlari
+const elementManagePanel = document.getElementById('element-manage-panel');
+const elementMainForm = document.getElementById('element-main-form');
+const inputLatitude = document.getElementById('input-latitude');
+const inputLongitude = document.getElementById('input-longitude');
+const inputElementName = document.getElementById('input-element-name');
+const inputElementAddress = document.getElementById('input-element-address');
+const inputElementPhone = document.getElementById('input-element-phone');
+const inputElementNote = document.getElementById('input-element-note');
+const inputBalanceToggle = document.getElementById('input-balance-toggle');
+const balanceStatusText = document.getElementById('balance-status-text');
+const privateOwnerInfoBlock = document.getElementById('private-owner-info-block');
+
+// Xususiy TP inputlari
+const inputOwnerFirm = document.getElementById('input-owner-firm');
+const inputOwnerName = document.getElementById('input-owner-name');
+const inputOwnerPhone = document.getElementById('input-owner-phone');
+const inputMeterNumber = document.getElementById('input-meter-number');
+
+// Rasm elementlari
+const elementImageInput = document.getElementById('element-image-input');
+const elementImagePreview = document.getElementById('element-image-preview');
+const imageIconPlaceholder = document.getElementById('image-icon-placeholder');
+const imageStatusText = document.getElementById('image-status-text');
+const removeImageBtn = document.getElementById('remove-image-btn');
+const deleteElementBtn = document.getElementById('delete-element-btn');
+
+// 3. "Save Location" tugmasi bosilganda formani ochish mantiqi (Plus knopka shartmas!)
+document.querySelector('.save-btn').addEventListener('click', function() {
+    // Joriy paneldagi textlardan koordinatalarni ajratib olamiz
+    const currentLat = parseFloat(document.getElementById('latitude').innerText);
+    const currentLng = parseFloat(document.getElementById('longitude').innerText);
+    const currentAddr = document.getElementById('address').innerText;
+
+    if (isNaN(currentLat) || isNaN(currentLng) || currentLat === 0) {
+        return showToast("Koordinata aniqlanmadi!");
+    }
+
+    // Formani tozalab yangi kiritish rejimiga o'tkazamiz
+    resetElementForm();
+    editingElementId = null;
+    document.getElementById('element-panel-title').innerText = "Добавить местоположение";
+    deleteElementBtn.classList.add('hidden');
+
+    // Qiymatlarni kiritamiz
+    inputLatitude.value = currentLat;
+    inputLongitude.value = currentLng;
+    inputElementAddress.value = currentAddr;
+
+    // Guruhlar daraxt dropdownini dynamic chizamiz
+    renderElementTreeDropdown();
+
+    // Panelni ochamiz
+    elementManagePanel.classList.remove('hidden');
+});
+
+// 4. Balans turi o'zgarganda (Tumbler switch bosilganda) yashirin bloklarni boshqarish
+if (inputBalanceToggle) {
+    inputBalanceToggle.addEventListener('change', function() {
+        if (this.checked) {
+            balanceStatusText.innerText = "Xususiy";
+            balanceStatusText.style.color = "#ff4444";
+            privateOwnerInfoBlock.classList.remove('hidden');
+            // Maydonlarni to'ldirish majburiy bo'ladi
+            togglePrivateFieldsRequired(true);
+        } else {
+            balanceStatusText.innerText = "ЕТК";
+            balanceStatusText.style.color = "#007AFF";
+            privateOwnerInfoBlock.classList.add('hidden');
+            togglePrivateFieldsRequired(false);
+        }
+    });
+}
+
+function togglePrivateFieldsRequired(isRequired) {
+    inputOwnerFirm.required = isRequired;
+    inputOwnerName.required = isRequired;
+}
+
+// 5. Siz aytgan eng muhim mantiq: Koordinatalar qo'lda o'zgartirilganda dynamic adresni aniqlash
+if (inputLatitude && inputLongitude) {
+    const triggerGeocoding = debounce(() => {
+        const lat = parseFloat(inputLatitude.value);
+        const lng = parseFloat(inputLongitude.value);
+        
+        if (!isNaN(lat) && !isNaN(lng)) {
+            inputElementAddress.value = "Yangi manzil aniqlanmoqda...";
+            
+            // OpenStreetMap Reverse Geocoding API
+                    // 734-qator: OpenStreetMap so'roviga o'zbek tili &accept-language=uz qo'shildi
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=uz`)
+            .then(res => res.json())
+            .then(data => {
+                inputElementAddress.value = data.display_name || "Manzil topilmadi";
+                
+                // ⚡ YANGI: Matn so'z o'rtasidan bo'linib, xunuk bo'lib ketmasligi uchun stillar
+                inputElementAddress.style.wordBreak = "keep-all";
+                inputElementAddress.style.overflowWrap = "break-word";
+                inputElementAddress.style.whiteSpace = "normal";
+
+                // Agar xaritada marker bo'lsa uni yangi koordinataga suramiz
+                if (selectedMarker) {
+                    selectedMarker.setLatLng([lat, lng]);
+                } else {
+                    isManualSelection = true;
+                    selectedMarker = L.marker([lat, lng]).addTo(map);
+                }
+                map.setView([lat, lng], 17);
+            }).catch(() => {
+                inputElementAddress.value = "Internetda xatolik yuz berdi";
+            });
+          
+        }
+    }, 1000); // Foydalanuvchi yozib bo'lishini 1 sekund kutadi
+
+    inputLatitude.addEventListener('input', triggerGeocoding);
+    inputLongitude.addEventListener('input', triggerGeocoding);
+}
+
+// Debounce funksiyasi - har bir harfda serverga so'rov yuborib qotib qolmasligi uchun
+function debounce(func, delay) {
+    let timer;
+    return function (...args) {
+        clearTimeout(timer);
+        timer = setTimeout(() => func.apply(this, args), delay);
+    };
+}
+// 6. Rasm yuklash va uni orqa fonda xarajatsiz Telegram Botga yuborish mantiqi
+if (elementImageInput) {
+    elementImageInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // Vizual yuklanish holati
+        imageStatusText.innerText = "Yuklanmoqda...";
+        imageStatusText.style.color = "#ffcc00";
+
+        const formData = new FormData();
+        formData.append("chat_id", TELEGRAM_CHAT_ID);
+        formData.append("photo", file);
+
+        // Telegram API orqali rasmni yuborib doimiy Link olish
+        fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`, {
+            method: "POST",
+            body: formData
+        })
+        .then(res => res.json())
+        .then(result => {
+            if (result.ok) {
+                // Telegram kanaldagi eng oxirgi kichik o'lchamli rasm linkini olamiz (Tez yuklanishi uchun)
+                const photos = result.result.photo;
+                const fileId = photos[photos.length - 1].file_id;
+                
+                // File ID orqali to'g'ridan-to'g'ri URL manzilini olamiz
+                fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getFile?file_id=${fileId}`)
+                .then(r => r.json())
+                .then(fResult => {
+                    if (fResult.ok) {
+                        currentUploadedImageUrl = `https://api.telegram.org/file/bot${TELEGRAM_BOT_TOKEN}/${fResult.result.file_path}`;
+                        
+                        // Ekrandagi preview rasm elementini yangilash
+                        elementImagePreview.src = currentUploadedImageUrl;
+                        elementImagePreview.classList.remove('hidden');
+                        removeImageBtn.classList.remove('hidden');
+                        imageStatusText.innerText = "Yuklandi";
+                        imageStatusText.style.color = "#34C759";
+                    }
+                });
+            } else {
+                imageStatusText.innerText = "Xatolik!";
+                showToast("Rasm yuklashda xatolik yuz berdi");
+            }
+        })
+        .catch(() => {
+            imageStatusText.innerText = "Ulanish xatosi";
+            showToast("Telegram bot bilan aloqa yo'q");
+        });
+    });
+}
+
+// Yuklangan rasmni formadan olib tashlash
+if (removeImageBtn) {
+    removeImageBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        currentUploadedImageUrl = "";
+        elementImagePreview.src = "";
+        elementImagePreview.classList.add('hidden');
+        removeImageBtn.classList.add('hidden');
+        imageStatusText.innerText = "Rasm";
+        imageStatusText.style.color = "#88a0b0";
+        elementImageInput.value = "";
+    });
+                                     }
+
+
+// 7. Element Formasi uchun daraxtsimon Multiselect (Many-to-Many fiderlar tanlash) dropdown chizish
+function renderElementTreeDropdown() {
+    const dropdownContainer = document.getElementById('element-parent-folder-tree');
+    if (!dropdownContainer) return;
+
+    dropdownContainer.innerHTML = "";
+    const selectedFoldersInput = document.getElementById('element-selected-folders');
+    // Avvaldan tanlangan fiderlar massivi (Tahrirlash rejimi uchun)
+    let selectedArray = selectedFoldersInput.value ? selectedFoldersInput.value.split(',') : [];
+
+    function buildNode(parentId, level, targetBox) {
+        const folders = Object.keys(currentFolders).filter(id => currentFolders[id].parentId === parentId);
+        
+        folders.forEach(id => {
+            const folder = currentFolders[id];
+            const isChecked = selectedArray.includes(id) ? "checked" : "";
+            const hasSubFolders = Object.keys(currentFolders).some(childId => currentFolders[childId].parentId === id);
+            
+            // Har bir element va uning bolalari uchun umumiy wrapper quti
+            const nodeWrapper = document.createElement('div');
+            nodeWrapper.style.cssText = "margin: 4px 0; width: 100%; display: block;";
+
+            // Qator dizayni
+            const row = document.createElement('div');
+            row.style.cssText = `display: flex; align-items: center; gap: 8px; padding: 6px 4px; border-radius: 6px; transition: background 0.2s;`;
+            row.style.paddingLeft = `${level * 16}px`; // Ichkariga surilish masofasi
+            row.style.background = selectedArray.includes(id) ? "rgba(0,122,255,0.15)" : "transparent";
+
+            // Ochilib yopilish belgisi dynamic yaratiladi
+            const toggleSign = hasSubFolders 
+                ? `<span class="elem-tree-toggle" style="width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; color: #88a0b0; font-weight: bold; cursor: pointer; background: rgba(255,255,255,0.07); border-radius: 4px; font-size: 13px; user-select: none;">+</span>` 
+                : `<span style="width: 20px; text-align: center; color: #4b6575; font-size: 12px;">•</span>`;
+
+            row.innerHTML = `
+                ${toggleSign}
+                <input type="checkbox" value="${id}" ${isChecked} class="element-folder-checkbox" style="width:18px; height:18px; cursor:pointer; margin: 0; flex-shrink: 0;">
+                <i class="fas fa-folder" style="color: ${folder.color}; font-size:15px; flex-shrink: 0;"></i>
+                <span style="font-size:14px; color:white; cursor:pointer; user-select:none; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex-grow: 1;">${folder.name}</span>
+            `;
+              
