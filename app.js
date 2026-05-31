@@ -766,72 +766,65 @@ function debounce(func, delay) {
     };
 }
 // 6. Rasm yuklash va uni orqa fonda xarajatsiz Telegram Botga yuborish mantiqi
-if (elementImageInput) {
-    elementImageInput.addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (!file) return;
+let selectedFiles=[];
+let uploadedTelegramImages=[];
 
-        // Vizual yuklanish holati
-        imageStatusText.innerText = "Yuklanmoqda...";
-        imageStatusText.style.color = "#ffcc00";
-
-        const formData = new FormData();
-        formData.append("chat_id", TELEGRAM_CHAT_ID);
-        formData.append("photo", file);
-
-        // Telegram API orqali rasmni yuborib doimiy Link olish
-        fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`, {
-            method: "POST",
-            body: formData
-        })
-        .then(res => res.json())
-        .then(result => {
-            if (result.ok) {
-                // Telegram kanaldagi eng oxirgi kichik o'lchamli rasm linkini olamiz (Tez yuklanishi uchun)
-                const photos = result.result.photo;
-                const fileId = photos[photos.length - 1].file_id;
-                
-                // File ID orqali to'g'ridan-to'g'ri URL manzilini olamiz
-                fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getFile?file_id=${fileId}`)
-                .then(r => r.json())
-                .then(fResult => {
-                    if (fResult.ok) {
-                        currentUploadedImageUrl = `https://api.telegram.org/file/bot${TELEGRAM_BOT_TOKEN}/${fResult.result.file_path}`;
-                        
-                        // Ekrandagi preview rasm elementini yangilash
-                        elementImagePreview.src = currentUploadedImageUrl;
-                        elementImagePreview.classList.remove('hidden');
-                        removeImageBtn.classList.remove('hidden');
-                        imageStatusText.innerText = "Yuklandi";
-                        imageStatusText.style.color = "#34C759";
-                    }
-                });
-            } else {
-                imageStatusText.innerText = "Xatolik!";
-                showToast("Rasm yuklashda xatolik yuz berdi");
-            }
-        })
-        .catch(() => {
-            imageStatusText.innerText = "Ulanish xatosi";
-            showToast("Telegram bot bilan aloqa yo'q");
-        });
-    });
+function renderMultiImagePreview(){
+const previewContainer=document.getElementById('multi-image-preview');
+if(!previewContainer)return;
+previewContainer.innerHTML='';
+selectedFiles.forEach((file,index)=>{
+const reader=new FileReader();
+reader.onload=function(e){
+const box=document.createElement('div');
+box.className='multi-image-box';
+box.innerHTML=`<img src="${e.target.result}"><button type="button" class="multi-image-remove" data-index="${index}">×</button>`;
+previewContainer.appendChild(box);
+};
+reader.readAsDataURL(file);
+});
+previewContainer.querySelectorAll('.multi-image-remove').forEach(btn=>{
+btn.onclick=function(){
+const index=parseInt(this.dataset.index);
+selectedFiles.splice(index,1);
+renderMultiImagePreview();
+imageStatusText.innerText=`${selectedFiles.length} ta rasm`;
+};
+});
 }
 
-// Yuklangan rasmni formadan olib tashlash
-if (removeImageBtn) {
-    removeImageBtn.addEventListener('click', function(e) {
-        e.preventDefault();
-        currentUploadedImageUrl = "";
-        elementImagePreview.src = "";
-        elementImagePreview.classList.add('hidden');
-        removeImageBtn.classList.add('hidden');
-        imageStatusText.innerText = "Rasm";
-        imageStatusText.style.color = "#88a0b0";
-        elementImageInput.value = "";
-    });
-                                     }
+if(elementImageInput){
+elementImageInput.setAttribute('multiple','multiple');
+elementImageInput.addEventListener('change',function(e){
+const files=Array.from(e.target.files);
+if(!files.length)return;
+files.forEach(file=>{
+if(file.type.startsWith('image/')){
+selectedFiles.push(file);
+}
+});
+imageStatusText.innerText=`${selectedFiles.length} ta rasm tanlandi`;
+imageStatusText.style.color="#34C759";
+renderMultiImagePreview();
+this.value="";
+});
+}
 
+if(removeImageBtn){
+removeImageBtn.addEventListener('click',function(e){
+e.preventDefault();
+selectedFiles=[];
+uploadedTelegramImages=[];
+renderMultiImagePreview();
+currentUploadedImageUrl="";
+elementImagePreview.src="";
+elementImagePreview.classList.add('hidden');
+removeImageBtn.classList.add('hidden');
+imageStatusText.innerText="Rasm";
+imageStatusText.style.color="#88a0b0";
+elementImageInput.value="";
+});
+}
 
 // 7. Element Formasi uchun daraxtsimon Multiselect (Many-to-Many fiderlar tanlash) dropdown chizish
 function renderElementTreeDropdown() {
