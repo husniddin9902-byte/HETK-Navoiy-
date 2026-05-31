@@ -873,3 +873,471 @@ function renderElementTreeDropdown() {
                 <span style="font-size:14px; color:white; cursor:pointer; user-select:none; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex-grow: 1;">${folder.name}</span>
             `;
               
+  // Checkbox o'zgarganda input elementga yozish mantiqi
+            const checkbox = row.querySelector('.element-folder-checkbox');
+            checkbox.addEventListener('change', function() {
+                let currentSelected = selectedFoldersInput.value ? selectedFoldersInput.value.split(',') : [];
+                if (this.checked) {
+                    if (!currentSelected.includes(this.value)) currentSelected.push(this.value);
+                    row.style.background = "rgba(0,122,255,0.15)";
+                } else {
+                    currentSelected = currentSelected.filter(v => v !== this.value);
+                    row.style.background = "transparent";
+                }
+                selectedFoldersInput.value = currentSelected.filter(Boolean).join(',');
+            });
+
+            // Matn (Guruh nomi) bosilganda ham checkbox belgilansin
+            row.querySelector('span').addEventListener('click', () => {
+                checkbox.checked = !checkbox.checked;
+                checkbox.dispatchEvent(new Event('change'));
+            });
+
+            nodeWrapper.appendChild(row);
+
+            // Agar ichki guruhlar bo'lsa, ularni zichlab yashirin qutiga (childBox) solamiz
+            if (hasSubFolders) {
+                const childBox = document.createElement('div');
+                childBox.className = "tree-child-container";
+                childBox.style.cssText = "display: none; border-left: 1px dashed rgba(255,255,255,0.12); margin-top: 2px;";
+                childBox.style.marginLeft = `${(level * 16) + 10}px`; // Chiziq to'g'ri tushishi uchun surish
+                
+                nodeWrapper.appendChild(childBox);
+
+                // Rekursiya: Bolalarini o'zidan bitta katta level bilan yangi childBox ichiga soladi
+                buildNode(id, level + 1, childBox);
+
+                // [+] yoki [-] bosilganda ochilish va yopilish hodisasi
+                const toggleBtn = row.querySelector('.elem-tree-toggle');
+                if (toggleBtn) {
+                    toggleBtn.addEventListener('click', (event) => {
+                        event.stopPropagation(); // Checkbox yoki qatorga o'tib ketishini to'xtatadi
+                        if (childBox.style.display === "none") {
+                            childBox.style.display = "block";
+                            toggleBtn.innerText = "-";
+                            toggleBtn.style.background = "rgba(0,122,255,0.2)";
+                            toggleBtn.style.color = "#007AFF";
+                        } else {
+                            childBox.style.display = "none";
+                            toggleBtn.innerText = "+";
+                            toggleBtn.style.background = "rgba(255,255,255,0.07)";
+                            toggleBtn.style.color = "#88a0b0";
+                        }
+                    });
+                }
+            }
+
+            targetBox.appendChild(nodeWrapper);
+        });
+    }
+
+    // Eng yuqori (Bosh guruh - root) elementlardan daraxtni yopiq holda yaratishni boshlaymiz
+    buildNode('root', 0, dropdownContainer);
+}
+
+// 8. Elementni Firebase Realtime Database'ga Saqlash va Tahrirlash (Many-to-Many tizimda)
+if (elementMainForm) {
+    elementMainForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const selectedFolders = document.getElementById('element-selected-folders').value;
+        if (!selectedFolders) return showToast("Kamida bitta fiderni (guruh) belgilang!");
+
+        const folderIdsArray = selectedFolders.split(',').filter(Boolean);
+
+        // Saqlanadigan obyekt strukturasi
+        const elementData = {
+            name: inputElementName.value,
+            lat: inputLatitude.value,
+            lng: inputLongitude.value,
+            address: inputElementAddress.value,
+            phone: inputElementPhone.value,
+            note: inputElementNote.value,
+            imageUrl: currentUploadedImageUrl,
+            isPrivate: inputBalanceToggle.checked,
+            // Many-to-Many: fiderlarni obyekt ichida saqlash (qidirish oson bo'lishi uchun)
+            folders: folderIdsArray.reduce((acc, id) => ({ ...acc, [id]: true }), {}),
+            // Eski kodlar buzilmasligi uchun birinchi fiderni standart folderId ga ham yozib qo'yamiz
+            folderId: folderIdsArray[0], 
+            
+            // Xususiy fieldlar agar o'chiq bo'lsa bo'sh ketadi
+            ownerFirm: inputBalanceToggle.checked ? inputOwnerFirm.value : "",
+            ownerName: inputBalanceToggle.checked ? inputOwnerName.value : "",
+            ownerPhone: inputBalanceToggle.checked ? inputOwnerPhone.value : "",
+            meterNumber: inputBalanceToggle.checked ? inputMeterNumber.value : "",
+            updatedAt: Date.now()
+        };
+
+        if (!editingElementId) {
+            // Yangi element yaratish holati
+            elementData.createdAt = Date.now();
+            database.ref('TPs').push(elementData).then(() => {
+                showToast("Yangi element muvaffaqiyatli saqlandi!");
+                elementManagePanel.classList.add('hidden');
+                resetToUserLocation();
+                if(document.getElementById('tab-items').classList.contains('active')) loadFilteredPoints();
+            });
+        } else {
+            // Mavjud elementni yangilash holati
+            database.ref('TPs/' + editingElementId).update(elementData).then(() => {
+                showToast("Element ma'lumotlari yangilandi!");
+                elementManagePanel.classList.add('hidden');
+                editingElementId = null;
+                if(document.getElementById('tab-items').classList.contains('active')) loadFilteredPoints();
+            });
+        }
+    });
+}
+
+// Elementni o'chirish tugmasi mantiqi
+if (deleteElementBtn) {
+    deleteElementBtn.addEventListener('click', function() {
+        if (editingElementId && confirm("Ushbu elementni (TP) butunlay o'chirib tashlamoqchimisiz?")) {
+            database.ref('TPs/' + editingElementId).remove().then(() => {
+                showToast("Element o'chirib tashlandi!");
+                elementManagePanel.classList.add('hidden');
+                editingElementId = null;
+                if(document.getElementById('tab-items').classList.contains('active')) loadFilteredPoints();
+            });
+        }
+    });
+              }
+      
+             // Formani tozalash funksiyasi
+function resetElementForm() {
+    elementMainForm.reset();
+    currentUploadedImageUrl = "";
+    elementImagePreview.src = "";
+    elementImagePreview.classList.add('hidden');
+    removeImageBtn.classList.add('hidden');
+    imageStatusText.innerText = "Rasm";
+    imageStatusText.style.color = "#88a0b0";
+    balanceStatusText.innerText = "ЕТК";
+    balanceStatusText.style.color = "#007AFF";
+    privateOwnerInfoBlock.classList.add('hidden');
+    document.getElementById('element-selected-folders').value = "";
+}
+
+
+// =========================================================================
+// 🔄 ESKI FUNKSIYALARNI INTEGRATSIYA QILISH VA SCADA ANIMATSIYALARI (OVERRIDE)
+// =========================================================================
+
+// 1. ESKI renderTree funksiyasini tahrirlash (✏️ Qalamcha bosilganda TP elementlarini ham ochish imkoni)
+// Guruhlar bo'limida har bir fiderning ostiga unga biriktirilgan TPlarni ketma-ket joylashtiramiz.
+function renderTree(parentId, container) {
+    container.innerHTML = "";
+    const children = Object.keys(currentFolders).filter(id => currentFolders[id].parentId === parentId);
+    
+    children.forEach(id => {
+        const folder = currentFolders[id];
+        const item = document.createElement('div');
+        item.className = 'folder-item';
+        
+        item.innerHTML = `
+            <div class="folder-header" id="folder-${id}" onclick="selectFolder('${id}')">
+                <span class="toggle-btn" style="width: 20px; text-align: center; font-size: 16px; display: inline-block;" onclick="event.stopPropagation(); toggleFolderView('${id}')">+</span>
+                <i class="fas fa-folder" style="color: ${folder.color}; margin-right: 5px;"></i>
+                <span style="flex-grow: 1; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline-block;">${folder.name}</span>
+                <i class="fas fa-edit edit-icon" style="cursor: pointer;" onclick="event.stopPropagation(); openEditFolder('${id}', '${folder.name}', ${folder.hue || 0})"></i>
+            </div>
+            <div id="children-${id}" class="folder-children" style="display: none; padding-left: 15px;"></div>
+        `;
+        container.appendChild(item);
+        
+        const childContainer = item.querySelector(`#children-${id}`);
+        
+        // Dynamic ravishda shu fiderga tegishli TPlarni bazadan olib daraxt ostiga qo'shish
+        renderElementsInTree(id, childContainer);
+        
+        renderTree(id, childContainer);
+    });
+}
+
+// Guruhlar ichida TPlarni chiroyli ketma-ketlikda qalamcha (✏️) bilan chizish funksiyasi
+function renderElementsInTree(folderId, childContainer) {
+    database.ref('TPs').once('value', (snapshot) => {
+        const allPoints = snapshot.val() || {};
+        Object.keys(allPoints).forEach(tpId => {
+            const tp = allPoints[tpId];
+            
+            // Ko'p tomonlama bog'liqlikni tekshirish (folders massivi yoki eski folderId)
+            const isBelongsToFolder = (tp.folders && tp.folders[folderId]) || (tp.folderId === folderId);
+            
+            if (isBelongsToFolder) {
+                const tpRow = document.createElement('div');
+                tpRow.style.cssText = "display:flex; align-items:center; padding: 6px 8px; margin: 2px 0; cursor:pointer; border-radius:4px; transition: background 0.2s;";
+                tpRow.className = "tp-tree-row-item";
+                
+                // Balans turiga qarab ikonka rangi
+                const iconColor = tp.isPrivate ? "#ff4444" : "#007AFF";
+                
+                tpRow.innerHTML = `
+                    <i class="fas fa-bolt" style="color: ${iconColor}; margin-right: 8px; font-size:13px;"></i>
+                    <span style="font-size:14px; color:#e0e0e0; flex-grow:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${tp.name || "TP"}</span>
+                    <i class="fas fa-pencil-alt element-edit-pencil-icon" style="color:#88a0b0; font-size:12px; padding:4px; cursor:pointer; opacity:0.6;" onclick="event.stopPropagation(); openEditElement('${tpId}')"></i>
+                `;
+
+                // Hoverda va bosilganda stil berish
+                tpRow.addEventListener('mouseenter', () => tpRow.style.background = "rgba(255,255,255,0.05)");
+                tpRow.addEventListener('mouseleave', () => tpRow.style.background = "transparent");
+                
+                // TP bosilsa xaritada focus bo'lish mantiqi
+                tpRow.addEventListener('click', () => {
+                    if(listModal) listModal.style.display = 'none';
+                    const lat = parseFloat(tp.lat);
+                    const lng = parseFloat(tp.lng);
+                    map.setView([lat, lng], 18);
+                    
+                    // Xaritada markerini topib popup ochish
+                    activeMapMarkers.forEach(m => {
+                        if (m.getLatLng().lat === lat && m.getLatLng().lng === lng) {
+                            m.openPopup();
+                        }
+                    });
+                    updatePanelValues(lat, lng, null, true);
+                    updateAddress(lat, lng, true);
+                });
+
+                childContainer.appendChild(tpRow);
+            }
+        });
+    });
+}
+
+// 2. Elementni tahrirlash uchun oynani ochish funksiyasi (✏️ Bosilganda hamma ma'lumot yuklanadi)
+  window.openEditElement = function(tpId) {
+    database.ref('TPs/' + tpId).once('value', (snapshot) => {
+        const tp = snapshot.val();
+        if (!tp) return;
+
+        resetElementForm();
+        editingElementId = tpId;
+        document.getElementById('element-panel-title').innerText = "Редактировать местоположение";
+        deleteElementBtn.classList.remove('hidden');
+
+        // Ma'lumotlarni formaga yuklaymiz
+        inputElementName.value = tp.name || "";
+        inputLatitude.value = tp.lat;
+        inputLongitude.value = tp.lng;
+        inputElementAddress.value = tp.address || "";
+        inputElementPhone.value = tp.phone || "";
+        inputElementNote.value = tp.note || "";
+
+        // Many-to-Many fiderlar ro'yxatini yuklash
+        let folderIds = [];
+        if (tp.folders) {
+            folderIds = Object.keys(tp.folders);
+        } else if (tp.folderId) {
+            folderIds = [tp.folderId];
+        }
+        document.getElementById('element-selected-folders').value = folderIds.join(',');
+
+        // Rasm mavjudligini tekshirish
+        if (tp.imageUrl) {
+            currentUploadedImageUrl = tp.imageUrl;
+            elementImagePreview.src = tp.imageUrl;
+            elementImagePreview.classList.remove('hidden');
+            removeImageBtn.classList.remove('hidden');
+            imageStatusText.innerText = "Yuklangan";
+            imageStatusText.style.color = "#34C759";
+        }
+
+        // Balans holati (Tumbler)
+        if (tp.isPrivate) {
+            inputBalanceToggle.checked = true;
+            balanceStatusText.innerText = "Xususiy";
+            balanceStatusText.style.color = "#ff4444";
+            privateOwnerInfoBlock.classList.remove('hidden');
+            togglePrivateFieldsRequired(true);
+
+            // Xususiy fieldlar ma'lumotlari
+            inputOwnerFirm.value = tp.ownerFirm || "";
+            inputOwnerName.value = tp.ownerName || "";
+            inputOwnerPhone.value = tp.ownerPhone || "";
+            inputMeterNumber.value = tp.meterNumber || "";
+        } else {
+            inputBalanceToggle.checked = false;
+        }
+
+                                             // Guruh daraxtini dropdown ichida qayta chizish (Belgilangan fiderlarni galochka qilish uchun)
+        renderElementTreeDropdown();
+
+        // Oynani ko'rsatish
+        elementManagePanel.classList.remove('hidden');
+    });
+};
+
+// 3. SIZ AYTGAN ASOSIY SCADA MANTIQI: Xaritada filtrlash, Birlashish va Miltillovchi markerlar (Override)
+function loadFilteredPoints() {
+    const tpListContainer = document.getElementById('tp-list');
+    if (!tpListContainer) return;
+    
+    tpListContainer.innerHTML = "<p style='color:gray; padding:15px; text-align:center;'>Yuklanmoqda...</p>";
+
+    // Eski markerlarni xaritadan butunlay tozalash
+    activeMapMarkers.forEach(m => map.removeLayer(m));
+    activeMapMarkers = [];
+
+    database.ref('TPs').once('value', (snapshot) => {
+        const allPoints = snapshot.val() || {};
+        tpListContainer.innerHTML = ""; 
+
+        let bounds = [];
+        const displayedPointsMap = new Map(); // Ona papkada bitta nuqtani bir marta chizish (dublikat oldini olish) uchun
+
+        // Bola guruhlarni (fiderlarni) recursively yig'ish funksiyasi (Ona papka bosilganda hamma pastidagilarni ko'rish uchun)
+        function getAllChildFolderIds(parentId) {
+            let ids = [parentId];
+            Object.keys(currentFolders).forEach(id => {
+                if (currentFolders[id].parentId === parentId) {
+                    ids = ids.concat(getAllChildFolderIds(id));
+                }
+            });
+            return ids;
+        }
+
+        // Tanlangan guruh va uning pastki fiderlari IDlari ro'yxati
+        const allowedFolderIds = activeFolderId === 'root' ? [] : getAllChildFolderIds(activeFolderId);
+
+        Object.keys(allPoints).forEach(key => {
+            const point = allPoints[key];
+            const lat = parseFloat(point.lat);
+            const lng = parseFloat(point.lng);
+
+            if (isNaN(lat) || isNaN(lng)) return;
+
+            // Element tegishli bo'lgan barcha fiderlar massivi
+            let tpFoldersArr = point.folders ? Object.keys(point.folders) : (point.folderId ? [point.folderId] : []);
+
+            // FILTRLASH ssenariylari:
+            let isVisible = false;
+            if (activeFolderId === 'root') {
+                isVisible = true; // Hamma elementlar ko'rinadi
+            } else {
+                // Agar tanlangan fiderlar ro'yxatida elementning kamida bitta fideri bo'lsa xaritaga chiqadi
+                isVisible = tpFoldersArr.some(id => allowedFolderIds.includes(id));
+            }
+
+            if (!isVisible) return;
+
+            // 📍 DUBLIKAT NUQTALARNI OLDINI OLISH VA SCADA MILTILLASH MANTIQI
+            const coordKey = `${lat.toFixed(6)}_${lng.toFixed(6)}`;
+
+            if (displayedPointsMap.has(coordKey)) {
+                // Agar ona papka ochilganda ushbu koordinatada rasm allaqachon chizilgan bo'lsa, uni miltillovchi ro'yxatga olamiz
+                const existingMarkerObj = displayedPointsMap.get(coordKey);
+                existingMarkerObj.associatedFolders = [...existingMarkerObj.associatedFolders, ...tpFoldersArr];
+                return; 
+            }
+
+            bounds.push([lat, lng]);
+            const displayName = point.name || point.address.split(',')[0] || "TP";
+
+            // Markerning standart fider rangini aniqlash
+            const primaryFolderId = tpFoldersArr[0];
+            const primaryColor = (currentFolders[primaryFolderId] && currentFolders[primaryFolderId].color) ? currentFolders[primaryFolderId].color : '#007AFF';
+
+            // Xususiy yoki ETK ekanligiga qarab sarlavha tayyorlash
+            const balanceBadge = point.isPrivate ? `<span style="color:#ff4444; font-weight:bold;">[Xususiy - ${point.ownerFirm || ''}]</span>` : `<span style="color:#007AFF; font-weight:bold;">[ЕТК balansi]</span>`;
+
+            // Maxsus divIcon marker yaratish
+            const markerDiv = document.createElement('div');
+            markerDiv.className = 'custom-tp-marker';
+            
+            // Agar element 1 tadan ko'p fiderga ulangan bo'lsa va ona papka ochiq bo'lsa dynamic CSS o'zgaruvchilarni biriktiramiz (Blinking uchun)
+            if (tpFoldersArr.length > 1) {
+                markerDiv.classList.add('blinking-marker-icon');
+                const secondFolderId = tpFoldersArr[1];
+                const secondaryColor = (currentFolders[secondFolderId] && currentFolders[secondFolderId].color) ? currentFolders[secondFolderId].color : '#34C759';
+                markerDiv.style.setProperty('--fider-color-1', primaryColor);
+                markerDiv.style.setProperty('--fider-color-2', secondaryColor);
+            }
+
+            markerDiv.innerHTML = `<i class="fas fa-map-marker-alt" style="color: ${primaryColor}; font-size: 28px; text-shadow: 0 0 4px black;"></i>`;
+
+            const mIcon = L.divIcon({
+                className: 'custom-leaflet-tp-wrapper',
+                html: markerDiv,
+                iconSize: [28, 28],
+                iconAnchor: [14, 28]
+            });
+
+            const marker = L.marker([lat, lng], {icon: mIcon}).addTo(map);
+            
+            // Popup oynasida barcha muhandislik va schotchik ma'lumotlarini chiroyli chiqarish
+            let popupHtml = `
+                <div style="color:white; background:#001a2c; padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); min-width:200px;">
+                    <b style="font-size:15px; color:#fff; display:block; margin-bottom:4px;">⚡ ${displayName}</b>
+                    ${balanceBadge}<br>
+                    <span style="font-size:12px; color:#88a0b0; display:block; margin-top:5px;"><b>Адрес:</b> ${point.address}</span>
+            `;
+            if (point.isPrivate) {
+                popupHtml += `
+                    <div style="border-top:1px dashed rgba(255,255,255,0.1); margin-top:6px; padding-top:6px; font-size:11px; color:#ffcc00;">
+                        👤 <b>Egasining ismi:</b> ${point.ownerName || '-'}<br>
+                        📞 <b>Tel:</b> ${point.ownerPhone || '-'}<br>
+                        🔢 <b>Hisoblagich №:</b> ${point.meterNumber || '-'}
+                    </div>
+                `;
+            }
+            if (point.imageUrl) {
+                popupHtml += `<div style="margin-top:8px; text-align:center;"><img src="${point.imageUrl}" style="width:100%; max-height:100px; border-radius:6px; object-fit:cover; cursor:pointer;" onclick="window.open('${point.imageUrl}', '_blank')"></div>`;
+            }
+            popupHtml += `</div>`;
+
+            marker.bindPopup(popupHtml, { className: 'custom-popup-scada' });
+            activeMapMarkers.push(marker);
+
+            // Obyektimizni xaritaga (Map) saqlaymiz (keyingi dublikat daxldorliklarni tekshirish uchun)
+            displayedPointsMap.set(coordKey, { marker: marker, associatedFolders: tpFoldersArr });
+
+            // Pastki ro'yxat elementini (Tab items) yaratish va bo'yash
+            const item = document.createElement('div');
+            item.className = 'tp-item';
+            item.style.cssText = `padding: 12px; margin: 6px 0; background: #00223a; border-radius: 8px; cursor: pointer; border-left: 4px solid ${primaryColor}; color: white;`;
+            
+            item.innerHTML = `
+                <div style="font-weight: bold; font-size: 14px; display:flex; justify-content:space-between; align-items:center;">
+                    <span>⚡ ${displayName}</span> 
+                    <span style="font-size:10px; opacity:0.6;">${point.isPrivate ? 'Xususiy' : 'ETK'}</span>
+                </div>
+                <div style="color: #88a0b0; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top:2px;">${point.address}</div>
+            `;
+
+            // Ro'yxat elementi bosilganda xaritani focus qilib yopish
+            item.addEventListener('click', () => {
+                if(listModal) listModal.style.display = 'none';
+                map.setView([lat, lng], 18);
+                marker.openPopup();
+                updatePanelValues(lat, lng, null, true);
+                updateAddress(lat, lng, true);
+            });
+
+            item.setAttribute('data-search-name', displayName.toLowerCase() + point.address.toLowerCase());
+            tpListContainer.appendChild(item);
+        });
+
+        // Agar biror papka ichiga kirilgan bo'lsa, xaritani shundoq o'sha fiderlar hududiga o'tkazish
+        if (bounds.length > 0 && activeFolderId !== 'root') {
+            map.fitBounds(bounds, { padding: [50, 50] });
+        }
+
+        if (tpListContainer.innerHTML === "") {
+            tpListContainer.innerHTML = "<p style='color:gray; padding:15px; text-align:center;'>Elementlar mavjud emas.</p>";
+        }
+    });
+                             }
+
+// 🔥 BAZANI PANELNI OCHMASDAN ORQA FONDA YUKLASH (YAKUNIY KOD)
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("Tizim yuklanmoqda...");
+
+    // 1. Kodingiz ichidagi guruhlarni yuklaydigan funksiyalarni panelni ochmasdan, xotirada to'g'ridan-to'g'ri chaqiramiz
+    const coreFunctions = ['loadGroups', 'fetchGroups', 'listenToGroups', 'loadUserGroups', 'listenToGroupsData', 'loadFolders'];
+    coreFunctions.forEach(fName => {
+        if (typeof window[fName] === "function") {
+            try { window[fName](); } catch(e) {}
+        }
+    });
+              
