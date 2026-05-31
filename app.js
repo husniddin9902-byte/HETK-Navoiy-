@@ -13,6 +13,33 @@ firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
 // 2. O'zgaruvchilar
+const appState = {
+
+    selectedNodeId: null,
+    selectedNodeType: null,
+
+    activeFolderId: null,
+    activeElementId: null,
+
+    folders: {},
+    elements: {},
+
+    mainMap: {
+        map: null,
+        markers: []
+    },
+
+    panelMap: {
+        map: null,
+        markers: []
+    },
+
+    ui: {
+        activeTab: 'folders',
+        openedFolders: {}
+    }
+
+};
 var map = L.map('map', { zoomControl: false }).setView([40.10, 65.81], 16);
 var userMarker = null; 
 var selectedMarker = null;
@@ -20,7 +47,8 @@ var lastPos = null;
 var isUserInteracting = false; 
 var isManualSelection = false; 
 let currentFolders = {}; 
-let activeFolderId = 'root'; 
+//let activeFolderId = 'root'; 
+appState.activeFolderId = 'root';
 let editingFolderId = null;
 let activeMapMarkers = []; // Xaritadagi dinamik markerlarni nazorat qilish uchun massiv
 
@@ -872,8 +900,8 @@ function renderElementTreeDropdown() {
                 <i class="fas fa-folder" style="color: ${folder.color}; font-size:15px; flex-shrink: 0;"></i>
                 <span style="font-size:14px; color:white; cursor:pointer; user-select:none; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex-grow: 1;">${folder.name}</span>
             `;
-              
-  // Checkbox o'zgarganda input elementga yozish mantiqi
+
+            // Checkbox o'zgarganda input elementga yozish mantiqi
             const checkbox = row.querySelector('.element-folder-checkbox');
             checkbox.addEventListener('change', function() {
                 let currentSelected = selectedFoldersInput.value ? selectedFoldersInput.value.split(',') : [];
@@ -1160,7 +1188,7 @@ function renderElementsInTree(folderId, childContainer) {
             inputBalanceToggle.checked = false;
         }
 
-                                             // Guruh daraxtini dropdown ichida qayta chizish (Belgilangan fiderlarni galochka qilish uchun)
+        // Guruh daraxtini dropdown ichida qayta chizish (Belgilangan fiderlarni galochka qilish uchun)
         renderElementTreeDropdown();
 
         // Oynani ko'rsatish
@@ -1340,8 +1368,8 @@ document.addEventListener('DOMContentLoaded', () => {
             try { window[fName](); } catch(e) {}
         }
     });
-              
-// 2. KAFOLAT: Agar tizimda boshqaruv paneli ochilib ketadigan bo'lsa, uni srazi yopib qo'yamiz
+
+    // 2. KAFOLAT: Agar tizimda boshqaruv paneli ochilib ketadigan bo'lsa, uni srazi yopib qo'yamiz
     const listContainer = document.getElementById('list-container');
     if (listContainer) {
         listContainer.style.display = 'none'; // Uni vizual yashiramiz
@@ -1528,4 +1556,3 @@ if (panelTabItems) {
         });
     });
 }
-
