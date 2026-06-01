@@ -819,6 +819,39 @@ return;
 }
 };
 }
+if(elementImageInput){
+elementImageInput.setAttribute('multiple','multiple');
+elementImageInput.addEventListener('change',function(e){
+const files=Array.from(e.target.files);
+if(!files.length)return;
+files.forEach(file=>{
+if(file.type.startsWith('image/')){
+selectedFiles.push(file);
+}
+});
+imageStatusText.innerText=
+`+ Rasm qo'shish (${selectedFiles.length})`;
+imageStatusText.style.color="#34C759";
+renderMultiImagePreview();
+this.value="";
+});
+}
+if(removeImageBtn){
+removeImageBtn.addEventListener('click',function(e){
+e.preventDefault();
+selectedFiles=[];
+existingImages=[];
+uploadedTelegramImages=[];
+renderMultiImagePreview();
+currentUploadedImageUrl="";
+elementImagePreview.src="";
+elementImagePreview.classList.add('hidden');
+removeImageBtn.classList.add('hidden');
+imageStatusText.innerText="Rasm";
+imageStatusText.style.color="#88a0b0";
+elementImageInput.value="";
+});
+}
 
 // 7. Element Formasi uchun daraxtsimon Multiselect (Many-to-Many fiderlar tanlash) dropdown chizish
 function renderElementTreeDropdown() {
