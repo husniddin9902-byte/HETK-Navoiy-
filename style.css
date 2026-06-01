@@ -763,6 +763,21 @@ body {
    right:2px;
   width:18px;
    height:18px;
+
+   .existing-image-remove{
+  position:absolute;
+  top:2px;
+  right:2px;
+  width:18px;
+  height:18px;
+  border:none;
+  border-radius:50%;
+  background:red;
+  color:white;
+  font-size:11px;
+  cursor:pointer;
+  z-index:999;
+}
    border:none;
    border-radius:50%;
   background:red;
