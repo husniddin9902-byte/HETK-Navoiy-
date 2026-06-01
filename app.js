@@ -778,7 +778,7 @@ const box=document.createElement('div');
 box.className='multi-image-box';
 box.innerHTML=`<img src="${img.url}"> <button
 type="button"
-class="existing-image-remove"
+class="multi-image-remove"
 data-index="${index}">
 × </button>`;
 previewContainer.appendChild(box);
