@@ -1367,10 +1367,28 @@ function loadFilteredPoints() {
                     </div>
                 `;
             }
-            if (point.imageUrl) {
-                popupHtml += `<div style="margin-top:8px; text-align:center;"><img src="${point.imageUrl}" style="width:100%; max-height:100px; border-radius:6px; object-fit:cover; cursor:pointer;" onclick="window.open('${point.imageUrl}', '_blank')"></div>`;
-            }
-            popupHtml += `</div>`;
+           if(point.images && point.images.length){
+
+popupHtml += `<div style="margin-top:8px;
+display:flex;
+gap:5px;
+overflow-x:auto;">`;
+
+point.images.forEach(img=>{
+popupHtml += `
+<img src="${img.url}"
+style="
+width:90px;
+height:90px;
+object-fit:cover;
+border-radius:6px;
+cursor:pointer;"
+onclick="window.open('${img.url}','_blank')">
+`;
+});
+
+popupHtml += `</div>`;
+}
 
             marker.bindPopup(popupHtml, { className: 'custom-popup-scada' });
             activeMapMarkers.push(marker);
