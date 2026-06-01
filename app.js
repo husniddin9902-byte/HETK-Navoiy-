@@ -772,7 +772,6 @@ let selectedFiles=[];
 let existingImages=[];
 let uploadedTelegramImages=[];
 
-function renderMultiImagePreview(){...}
 function renderMultiImagePreview(){
 const previewContainer=document.getElementById('multi-image-preview');
 if(!previewContainer)return;
