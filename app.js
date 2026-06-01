@@ -1014,9 +1014,9 @@ if(!fileResult.ok) continue;
 
 uploadedTelegramImages.push({
 url:`https://api.telegram.org/file/bot${TELEGRAM_BOT_TOKEN}/${fileResult.result.file_path}`,
-messageId:messageId
+messageId:messageId,
+fileId:fileId
 });
-
 }
       
         // Saqlanadigan obyekt strukturasi
