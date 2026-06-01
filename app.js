@@ -789,7 +789,8 @@ const reader=new FileReader();
 reader.onload=function(e){
 const box=document.createElement('div');
 box.className='multi-image-box';
-box.innerHTML=`<img src="${e.target.result}"><button type="button" class="multi-image-remove" data-index="${index}">×</button>`;
+box.innerHTML=`<img src="${e.target.result}"><button type="button" 
+class="existing-image-remove" data-index="${index}">×</button>`;
 previewContainer.appendChild(box);
 };
 reader.readAsDataURL(file);
