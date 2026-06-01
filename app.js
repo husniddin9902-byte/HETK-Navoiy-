@@ -939,6 +939,53 @@ if (elementMainForm) {
 
         const folderIdsArray = selectedFolders.split(',').filter(Boolean);
 
+uploadedTelegramImages=[];
+
+for(const file of selectedFiles){
+
+const formData=new FormData();
+
+formData.append("chat_id",TELEGRAM_CHAT_ID);
+formData.append("photo",file);
+
+const sendResponse=await fetch(
+`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`,
+{
+method:"POST",
+body:formData
+}
+);
+
+const sendResult=await sendResponse.json();
+
+if(!sendResult.ok){
+showToast("Telegramga rasm yuborishda xatolik!");
+return;
+}
+
+const photoArray=sendResult.result.photo;
+
+const fileId=
+photoArray[photoArray.length-1].file_id;
+
+const messageId=
+sendResult.result.message_id;
+
+const fileResponse=await fetch(
+`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getFile?file_id=${fileId}`
+);
+
+const fileResult=await fileResponse.json();
+
+if(!fileResult.ok) continue;
+
+uploadedTelegramImages.push({
+url:`https://api.telegram.org/file/bot${TELEGRAM_BOT_TOKEN}/${fileResult.result.file_path}`,
+messageId:messageId
+});
+
+}
+      
         // Saqlanadigan obyekt strukturasi
         const elementData = {
             name: inputElementName.value,
@@ -947,7 +994,7 @@ if (elementMainForm) {
             address: inputElementAddress.value,
             phone: inputElementPhone.value,
             note: inputElementNote.value,
-            imageUrl: currentUploadedImageUrl,
+            images: uploadedTelegramImages,
             isPrivate: inputBalanceToggle.checked,
             // Many-to-Many: fiderlarni obyekt ichida saqlash (qidirish oson bo'lishi uchun)
             folders: folderIdsArray.reduce((acc, id) => ({ ...acc, [id]: true }), {}),
