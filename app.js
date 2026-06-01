@@ -767,13 +767,18 @@ function debounce(func, delay) {
 }
 // 6. Rasm yuklash va uni orqa fonda xarajatsiz Telegram Botga yuborish mantiqi
 let selectedFiles=[];
-let existingImages = [];
+let existingImages=[];
 let uploadedTelegramImages=[];
-
 function renderMultiImagePreview(){
 const previewContainer=document.getElementById('multi-image-preview');
 if(!previewContainer)return;
 previewContainer.innerHTML='';
+existingImages.forEach((img,index)=>{
+const box=document.createElement('div');
+box.className='multi-image-box';
+box.innerHTML=`<img src="${img.url}">`;
+previewContainer.appendChild(box);
+});
 selectedFiles.forEach((file,index)=>{
 const reader=new FileReader();
 reader.onload=function(e){
@@ -787,6 +792,7 @@ reader.readAsDataURL(file);
 previewContainer.onclick=function(e){
 if(!e.target.classList.contains('multi-image-remove'))
 return;
+
 const index=parseInt(e.target.dataset.index);
 selectedFiles.splice(index,1);
 renderMultiImagePreview();
@@ -794,7 +800,6 @@ imageStatusText.innerText=
 `${selectedFiles.length} ta rasm`;
 };
 }
-
 if(elementImageInput){
 elementImageInput.setAttribute('multiple','multiple');
 elementImageInput.addEventListener('change',function(e){
@@ -804,18 +809,20 @@ files.forEach(file=>{
 if(file.type.startsWith('image/')){
 selectedFiles.push(file);
 }
+
 });
-imageStatusText.innerText=`+ Rasm qo'shish (${selectedFiles.length})`;
+imageStatusText.innerText=
+`+ Rasm qo'shish (${selectedFiles.length})`;
 imageStatusText.style.color="#34C759";
 renderMultiImagePreview();
 this.value="";
 });
 }
-
 if(removeImageBtn){
 removeImageBtn.addEventListener('click',function(e){
 e.preventDefault();
 selectedFiles=[];
+existingImages=[];
 uploadedTelegramImages=[];
 renderMultiImagePreview();
 currentUploadedImageUrl="";
@@ -827,6 +834,7 @@ imageStatusText.style.color="#88a0b0";
 elementImageInput.value="";
 });
 }
+
 
 // 7. Element Formasi uchun daraxtsimon Multiselect (Many-to-Many fiderlar tanlash) dropdown chizish
 function renderElementTreeDropdown() {
