@@ -1185,14 +1185,15 @@ function renderElementsInTree(folderId, childContainer) {
         document.getElementById('element-selected-folders').value = folderIds.join(',');
 
         // Rasm mavjudligini tekshirish
-        if (tp.imageUrl) {
-            currentUploadedImageUrl = tp.imageUrl;
-            elementImagePreview.src = tp.imageUrl;
-            elementImagePreview.classList.remove('hidden');
-            removeImageBtn.classList.remove('hidden');
-            imageStatusText.innerText = "Yuklangan";
-            imageStatusText.style.color = "#34C759";
-        }
+       if(tp.images && tp.images.length){
+
+imageStatusText.innerText=
+`${tp.images.length} ta rasm`;
+
+imageStatusText.style.color="#34C759";
+
+}
+
 
         // Balans holati (Tumbler)
         if (tp.isPrivate) {
