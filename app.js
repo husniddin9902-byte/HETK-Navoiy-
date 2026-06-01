@@ -776,9 +776,14 @@ previewContainer.innerHTML='';
 existingImages.forEach((img,index)=>{
 const box=document.createElement('div');
 box.className='multi-image-box';
-box.innerHTML=`<img src="${img.url}">`;
+box.innerHTML=`<img src="${img.url}"> <button
+type="button"
+class="existing-image-remove"
+data-index="${index}">
+× </button>`;
 previewContainer.appendChild(box);
 });
+
 selectedFiles.forEach((file,index)=>{
 const reader=new FileReader();
 reader.onload=function(e){
