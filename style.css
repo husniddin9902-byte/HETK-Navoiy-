@@ -767,3 +767,29 @@ body {
   cursor:pointer;
   z-index:999;
 }
+
+/* Multi image preview */
+
+#multi-image-preview{
+display:flex;
+flex-wrap:wrap;
+gap:8px;
+max-width:220px;
+}
+
+.multi-image-box{
+position:relative;
+width:70px;
+height:70px;
+flex:0 0 70px;
+overflow:hidden;
+border-radius:10px;
+border:2px solid rgba(255,255,255,0.1);
+}
+
+.multi-image-box img{
+width:100%;
+height:100%;
+object-fit:cover;
+display:block;
+}
