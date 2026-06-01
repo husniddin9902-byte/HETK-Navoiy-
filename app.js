@@ -783,14 +783,15 @@ previewContainer.appendChild(box);
 };
 reader.readAsDataURL(file);
 });
-previewContainer.querySelectorAll('.multi-image-remove').forEach(btn=>{
-btn.onclick=function(){
-const index=parseInt(this.dataset.index);
+previewContainer.onclick=function(e){
+if(!e.target.classList.contains('multi-image-remove'))
+return;
+const index=parseInt(e.target.dataset.index);
 selectedFiles.splice(index,1);
 renderMultiImagePreview();
-imageStatusText.innerText=`${selectedFiles.length} ta rasm`;
+imageStatusText.innerText=
+`${selectedFiles.length} ta rasm`;
 };
-});
 }
 
 if(elementImageInput){
@@ -803,7 +804,7 @@ if(file.type.startsWith('image/')){
 selectedFiles.push(file);
 }
 });
-imageStatusText.innerText=`${selectedFiles.length} ta rasm tanlandi    +`;
+imageStatusText.innerText=`+ Rasm qo'shish (${selectedFiles.length})`;
 imageStatusText.style.color="#34C759";
 renderMultiImagePreview();
 this.value="";
