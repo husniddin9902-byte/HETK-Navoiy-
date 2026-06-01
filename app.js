@@ -1010,6 +1010,10 @@ function resetElementForm() {
     balanceStatusText.style.color = "#007AFF";
     privateOwnerInfoBlock.classList.add('hidden');
     document.getElementById('element-selected-folders').value = "";
+  selectedFiles=[];
+uploadedTelegramImages=[];
+
+document.getElementById('multi-image-preview').innerHTML='';
 }
 
 
