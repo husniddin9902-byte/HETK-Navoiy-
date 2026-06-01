@@ -766,9 +766,6 @@ function debounce(func, delay) {
     };
 }
 // 6. Rasm yuklash va uni orqa fonda xarajatsiz Telegram Botga yuborish mantiqi
-let selectedFiles=[];
-let existingImages=[];
-let uploadedTelegramImages=[];
 function renderMultiImagePreview(){
 const previewContainer=document.getElementById('multi-image-preview');
 if(!previewContainer)return;
@@ -783,21 +780,22 @@ data-index="${index}">
 × </button>`;
 previewContainer.appendChild(box);
 });
-
 selectedFiles.forEach((file,index)=>{
 const reader=new FileReader();
 reader.onload=function(e){
 const box=document.createElement('div');
 box.className='multi-image-box';
-box.innerHTML=`<img src="${e.target.result}"><button type="button" 
-class="existing-image-remove" data-index="${index}">×</button>`;
+box.innerHTML=`<img src="${e.target.result}"> <button
+type="button"
+class="multi-image-remove"
+data-index="${index}">
+× </button>`;
 previewContainer.appendChild(box);
 };
 reader.readAsDataURL(file);
 });
 previewContainer.onclick=function(e){
-
-  if(e.target.classList.contains('existing-image-remove')){
+if(e.target.classList.contains('existing-image-remove')){
 const index=parseInt(e.target.dataset.index);
 existingImages.splice(index,1);
 renderMultiImagePreview();
@@ -805,50 +803,16 @@ imageStatusText.innerText=
 `${existingImages.length + selectedFiles.length} ta rasm`;
 return;
 }
-if(!e.target.classList.contains('multi-image-remove'))
-return;
+if(e.target.classList.contains('multi-image-remove')){
 const index=parseInt(e.target.dataset.index);
 selectedFiles.splice(index,1);
 renderMultiImagePreview();
 imageStatusText.innerText=
-`${selectedFiles.length} ta rasm`;
+`${existingImages.length + selectedFiles.length} ta rasm`;
+return;
+}
 };
 }
-if(elementImageInput){
-elementImageInput.setAttribute('multiple','multiple');
-elementImageInput.addEventListener('change',function(e){
-const files=Array.from(e.target.files);
-if(!files.length)return;
-files.forEach(file=>{
-if(file.type.startsWith('image/')){
-selectedFiles.push(file);
-}
-
-});
-imageStatusText.innerText=
-`+ Rasm qo'shish (${selectedFiles.length})`;
-imageStatusText.style.color="#34C759";
-renderMultiImagePreview();
-this.value="";
-});
-}
-if(removeImageBtn){
-removeImageBtn.addEventListener('click',function(e){
-e.preventDefault();
-selectedFiles=[];
-existingImages=[];
-uploadedTelegramImages=[];
-renderMultiImagePreview();
-currentUploadedImageUrl="";
-elementImagePreview.src="";
-elementImagePreview.classList.add('hidden');
-removeImageBtn.classList.add('hidden');
-imageStatusText.innerText="Rasm";
-imageStatusText.style.color="#88a0b0";
-elementImageInput.value="";
-});
-}
-
 
 // 7. Element Formasi uchun daraxtsimon Multiselect (Many-to-Many fiderlar tanlash) dropdown chizish
 function renderElementTreeDropdown() {
