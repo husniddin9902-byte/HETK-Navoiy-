@@ -1196,13 +1196,12 @@ function renderElementsInTree(folderId, childContainer) {
         // Rasm mavjudligini tekshirish
        if(tp.images && tp.images.length){
 
-imageStatusText.innerText=
+existingImages = tp.images || [];
+renderMultiImagePreview();
+imageStatusText.innerText =
 `${tp.images.length} ta rasm`;
-
-imageStatusText.style.color="#34C759";
-
+imageStatusText.style.color = "#34C759";
 }
-
 
         // Balans holati (Tumbler)
         if (tp.isPrivate) {
