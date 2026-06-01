@@ -1028,7 +1028,11 @@ fileId:fileId
             phone: inputElementPhone.value,
             note: inputElementNote.value,
           images: [...existingImages, ...uploadedTelegramImages],
-           // images: uploadedTelegramImages,
+        telegramMessageIds:
+[...existingImages, ...uploadedTelegramImages]
+.map(x => x.messageId)
+.filter(Boolean),
+          
             isPrivate: inputBalanceToggle.checked,
           
             // Many-to-Many: fiderlarni obyekt ichida saqlash (qidirish oson bo'lishi uchun)
