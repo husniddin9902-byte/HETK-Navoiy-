@@ -1027,10 +1027,13 @@ messageId:messageId
             address: inputElementAddress.value,
             phone: inputElementPhone.value,
             note: inputElementNote.value,
-            images: uploadedTelegramImages,
+          images: [...existingImages, ...uploadedTelegramImages],
+           // images: uploadedTelegramImages,
             isPrivate: inputBalanceToggle.checked,
+          
             // Many-to-Many: fiderlarni obyekt ichida saqlash (qidirish oson bo'lishi uchun)
             folders: folderIdsArray.reduce((acc, id) => ({ ...acc, [id]: true }), {}),
+          
             // Eski kodlar buzilmasligi uchun birinchi fiderni standart folderId ga ham yozib qo'yamiz
             folderId: folderIdsArray[0], 
             
