@@ -947,7 +947,13 @@ const formData=new FormData();
 
 formData.append("chat_id",TELEGRAM_CHAT_ID);
 formData.append("photo",file);
-
+const caption=
+`📍 ${inputElementName.value}
+📁 ${selectedFolders}
+📞 ${inputElementPhone.value || "-"}
+📌 ${inputLatitude.value}, ${inputLongitude.value}`;
+formData.append("caption",caption);
+  
 const sendResponse=await fetch(
 `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`,
 {
