@@ -766,6 +766,13 @@ function debounce(func, delay) {
     };
 }
 // 6. Rasm yuklash va uni orqa fonda xarajatsiz Telegram Botga yuborish mantiqi
+// 6. Rasm yuklash va uni orqa fonda xarajatsiz Telegram Botga yuborish mantiqi
+
+let selectedFiles=[];
+let existingImages=[];
+let uploadedTelegramImages=[];
+
+function renderMultiImagePreview(){...}
 function renderMultiImagePreview(){
 const previewContainer=document.getElementById('multi-image-preview');
 if(!previewContainer)return;
