@@ -1091,6 +1091,7 @@ function resetElementForm() {
     privateOwnerInfoBlock.classList.add('hidden');
     document.getElementById('element-selected-folders').value = "";
   selectedFiles=[];
+  existingImages=[];
 uploadedTelegramImages=[];
 
 document.getElementById('multi-image-preview').innerHTML='';
