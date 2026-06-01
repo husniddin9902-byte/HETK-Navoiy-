@@ -931,7 +931,7 @@ function renderElementTreeDropdown() {
 
 // 8. Elementni Firebase Realtime Database'ga Saqlash va Tahrirlash (Many-to-Many tizimda)
 if (elementMainForm) {
-    elementMainForm.addEventListener('submit', function(e) {
+    elementMainForm.addEventListener('submit', async function(e) {
         e.preventDefault();
 
         const selectedFolders = document.getElementById('element-selected-folders').value;
