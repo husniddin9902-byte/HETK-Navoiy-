@@ -738,33 +738,7 @@ body {
     }
        }
 
-/* ========================= */
-/* MULTI IMAGE */
-/* ========================= */
-
-.multi-image-box{
-    position:relative;
-    width:70px;
-    height:70px;
-    border-radius:10px;
-    overflow:hidden;
-    border:2px solid
-    rgba(255,255,255,0.1);
-}
-.multi-image-box img{
-
-    width:100%;
-    height:100%;
- object-fit:cover;
-}
 .multi-image-remove{
-  position:absolute;
-  top:2px;
-   right:2px;
-  width:18px;
-   height:18px;
-
-   .existing-image-remove{
   position:absolute;
   top:2px;
   right:2px;
@@ -778,10 +752,18 @@ body {
   cursor:pointer;
   z-index:999;
 }
-   border:none;
-   border-radius:50%;
+
+.existing-image-remove{
+  position:absolute;
+  top:2px;
+  right:2px;
+  width:18px;
+  height:18px;
+  border:none;
+  border-radius:50%;
   background:red;
   color:white;
   font-size:11px;
   cursor:pointer;
+  z-index:999;
 }
