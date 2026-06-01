@@ -795,9 +795,17 @@ previewContainer.appendChild(box);
 reader.readAsDataURL(file);
 });
 previewContainer.onclick=function(e){
+
+  if(e.target.classList.contains('existing-image-remove')){
+const index=parseInt(e.target.dataset.index);
+existingImages.splice(index,1);
+renderMultiImagePreview();
+imageStatusText.innerText=
+`${existingImages.length + selectedFiles.length} ta rasm`;
+return;
+}
 if(!e.target.classList.contains('multi-image-remove'))
 return;
-
 const index=parseInt(e.target.dataset.index);
 selectedFiles.splice(index,1);
 renderMultiImagePreview();
