@@ -779,8 +779,9 @@ previewContainer.innerHTML='';
 existingImages.forEach((img,index)=>{
 const box=document.createElement('div');
 box.className='multi-image-box';
-box.innerHTML=`<img src="${img.url}"> <button
-type="button"
+// box.innerHTML=`<img src="${img.url}"> 
+box.innerHTML=`<img src="${img.url}" style="width:100%;height:100%;object-fit:cover;">
+<button type="button"
 class="existing-image-remove"
 data-index="${index}">
 × </button>`;
