@@ -987,15 +987,28 @@ uploadedTelegramImages=[];
 
 for(const file of selectedFiles){
 
-const formData=new FormData();
+const folderPath =
+getFolderPath(folderIdsArray[0]);
 
-formData.append("chat_id",TELEGRAM_CHAT_ID);
-formData.append("photo",file);
-const caption=
-`📍 ${inputElementName.value}
-📁 ${selectedFolders}
-📞 ${inputElementPhone.value || "-"}
-📌 ${inputLatitude.value}, ${inputLongitude.value}`;
+const tpTag =
+inputElementName.value
+.replace(/\s+/g,'');
+
+const caption =
+`⚡ HETK Monitoring
+📍 ${inputElementName.value}
+${inputBalanceToggle.checked ? '🔴 XUSUSIY' : '🔵 ETK'}
+📂 ${folderPath}
+📍 Manzil:
+${inputElementAddress.value || "-"}
+📌 Kenglik (Latitude): ${inputLatitude.value}
+📌 Uzunlik (Longitude): ${inputLongitude.value}
+🚗 Navigatsiya:
+https://maps.google.com/?q=${inputLatitude.value},${inputLongitude.value}
+🔎 Qidiruv teglari
+#${tpTag}
+#${inputBalanceToggle.checked ? 'XUSUSIY' : 'ETK'}
+📖 Batafsil ma'lumot`;
 formData.append("caption",caption);
   
 const sendResponse=await fetch(
