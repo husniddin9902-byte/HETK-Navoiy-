@@ -984,6 +984,10 @@ if (elementMainForm) {
         const folderIdsArray = selectedFolders.split(',').filter(Boolean);
 
 uploadedTelegramImages=[];
+      if(selectedFiles.length > 10){
+showToast("10 tadan ortiq rasm yuborib bo'lmaydi!");
+return;
+}
 for(const file of selectedFiles){
 const formData = new FormData();
 formData.append("chat_id", TELEGRAM_CHAT_ID);
