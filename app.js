@@ -854,6 +854,23 @@ elementImageInput.value="";
 });
 }
 
+// =====================================
+// TELEGRAM UCHUN PAPKA YO'LINI YIG'ISH
+// =====================================
+function getFolderPath(folderId){
+    const path = [];
+    let currentId = folderId;
+    while(
+        currentId &&
+        currentFolders[currentId] &&
+        currentId !== 'root'
+    ){
+        path.unshift(currentFolders[currentId].name);
+        currentId = currentFolders[currentId].parentId;
+    }
+    return path.join(' / ');
+}
+
 // 7. Element Formasi uchun daraxtsimon Multiselect (Many-to-Many fiderlar tanlash) dropdown chizish
 function renderElementTreeDropdown() {
     const dropdownContainer = document.getElementById('element-parent-folder-tree');
