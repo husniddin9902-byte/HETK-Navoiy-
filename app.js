@@ -984,12 +984,15 @@ if (elementMainForm) {
         const folderIdsArray = selectedFolders.split(',').filter(Boolean);
 
 uploadedTelegramImages=[];
-
 for(const file of selectedFiles){
+const formData = new FormData();
+formData.append("chat_id", TELEGRAM_CHAT_ID);
+formData.append("photo", file);
 const folderPath = selectedFolders;
 //const folderPath = getFolderPath(folderIdsArray[0]);
-const tpTag = inputElementName.value .replace(/\s+/g,'');
 
+const tpTag =
+inputElementName.value.replace(/\s+/g,'');
 const caption =
 `⚡ HETK Monitoring
 📍 ${inputElementName.value}
