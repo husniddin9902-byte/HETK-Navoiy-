@@ -986,13 +986,9 @@ if (elementMainForm) {
 uploadedTelegramImages=[];
 
 for(const file of selectedFiles){
-
-const folderPath =
-getFolderPath(folderIdsArray[0]);
-
-const tpTag =
-inputElementName.value
-.replace(/\s+/g,'');
+const folderPath = selectedFolders;
+//const folderPath = getFolderPath(folderIdsArray[0]);
+const tpTag = inputElementName.value .replace(/\s+/g,'');
 
 const caption =
 `⚡ HETK Monitoring
