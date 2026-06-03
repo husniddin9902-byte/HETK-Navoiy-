@@ -1023,6 +1023,8 @@ https://maps.google.com/?q=${inputLatitude.value},${inputLongitude.value}
 
 📖 Batafsil ma'lumot`;
 
+const media = [];
+
 for(const file of selectedFiles){
 
 const formData = new FormData();
@@ -1045,18 +1047,29 @@ showToast("Telegramga rasm yuborishda xatolik!");
 return;
 }
 
-const photoArray = sendResult.result.photo;
+const photoArray =
+sendResult.result.photo;
 
 const fileId =
 photoArray[photoArray.length-1].file_id;
 
-const messageId =
-sendResult.result.message_id;
+media.push({
+type:"photo",
+media:fileId
+});
 
-if(uploadedTelegramImages.length === 0){
+uploadedTelegramImages.push({
+fileId:fileId
+});
 
-await fetch(
-`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageCaption`,
+}
+
+if(media.length){
+
+media[0].caption = caption;
+
+const albumResponse = await fetch(
+`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMediaGroup`,
 {
 method:"POST",
 headers:{
@@ -1064,27 +1077,15 @@ headers:{
 },
 body:JSON.stringify({
 chat_id: TELEGRAM_CHAT_ID,
-message_id: messageId,
-caption: caption
+media: media
 })
 }
 );
 
-}
+const albumResult =
+await albumResponse.json();
 
-const fileResponse = await fetch(
-`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getFile?file_id=${fileId}`
-);
-
-const fileResult = await fileResponse.json();
-
-if(!fileResult.ok) continue;
-
-uploadedTelegramImages.push({
-url:`https://api.telegram.org/file/bot${TELEGRAM_BOT_TOKEN}/${fileResult.result.file_path}`,
-messageId:messageId,
-fileId:fileId
-});
+console.log(albumResult);
 
 }
       
