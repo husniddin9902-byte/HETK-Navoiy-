@@ -1055,7 +1055,8 @@ photoArray[photoArray.length-1].file_id;
 
 media.push({
 type:"photo",
-media:fileId
+media:fileId,
+messageId: sendResult.result.message_id
 });
 
 /* uploadedTelegramImages.push({
