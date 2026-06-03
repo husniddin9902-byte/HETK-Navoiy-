@@ -1058,9 +1058,9 @@ type:"photo",
 media:fileId
 });
 
-uploadedTelegramImages.push({
+/* uploadedTelegramImages.push({
 fileId:fileId
-});
+}); */
 
 }
 
@@ -1086,7 +1086,7 @@ const albumResult =
 await albumResponse.json();
 
 console.log(albumResult);
-
+console.log("ALBUM OK");
 }
       
         // Saqlanadigan obyekt strukturasi
