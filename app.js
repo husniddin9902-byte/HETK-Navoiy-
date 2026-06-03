@@ -989,8 +989,10 @@ if(selectedFiles.length > 10){
 showToast("10 tadan ortiq rasm yuborib bo'lmaydi!");
 return;
 }
-
-const folderPath = selectedFolders;
+      
+const folderPath =
+getFolderPath(folderIdsArray[0]);
+//const folderPath = selectedFolders;
 
 const tpTag =
 inputElementName.value.replace(/\s+/g,'');
