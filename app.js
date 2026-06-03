@@ -984,37 +984,51 @@ if (elementMainForm) {
         const folderIdsArray = selectedFolders.split(',').filter(Boolean);
 
 uploadedTelegramImages=[];
-      if(selectedFiles.length > 10){
+
+if(selectedFiles.length > 10){
 showToast("10 tadan ortiq rasm yuborib bo'lmaydi!");
 return;
 }
-for(const file of selectedFiles){
-const formData = new FormData();
-formData.append("chat_id", TELEGRAM_CHAT_ID);
-formData.append("photo", file);
+
 const folderPath = selectedFolders;
-//const folderPath = getFolderPath(folderIdsArray[0]);
 
 const tpTag =
 inputElementName.value.replace(/\s+/g,'');
+
 const caption =
 `⚡ HETK Monitoring
+
 📍 ${inputElementName.value}
+
 ${inputBalanceToggle.checked ? '🔴 XUSUSIY' : '🔵 ETK'}
+
 📂 ${folderPath}
+
 📍 Manzil:
 ${inputElementAddress.value || "-"}
+
 📌 Kenglik (Latitude): ${inputLatitude.value}
+
 📌 Uzunlik (Longitude): ${inputLongitude.value}
+
 🚗 Navigatsiya:
 https://maps.google.com/?q=${inputLatitude.value},${inputLongitude.value}
+
 🔎 Qidiruv teglari
+
 #${tpTag}
 #${inputBalanceToggle.checked ? 'XUSUSIY' : 'ETK'}
+
 📖 Batafsil ma'lumot`;
-formData.append("caption",caption);
-  
-const sendResponse=await fetch(
+
+for(const file of selectedFiles){
+
+const formData = new FormData();
+
+formData.append("chat_id", TELEGRAM_CHAT_ID);
+formData.append("photo", file);
+
+const sendResponse = await fetch(
 `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`,
 {
 method:"POST",
@@ -1022,26 +1036,45 @@ body:formData
 }
 );
 
-const sendResult=await sendResponse.json();
+const sendResult = await sendResponse.json();
 
 if(!sendResult.ok){
 showToast("Telegramga rasm yuborishda xatolik!");
 return;
 }
 
-const photoArray=sendResult.result.photo;
+const photoArray = sendResult.result.photo;
 
-const fileId=
+const fileId =
 photoArray[photoArray.length-1].file_id;
 
-const messageId=
+const messageId =
 sendResult.result.message_id;
 
-const fileResponse=await fetch(
+if(uploadedTelegramImages.length === 0){
+
+await fetch(
+`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageCaption`,
+{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+chat_id: TELEGRAM_CHAT_ID,
+message_id: messageId,
+caption: caption
+})
+}
+);
+
+}
+
+const fileResponse = await fetch(
 `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getFile?file_id=${fileId}`
 );
 
-const fileResult=await fileResponse.json();
+const fileResult = await fileResponse.json();
 
 if(!fileResult.ok) continue;
 
@@ -1050,6 +1083,7 @@ url:`https://api.telegram.org/file/bot${TELEGRAM_BOT_TOKEN}/${fileResult.result.
 messageId:messageId,
 fileId:fileId
 });
+
 }
       
         // Saqlanadigan obyekt strukturasi
