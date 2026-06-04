@@ -810,7 +810,7 @@ ${mainImageIndex===index ? '⭐ Asosiy' : ''}
 <button type="button"
 class="set-main-image"
 data-index="${index}">
-⭐
+${mainImageIndex===index ? '⭐' : '☆'}
 </button>
 <button type="button"
 class="existing-image-remove"
@@ -835,7 +835,9 @@ ${mainImageIndex === (existingImages.length + index)
 type="button"
 class="set-main-image"
 data-index="${existingImages.length + index}">
-⭐
+${mainImageIndex === (existingImages.length + index)
+? '⭐'
+: '☆'}
 </button>
 <button
 type="button"
