@@ -1396,7 +1396,8 @@ function renderElementsInTree(folderId, childContainer) {
     database.ref('TPs/' + tpId).once('value', (snapshot) => {
         const tp = snapshot.val();
         if (!tp) return;
-
+   originalElementData = JSON.parse(JSON.stringify(tp));
+      
         resetElementForm();
         editingElementId = tpId;
         document.getElementById('element-panel-title').innerText = "Редактировать местоположение";
