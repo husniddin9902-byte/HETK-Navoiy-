@@ -1227,11 +1227,18 @@ loadFilteredPoints();
         } else {
             // Mavjud elementni yangilash holati
             database.ref('TPs/' + editingElementId).update(elementData).then(() => {
-                showToast("Element ma'lumotlari yangilandi!");
-                elementManagePanel.classList.add('hidden');
-                editingElementId = null;
-                if(document.getElementById('tab-items').classList.contains('active')) loadFilteredPoints();
-            });
+showSaveLoader(100,"Yakunlanmoqda...");
+setTimeout(()=>{
+hideSaveLoader();
+isSaving = false;
+showToast("Element ma'lumotlari yangilandi!");
+elementManagePanel.classList.add('hidden');
+editingElementId = null;
+if(document.getElementById('tab-items').classList.contains('active')){
+loadFilteredPoints();
+}
+},500);
+});
         }
     });
 }
