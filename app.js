@@ -1207,16 +1207,23 @@ console.log("ALBUM OK");
             meterNumber: inputBalanceToggle.checked ? inputMeterNumber.value : "",
             updatedAt: Date.now()
         };
-
         if (!editingElementId) {
+          
             // Yangi element yaratish holati
             elementData.createdAt = Date.now();
             database.ref('TPs').push(elementData).then(() => {
-                showToast("Yangi element muvaffaqiyatli saqlandi!");
-                elementManagePanel.classList.add('hidden');
-                resetToUserLocation();
-                if(document.getElementById('tab-items').classList.contains('active')) loadFilteredPoints();
-            });
+showSaveLoader(100,"Yakunlanmoqda...");
+setTimeout(()=>{
+hideSaveLoader();
+isSaving = false;
+showToast("Yangi element muvaffaqiyatli saqlandi!");
+elementManagePanel.classList.add('hidden');
+resetToUserLocation();
+if(document.getElementById('tab-items').classList.contains('active')){
+loadFilteredPoints();
+}
+},500);
+});
         } else {
             // Mavjud elementni yangilash holati
             database.ref('TPs/' + editingElementId).update(elementData).then(() => {
