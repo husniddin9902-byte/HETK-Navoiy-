@@ -1186,6 +1186,7 @@ console.log("ALBUM OK");
             phone: inputElementPhone.value,
             note: inputElementNote.value,
           images: [...existingImages, ...uploadedTelegramImages],
+          mainImageIndex: mainImageIndex,
         telegramMessageIds:
 [...existingImages, ...uploadedTelegramImages]
 .map(x => x.messageId)
