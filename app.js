@@ -1009,7 +1009,13 @@ showSaveLoader(
 );
       
         const selectedFolders = document.getElementById('element-selected-folders').value;
-        if (!selectedFolders) return showToast("Kamida bitta fiderni (guruh) belgilang!");
+        if (!selectedFolders){
+hideSaveLoader();
+isSaving = false;
+return showToast(
+"Kamida bitta fiderni (guruh) belgilang!"
+);
+}
 
         const folderIdsArray = selectedFolders.split(',').filter(Boolean);
 
