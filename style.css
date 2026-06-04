@@ -793,3 +793,55 @@ height:100%;
 object-fit:cover;
 display:block;
 }
+
+#save-loader{
+    position:fixed;
+    inset:0;
+    background:rgba(15,23,42,.88);
+    backdrop-filter:blur(6px);
+    z-index:999999;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+
+#save-loader.hidden{
+    display:none;
+}
+
+.save-loader-card{
+    width:320px;
+    max-width:90%;
+    background:#111827;
+    border-radius:20px;
+    padding:24px;
+    text-align:center;
+    color:#fff;
+    box-shadow:0 0 30px rgba(0,0,0,.35);
+}
+
+.save-loader-logo{
+    font-size:42px;
+    margin-bottom:10px;
+}
+
+.progress-bar{
+    width:100%;
+    height:12px;
+    background:#374151;
+    border-radius:999px;
+    overflow:hidden;
+    margin-top:15px;
+}
+
+#save-progress-fill{
+    width:0%;
+    height:100%;
+    background:#3b82f6;
+    transition:.3s;
+}
+
+#save-progress-percent{
+    margin-top:10px;
+    font-weight:700;
+}
