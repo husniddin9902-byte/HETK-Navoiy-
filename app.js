@@ -1377,11 +1377,12 @@ function renderElementsInTree(folderId, childContainer) {
             folderIds = [tp.folderId];
         }
         document.getElementById('element-selected-folders').value = folderIds.join(',');
-
-        // Rasm mavjudligini tekshirish
-       if(tp.images && tp.images.length){
-
+      
+      // Rasm mavjudligini tekshirish 
+      if(tp.images && tp.images.length){
 existingImages = tp.images || [];
+mainImageIndex =
+tp.mainImageIndex || 0;
 renderMultiImagePreview();
 imageStatusText.innerText =
 `${tp.images.length} ta rasm`;
