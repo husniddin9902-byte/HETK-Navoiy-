@@ -820,7 +820,10 @@ const box=document.createElement('div');
 box.className='multi-image-box';
 // box.innerHTML=`<img src="${img.url}"> 
 box.innerHTML=`
-<img src="https://via.placeholder.com/90x90?text=IMG"
+
+<img src="${img.url}"
+style="width:100%;height:100%;object-fit:cover;">
+
 style="width:100%;height:100%;object-fit:cover;">
 <div class="main-image-badge">
 ${mainImageIndex===index ? '⭐ Asosiy' : ''}
