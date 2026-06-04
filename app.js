@@ -850,6 +850,12 @@ previewContainer.appendChild(box);
 reader.readAsDataURL(file);
 });
 previewContainer.onclick=function(e){
+  if(e.target.classList.contains('set-main-image')){
+mainImageIndex =
+parseInt(e.target.dataset.index);
+renderMultiImagePreview();
+return;
+}
 if(e.target.classList.contains('existing-image-remove')){
 const index=parseInt(e.target.dataset.index);
 existingImages.splice(index,1);
