@@ -855,7 +855,20 @@ previewContainer.onclick=function(e){
   if(e.target.classList.contains('set-main-image')){
 mainImageIndex =
 parseInt(e.target.dataset.index);
-renderMultiImagePreview();
+document
+.querySelectorAll('.main-image-badge')
+.forEach(x => x.innerHTML = '');
+document
+.querySelectorAll('.set-main-image')
+.forEach(x => x.innerHTML = '☆');
+const currentStar = e.target;
+currentStar.innerHTML = '⭐';
+const badge =
+currentStar.parentElement
+.querySelector('.main-image-badge');
+if(badge){
+badge.innerHTML = '⭐ Asosiy';
+}
 return;
 }
 if(e.target.classList.contains('existing-image-remove')){
