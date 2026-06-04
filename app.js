@@ -23,6 +23,27 @@ let currentFolders = {};
 let activeFolderId = 'root'; 
 let editingFolderId = null;
 let activeMapMarkers = []; // Xaritadagi dinamik markerlarni nazorat qilish uchun massiv
+let isSaving = false;
+
+function showSaveLoader(percent,text){
+document
+.getElementById("save-loader")
+.classList.remove("hidden");
+document
+.getElementById("save-progress-fill")
+.style.width = percent + "%";
+document
+.getElementById("save-progress-percent")
+.innerText = percent + "%";
+document
+.getElementById("save-loader-text")
+.innerText = text;
+}
+function hideSaveLoader(){
+document
+.getElementById("save-loader")
+.classList.add("hidden");
+}
 
 // Google Satellit qatlami
 L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}',{
