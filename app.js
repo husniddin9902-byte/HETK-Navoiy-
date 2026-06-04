@@ -1277,7 +1277,8 @@ setTimeout(()=>{
 hideSaveLoader();
 isSaving = false;
 showToast("Element ma'lumotlari yangilandi!");
-elementManagePanel.classList.add('hidden');
+console.log("UPDATE OK");
+  elementManagePanel.classList.add('hidden');
 editingElementId = null;
 if(document.getElementById('tab-items').classList.contains('active')){
 loadFilteredPoints();
