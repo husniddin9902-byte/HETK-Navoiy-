@@ -1164,9 +1164,13 @@ media:fileId,
 messageId: sendResult.result.message_id
 });
 
+const imageUrl =
+await getTelegramFileUrl(fileId);
+
 uploadedTelegramImages.push({
 fileId: fileId,
-messageId: sendResult.result.message_id
+messageId: sendResult.result.message_id,
+url: imageUrl
 });
 
 }
