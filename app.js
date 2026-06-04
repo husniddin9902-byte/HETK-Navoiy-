@@ -1020,9 +1020,12 @@ return showToast(
         const folderIdsArray = selectedFolders.split(',').filter(Boolean);
 
 uploadedTelegramImages=[];
-
 if(selectedFiles.length > 10){
-showToast("10 tadan ortiq rasm yuborib bo'lmaydi!");
+hideSaveLoader();
+isSaving = false;
+showToast(
+"10 tadan ortiq rasm yuborib bo'lmaydi!"
+);
 return;
 }
       
