@@ -250,12 +250,24 @@ margin-top:10px;
         </form>
     </div>
     
-    
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
-
+<div id="save-loader" class="hidden">
+    <div class="save-loader-card">
+        <div class="save-loader-logo">⚡</div>
+        <h2>HETK Monitoring</h2>
+        <p id="save-loader-text">
+            Ma'lumotlar saqlanmoqda...
+        </p>
+        <div class="progress-bar">
+            <div id="save-progress-fill"></div>
+        </div>
+        <div id="save-progress-percent">0%</div>
+    </div>
+</div>
+    
     <script src="app.js?v=1.2"></script>
-
+    
 </body>
                             </html>
