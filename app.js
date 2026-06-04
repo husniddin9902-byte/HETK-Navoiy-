@@ -1234,6 +1234,24 @@ console.log("ALBUM OK");
             meterNumber: inputBalanceToggle.checked ? inputMeterNumber.value : "",
             updatedAt: Date.now()
         };
+
+let needTelegramRepost = false;
+
+if(editingElementId && originalElementData){
+
+if(
+originalElementData.name !== elementData.name ||
+originalElementData.address !== elementData.address ||
+originalElementData.lat !== elementData.lat ||
+originalElementData.lng !== elementData.lng ||
+originalElementData.phone !== elementData.phone ||
+originalElementData.folderId !== elementData.folderId ||
+originalElementData.mainImageIndex !== elementData.mainImageIndex
+){
+needTelegramRepost = true;
+}
+}
+      
         if (!editingElementId) {
           
             // Yangi element yaratish holati
