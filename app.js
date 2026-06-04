@@ -675,6 +675,7 @@ return null;
 
 let currentUploadedImageUrl = ""; // Telegramdan kelgan rasm linkini vaqtincha saqlash uchun
 let editingElementId = null; // Tahrirlash rejimi uchun element IDsi
+let originalElementData = null;
 
 // 2. Global Element Kiritish Oynasini Boshqarish Elementlari
 const elementManagePanel = document.getElementById('element-manage-panel');
