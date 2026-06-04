@@ -999,6 +999,15 @@ if (elementMainForm) {
     elementMainForm.addEventListener('submit', async function(e) {
         e.preventDefault();
 
+if(isSaving){
+return;
+}
+isSaving = true;
+showSaveLoader(
+10,
+"Ma'lumotlar tekshirilmoqda..."
+);
+      
         const selectedFolders = document.getElementById('element-selected-folders').value;
         if (!selectedFolders) return showToast("Kamida bitta fiderni (guruh) belgilang!");
 
