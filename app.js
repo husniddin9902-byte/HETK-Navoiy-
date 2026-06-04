@@ -1063,7 +1063,7 @@ https://maps.google.com/?q=${inputLatitude.value},${inputLongitude.value}
 📖 Batafsil ma'lumot`;
 
 const media = [];
-
+return;
 for(const file of selectedFiles){
 
 const formData = new FormData();
