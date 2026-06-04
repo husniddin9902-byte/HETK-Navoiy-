@@ -1146,9 +1146,10 @@ media:fileId,
 messageId: sendResult.result.message_id
 });
 
-/* uploadedTelegramImages.push({
-fileId:fileId
-}); */
+uploadedTelegramImages.push({
+fileId: fileId,
+messageId: sendResult.result.message_id
+});
 
 }
 
