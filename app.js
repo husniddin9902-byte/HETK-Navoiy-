@@ -790,6 +790,7 @@ function debounce(func, delay) {
 // 6. Rasm yuklash va uni orqa fonda xarajatsiz Telegram Botga yuborish mantiqi
 
 let selectedFiles=[];
+let mainImageIndex = 0;
 let existingImages=[];
 let uploadedTelegramImages=[];
 
