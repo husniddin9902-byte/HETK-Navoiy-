@@ -657,6 +657,31 @@ function refreshTreeDropdownSelection(container, selectedId) {
 const TELEGRAM_BOT_TOKEN = "8992286638:AAFPqW8OuFnBe-u6WZqqxiL1h3nhlIz48Qg"; // Bot tokeningizni shu yerga yozasiz
 const TELEGRAM_CHAT_ID = "-1003934340914"; // Maxfiy kanal yoki guruh IDsini yozasiz
 
+async function deleteTelegramMessages(messageIds){
+if(!messageIds || !messageIds.length){
+return;
+}
+for(const messageId of messageIds){
+try{
+await fetch(
+`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/deleteMessage`,
+{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+chat_id: TELEGRAM_CHAT_ID,
+message_id: messageId
+})
+}
+);
+}catch(error){
+console.error(error);
+}
+}
+}
+
 async function getTelegramFileUrl(fileId){
 try{
 const response = await fetch(
