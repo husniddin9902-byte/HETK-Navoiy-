@@ -825,11 +825,26 @@ const reader=new FileReader();
 reader.onload=function(e){
 const box=document.createElement('div');
 box.className='multi-image-box';
-box.innerHTML=`<img src="${e.target.result}"> <button
+box.innerHTML=`
+<img src="${e.target.result}">
+<div class="main-image-badge">
+${mainImageIndex === (existingImages.length + index)
+? '⭐ Asosiy' : ''}
+</div>
+<button
+type="button"
+class="set-main-image"
+data-index="${existingImages.length + index}">
+⭐
+</button>
+<button
 type="button"
 class="multi-image-remove"
 data-index="${index}">
-× </button>`;
+×
+</button>
+`;
+  
 previewContainer.appendChild(box);
 };
 reader.readAsDataURL(file);
