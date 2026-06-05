@@ -1274,8 +1274,8 @@ originalElementData.folderId !== elementData.folderId ||
 originalElementData.mainImageIndex !== elementData.mainImageIndex
 ){
 needTelegramRepost = true;
- alert("TELEGRAM REPOST");
 }
+
 }
       
         if (!editingElementId) {
@@ -1297,6 +1297,17 @@ loadFilteredPoints();
 });
         } else {
             // Mavjud elementni yangilash holati
+          if(
+needTelegramRepost &&
+originalElementData &&
+originalElementData.telegramMessageIds
+){
+
+await deleteTelegramMessages(
+originalElementData.telegramMessageIds
+);
+
+}
             database.ref('TPs/' + editingElementId).update(elementData).then(() => {
 showSaveLoader(100,"Yakunlanmoqda...");
 setTimeout(()=>{
