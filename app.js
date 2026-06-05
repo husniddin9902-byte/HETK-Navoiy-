@@ -1274,7 +1274,7 @@ originalElementData.folderId !== elementData.folderId ||
 originalElementData.mainImageIndex !== elementData.mainImageIndex
 ){
 needTelegramRepost = true;
- showToast("TELEGRAM REPOST");
+ alert("TELEGRAM REPOST");
 }
 }
       
