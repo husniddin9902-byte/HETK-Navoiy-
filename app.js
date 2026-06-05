@@ -1247,8 +1247,10 @@ JSON.stringify(albumResult).substring(0,500)
             note: inputElementNote.value,
           images: [...existingImages, ...uploadedTelegramImages],
           mainImageIndex: mainImageIndex,
-        telegramMessageIds:
-[...existingImages, ...uploadedTelegramImages]
+      telegramMessageIds:
+albumMessageIds.length
+? albumMessageIds
+: [...existingImages, ...uploadedTelegramImages]
 .map(x => x.messageId)
 .filter(Boolean),
           
