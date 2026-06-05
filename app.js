@@ -1225,6 +1225,11 @@ media: media
 const albumResult =
 await albumResponse.json();
 
+const albumMessageIds =
+albumResult.result
+? albumResult.result.map(x => x.message_id)
+: albumResult.map(x => x.message_id);
+  
 console.log(albumResult);
 console.log("ALBUM OK");
 alert(
