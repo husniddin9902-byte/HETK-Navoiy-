@@ -1156,7 +1156,7 @@ https://maps.google.com/?q=${inputLatitude.value},${inputLongitude.value}
 #${inputBalanceToggle.checked ? 'XUSUSIY' : 'ETK'}
 
 📖 Batafsil ma'lumot`;
-
+let albumMessageIds = [];
 const media = [];
 //return;
 for(const file of selectedFiles){
