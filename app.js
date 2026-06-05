@@ -1227,6 +1227,9 @@ await albumResponse.json();
 
 console.log(albumResult);
 console.log("ALBUM OK");
+alert(
+JSON.stringify(albumResult).substring(0,500)
+);
 }
       
         // Saqlanadigan obyekt strukturasi
