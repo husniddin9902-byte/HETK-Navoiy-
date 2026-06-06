@@ -1201,17 +1201,7 @@ messageId:messageId,
 url:imageUrl
 });
 }
-
-/*const archiveMedia = [];
-archiveImages.forEach(img => {
-if(img.fileId){
-archiveMedia.push({
-type:"photo",
-media: img.fileId
-});
-}
-});  */
-      
+   
      if(media.length) {
 media[0].caption = caption
 const albumResponse = await fetch(
@@ -1237,10 +1227,8 @@ albumResult.result
   archiveAlbumMessageIds = albumMessageIds;
 console.log(albumResult);
 console.log("ALBUM OK");
-
 }
 
-     
 let mainImage = null;
 const allImages = [
 ...existingImages,
@@ -1261,35 +1249,7 @@ allImages[mainImageIndex]
 mainImage =
 allImages[mainImageIndex];
 }
-   /*   if(mainImage){
-const mainPostResponse = await fetch(
-`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`,
-{
-method:"POST",
-headers:{
-"Content-Type":"application/json"
-},
-body:JSON.stringify({
-chat_id: TELEGRAM_CHAT_ID,
-photo: mainImage.fileId,
-caption: mainCaption
-})
-}
-);
-const mainPostResult =
-await mainPostResponse.json();
-if(mainPostResult.ok){
-mainTelegramMessageId =
-mainPostResult.result.message_id;
-console.log("MAIN POST OK");
-}else{
-console.error(
-"MAIN POST ERROR",
-mainPostResult
-);
-}
-} */
-      
+ 
 const mainCaption =
 `⚡ HETK Monitoring
 📍 ${inputElementName.value}
