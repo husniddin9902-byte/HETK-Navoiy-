@@ -1219,7 +1219,7 @@ headers:{
 },
 body:JSON.stringify({
 chat_id: TELEGRAM_ARCHIVE_CHAT_ID,
-media: media
+media: archiveMedia
 })
 }
 );
