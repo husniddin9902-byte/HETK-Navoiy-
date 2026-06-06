@@ -1223,6 +1223,32 @@ albumResult.result
 console.log(albumResult);
 console.log("ALBUM OK");
 }
+
+let mainImage = null;
+const allImages = [
+...existingImages,
+...uploadedTelegramImages
+];
+if(
+allImages.length &&
+allImages[mainImageIndex]
+){
+mainImage =
+allImages[mainImageIndex];
+}
+const mainCaption =
+`⚡ HETK Monitoring
+📍 ${inputElementName.value}
+${inputBalanceToggle.checked ? '🔴 XUSUSIY' : '🔵 ETK'}
+📂 ${folderPath}
+📍 Manzil:
+${inputElementAddress.value || "-"}
+📌 Kenglik:
+${inputLatitude.value}
+📌 Uzunlik:
+${inputLongitude.value}
+📖 Qo'shimcha ma'lumot mavjud`;
+
       
         // Saqlanadigan obyekt strukturasi
         const elementData = {
