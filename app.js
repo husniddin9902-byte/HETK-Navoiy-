@@ -1224,35 +1224,7 @@ console.log(albumResult);
 console.log("ALBUM OK");
 }
 
-      if(mainImage){
-
-const mainPostResponse = await fetch(
-`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`,
-{
-method:"POST",
-headers:{
-"Content-Type":"application/json"
-},
-body:JSON.stringify({
-chat_id: TELEGRAM_CHAT_ID,
-photo: mainImage.fileId,
-caption: mainCaption
-})
-}
-);
-
-const mainPostResult =
-await mainPostResponse.json();
-if(mainPostResult.ok){
-mainTelegramMessageId =
-mainPostResult.result.message_id;
-}else{
-console.error(
-"Main post error",
-mainPostResult
-);
-}
-}
+     
 let mainImage = null;
 const allImages = [
 ...existingImages,
