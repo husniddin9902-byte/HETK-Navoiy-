@@ -1230,7 +1230,16 @@ const allImages = [
 ...existingImages,
 ...uploadedTelegramImages
 ];
-if(
+
+      let archiveImages = [];
+
+if(allImages.length){
+archiveImages =
+allImages.filter(
+(_,index)=>index!==mainImageIndex
+);
+}  
+      if(
 allImages.length &&
 allImages[mainImageIndex]
 ){
