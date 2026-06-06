@@ -1159,6 +1159,7 @@ https://maps.google.com/?q=${inputLatitude.value},${inputLongitude.value}
 
 📖 Batafsil ma'lumot`;
 let albumMessageIds = [];
+let mainTelegramMessageId = null;      
 const media = [];
 //return;
 for(const file of selectedFiles){
@@ -1218,6 +1219,7 @@ await albumResponse.json();
 albumResult.result
 ? albumResult.result.map(x => x.message_id)
 : albumResult.map(x => x.message_id);
+  archiveAlbumMessageIds = albumMessageIds;
 console.log(albumResult);
 console.log("ALBUM OK");
 }
@@ -1232,12 +1234,12 @@ console.log("ALBUM OK");
             note: inputElementNote.value,
           images: [...existingImages, ...uploadedTelegramImages],
           mainImageIndex: mainImageIndex,
-      telegramMessageIds:
-albumMessageIds.length
-? albumMessageIds
-: [...existingImages, ...uploadedTelegramImages]
-.map(x => x.messageId)
-.filter(Boolean),
+          
+   telegramMainMessageId:
+mainTelegramMessageId,
+
+telegramArchiveMessageIds:
+archiveAlbumMessageIds,
           
             isPrivate: inputBalanceToggle.checked,
           
