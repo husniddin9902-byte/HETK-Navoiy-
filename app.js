@@ -1197,7 +1197,18 @@ fileId:fileId,
 url:imageUrl
 });
 }
-if(media.length){
+
+const archiveMedia = [];
+archiveImages.forEach(img => {
+if(img.fileId){
+archiveMedia.push({
+type:"photo",
+media: img.fileId
+});
+}
+});
+      
+      if(media.length){
 media[0].caption = caption;
 const albumResponse = await fetch(
 `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMediaGroup`,
