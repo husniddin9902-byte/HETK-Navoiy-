@@ -1186,6 +1186,9 @@ const photoArray =
 sendResult.result.photo;
 const fileId =
 photoArray[photoArray.length-1].file_id;
+const messageId =
+sendResult.result.message_id;
+  
 media.push({
 type:"photo",
 media:fileId
@@ -1194,6 +1197,7 @@ const imageUrl =
 await getTelegramFileUrl(fileId);
 uploadedTelegramImages.push({
 fileId:fileId,
+messageId:messageId,
 url:imageUrl
 });
 }
