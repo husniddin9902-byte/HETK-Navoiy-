@@ -670,8 +670,8 @@ headers:{
 "Content-Type":"application/json"
 },
 body:JSON.stringify({
-chat_id: chatId,
-message_id: messageId
+chat_id: TELEGRAM_ARCHIVE_CHAT_ID,
+media: archiveMedia
 })
 }
 );
