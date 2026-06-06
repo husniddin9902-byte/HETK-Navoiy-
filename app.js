@@ -1198,7 +1198,7 @@ url:imageUrl
 });
 }
 
-const archiveMedia = [];
+/*const archiveMedia = [];
 archiveImages.forEach(img => {
 if(img.fileId){
 archiveMedia.push({
@@ -1206,10 +1206,10 @@ type:"photo",
 media: img.fileId
 });
 }
-});
+});  */
       
-      if(archiveMedia.length){
-archiveMedia[0].caption = caption;
+     if(media.length)
+media[0].caption = caption
 const albumResponse = await fetch(
 `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMediaGroup`,
 {
@@ -1219,7 +1219,7 @@ headers:{
 },
 body:JSON.stringify({
 chat_id: TELEGRAM_ARCHIVE_CHAT_ID,
-media: archiveMedia
+media: media
 })
 }
 );
