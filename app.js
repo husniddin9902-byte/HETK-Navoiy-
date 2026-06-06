@@ -1161,12 +1161,12 @@ let albumMessageIds = [];
 const media = [];
 //return;
 for(const file of selectedFiles){
-
 const formData = new FormData();
-
-formData.append("chat_id", TELEGRAM_CHAT_ID);
+formData.append(
+"chat_id",
+TELEGRAM_ARCHIVE_CHAT_ID
+);
 formData.append("photo", file);
-
 const sendResponse = await fetch(
 `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`,
 {
@@ -1174,41 +1174,29 @@ method:"POST",
 body:formData
 }
 );
-
-const sendResult = await sendResponse.json();
-
+const sendResult =
+await sendResponse.json();
 if(!sendResult.ok){
 showToast("Telegramga rasm yuborishda xatolik!");
 return;
 }
-
 const photoArray =
 sendResult.result.photo;
-
 const fileId =
 photoArray[photoArray.length-1].file_id;
-
 media.push({
 type:"photo",
-media:fileId,
-messageId: sendResult.result.message_id
+media:fileId
 });
-
 const imageUrl =
 await getTelegramFileUrl(fileId);
-
 uploadedTelegramImages.push({
-fileId: fileId,
-messageId: sendResult.result.message_id,
-url: imageUrl
+fileId:fileId,
+url:imageUrl
 });
-
 }
-
 if(media.length){
-
 media[0].caption = caption;
-
 const albumResponse = await fetch(
 `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMediaGroup`,
 {
@@ -1222,7 +1210,6 @@ media: media
 })
 }
 );
-
 const albumResult =
 await albumResponse.json();
 
@@ -1230,10 +1217,8 @@ await albumResponse.json();
 albumResult.result
 ? albumResult.result.map(x => x.message_id)
 : albumResult.map(x => x.message_id);
-  
 console.log(albumResult);
 console.log("ALBUM OK");
-
 }
       
         // Saqlanadigan obyekt strukturasi
