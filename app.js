@@ -332,7 +332,7 @@ function updateParentSelect(selectId, excludeId = null) {
             option.value = id;
             option.innerText = currentFolders[id].name;
             select.appendChild(option);
-        }
+       }
     });
     
     // Asosiy select o'zgarganda dynamic daraxt dropdownlarni yangilaymiz
