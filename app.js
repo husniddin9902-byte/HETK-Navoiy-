@@ -942,6 +942,16 @@ if(elementImageInput){
 elementImageInput.setAttribute('multiple','multiple');
 elementImageInput.addEventListener('change',function(e){
 const files=Array.from(e.target.files);
+  if(
+existingImages.length +
+selectedFiles.length +
+files.length > 5
+){
+showToast(
+"Maksimal 5 ta rasm yuklash mumkin!"
+);
+return;
+}
 if(!files.length)return;
 files.forEach(file=>{
 if(file.type.startsWith('image/')){
