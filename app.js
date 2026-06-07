@@ -1263,7 +1263,7 @@ photo: mainImage.fileId,
 caption: mainCaption
 })
 }
-); */
+);
 const mainResult = await mainResponse.json();
       alert(JSON.stringify(mainResult));
 if(mainResult.ok){
@@ -1271,7 +1271,7 @@ mainTelegramMessageId =
 mainResult.result.message_id;
 console.log("MAIN POST OK");
 }
-}
+}  */
  
 const mainCaption =
 `⚡ HETK Monitoring
