@@ -1249,7 +1249,7 @@ allImages[mainImageIndex]
 mainImage =
 allImages[mainImageIndex];
 }
- /*     if(mainImage && mainImage.fileId){
+   if(mainImage && mainImage.fileId){
 const mainResponse = await fetch(
 `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`,
 {
@@ -1265,13 +1265,18 @@ caption: mainCaption
 }
 );
 const mainResult = await mainResponse.json();
+     showToast(
+mainResult.ok
+? "MAIN OK"
+: JSON.stringify(mainResult)
+);
       alert(JSON.stringify(mainResult));
 if(mainResult.ok){
 mainTelegramMessageId =
 mainResult.result.message_id;
 console.log("MAIN POST OK");
 }
-}  */
+}  
  
 const mainCaption =
 `⚡ HETK Monitoring
@@ -1285,7 +1290,6 @@ ${inputLatitude.value}
 📌 Uzunlik:
 ${inputLongitude.value}
 📖 Qo'shimcha ma'lumot mavjud`;
-showToast("MAIN IMAGE TEST");
       
         // Saqlanadigan obyekt strukturasi
         const elementData = {
