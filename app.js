@@ -1285,7 +1285,7 @@ ${inputLatitude.value}
 📌 Uzunlik:
 ${inputLongitude.value}
 📖 Qo'shimcha ma'lumot mavjud`;
-alert(JSON.stringify(mainImage));
+showToast("MAIN IMAGE TEST");
       
         // Saqlanadigan obyekt strukturasi
         const elementData = {
