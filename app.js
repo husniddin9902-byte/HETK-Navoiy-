@@ -1193,9 +1193,9 @@ media.push({
 type:"photo",
 media:fileId
 });
-//const imageUrl =
-//await getTelegramFileUrl(fileId);
-  const imageUrl = "";
+const imageUrl =
+await getTelegramFileUrl(fileId);
+  
 uploadedTelegramImages.push({
 fileId:fileId,
 messageId:messageId,
