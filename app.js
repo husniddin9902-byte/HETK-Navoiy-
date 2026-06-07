@@ -1271,9 +1271,10 @@ const allImages = [
 ...uploadedTelegramImages
 ];
 
-      console.log(
-"MAIN IMAGE =",
+     alert(
+JSON.stringify(
 allImages[mainImageIndex]
+)
 );
 const mainCaption =
 `⚡ HETK Monitoring
