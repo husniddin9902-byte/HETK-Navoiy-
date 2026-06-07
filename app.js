@@ -1249,7 +1249,7 @@ allImages[mainImageIndex]
 mainImage =
 allImages[mainImageIndex];
 }
-      if(mainImage && mainImage.fileId){
+ /*     if(mainImage && mainImage.fileId){
 const mainResponse = await fetch(
 `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`,
 {
@@ -1263,7 +1263,7 @@ photo: mainImage.fileId,
 caption: mainCaption
 })
 }
-);
+); */
 const mainResult = await mainResponse.json();
       alert(JSON.stringify(mainResult));
 if(mainResult.ok){
