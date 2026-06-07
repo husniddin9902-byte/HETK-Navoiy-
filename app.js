@@ -947,7 +947,7 @@ existingImages.length +
 selectedFiles.length +
 files.length > 5
 ){
-showToast(
+alert(
 "Maksimal 5 ta rasm yuklash mumkin!"
 );
 return;
