@@ -1235,7 +1235,7 @@ const allImages = [
 ...uploadedTelegramImages
 ];
 
-      let archiveImages = [];
+  /*    let archiveImages = [];
 if(allImages.length){
 archiveImages =
 allImages.filter(
@@ -1262,7 +1262,7 @@ chat_id: TELEGRAM_CHAT_ID,
 photo: mainImage.fileId,
 caption: mainCaption
 })
-}
+} */
 );
 const mainResult = await mainResponse.json();
      showToast(
