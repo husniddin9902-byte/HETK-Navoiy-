@@ -1271,11 +1271,7 @@ const allImages = [
 ...uploadedTelegramImages
 ];
 
-     alert(
-JSON.stringify(
-allImages[mainImageIndex]
-)
-);
+  
 const mainCaption =
 `⚡ HETK Monitoring
 📍 ${inputElementName.value}
@@ -1288,6 +1284,31 @@ ${inputLatitude.value}
 📌 Uzunlik:
 ${inputLongitude.value}
 📖 Qo'shimcha ma'lumot mavjud`;
+
+ mainImage = allImages[mainImageIndex];
+
+if(mainImage && mainImage.fileId){
+
+const mainResponse = await fetch(
+`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`,
+{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+chat_id: TELEGRAM_CHAT_ID,
+photo: mainImage.fileId,
+caption: mainCaption
+})
+}
+);
+
+const mainResult = await mainResponse.json();
+
+alert(JSON.stringify(mainResult));
+
+}
       
         // Saqlanadigan obyekt strukturasi
         const elementData = {
