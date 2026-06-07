@@ -1235,49 +1235,6 @@ const allImages = [
 ...existingImages,
 ...uploadedTelegramImages
 ];
-
-  /*    let archiveImages = [];
-if(allImages.length){
-archiveImages =
-allImages.filter(
-(_,index)=>index!==mainImageIndex
-);
-}  
-      if(
-allImages.length &&
-allImages[mainImageIndex]
-){
-mainImage =
-allImages[mainImageIndex];
-}
-   if(mainImage && mainImage.fileId){
-const mainResponse = await fetch(
-`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`,
-{
-method:"POST",
-headers:{
-"Content-Type":"application/json"
-},
-body:JSON.stringify({
-chat_id: TELEGRAM_CHAT_ID,
-photo: mainImage.fileId,
-caption: mainCaption
-})
-} */
-);
-const mainResult = await mainResponse.json();
-     showToast(
-mainResult.ok
-? "MAIN OK"
-: JSON.stringify(mainResult)
-);
-      alert(JSON.stringify(mainResult));
-if(mainResult.ok){
-mainTelegramMessageId =
-mainResult.result.message_id;
-console.log("MAIN POST OK");
-}
-}  
  
 const mainCaption =
 `⚡ HETK Monitoring
