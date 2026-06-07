@@ -1270,7 +1270,11 @@ const allImages = [
 ...existingImages,
 ...uploadedTelegramImages
 ];
- 
+
+      console.log(
+"MAIN IMAGE =",
+allImages[mainImageIndex]
+);
 const mainCaption =
 `⚡ HETK Monitoring
 📍 ${inputElementName.value}
