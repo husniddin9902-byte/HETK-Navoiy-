@@ -1265,6 +1265,7 @@ caption: mainCaption
 }
 );
 const mainResult = await mainResponse.json();
+        console.log("MAIN RESULT =", mainResult);
 if(mainResult.ok){
 mainTelegramMessageId =
 mainResult.result.message_id;
