@@ -1228,6 +1228,31 @@ albumResult.result
   archiveAlbumMessageIds = albumMessageIds;
 console.log(albumResult);
 console.log("ALBUM OK");
+
+       for(const img of uploadedTelegramImages){
+if(img.messageId){
+try{
+await fetch(
+`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/deleteMessage`,
+{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+chat_id: TELEGRAM_ARCHIVE_CHAT_ID,
+message_id: img.messageId
+})
+}
+);
+}catch(err){
+console.error(
+"Delete temp photo error:",
+err
+);
+}
+}
+}
 }
 
 let mainImage = null;
