@@ -1388,7 +1388,7 @@ needTelegramRepost = true;
 } else {
          
    // Mavjud elementni yangilash holati
-if(
+ /* if(
     needTelegramRepost &&
     originalElementData &&
     originalElementData.telegramArchiveMessageIds
@@ -1396,7 +1396,7 @@ if(
     await deleteTelegramMessages(
         originalElementData.telegramArchiveMessageIds
     );
-}
+} */
     database.ref('TPs/' + editingElementId).update(elementData).then(() => {
         showSaveLoader(100,"Yakunlanmoqda...");
         setTimeout(()=>{
