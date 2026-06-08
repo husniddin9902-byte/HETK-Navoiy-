@@ -1438,7 +1438,7 @@ err.message
 console.error(err);
 
 });
-
+ }
 // Elementni o'chirish tugmasi mantiqi
 if (deleteElementBtn) {
     deleteElementBtn.addEventListener('click', function() {
