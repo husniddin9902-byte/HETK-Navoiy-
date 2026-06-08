@@ -1313,7 +1313,8 @@ console.log("MAIN POST OK");
 console.error(mainResult);
 }
 }
-      
+
+      alert("ELEMENTDATA YASALMOQDA");
         // Saqlanadigan obyekt strukturasi
         const elementData = {
             name: inputElementName.value,
