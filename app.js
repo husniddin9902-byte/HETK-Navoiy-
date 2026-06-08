@@ -1387,11 +1387,11 @@ loadFilteredPoints();
           if(
 needTelegramRepost &&
 originalElementData &&
-originalElementData.telegramMessageIds
+originalElementData.telegramArchiveMessageIds
 ){
 
 await deleteTelegramMessages(
-originalElementData.telegramMessageIds
+originalElementData.telegramArchiveMessageIds
 );
 
 }
