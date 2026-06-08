@@ -1367,6 +1367,11 @@ needTelegramRepost = true;
 }
 
 }
+
+alert(
+"editingElementId = " +
+editingElementId
+);
       
        if (!editingElementId) {
           
