@@ -1397,27 +1397,47 @@ originalElementData.telegramArchiveMessageIds
 );
 
 } */
-          alert(
+         alert(
 "Tahrirlanayotgan nom: " +
 elementData.name
 );
-            database.ref('TPs/' + editingElementId).update(elementData).then(() => {
+
+alert("FIREBASE UPDATE BOSHLANMOQDA");
+
+database.ref('TPs/' + editingElementId)
+.update(elementData)
+.then(() => {
+
+alert("FIREBASE UPDATE TUGADI");
+
 showSaveLoader(100,"Yakunlanmoqda...");
+
 setTimeout(()=>{
 hideSaveLoader();
 isSaving = false;
 showToast("Element ma'lumotlari yangilandi!");
 console.log("UPDATE OK");
-  elementManagePanel.classList.add('hidden');
+
+elementManagePanel.classList.add('hidden');
 editingElementId = null;
+
 if(document.getElementById('tab-items').classList.contains('active')){
 loadFilteredPoints();
 }
+
 },500);
+
+})
+.catch(err => {
+
+alert(
+"UPDATE ERROR: " +
+err.message
+);
+
+console.error(err);
+
 });
-        }
-    });
-}
 
 // Elementni o'chirish tugmasi mantiqi
 if (deleteElementBtn) {
