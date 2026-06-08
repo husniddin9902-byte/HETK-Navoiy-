@@ -1383,8 +1383,10 @@ loadFilteredPoints();
 },500);
 });
         } else {
-            // Mavjud elementni yangilash holati
-          if(
+          
+          // Mavjud elementni yangilash holati
+         
+      /*    if(
 needTelegramRepost &&
 originalElementData &&
 originalElementData.telegramArchiveMessageIds
@@ -1394,7 +1396,7 @@ await deleteTelegramMessages(
 originalElementData.telegramArchiveMessageIds
 );
 
-}
+} */
           alert(
 "Tahrirlanayotgan nom: " +
 elementData.name
