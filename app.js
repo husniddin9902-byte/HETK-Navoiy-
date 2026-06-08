@@ -1397,6 +1397,10 @@ needTelegramRepost = true;
         originalElementData.telegramArchiveMessageIds
     );
 } */
+
+         alert("UPDATE BOSHLANISHIDAN OLDIN");
+console.log(elementData);
+         
     database.ref('TPs/' + editingElementId).update(elementData).then(() => {
         showSaveLoader(100,"Yakunlanmoqda...");
         setTimeout(()=>{
