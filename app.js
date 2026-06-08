@@ -1365,80 +1365,57 @@ needTelegramRepost = true;
 
 }
       
-        if (!editingElementId) {
+       if (!editingElementId) {
           
-            // Yangi element yaratish holati
-            elementData.createdAt = Date.now();
-            database.ref('TPs').push(elementData).then(() => {
-showSaveLoader(100,"Yakunlanmoqda...");
-setTimeout(()=>{
-hideSaveLoader();
-isSaving = false;
-showToast("Yangi element muvaffaqiyatli saqlandi!");
-elementManagePanel.classList.add('hidden');
-resetToUserLocation();
-if(document.getElementById('tab-items').classList.contains('active')){
-loadFilteredPoints();
-}
-},500);
-});
-        } else {
-          
-          // Mavjud elementni yangilash holati
+    // Yangi element yaratish holati
+    elementData.createdAt = Date.now();
+    database.ref('TPs').push(elementData).then(() => {
+        showSaveLoader(100,"Yakunlanmoqda...");
+        setTimeout(()=>{
+            hideSaveLoader();
+            isSaving = false;
+            showToast("Yangi element muvaffaqiyatli saqlandi!");
+            elementManagePanel.classList.add('hidden');
+            resetToUserLocation();
+
+            if(document.getElementById('tab-items').classList.contains('active')){
+                loadFilteredPoints();
+            }
+        },500);
+    });
+} else {
          
-      /*    if(
-needTelegramRepost &&
-originalElementData &&
-originalElementData.telegramArchiveMessageIds
-){
+    // Mavjud elementni yangilash holati
+    if(
+        needTelegramRepost &&
+        originalElementData &&
+        originalElementData.telegramMessageIds
+    ){
+        await deleteTelegramMessages(
+            originalElementData.telegramMessageIds
+        );
+    }
+    database.ref('TPs/' + editingElementId).update(elementData).then(() => {
+        showSaveLoader(100,"Yakunlanmoqda...");
+        setTimeout(()=>{
+            hideSaveLoader();
+            isSaving = false;
+            showToast("Element ma'lumotlari yangilandi!");
+            console.log("UPDATE OK");
 
-await deleteTelegramMessages(
-originalElementData.telegramArchiveMessageIds
-);
+            elementManagePanel.classList.add('hidden');
+            editingElementId = null;
 
-} */
-         alert(
-"Tahrirlanayotgan nom: " +
-elementData.name
-);
+            if(document.getElementById('tab-items').classList.contains('active')){
+                loadFilteredPoints();
+            }
+        },500);
+    });
 
-alert("FIREBASE UPDATE BOSHLANMOQDA");
-
-database.ref('TPs/' + editingElementId)
-.update(elementData)
-.then(() => {
-
-alert("FIREBASE UPDATE TUGADI");
-
-showSaveLoader(100,"Yakunlanmoqda...");
-
-setTimeout(()=>{
-hideSaveLoader();
-isSaving = false;
-showToast("Element ma'lumotlari yangilandi!");
-console.log("UPDATE OK");
-
-elementManagePanel.classList.add('hidden');
-editingElementId = null;
-
-if(document.getElementById('tab-items').classList.contains('active')){
-loadFilteredPoints();
+}
+    });
 }
 
-},500);
-
-})
-.catch(err => {
-
-alert(
-"UPDATE ERROR: " +
-err.message
-);
-
-console.error(err);
-
-});
- }
 // Elementni o'chirish tugmasi mantiqi
 if (deleteElementBtn) {
     deleteElementBtn.addEventListener('click', function() {
