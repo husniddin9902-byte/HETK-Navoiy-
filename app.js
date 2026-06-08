@@ -1325,11 +1325,13 @@ console.error(mainResult);
           images: [...existingImages, ...uploadedTelegramImages],
           mainImageIndex: mainImageIndex,
           
-   telegramMainMessageId:
-mainTelegramMessageId,
+  telegramMainMessageId:
+mainTelegramMessageId ||
+originalElementData?.telegramMainMessageId,
 
 telegramArchiveMessageIds:
-archiveAlbumMessageIds,
+archiveAlbumMessageIds ||
+originalElementData?.telegramArchiveMessageIds,
           
             isPrivate: inputBalanceToggle.checked,
           
