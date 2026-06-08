@@ -1395,6 +1395,10 @@ originalElementData.telegramMessageIds
 );
 
 }
+          alert(
+"Tahrirlanayotgan nom: " +
+elementData.name
+);
             database.ref('TPs/' + editingElementId).update(elementData).then(() => {
 showSaveLoader(100,"Yakunlanmoqda...");
 setTimeout(()=>{
