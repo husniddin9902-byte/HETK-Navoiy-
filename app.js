@@ -1382,6 +1382,18 @@ originalElementData.folderId !== elementData.folderId
 needArchiveCaptionEdit = true;
 }
 }
+
+ let needArchiveRebuild = false;
+if(
+selectedFiles.length > 0 ||
+(
+editingElementId &&
+originalElementData &&
+originalElementData.mainImageIndex !== mainImageIndex
+)
+){
+needArchiveRebuild = true;
+}
       
        if (!editingElementId) {
           
