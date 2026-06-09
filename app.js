@@ -1369,11 +1369,6 @@ needTelegramRepost = true;
 }
 
 }
-
-alert(
-"editingElementId = " +
-editingElementId
-);
       
        if (!editingElementId) {
           
@@ -1406,7 +1401,7 @@ editingElementId
     );
 } */
 
-         alert("UPDATE BOSHLANISHIDAN OLDIN");
+         
 console.log(elementData);
          
     database.ref('TPs/' + editingElementId).update(elementData).then(() => {
