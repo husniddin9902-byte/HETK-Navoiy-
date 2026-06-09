@@ -1316,6 +1316,9 @@ console.error(mainResult);
 }
 
       alert("ELEMENTDATA YASALMOQDA");
+      alert(
+typeof archiveAlbumMessageIds
+);
         // Saqlanadigan obyekt strukturasi
         const elementData = {
             name: inputElementName.value,
