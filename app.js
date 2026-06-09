@@ -1315,10 +1315,7 @@ console.error(mainResult);
 }
 }
 
-      alert("ELEMENTDATA YASALMOQDA");
-      alert(
-typeof archiveAlbumMessageIds
-);
+    
         // Saqlanadigan obyekt strukturasi
         const elementData = {
             name: inputElementName.value,
@@ -1335,8 +1332,9 @@ mainTelegramMessageId ||
 originalElementData?.telegramMainMessageId,
 
 telegramArchiveMessageIds:
-archiveAlbumMessageIds ||
-originalElementData?.telegramArchiveMessageIds,
+albumMessageIds.length
+? albumMessageIds
+: originalElementData?.telegramArchiveMessageIds,
           
             isPrivate: inputBalanceToggle.checked,
           
