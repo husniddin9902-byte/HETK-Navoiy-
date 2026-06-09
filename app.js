@@ -1421,11 +1421,6 @@ if(
 needArchiveCaptionEdit &&
 originalElementData?.telegramArchiveMessageIds?.length
 ){
-
-if(
-needArchiveCaptionEdit &&
-originalElementData?.telegramArchiveMessageIds?.length
-){
 try{
 const editResponse = await fetch(
 `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageCaption`,
@@ -1453,7 +1448,6 @@ console.error(
 "ARCHIVE EDIT ERROR:",
 err
 );
-}
 }
 }
          
