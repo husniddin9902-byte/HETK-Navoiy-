@@ -1369,6 +1369,19 @@ needTelegramRepost = true;
 }
 
 }
+
+let needArchiveCaptionEdit = false;
+if(editingElementId && originalElementData){
+if(
+originalElementData.name !== elementData.name ||
+originalElementData.address !== elementData.address ||
+originalElementData.phone !== elementData.phone ||
+originalElementData.note !== elementData.note ||
+originalElementData.folderId !== elementData.folderId
+){
+needArchiveCaptionEdit = true;
+}
+}
       
        if (!editingElementId) {
           
@@ -1403,6 +1416,13 @@ needTelegramRepost = true;
 
          
 console.log(elementData);
+
+if(
+needArchiveCaptionEdit &&
+originalElementData?.telegramArchiveMessageIds?.length
+){
+console.log("ARCHIVE CAPTION EDIT");
+}
          
     database.ref('TPs/' + editingElementId).update(elementData).then(() => {
         showSaveLoader(100,"Yakunlanmoqda...");
