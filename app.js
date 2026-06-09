@@ -1422,11 +1422,39 @@ needArchiveCaptionEdit &&
 originalElementData?.telegramArchiveMessageIds?.length
 ){
 
-alert(
-"Archive caption ID = " +
-originalElementData.telegramArchiveMessageIds[0]
+if(
+needArchiveCaptionEdit &&
+originalElementData?.telegramArchiveMessageIds?.length
+){
+try{
+const editResponse = await fetch(
+`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageCaption`,
+{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+chat_id: TELEGRAM_ARCHIVE_CHAT_ID,
+message_id:
+originalElementData.telegramArchiveMessageIds[0],
+caption: caption
+})
+}
 );
-
+const editResult =
+await editResponse.json();
+console.log(
+"ARCHIVE EDIT RESULT:",
+editResult
+);
+}catch(err){
+console.error(
+"ARCHIVE EDIT ERROR:",
+err
+);
+}
+}
 }
          
     database.ref('TPs/' + editingElementId).update(elementData).then(() => {
