@@ -659,7 +659,7 @@ const TELEGRAM_BOT_TOKEN = "8992286638:AAFPqW8OuFnBe-u6WZqqxiL1h3nhlIz48Qg"; // 
 const TELEGRAM_CHAT_ID = "-1003934340914"; // Maxfiy kanal yoki guruh IDsini yozasiz
 const TELEGRAM_ARCHIVE_CHAT_ID = "-1003885366930";
 
-async function deleteTelegramMessages(chatId, messageIds){
+async function deleteTelegramMessages(messageIds){
 if(!messageIds || !messageIds.length) return;
 for(const messageId of messageIds){
 try{
@@ -672,7 +672,7 @@ headers:{
 },
 body:JSON.stringify({
 chat_id: TELEGRAM_ARCHIVE_CHAT_ID,
-media: archiveMedia
+message_id: messageId
 })
 }
 );
