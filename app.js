@@ -1421,7 +1421,7 @@ if(
 needArchiveCaptionEdit &&
 originalElementData?.telegramArchiveMessageIds?.length
 ){
-console.log("ARCHIVE CAPTION EDIT");
+alert("ARCHIVE CAPTION EDIT");
 }
          
     database.ref('TPs/' + editingElementId).update(elementData).then(() => {
