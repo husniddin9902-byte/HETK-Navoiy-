@@ -1377,7 +1377,7 @@ originalElementData.name !== elementData.name ||
 originalElementData.address !== elementData.address ||
 originalElementData.phone !== elementData.phone ||
 originalElementData.note !== elementData.note ||
-originalElementData.folderId !== elementData.folderId
+originalElementData.folderId !== elementData.folderId ||
   originalElementData.lat !== elementData.lat ||
 originalElementData.lng !== elementData.lng
 ){
