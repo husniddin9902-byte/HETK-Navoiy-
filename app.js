@@ -1378,6 +1378,8 @@ originalElementData.address !== elementData.address ||
 originalElementData.phone !== elementData.phone ||
 originalElementData.note !== elementData.note ||
 originalElementData.folderId !== elementData.folderId
+  originalElementData.lat !== elementData.lat ||
+originalElementData.lng !== elementData.lng
 ){
 needArchiveCaptionEdit = true;
 }
