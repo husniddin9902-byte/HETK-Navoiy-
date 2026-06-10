@@ -1385,7 +1385,7 @@ needArchiveCaptionEdit = true;
 }
 }
 
- let needArchiveRebuild = false;
+/* let needArchiveRebuild = false;
 if(
 selectedFiles.length > 0 ||
 (
@@ -1395,7 +1395,7 @@ originalElementData.mainImageIndex !== mainImageIndex
 )
 ){
 needArchiveRebuild = true;
-}
+} */
       
        if (!editingElementId) {
           
