@@ -1389,10 +1389,7 @@ let needArchiveRebuild = false;
 if(selectedFiles.length > 0){
 needArchiveRebuild = true;
 }
-alert(
-"needArchiveRebuild =",
-needArchiveRebuild
-);
+alert(`needArchiveRebuild = ${needArchiveRebuild}`);
       
 /* let needArchiveRebuild = false;
 if(
