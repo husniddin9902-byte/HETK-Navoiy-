@@ -1388,8 +1388,12 @@ needArchiveCaptionEdit = true;
       
 let needArchiveRebuild = false;
 if(
+editingElementId &&
+originalElementData &&
+(
 selectedFiles.length > 0 ||
-existingImages.length !== originalElementData.images.length
+existingImages.length !== (originalElementData.images || []).length
+)
 ){
 needArchiveRebuild = true;
 }
