@@ -1385,6 +1385,15 @@ needArchiveCaptionEdit = true;
 }
 }
 
+let needArchiveRebuild = false;
+if(selectedFiles.length > 0){
+needArchiveRebuild = true;
+}
+console.log(
+"needArchiveRebuild =",
+needArchiveRebuild
+);
+      
 /* let needArchiveRebuild = false;
 if(
 selectedFiles.length > 0 ||
