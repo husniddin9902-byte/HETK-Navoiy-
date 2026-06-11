@@ -1384,7 +1384,10 @@ originalElementData.lng !== elementData.lng
 needArchiveCaptionEdit = true;
 }
 }
-
+alert(
+"existingImages = " +
+existingImages.length
+);
 let needArchiveRebuild = false;
 if(selectedFiles.length > 0){
 needArchiveRebuild = true;
