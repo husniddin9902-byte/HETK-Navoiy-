@@ -1388,10 +1388,15 @@ alert(
 "existingImages = " +
 existingImages.length
 );
+      
 let needArchiveRebuild = false;
-if(selectedFiles.length > 0){
+if(
+selectedFiles.length > 0 ||
+existingImages.length !== originalElementData.images.length
+){
 needArchiveRebuild = true;
 }
+      
 alert(`needArchiveRebuild = ${needArchiveRebuild}`);
       
 /* let needArchiveRebuild = false;
