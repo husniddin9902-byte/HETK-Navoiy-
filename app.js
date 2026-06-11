@@ -1384,10 +1384,7 @@ originalElementData.lng !== elementData.lng
 needArchiveCaptionEdit = true;
 }
 }
-alert(
-"existingImages = " +
-existingImages.length
-);
+
       
 let needArchiveRebuild = false;
 if(
@@ -1397,7 +1394,6 @@ existingImages.length !== originalElementData.images.length
 needArchiveRebuild = true;
 }
       
-alert(`needArchiveRebuild = ${needArchiveRebuild}`);
       
 /* let needArchiveRebuild = false;
 if(
