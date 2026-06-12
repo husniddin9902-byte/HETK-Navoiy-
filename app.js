@@ -1478,7 +1478,14 @@ err
 );
 }
 }
-         
+         if(
+needArchiveRebuild &&
+originalElementData?.telegramArchiveMessageIds?.length
+){
+
+alert("ARCHIVE REBUILD START");
+
+}
     database.ref('TPs/' + editingElementId).update(elementData).then(() => {
         showSaveLoader(100,"Yakunlanmoqda...");
         setTimeout(()=>{
