@@ -1214,7 +1214,7 @@ url:imageUrl
 });
 }
    
-     if(media.length) {
+     if(media.length && !editingElementId) {
 media[0].caption = caption
 const albumResponse = await fetch(
 `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMediaGroup`,
