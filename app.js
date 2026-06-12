@@ -1485,7 +1485,38 @@ originalElementData?.telegramArchiveMessageIds?.length
 await deleteTelegramMessages(
 originalElementData.telegramArchiveMessageIds
 );
-alert("ARCHIVE DELETED");
+
+           const archiveMedia = [];
+for(const img of elementData.images){
+if(img.fileId){
+archiveMedia.push({
+type:"photo",
+media:img.fileId
+});
+}
+}
+if(archiveMedia.length){
+archiveMedia[0].caption = caption;
+const rebuildResponse = await fetch(
+`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMediaGroup`,
+{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+chat_id: TELEGRAM_ARCHIVE_CHAT_ID,
+media: archiveMedia
+})
+}
+);
+const rebuildResult =
+await rebuildResponse.json();
+console.log(
+"ARCHIVE REBUILD RESULT:",
+rebuildResult
+);
+}
 
 }
     database.ref('TPs/' + editingElementId).update(elementData).then(() => {
