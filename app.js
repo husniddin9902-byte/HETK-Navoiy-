@@ -1482,8 +1482,10 @@ err
 needArchiveRebuild &&
 originalElementData?.telegramArchiveMessageIds?.length
 ){
-
-alert("ARCHIVE REBUILD START");
+await deleteTelegramMessages(
+originalElementData.telegramArchiveMessageIds
+);
+alert("ARCHIVE DELETED");
 
 }
     database.ref('TPs/' + editingElementId).update(elementData).then(() => {
