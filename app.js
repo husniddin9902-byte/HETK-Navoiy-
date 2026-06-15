@@ -1287,10 +1287,7 @@ ${inputLongitude.value}
 📖 Qo'shimcha ma'lumot mavjud`;
 
  mainImage = allImages[mainImageIndex];
-alert(
-"editingElementId = " +
-editingElementId
-);
+
 if(mainImage && mainImage.fileId){
 
 const mainResponse = await fetch(
