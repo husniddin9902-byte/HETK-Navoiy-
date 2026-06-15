@@ -1239,7 +1239,7 @@ albumResult.result
   archiveAlbumMessageIds = albumMessageIds;
 console.log(albumResult);
 console.log("ALBUM OK");
-
+}
        for(const img of uploadedTelegramImages){
 if(img.messageId){
 try{
@@ -1264,7 +1264,7 @@ err
 }
 }
 }
-}
+
 
 let mainImage = null;
 const allImages = [
