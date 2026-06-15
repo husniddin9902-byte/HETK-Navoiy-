@@ -1512,6 +1512,10 @@ media: archiveMedia
 );
 const rebuildResult =
 await rebuildResponse.json();
+  elementData.telegramArchiveMessageIds =
+rebuildResult.result.map(
+x => x.message_id
+);
 console.log(
 "ARCHIVE REBUILD RESULT:",
 rebuildResult
