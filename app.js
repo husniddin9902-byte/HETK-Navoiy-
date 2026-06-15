@@ -1288,7 +1288,11 @@ ${inputLongitude.value}
 
  mainImage = allImages[mainImageIndex];
 
-if(mainImage && mainImage.fileId){
+if(
+mainImage &&
+mainImage.fileId &&
+!editingElementId
+){
 
 const mainResponse = await fetch(
 `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`,
