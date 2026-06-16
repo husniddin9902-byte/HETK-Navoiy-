@@ -1187,6 +1187,15 @@ ${inputElementAddress.value || "-"}
 🚗 Navigatsiya:
 https://maps.google.com/?q=${inputLatitude.value},${inputLongitude.value}
 
+🕒 Yaratilgan:
+${createdDate}
+
+✏️ Oxirgi tahrir:
+${updatedDate}
+
+👤 Tahrirlagan:
+${updatedBy}
+
 🔎 Qidiruv teglari
 
 #${tpTag}
