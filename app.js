@@ -1482,6 +1482,41 @@ err
 );
 }
 }
+
+if(
+needArchiveCaptionEdit &&
+originalElementData?.telegramMainMessageId
+){
+try{
+const mainEditResponse = await fetch(
+`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageCaption`,
+{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+chat_id: TELEGRAM_CHAT_ID,
+message_id:
+originalElementData.telegramMainMessageId,
+caption: mainCaption
+})
+}
+);
+const mainEditResult =
+await mainEditResponse.json();
+console.log(
+"MAIN EDIT RESULT:",
+mainEditResult
+);
+}catch(err){
+console.error(
+"MAIN EDIT ERROR:",
+err
+);
+}
+}
+         
          if(
 needArchiveRebuild &&
 originalElementData?.telegramArchiveMessageIds?.length
