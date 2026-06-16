@@ -1388,11 +1388,6 @@ originalElementData.lng !== elementData.lng
 needArchiveCaptionEdit = true;
 }
 }
-
-      alert(
-"needTelegramRepost = " +
-needTelegramRepost
-);
       
 let needArchiveRebuild = false;
 if(
@@ -1518,6 +1513,50 @@ console.error(
 "MAIN EDIT ERROR:",
 err
 );
+}
+}
+
+if(
+needTelegramRepost &&
+originalElementData?.telegramMainMessageId
+){
+const mainImage =
+elementData.images[
+elementData.mainImageIndex
+];
+if(mainImage?.fileId){
+try{
+const mediaResponse = await fetch(
+`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageMedia`,
+{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+chat_id: TELEGRAM_CHAT_ID,
+message_id:
+originalElementData.telegramMainMessageId,
+media:{
+type:"photo",
+media: mainImage.fileId,
+caption: mainCaption
+}
+})
+}
+);
+const mediaResult =
+await mediaResponse.json();
+console.log(
+"MAIN MEDIA RESULT:",
+mediaResult
+);
+}catch(err){
+console.error(
+"MAIN MEDIA ERROR:",
+err
+);
+}
 }
 }
          
