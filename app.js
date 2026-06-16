@@ -1156,7 +1156,16 @@ const folderPath =
 getFolderPath(folderIdsArray[0]);
 //const folderPath = selectedFolders;
 
-const tpTag =
+      const createdDate =
+formatDate(
+originalElementData?.createdAt ||
+Date.now()
+);
+const updatedDate =
+formatDate(Date.now());
+const updatedBy = "Admin";
+
+      const tpTag =
 inputElementName.value.replace(/\s+/g,'');
 
 const caption =
