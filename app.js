@@ -1389,6 +1389,10 @@ needArchiveCaptionEdit = true;
 }
 }
 
+      alert(
+"needTelegramRepost = " +
+needTelegramRepost
+);
       
 let needArchiveRebuild = false;
 if(
