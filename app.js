@@ -1000,6 +1000,21 @@ function getFolderPath(folderId){
     return path.join(' / ');
 }
 
+function formatDate(timestamp){
+if(!timestamp) return "-";
+const d = new Date(timestamp);
+return d.toLocaleString(
+"uz-UZ",
+{
+day:"2-digit",
+month:"2-digit",
+year:"numeric",
+hour:"2-digit",
+minute:"2-digit"
+}
+);
+}
+
 // 7. Element Formasi uchun daraxtsimon Multiselect (Many-to-Many fiderlar tanlash) dropdown chizish
 function renderElementTreeDropdown() {
     const dropdownContainer = document.getElementById('element-parent-folder-tree');
