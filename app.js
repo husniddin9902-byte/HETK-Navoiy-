@@ -1306,21 +1306,38 @@ const allImages = [
 ];
 
   
+const createdDate =
+editingElementId &&
+originalElementData?.createdAt
+? new Date(originalElementData.createdAt)
+.toLocaleString("uz-UZ")
+: new Date().toLocaleString("uz-UZ");
+
+const updatedDate =
+new Date().toLocaleString("uz-UZ");
+
 const mainCaption =
-`⚡ HETK Monitoring
+`⚡️ HETK Monitoring
 📍 ${inputElementName.value}
 ${inputBalanceToggle.checked ? '🔴 XUSUSIY' : '🔵 ETK'}
 📂 ${folderPath}
 📍 Manzil:
 ${inputElementAddress.value || "-"}
-📌 Kenglik:
-${inputLatitude.value}
-📌 Uzunlik:
-${inputLongitude.value}
+🚗 Navigatsiya:
+https://maps.google.com/?q=${inputLatitude.value},${inputLongitude.value}
+🕒 Yaratilgan:
+${createdDate}
+✏️ Oxirgi tahrir:
+${updatedDate}
+👤 Tahrirlagan shaxs:
+Admin
+🔎 Qidiruv teglari
+
+#${tpTag}
+#${inputBalanceToggle.checked ? 'XUSUSIY' : 'ETK'}
 📖 Qo'shimcha ma'lumot mavjud`;
-
+      
  mainImage = allImages[mainImageIndex];
-
 if(
 mainImage &&
 mainImage.fileId &&
@@ -1386,7 +1403,11 @@ albumMessageIds.length
             ownerName: inputBalanceToggle.checked ? inputOwnerName.value : "",
             ownerPhone: inputBalanceToggle.checked ? inputOwnerPhone.value : "",
             meterNumber: inputBalanceToggle.checked ? inputMeterNumber.value : "",
-            updatedAt: Date.now()
+       
+          createdAt:
+originalElementData?.createdAt ||
+Date.now(),
+          updatedAt: Date.now()
         };
 
 let needTelegramRepost = false;
