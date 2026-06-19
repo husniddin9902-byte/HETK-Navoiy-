@@ -1305,16 +1305,6 @@ const allImages = [
 ...uploadedTelegramImages
 ];
 
-  
-const createdDate =
-editingElementId &&
-originalElementData?.createdAt
-? new Date(originalElementData.createdAt)
-.toLocaleString("uz-UZ")
-: new Date().toLocaleString("uz-UZ");
-
-const updatedDate =
-new Date().toLocaleString("uz-UZ");
 
 const mainCaption =
 `⚡️ HETK Monitoring
