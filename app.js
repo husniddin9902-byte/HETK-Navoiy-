@@ -1373,7 +1373,11 @@ console.error(mainResult);
             lat: inputLatitude.value,
             lng: inputLongitude.value,
             address: inputElementAddress.value,
-            phone: inputElementPhone.value,
+           responsiblePerson:
+inputResponsiblePerson.value,
+
+responsiblePhone:
+inputResponsiblePhone.value,
             note: inputElementNote.value,
           images: [...existingImages, ...uploadedTelegramImages],
           mainImageIndex: mainImageIndex,
@@ -1815,7 +1819,11 @@ function renderElementsInTree(folderId, childContainer) {
         inputLatitude.value = tp.lat;
         inputLongitude.value = tp.lng;
         inputElementAddress.value = tp.address || "";
-        inputElementPhone.value = tp.phone || "";
+       inputResponsiblePerson.value =
+tp.responsiblePerson || "";
+
+inputResponsiblePhone.value =
+tp.responsiblePhone || "";
         inputElementNote.value = tp.note || "";
 
         // Many-to-Many fiderlar ro'yxatini yuklash
