@@ -1698,10 +1698,10 @@ confirm(
 )
 ) {
        alert(
-originalElementData
-? originalElementData.name
-: "originalElementData topilmadi"
-);  
+originalElementData.images
+? originalElementData.images.length
+: "images topilmadi"
+);
             database.ref('TPs/' + editingElementId).remove().then(() => {
                 showToast("Element o'chirib tashlandi!");
                 elementManagePanel.classList.add('hidden');
