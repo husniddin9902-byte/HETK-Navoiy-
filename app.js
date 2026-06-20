@@ -1690,17 +1690,41 @@ rebuildResult
 
 // Elementni o'chirish tugmasi mantiqi
 if (deleteElementBtn) {
-    deleteElementBtn.addEventListener('click', function() {
+    deleteElementBtn.addEventListener('click', async function() {
        if (
 editingElementId &&
 confirm(
 "⚠️ DIQQAT!\n\nMa'lumotlar 30 kun davomida arxivda saqlanadi.\n\nTiklash uchun administratorga murojaat qiling!.\n\nElement o'chirilsinmi?"
 )
 ) {
-      alert(
-JSON.stringify(
-originalElementData.images[0]
-)
+    const deletedCaption =
+`❌ TP O'CHIRILDI
+📍 ${originalElementData.name || "-"}
+📂 ${getFolderPath(originalElementData.folderId)}
+📍 Manzil:
+${originalElementData.address || "-"}
+📌 Kenglik:
+${originalElementData.lat || "-"}
+📌 Uzunlik:
+${originalElementData.lng || "-"}
+📞 Telefon:
+${originalElementData.phone || "-"}
+📖 Izoh:
+${originalElementData.note || "-"}
+🗑 O'chirilgan vaqt:
+${new Date().toLocaleString("uz-UZ")}`;
+await fetch(
+`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
+{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+chat_id: TELEGRAM_DELETED_CHAT_ID,
+text: deletedCaption
+})
+}
 );
             database.ref('TPs/' + editingElementId).remove().then(() => {
                 showToast("Element o'chirib tashlandi!");
