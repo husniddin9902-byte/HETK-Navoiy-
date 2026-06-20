@@ -1719,6 +1719,31 @@ ${originalElementData.phone || "-"}
 ${originalElementData.note || "-"}
 🗑 O'chirilgan vaqt:
 ${new Date().toLocaleString("uz-UZ")}`;
+const deletedMedia = [];
+for(const img of originalElementData.images || []){
+if(img.fileId){
+deletedMedia.push({
+type:"photo",
+media: img.fileId
+});
+}
+}
+if(deletedMedia.length){
+deletedMedia[0].caption = deletedCaption;
+await fetch(
+`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMediaGroup`,
+{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+chat_id: TELEGRAM_DELETED_CHAT_ID,
+media: deletedMedia
+})
+}
+);
+}else{
 await fetch(
 `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
 {
@@ -1732,6 +1757,7 @@ text: deletedCaption
 })
 }
 );
+}
 
          if(originalElementData.telegramMainMessageId){
 await fetch(
