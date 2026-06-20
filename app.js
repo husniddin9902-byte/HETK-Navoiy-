@@ -1203,6 +1203,12 @@ ${updatedDate}
 👤 Tahrirlagan:
 ${updatedBy}
 
+👤 Javobgar shaxs:
+${inputResponsiblePerson.value || "-"}
+
+📱 Javobgar telefon:
+${inputResponsiblePhone.value || "-"}
+
 🔎 Qidiruv teglari
 
 #${tpTag}
