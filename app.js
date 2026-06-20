@@ -712,7 +712,11 @@ const inputLatitude = document.getElementById('input-latitude');
 const inputLongitude = document.getElementById('input-longitude');
 const inputElementName = document.getElementById('input-element-name');
 const inputElementAddress = document.getElementById('input-element-address');
-const inputElementPhone = document.getElementById('input-element-phone');
+//const inputElementPhone = document.getElementById('input-element-phone');
+const inputResponsiblePerson =
+document.getElementById('input-responsible-person');
+const inputResponsiblePhone =
+document.getElementById('input-responsible-phone');
 const inputElementNote = document.getElementById('input-element-note');
 const inputBalanceToggle = document.getElementById('input-balance-toggle');
 const balanceStatusText = document.getElementById('balance-status-text');
