@@ -1697,10 +1697,10 @@ confirm(
 "⚠️ DIQQAT!\n\nMa'lumotlar 30 kun davomida arxivda saqlanadi.\n\nTiklash uchun administratorga murojaat qiling!.\n\nElement o'chirilsinmi?"
 )
 ) {
-       alert(
-originalElementData.images
-? originalElementData.images.length
-: "images topilmadi"
+      alert(
+JSON.stringify(
+originalElementData.images[0]
+)
 );
             database.ref('TPs/' + editingElementId).remove().then(() => {
                 showToast("Element o'chirib tashlandi!");
