@@ -1703,22 +1703,68 @@ JSON.stringify(
 originalElementData.images[0]
 )
 );
-    const deletedCaption =
+   const deletedCaption =
 `❌ TP O'CHIRILDI
-📍 ${originalElementData.name || "-"}
-📂 ${getFolderPath(originalElementData.folderId)}
+
+📍 TP:
+${originalElementData.name || "-"}
+
+${originalElementData.isPrivate ? "🔴 XUSUSIY" : "🔵 ETK"}
+
+📂 Papka:
+${getFolderPath(originalElementData.folderId)}
+
 📍 Manzil:
 ${originalElementData.address || "-"}
+
 📌 Kenglik:
 ${originalElementData.lat || "-"}
+
 📌 Uzunlik:
 ${originalElementData.lng || "-"}
-📞 Telefon:
+
+📞 TP telefoni:
 ${originalElementData.phone || "-"}
-📖 Izoh:
+
+👨‍🔧 Mas'ul shaxs:
+${originalElementData.responsiblePerson || "-"}
+
+📱 Mas'ul telefon:
+${originalElementData.responsiblePhone || "-"}
+
+${originalElementData.isPrivate ? `
+🏢 Korxona:
+${originalElementData.ownerFirm || "-"}
+
+👤 Korxona vakili:
+${originalElementData.ownerName || "-"}
+
+☎️ Korxona telefoni:
+${originalElementData.ownerPhone || "-"}
+
+🔢 Hisoblagich:
+${originalElementData.meterNumber || "-"}
+` : ""}
+
+📝 Izoh:
 ${originalElementData.note || "-"}
-🗑 O'chirilgan vaqt:
-${new Date().toLocaleString("uz-UZ")}`;
+
+🕒 Yaratilgan:
+${originalElementData.createdAt
+? new Date(originalElementData.createdAt).toLocaleString("uz-UZ")
+: "-"}
+
+✏️ Oxirgi tahrir:
+${originalElementData.updatedAt
+? new Date(originalElementData.updatedAt).toLocaleString("uz-UZ")
+: "-"}
+
+🗑 O'chirilgan:
+${new Date().toLocaleString("uz-UZ")}
+
+🆔 Element ID:
+${editingElementId}`;
+         
 const deletedMedia = [];
 for(const img of originalElementData.images || []){
 if(img.fileId){
