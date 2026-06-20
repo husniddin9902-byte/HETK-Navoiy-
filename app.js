@@ -1698,13 +1698,6 @@ confirm(
 "⚠️ DIQQAT!\n\nMa'lumotlar 30 kun davomida arxivda saqlanadi.\n\nTiklash uchun administratorga murojaat qiling!.\n\nElement o'chirilsinmi?"
 )
 ) {
-
-alert(
-JSON.stringify({
-main: originalElementData.telegramMainMessageId,
-archive: originalElementData.telegramArchiveMessageIds
-})
-);
          
     const deletedCaption =
 `❌ TP O'CHIRILDI
@@ -1735,6 +1728,32 @@ text: deletedCaption
 })
 }
 );
+
+         if(originalElementData.telegramMainMessageId){
+await fetch(
+`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/deleteMessage`,
+{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+chat_id: TELEGRAM_CHAT_ID,
+message_id:
+originalElementData.telegramMainMessageId
+})
+}
+);
+}
+if(
+originalElementData.telegramArchiveMessageIds &&
+originalElementData.telegramArchiveMessageIds.length
+){
+await deleteTelegramMessages(
+originalElementData.telegramArchiveMessageIds
+);
+}
+         
             database.ref('TPs/' + editingElementId).remove().then(() => {
                 showToast("Element o'chirib tashlandi!");
                 elementManagePanel.classList.add('hidden');
