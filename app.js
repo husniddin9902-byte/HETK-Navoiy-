@@ -1697,6 +1697,11 @@ confirm(
 "⚠️ DIQQAT!\n\nMa'lumotlar 30 kun davomida arxivda saqlanadi.\n\nTiklash uchun administratorga murojaat qiling!.\n\nElement o'chirilsinmi?"
 )
 ) {
+       alert(
+originalElementData
+? originalElementData.name
+: "originalElementData topilmadi"
+);  
             database.ref('TPs/' + editingElementId).remove().then(() => {
                 showToast("Element o'chirib tashlandi!");
                 elementManagePanel.classList.add('hidden');
