@@ -1690,7 +1690,12 @@ rebuildResult
 // Elementni o'chirish tugmasi mantiqi
 if (deleteElementBtn) {
     deleteElementBtn.addEventListener('click', function() {
-        if (editingElementId && confirm("Ushbu elementni (TP) butunlay o'chirib tashlamoqchimisiz?")) {
+       if (
+editingElementId &&
+confirm(
+"⚠️ DIQQAT!\n\nMa'lumotlar 30 kun davomida arxivda saqlanadi.\n\nTiklash uchun administratorga murojaat qiling!.\n\nElement o'chirilsinmi?"
+)
+) {
             database.ref('TPs/' + editingElementId).remove().then(() => {
                 showToast("Element o'chirib tashlandi!");
                 elementManagePanel.classList.add('hidden');
