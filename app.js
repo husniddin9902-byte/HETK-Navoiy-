@@ -1698,7 +1698,11 @@ confirm(
 "⚠️ DIQQAT!\n\nMa'lumotlar 30 kun davomida arxivda saqlanadi.\n\nTiklash uchun administratorga murojaat qiling!.\n\nElement o'chirilsinmi?"
 )
 ) {
-         
+         alert(
+JSON.stringify(
+originalElementData.images[0]
+)
+);
     const deletedCaption =
 `❌ TP O'CHIRILDI
 📍 ${originalElementData.name || "-"}
