@@ -1698,6 +1698,14 @@ confirm(
 "⚠️ DIQQAT!\n\nMa'lumotlar 30 kun davomida arxivda saqlanadi.\n\nTiklash uchun administratorga murojaat qiling!.\n\nElement o'chirilsinmi?"
 )
 ) {
+
+alert(
+JSON.stringify({
+main: originalElementData.telegramMainMessageId,
+archive: originalElementData.telegramArchiveMessageIds
+})
+);
+         
     const deletedCaption =
 `❌ TP O'CHIRILDI
 📍 ${originalElementData.name || "-"}
