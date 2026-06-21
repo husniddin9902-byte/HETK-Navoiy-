@@ -1433,7 +1433,7 @@ Date.now(),
         };
       
 let needTelegramRepost = false;
-      
+     if(editingElementId && originalElementData){ 
 if(
 originalElementData.name !== elementData.name ||
 originalElementData.address !== elementData.address ||
