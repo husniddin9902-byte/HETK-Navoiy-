@@ -1432,10 +1432,6 @@ Date.now(),
           updatedAt: Date.now()
         };
 
-let needTelegramRepost = false;
-
-if(editingElementId && originalElementData){
-
 if(
 originalElementData.name !== elementData.name ||
 originalElementData.address !== elementData.address ||
@@ -1443,7 +1439,19 @@ originalElementData.lat !== elementData.lat ||
 originalElementData.lng !== elementData.lng ||
 originalElementData.phone !== elementData.phone ||
 originalElementData.folderId !== elementData.folderId ||
-originalElementData.mainImageIndex !== elementData.mainImageIndex
+originalElementData.mainImageIndex !== elementData.mainImageIndex ||
+
+originalElementData.isPrivate !== elementData.isPrivate ||
+
+originalElementData.responsiblePerson !== elementData.responsiblePerson ||
+originalElementData.responsiblePhone !== elementData.responsiblePhone ||
+
+originalElementData.ownerFirm !== elementData.ownerFirm ||
+originalElementData.ownerName !== elementData.ownerName ||
+originalElementData.ownerPhone !== elementData.ownerPhone ||
+originalElementData.meterNumber !== elementData.meterNumber ||
+
+originalElementData.note !== elementData.note
 ){
 needTelegramRepost = true;
 }
@@ -1458,8 +1466,18 @@ originalElementData.address !== elementData.address ||
 originalElementData.phone !== elementData.phone ||
 originalElementData.note !== elementData.note ||
 originalElementData.folderId !== elementData.folderId ||
-  originalElementData.lat !== elementData.lat ||
-originalElementData.lng !== elementData.lng
+originalElementData.lat !== elementData.lat ||
+originalElementData.lng !== elementData.lng ||
+
+originalElementData.isPrivate !== elementData.isPrivate ||
+
+originalElementData.responsiblePerson !== elementData.responsiblePerson ||
+originalElementData.responsiblePhone !== elementData.responsiblePhone ||
+
+originalElementData.ownerFirm !== elementData.ownerFirm ||
+originalElementData.ownerName !== elementData.ownerName ||
+originalElementData.ownerPhone !== elementData.ownerPhone ||
+originalElementData.meterNumber !== elementData.meterNumber
 ){
 needArchiveCaptionEdit = true;
 }
