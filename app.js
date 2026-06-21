@@ -1698,13 +1698,9 @@ confirm(
 "⚠️ DIQQAT!\n\nMa'lumotlar 30 kun davomida arxivda saqlanadi.\n\nTiklash uchun administratorga murojaat qiling!.\n\nElement o'chirilsinmi?"
 )
 ) {
-         alert(
-JSON.stringify(
-originalElementData.images[0]
-)
-);
-   const deletedCaption =
-`❌ TP O'CHIRILDI
+       
+  const deletedCaption =
+`   ❌ TP O'CHIRILDI
 
 📍 TP:
 ${originalElementData.name || "-"}
@@ -1722,9 +1718,6 @@ ${originalElementData.lat || "-"}
 
 📌 Uzunlik:
 ${originalElementData.lng || "-"}
-
-📞 TP telefoni:
-${originalElementData.phone || "-"}
 
 👨‍🔧 Mas'ul shaxs:
 ${originalElementData.responsiblePerson || "-"}
@@ -1763,7 +1756,8 @@ ${originalElementData.updatedAt
 ${new Date().toLocaleString("uz-UZ")}
 
 🆔 Element ID:
-${editingElementId}`;
+${editingElementId}
+`;
          
 const deletedMedia = [];
 for(const img of originalElementData.images || []){
