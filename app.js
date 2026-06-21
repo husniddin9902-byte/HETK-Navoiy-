@@ -1513,7 +1513,11 @@ needArchiveRebuild = true;
           
     // Yangi element yaratish holati
     elementData.createdAt = Date.now();
-    database.ref('TPs').push(elementData).then(() => {
+   const newRef =
+database.ref('TPs').push();
+const tpId = newRef.key;
+elementData.tpId = tpId;
+newRef.set(elementData).then(() => {
         showSaveLoader(100,"Yakunlanmoqda...");
         setTimeout(()=>{
             hideSaveLoader();
