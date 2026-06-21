@@ -1210,12 +1210,26 @@ ${inputResponsiblePerson.value || "-"}
 📱 Javobgar telefon:
 ${inputResponsiblePhone.value || "-"}
 
+${inputBalanceToggle.checked ? `
+
+🏢 Korxona:
+${inputOwnerFirm.value || "-"}
+
+👤 Korxona vakili:
+${inputOwnerName.value || "-"}
+
+☎️ Korxona telefoni:
+${inputOwnerPhone.value || "-"}
+
+🔢 Hisoblagich:
+${inputMeterNumber.value || "-"}
+` : ""}
+
 🔎 Qidiruv teglari
 
 #${tpTag}
-#${inputBalanceToggle.checked ? 'XUSUSIY' : 'ETK'}
-
-📖 Batafsil ma'lumot`;
+#${inputBalanceToggle.checked ? 'XUSUSIY' : 'ETK'} `;
+      
 let albumMessageIds = [];
 let mainTelegramMessageId = null;      
 const media = [];
