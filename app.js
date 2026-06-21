@@ -1429,7 +1429,7 @@ albumMessageIds.length
           createdAt:
 originalElementData?.createdAt ||
 Date.now(),
-          updatedAt: Date.now()
+          updatedAt: Date.now(), updatedBy: updatedBy,
         };
       
 let needTelegramRepost = false;
