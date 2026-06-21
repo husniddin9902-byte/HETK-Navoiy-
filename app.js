@@ -1431,7 +1431,7 @@ originalElementData?.createdAt ||
 Date.now(),
           updatedAt: Date.now()
         };
-
+let needTelegramRepost = false;
 if(
 originalElementData.name !== elementData.name ||
 originalElementData.address !== elementData.address ||
