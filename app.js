@@ -1731,7 +1731,7 @@ confirm(
 "⚠️ DIQQAT!\n\nMa'lumotlar 30 kun davomida arxivda saqlanadi.\n\nTiklash uchun administratorga murojaat qiling!.\n\nElement o'chirilsinmi?"
 )
 ) {
-       
+       alert("DELETE START");
   const deletedCaption =
 `   ❌ TP O'CHIRILDI
 
@@ -1797,7 +1797,7 @@ ${updatedBy}
 🆔 Element ID:
 ${editingElementId}
 `;
-         
+       alert("CAPTION OK");  
 const deletedMedia = [];
 for(const img of originalElementData.images || []){
 if(img.fileId){
