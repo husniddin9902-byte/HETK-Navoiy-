@@ -1516,6 +1516,7 @@ needArchiveRebuild = true;
    const newRef =
 database.ref('TPs').push();
 const tpId = newRef.key;
+         alert("TP ID = " + tpId);
 elementData.tpId = tpId;
 newRef.set(elementData).then(() => {
         showSaveLoader(100,"Yakunlanmoqda...");
