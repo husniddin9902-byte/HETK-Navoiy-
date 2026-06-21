@@ -1785,8 +1785,14 @@ ${originalElementData.updatedAt
 ? new Date(originalElementData.updatedAt).toLocaleString("uz-UZ")
 : "-"}
 
+👤 Oxirgi tahrirlagan:
+${originalElementData.updatedBy || "-"}
+
 🗑 O'chirilgan:
 ${new Date().toLocaleString("uz-UZ")}
+
+👤 O'chirgan:
+${updatedBy}
 
 🆔 Element ID:
 ${editingElementId}
