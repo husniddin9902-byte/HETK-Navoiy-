@@ -1483,8 +1483,7 @@ originalElementData.meterNumber !== elementData.meterNumber
 ){
 needArchiveCaptionEdit = true;
 }
-}
-      
+}      
 let needArchiveRebuild = false;
 if(
 editingElementId &&
