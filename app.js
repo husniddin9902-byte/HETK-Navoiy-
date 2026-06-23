@@ -2019,6 +2019,7 @@ tp.responsiblePhone || "";
 existingImages = tp.images || [];
 mainImageIndex =
 tp.mainImageIndex || 0;
+      alert(JSON.stringify(tp.images));  
 renderMultiImagePreview();
 imageStatusText.innerText =
 `${tp.images.length} ta rasm`;
