@@ -1520,7 +1520,7 @@ const tpId = newRef.key;
 elementData.tpId = tpId;
          
          elementData.tpPageLink =
-`https://husniddin9902-byte.github.io/tp.html?id=${tpId}`;
+`https://husniddin9902-byte.github.io/HETK-Navoiy-/tp.html?id=${tpId}`;
          
 newRef.set(elementData).then(() => {
         showSaveLoader(100,"Yakunlanmoqda...");
@@ -1711,7 +1711,7 @@ rebuildResult
 }
 
        elementData.tpPageLink =
-`https://husniddin9902-byte.github.io/tp.html?id=${editingElementId}`;
+`https://husniddin9902-byte.github.io/HETK-Navoiy-/tp.html?id=${editingElementId}`;
          
     database.ref('TPs/' + editingElementId).update(elementData).then(() => {
         showSaveLoader(100,"Yakunlanmoqda...");
