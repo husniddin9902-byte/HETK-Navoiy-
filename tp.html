@@ -117,8 +117,6 @@ database.ref("TPs/"+tpId).once("value")
 
 const tp = snapshot.val();
 
-alert("TP ID = " + tpId);
-alert(JSON.stringify(snapshot.val()));
   
 if(!tp){
 document.getElementById("tp-container").innerHTML =
