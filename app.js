@@ -1516,7 +1516,7 @@ needArchiveRebuild = true;
    const newRef =
 database.ref('TPs').push();
 const tpId = newRef.key;
-         alert("TP ID = " + tpId);
+       
 elementData.tpId = tpId;
 newRef.set(elementData).then(() => {
         showSaveLoader(100,"Yakunlanmoqda...");
@@ -1736,7 +1736,7 @@ confirm(
 "⚠️ DIQQAT!\n\nMa'lumotlar 30 kun davomida arxivda saqlanadi.\n\nTiklash uchun administratorga murojaat qiling!.\n\nElement o'chirilsinmi?"
 )
 ) {
-       alert("DELETE START");
+      
   const deletedCaption =
 `   ❌ TP O'CHIRILDI
 
@@ -1798,7 +1798,7 @@ ${new Date().toLocaleString("uz-UZ")}
 🆔 Element ID:
 ${editingElementId}
 `;
-       alert("CAPTION OK");  
+    
 const deletedMedia = [];
 for(const img of originalElementData.images || []){
 if(img.fileId){
@@ -2019,7 +2019,7 @@ tp.responsiblePhone || "";
 existingImages = tp.images || [];
 mainImageIndex =
 tp.mainImageIndex || 0;
-      alert(JSON.stringify(tp.images));  
+    
 renderMultiImagePreview();
 imageStatusText.innerText =
 `${tp.images.length} ta rasm`;
