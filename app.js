@@ -1518,6 +1518,10 @@ database.ref('TPs').push();
 const tpId = newRef.key;
        
 elementData.tpId = tpId;
+         
+         elementData.tpPageLink =
+`https://husniddin9902-byte.github.io/tp.html?id=${tpId}`;
+         
 newRef.set(elementData).then(() => {
         showSaveLoader(100,"Yakunlanmoqda...");
         setTimeout(()=>{
