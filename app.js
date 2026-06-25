@@ -1707,9 +1707,6 @@ rebuildResult
 }
 
 }
-
-       elementData.tpPageLink =
-`https://husniddin9902-byte.github.io/HETK-Navoiy-/tp.html?id=${editingElementId}`;
          
     database.ref('TPs/' + editingElementId).update(elementData).then(() => {
         showSaveLoader(100,"Yakunlanmoqda...");
