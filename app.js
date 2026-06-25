@@ -1335,11 +1335,6 @@ const allImages = [
 
 let tpPageLink = "";
 
-if(editingElementId){
-tpPageLink =
-`https://husniddin9902-byte.github.io/HETK-Navoiy-/tp.html?id=${editingElementId}`;
-}
-      
 const mainCaption =
 `⚡️ HETK Monitoring
 📍 ${inputElementName.value}
@@ -1360,9 +1355,7 @@ Admin
 #${tpTag}
 #${inputBalanceToggle.checked ? 'XUSUSIY' : 'ETK'}
 
-${tpPageLink ? `📖 Batafsil ma'lumot:
-
-${tpPageLink}` : '📖 Qo\'shimcha ma\'lumot mavjud'}`;
+📖 Qo'shimcha ma'lumot mavjud`;
       
  mainImage = allImages[mainImageIndex];
 if(
