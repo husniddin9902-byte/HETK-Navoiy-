@@ -845,17 +845,22 @@ function debounce(func, delay) {
 }
 
 if(showOnMapBtn){
+
+showOnMapBtn.addEventListener("click",function(e){
+
 e.preventDefault();
 e.stopPropagation();
-showOnMapBtn.addEventListener("click",function(){
+
 returnToElementPanel = true;
 
 document
 .getElementById("element-manage-panel")
 .classList.add("hidden");
+
 if(returnElementBtn){
 returnElementBtn.style.display = "block";
 }
+
 map.invalidateSize();
 
 });
