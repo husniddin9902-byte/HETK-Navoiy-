@@ -724,6 +724,27 @@ document.getElementById("show-on-map-btn");
 const returnElementBtn =
 document.getElementById("return-element-btn");
 
+if(showOnMapBtn){
+showOnMapBtn.addEventListener("click",function(e){
+e.preventDefault();
+previewState.active = true;
+previewState.mode =
+editingElementId ? "edit" : "create";
+previewState.editingElementId =
+editingElementId;
+elementManagePanel.classList.add("hidden");
+if(returnElementBtn){
+    returnElementBtn.style.display="block";
+}
+const lat=parseFloat(inputLatitude.value);
+const lng=parseFloat(inputLongitude.value);
+if(!isNaN(lat) && !isNaN(lng)){
+    map.setView([lat,lng],18);
+}
+map.invalidateSize();
+});
+}
+
 const inputElementName = document.getElementById('input-element-name');
 const inputElementAddress = document.getElementById('input-element-address');
 //const inputElementPhone = document.getElementById('input-element-phone');
