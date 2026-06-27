@@ -851,41 +851,7 @@ function debounce(func, delay) {
     };
 }
 
-if(showOnMapBtn){
 
-showOnMapBtn.addEventListener("click",function(e){
-
-e.preventDefault();
-e.stopPropagation();
-
-returnToElementPanel = true;
-
-document
-.getElementById("element-manage-panel")
-.classList.add("hidden");
-
-if(returnElementBtn){
-returnElementBtn.style.display = "block";
-}
-const lat = parseFloat(inputLatitude.value);
-const lng = parseFloat(inputLongitude.value);
-
-if(!isNaN(lat) && !isNaN(lng)){
-
-    if(selectedMarker){
-        selectedMarker.setLatLng([lat,lng]);
-    }else{
-        selectedMarker = L.marker([lat,lng]).addTo(map);
-    }
-
-    map.setView([lat,lng],17);
-
-}
-map.invalidateSize();
-
-});
-
-}
 
 // 6. Rasm yuklash va uni orqa fonda xarajatsiz Telegram Botga yuborish mantiqi
 // 6. Rasm yuklash va uni orqa fonda xarajatsiz Telegram Botga yuborish mantiqi
