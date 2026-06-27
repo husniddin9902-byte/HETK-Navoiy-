@@ -755,6 +755,18 @@ map.invalidateSize();
 });
 }
 
+if(returnElementBtn){
+
+returnElementBtn.addEventListener("click",function(){
+
+    returnElementBtn.style.display = "none";
+
+    elementManagePanel.classList.remove("hidden");
+
+});
+
+}
+
 const inputElementName = document.getElementById('input-element-name');
 const inputElementAddress = document.getElementById('input-element-address');
 //const inputElementPhone = document.getElementById('input-element-phone');
