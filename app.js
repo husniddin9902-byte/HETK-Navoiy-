@@ -847,7 +847,7 @@ function debounce(func, delay) {
 if(showOnMapBtn){
 e.preventDefault();
 e.stopPropagation();
-showOnMapBtn.addEventListener("click",function(){
+showOnMapBtn.addEventListener("click",function(e){
 returnToElementPanel = true;
 
 document
