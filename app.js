@@ -844,6 +844,7 @@ function debounce(func, delay) {
 if(showOnMapBtn){
 
 showOnMapBtn.addEventListener("click",function(){
+returnToElementPanel = true;
 
 document
 .getElementById("element-manage-panel")
