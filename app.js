@@ -714,6 +714,9 @@ const inputLatitude = document.getElementById('input-latitude');
 const inputLongitude = document.getElementById('input-longitude');
 const showOnMapBtn =
 document.getElementById("show-on-map-btn");
+const returnElementBtn =
+document.getElementById("return-element-btn");
+
 const inputElementName = document.getElementById('input-element-name');
 const inputElementAddress = document.getElementById('input-element-address');
 //const inputElementPhone = document.getElementById('input-element-phone');
