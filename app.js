@@ -726,6 +726,12 @@ document.getElementById("return-element-btn");
 
 if(showOnMapBtn){
 showOnMapBtn.addEventListener("click",function(e){
+
+  if(listModal){
+    listModal.style.display = "none";
+}
+document.getElementById("list-container").style.display = "none";
+  
 e.preventDefault();
 previewState.active = true;
 previewState.mode =
