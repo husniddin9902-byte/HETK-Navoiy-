@@ -860,7 +860,20 @@ document
 if(returnElementBtn){
 returnElementBtn.style.display = "block";
 }
+const lat = parseFloat(inputLatitude.value);
+const lng = parseFloat(inputLongitude.value);
 
+if(!isNaN(lat) && !isNaN(lng)){
+
+    if(selectedMarker){
+        selectedMarker.setLatLng([lat,lng]);
+    }else{
+        selectedMarker = L.marker([lat,lng]).addTo(map);
+    }
+
+    map.setView([lat,lng],17);
+
+}
 map.invalidateSize();
 
 });
