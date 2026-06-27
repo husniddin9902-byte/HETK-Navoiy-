@@ -745,6 +745,10 @@ if(returnElementBtn){
 const lat=parseFloat(inputLatitude.value);
 const lng=parseFloat(inputLongitude.value);
 if(!isNaN(lat) && !isNaN(lng)){
+    if(selectedMarker){
+        map.removeLayer(selectedMarker);
+    }
+    selectedMarker = L.marker([lat,lng]).addTo(map);
     map.setView([lat,lng],18);
 }
 map.invalidateSize();
