@@ -706,6 +706,13 @@ let currentUploadedImageUrl = ""; // Telegramdan kelgan rasm linkini vaqtincha s
 let editingElementId = null; // Tahrirlash rejimi uchun element IDsi
 let originalElementData = null;
 let returnToElementPanel = false;
+let previewState = {
+    active: false,
+    mode: null,          // "create" | "edit"
+    editingElementId: null,
+    mapCenter: null,
+    mapZoom: null
+};
 
 // 2. Global Element Kiritish Oynasini Boshqarish Elementlari
 const elementManagePanel = document.getElementById('element-manage-panel');
