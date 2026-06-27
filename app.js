@@ -839,6 +839,21 @@ function debounce(func, delay) {
         timer = setTimeout(() => func.apply(this, args), delay);
     };
 }
+
+if(showOnMapBtn){
+
+showOnMapBtn.addEventListener("click",function(){
+
+document
+.getElementById("element-manage-panel")
+.classList.add("hidden");
+
+map.invalidateSize();
+
+});
+
+}
+
 // 6. Rasm yuklash va uni orqa fonda xarajatsiz Telegram Botga yuborish mantiqi
 // 6. Rasm yuklash va uni orqa fonda xarajatsiz Telegram Botga yuborish mantiqi
 
