@@ -135,10 +135,10 @@ map.on('contextmenu', function(e) {
     }).openPopup();
 
 // Agar element oynasi ochiq bo'lsa koordinatani unga ham yozamiz
-if(!elementManagePanel.classList.contains("hidden")){
+
     inputLatitude.value = e.latlng.lat.toFixed(6);
     inputLongitude.value = e.latlng.lng.toFixed(6);
-}
+
   
     updatePanelValues(e.latlng.lat, e.latlng.lng, null, true);
     updateAddress(e.latlng.lat, e.latlng.lng, true);
