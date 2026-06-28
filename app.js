@@ -1136,9 +1136,28 @@ function renderElementTreeDropdown() {
             row.style.background = selectedArray.includes(id) ? "rgba(0,122,255,0.15)" : "transparent";
 
             // Ochilib yopilish belgisi dynamic yaratiladi
-            const toggleSign = hasSubFolders 
-                ? `<span class="elem-tree-toggle" style="width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; color: #88a0b0; font-weight: bold; cursor: pointer; background: rgba(255,255,255,0.07); border-radius: 4px; font-size: 13px; user-select: none;">+</span>` 
-                : `<span style="width: 20px; text-align: center; color: #4b6575; font-size: 12px;">•</span>`;
+           const toggleSign = hasSubFolders
+    ? `<button type="button"
+        class="elem-tree-toggle"
+        style="
+        width:20px;
+        height:20px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        color:#88a0b0;
+        font-weight:bold;
+        cursor:pointer;
+        background:rgba(255,255,255,0.07);
+        border:none;
+        border-radius:4px;
+        font-size:13px;
+        user-select:none;
+        padding:0;
+        ">
+        +
+       </button>`
+    : `<span style="width: 20px; text-align: center; color: #4b6575; font-size: 12px;">•</span>`;
 
             row.innerHTML = `
                 ${toggleSign}
