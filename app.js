@@ -118,7 +118,7 @@ function onLocation(p) {
 navigator.geolocation.watchPosition(onLocation, (e) => console.log(e), { enableHighAccuracy: true });
 
 // 5. Xaritadan nuqta tanlash (Context Menu)
-map.on('contextmenu', function(e) {
+map.on('contextmenu', function(e) { 
     if (selectedMarker) map.removeLayer(selectedMarker);
 
     isManualSelection = true; 
