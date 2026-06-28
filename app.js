@@ -1184,20 +1184,23 @@ function renderElementTreeDropdown() {
                 // [+] yoki [-] bosilganda ochilish va yopilish hodisasi
                 const toggleBtn = row.querySelector('.elem-tree-toggle');
                 if (toggleBtn) {
-                    toggleBtn.addEventListener('click', (event) => {
-                        event.stopPropagation(); // Checkbox yoki qatorga o'tib ketishini to'xtatadi
-                        if (childBox.style.display === "none") {
-                            childBox.style.display = "block";
-                            toggleBtn.innerText = "-";
-                            toggleBtn.style.background = "rgba(0,122,255,0.2)";
-                            toggleBtn.style.color = "#007AFF";
-                        } else {
-                            childBox.style.display = "none";
-                            toggleBtn.innerText = "+";
-                            toggleBtn.style.background = "rgba(255,255,255,0.07)";
-                            toggleBtn.style.color = "#88a0b0";
-                        }
-                    });
+                   toggleBtn.addEventListener('click', (event) => {
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (childBox.style.display === "none") {
+        childBox.style.display = "block";
+        toggleBtn.innerText = "-";
+        toggleBtn.style.background = "rgba(0,122,255,0.2)";
+        toggleBtn.style.color = "#007AFF";
+    } else {
+        childBox.style.display = "none";
+        toggleBtn.innerText = "+";
+        toggleBtn.style.background = "rgba(255,255,255,0.07)";
+        toggleBtn.style.color = "#88a0b0";
+    }
+});
                 }
             }
 
