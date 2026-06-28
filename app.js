@@ -1132,7 +1132,7 @@ function renderElementTreeDropdown() {
             // Qator dizayni
             const row = document.createElement('div');
             row.style.cssText = `display: flex; align-items: center; gap: 8px; padding: 6px 4px; border-radius: 6px; transition: background 0.2s;`;
-            row.style.paddingLeft = `${level * 16}px`; // Ichkariga surilish masofasi
+            row.style.paddingLeft = `${level * 12}px`; // Ichkariga surilish masofasi
             row.style.background = selectedArray.includes(id) ? "rgba(0,122,255,0.15)" : "transparent";
 
             // Ochilib yopilish belgisi dynamic yaratiladi
