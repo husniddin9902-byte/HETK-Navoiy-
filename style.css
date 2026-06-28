@@ -940,3 +940,11 @@ color:white;
 background:#0078ff;
 color:white;
 }
+
+.tree-dropdown-container{
+overflow-x:auto;
+overflow-y:auto;
+}
+.tree-child-container{
+min-width:max-content;
+}
