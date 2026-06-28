@@ -739,6 +739,21 @@ editingElementId ? "edit" : "create";
 previewState.editingElementId =
 editingElementId;
 elementManagePanel.classList.add("hidden");
+
+// Preview Mode
+document.getElementById("panel").style.display = "none";
+if(listModal){
+    listModal.style.display = "none";
+}
+const locateBtn = document.getElementById("locate-btn");
+if(locateBtn){
+    locateBtn.style.display = "none";
+}
+const menuBtn = document.getElementById("menu-btn");
+if(menuBtn){
+    menuBtn.style.display = "none";
+}
+  
 if(returnElementBtn){
     returnElementBtn.style.display="block";
 }
@@ -756,15 +771,19 @@ map.invalidateSize();
 }
 
 if(returnElementBtn){
-
 returnElementBtn.addEventListener("click",function(){
-
     returnElementBtn.style.display = "none";
-
+ document.getElementById("panel").style.display = "";
+    const locateBtn = document.getElementById("locate-btn");
+    if(locateBtn){
+        locateBtn.style.display = "";
+    }
+    const menuBtn = document.getElementById("menu-btn");
+    if(menuBtn){
+        menuBtn.style.display = "";
+    }
     elementManagePanel.classList.remove("hidden");
-
 });
-
 }
 
 const inputElementName = document.getElementById('input-element-name');
