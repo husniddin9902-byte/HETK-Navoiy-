@@ -2192,6 +2192,9 @@ function loadFilteredPoints() {
         // Tanlangan guruh va uning pastki fiderlari IDlari ro'yxati
         const allowedFolderIds = activeFolderId === 'root' ? [] : getAllChildFolderIds(activeFolderId);
 
+// Tez tekshirish uchun Set
+const allowedFolderSet = new Set(allowedFolderIds);
+      
         Object.keys(allPoints).forEach(key => {
             const point = allPoints[key];
             const lat = parseFloat(point.lat);
@@ -2202,14 +2205,15 @@ function loadFilteredPoints() {
             // Element tegishli bo'lgan barcha fiderlar massivi
             let tpFoldersArr = point.folders ? Object.keys(point.folders) : (point.folderId ? [point.folderId] : []);
 
-            // FILTRLASH ssenariylari:
-            let isVisible = false;
-            if (activeFolderId === 'root') {
-                isVisible = true; // Hamma elementlar ko'rinadi
-            } else {
-                // Agar tanlangan fiderlar ro'yxatida elementning kamida bitta fideri bo'lsa xaritaga chiqadi
-                isVisible = tpFoldersArr.some(id => allowedFolderIds.includes(id));
-            }
+            // FILTRLASH
+let isVisible = false;
+if (activeFolderId === "root") {
+    isVisible = true;
+} else {
+    isVisible = tpFoldersArr.some(folderId => {
+        return allowedFolderSet.has(folderId);
+    });
+}
 
             if (!isVisible) return;
 
