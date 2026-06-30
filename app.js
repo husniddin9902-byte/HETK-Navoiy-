@@ -2226,7 +2226,7 @@ if (activeFolderId === "root") {
     isVisible = true;
 } else {
     isVisible = tpFoldersArr.some(folderId => {
-        return allowedFolderSet.has(folderId);
+        return isPointInsideFolder(folderId, activeFolderId);
     });
 }
 
