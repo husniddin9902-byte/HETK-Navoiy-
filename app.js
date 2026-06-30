@@ -2502,32 +2502,36 @@ function getPanelChildFolders(parentId){
 
 function getVisiblePoints(activeFolderId, allPoints){
     const keys = Object.keys(allPoints);
-    if(activeFolderId === "root"){
+    if(activeFolderId==="root"){
         return keys;
     }
-    const allowedFolders = getPanelChildFolders(activeFolderId);
     return keys.filter(key=>{
-        const point = allPoints[key];
-        // Eski format
+        const point=allPoints[key];
+        let folders=[];
         if(point.folderId){
-            if(allowedFolders.includes(point.folderId)){
-                return true;
-            }
+            folders.push(point.folderId);
         }
-        // Yangi format (ko'p papka)
         if(point.folders){
-            return Object.keys(point.folders).some(id=>{
-                return allowedFolders.includes(id);
-            });
+            folders.push(...Object.keys(point.folders));
         }
-        return false;
+        return folders.some(folderId=>{
+            let current=folderId;
+            while(current){
+                if(current===activeFolderId){
+                    return true;
+                }
+                if(!currentFolders[current]){
+                    break;
+                }
+                current=currentFolders[current].parentId;
+            }
+            return false;
+        });
     });
 }
 
-alert("Kod shu joygacha keldi");
 if (panelTabItems) {
     panelTabItems.addEventListener('click', () => {
-        alert("Xarita bosildi");
         if (panelTabItems) panelTabItems.classList.add('active');
         if (panelTabFolders) panelTabFolders.classList.remove('active');
         
