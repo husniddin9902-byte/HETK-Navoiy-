@@ -2160,6 +2160,21 @@ imageStatusText.style.color = "#34C759";
     });
 };
 
+// Element tanlangan papka ichidami?
+function isPointInsideFolder(pointFolderId, selectedFolderId){
+    if(selectedFolderId==="root") return true;
+    let current = pointFolderId;
+    while(current){
+        if(current===selectedFolderId){
+            return true;
+        }
+        const folder = currentFolders[current];
+        if(!folder) break;
+        current = folder.parentId;
+    }
+    return false;
+}
+
 // 3. SIZ AYTGAN ASOSIY SCADA MANTIQI: Xaritada filtrlash, Birlashish va Miltillovchi markerlar (Override)
 function loadFilteredPoints() {
     const tpListContainer = document.getElementById('tp-list');
