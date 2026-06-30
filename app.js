@@ -2549,37 +2549,10 @@ if (panelTabItems) {
         panelInternalMarkers = [];
 
         // Bazadan faqat tanlangan guruh ma'lumotlarini filtrlash
-      alert("activeFolderId = " + activeFolderId);
+     
         database.ref('TPs').once('value', (snapshot) => {
             const allPoints = snapshot.val() || {};
-            const keys = Object.keys(allPoints);
-          let filteredKeys;
-
-if(activeFolderId==="root"){
-    filteredKeys=keys;
-}else{
-    const allowedFolders=getPanelChildFolders(activeFolderId);
-
-alert(
-    "activeFolderId = " + activeFolderId +
-    "\n\nallowedFolders =\n" +
-    allowedFolders.join("\n")
-);
-  
-    filteredKeys=keys.filter(key=>{
-        const point=allPoints[key];
-        if(point.folderId){
-            return allowedFolders.includes(point.folderId);
-        }
-        if(point.folders){
-
-            return Object.keys(point.folders)
-                .some(id=>allowedFolders.includes(id));
-
-        }
-        return false;
-    });
-}
+          const filteredKeys = getVisiblePoints(activeFolderId, allPoints);
             
             let bounds = [];
 
