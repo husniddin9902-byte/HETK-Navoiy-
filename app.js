@@ -2526,7 +2526,26 @@ if (panelTabItems) {
         database.ref('TPs').once('value', (snapshot) => {
             const allPoints = snapshot.val() || {};
             const keys = Object.keys(allPoints);
-            const filteredKeys = activeFolderId === 'root' ? keys : keys.filter(key => allPoints[key].folderId === activeFolderId);
+          let filteredKeys;
+
+if(activeFolderId==="root"){
+    filteredKeys=keys;
+}else{
+    const allowedFolders=getPanelChildFolders(activeFolderId);
+    filteredKeys=keys.filter(key=>{
+        const point=allPoints[key];
+        if(point.folderId){
+            return allowedFolders.includes(point.folderId);
+        }
+        if(point.folders){
+
+            return Object.keys(point.folders)
+                .some(id=>allowedFolders.includes(id));
+
+        }
+        return false;
+    });
+}
             
             let bounds = [];
 
