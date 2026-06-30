@@ -2489,6 +2489,17 @@ if (panelTabFolders) {
 var panelInternalMap = null;
 var panelInternalMarkers = [];
 
+// Ichki papkalarni recursive yig'ish
+function getPanelChildFolders(parentId){
+    let ids=[parentId];
+    Object.keys(currentFolders).forEach(id=>{
+        if(currentFolders[id].parentId===parentId){
+            ids=ids.concat(getPanelChildFolders(id));
+        }
+    });
+    return ids;
+}
+
 if (panelTabItems) {
     panelTabItems.addEventListener('click', () => {
         if (panelTabItems) panelTabItems.classList.add('active');
