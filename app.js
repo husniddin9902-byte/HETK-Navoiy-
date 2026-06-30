@@ -2256,6 +2256,21 @@ if (activeFolderId === "root") {
             const primaryFolderId = tpFoldersArr[0];
             const primaryColor = (currentFolders[primaryFolderId] && currentFolders[primaryFolderId].color) ? currentFolders[primaryFolderId].color : '#007AFF';
 
+// SCADA uchun ko'rsatiladigan papkani aniqlash
+let displayFolderId = primaryFolderId;
+if (activeFolderId !== "root") {
+    let current = primaryFolderId;
+    let child = primaryFolderId;
+    while (current && currentFolders[current]) {
+        if (current === activeFolderId) {
+            displayFolderId = child;
+            break;
+        }
+        child = current;
+        current = currentFolders[current].parentId;
+    }
+}
+          
             // Xususiy yoki ETK ekanligiga qarab sarlavha tayyorlash
             const balanceBadge = point.isPrivate ? `<span style="color:#ff4444; font-weight:bold;">[Xususiy - ${point.ownerFirm || ''}]</span>` : `<span style="color:#007AFF; font-weight:bold;">[ЕТК balansi]</span>`;
 
