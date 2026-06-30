@@ -2499,6 +2499,31 @@ function getPanelChildFolders(parentId){
     });
     return ids;
 }
+
+function getVisiblePoints(activeFolderId, allPoints){
+    const keys = Object.keys(allPoints);
+    if(activeFolderId === "root"){
+        return keys;
+    }
+    const allowedFolders = getPanelChildFolders(activeFolderId);
+    return keys.filter(key=>{
+        const point = allPoints[key];
+        // Eski format
+        if(point.folderId){
+            if(allowedFolders.includes(point.folderId)){
+                return true;
+            }
+        }
+        // Yangi format (ko'p papka)
+        if(point.folders){
+            return Object.keys(point.folders).some(id=>{
+                return allowedFolders.includes(id);
+            });
+        }
+        return false;
+    });
+}
+
 alert("Kod shu joygacha keldi");
 if (panelTabItems) {
     panelTabItems.addEventListener('click', () => {
