@@ -2207,13 +2207,6 @@ function loadFilteredPoints() {
         // Tanlangan guruh va uning pastki fiderlari IDlari ro'yxati
         const allowedFolderIds = activeFolderId === 'root' ? [] : getAllChildFolderIds(activeFolderId);
 
-// Tanlangan papka ichidagi barcha papkalarni tez qidirish uchun
-const allowedFolderSet = new Set(allowedFolderIds);
-
-// Tanlangan papkaning rangi
-const activeFolder =
-    currentFolders[activeFolderId] || null;
-      
 // Tez tekshirish uchun Set
 const allowedFolderSet = new Set(allowedFolderIds);
       
@@ -2233,7 +2226,7 @@ if (activeFolderId === "root") {
     isVisible = true;
 } else {
     isVisible = tpFoldersArr.some(folderId => {
-        return isPointInsideFolder(folderId, activeFolderId);
+        return allowedFolderSet.has(folderId);
     });
 }
 
@@ -2252,31 +2245,10 @@ if (activeFolderId === "root") {
             bounds.push([lat, lng]);
             const displayName = point.name || point.address.split(',')[0] || "TP";
 
-            const primaryColor =
-(
-    currentFolders[displayFolderId] &&
-    currentFolders[displayFolderId].color
-)
-?
-currentFolders[displayFolderId].color
-:
-'#007AFF';
+            // Markerning standart fider rangini aniqlash
+            const primaryFolderId = tpFoldersArr[0];
+            const primaryColor = (currentFolders[primaryFolderId] && currentFolders[primaryFolderId].color) ? currentFolders[primaryFolderId].color : '#007AFF';
 
-// SCADA uchun ko'rsatiladigan papkani aniqlash
-let displayFolderId = primaryFolderId;
-if (activeFolderId !== "root") {
-    let current = primaryFolderId;
-    let child = primaryFolderId;
-    while (current && currentFolders[current]) {
-        if (current === activeFolderId) {
-            displayFolderId = child;
-            break;
-        }
-        child = current;
-        current = currentFolders[current].parentId;
-    }
-}
-          
             // Xususiy yoki ETK ekanligiga qarab sarlavha tayyorlash
             const balanceBadge = point.isPrivate ? `<span style="color:#ff4444; font-weight:bold;">[Xususiy - ${point.ownerFirm || ''}]</span>` : `<span style="color:#007AFF; font-weight:bold;">[ЕТК balansi]</span>`;
 
