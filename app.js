@@ -2499,9 +2499,10 @@ function getPanelChildFolders(parentId){
     });
     return ids;
 }
-
+alert("Kod shu joygacha keldi");
 if (panelTabItems) {
     panelTabItems.addEventListener('click', () => {
+        alert("Xarita bosildi");
         if (panelTabItems) panelTabItems.classList.add('active');
         if (panelTabFolders) panelTabFolders.classList.remove('active');
         
