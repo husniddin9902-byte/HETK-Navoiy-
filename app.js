@@ -2534,6 +2534,13 @@ if(activeFolderId==="root"){
     filteredKeys=keys;
 }else{
     const allowedFolders=getPanelChildFolders(activeFolderId);
+
+alert(
+    "activeFolderId = " + activeFolderId +
+    "\n\nallowedFolders =\n" +
+    allowedFolders.join("\n")
+);
+  
     filteredKeys=keys.filter(key=>{
         const point=allPoints[key];
         if(point.folderId){
