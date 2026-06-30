@@ -2207,6 +2207,13 @@ function loadFilteredPoints() {
         // Tanlangan guruh va uning pastki fiderlari IDlari ro'yxati
         const allowedFolderIds = activeFolderId === 'root' ? [] : getAllChildFolderIds(activeFolderId);
 
+// Tanlangan papka ichidagi barcha papkalarni tez qidirish uchun
+const allowedFolderSet = new Set(allowedFolderIds);
+
+// Tanlangan papkaning rangi
+const activeFolder =
+    currentFolders[activeFolderId] || null;
+      
 // Tez tekshirish uchun Set
 const allowedFolderSet = new Set(allowedFolderIds);
       
