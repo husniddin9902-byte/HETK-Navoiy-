@@ -2252,9 +2252,15 @@ if (activeFolderId === "root") {
             bounds.push([lat, lng]);
             const displayName = point.name || point.address.split(',')[0] || "TP";
 
-            // Markerning standart fider rangini aniqlash
-            const primaryFolderId = tpFoldersArr[0];
-            const primaryColor = (currentFolders[primaryFolderId] && currentFolders[primaryFolderId].color) ? currentFolders[primaryFolderId].color : '#007AFF';
+            const primaryColor =
+(
+    currentFolders[displayFolderId] &&
+    currentFolders[displayFolderId].color
+)
+?
+currentFolders[displayFolderId].color
+:
+'#007AFF';
 
 // SCADA uchun ko'rsatiladigan papkani aniqlash
 let displayFolderId = primaryFolderId;
