@@ -2523,6 +2523,7 @@ if (panelTabItems) {
         panelInternalMarkers = [];
 
         // Bazadan faqat tanlangan guruh ma'lumotlarini filtrlash
+      alert("activeFolderId = " + activeFolderId);
         database.ref('TPs').once('value', (snapshot) => {
             const allPoints = snapshot.val() || {};
             const keys = Object.keys(allPoints);
