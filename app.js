@@ -2489,47 +2489,6 @@ if (panelTabFolders) {
 var panelInternalMap = null;
 var panelInternalMarkers = [];
 
-// Ichki papkalarni recursive yig'ish
-function getPanelChildFolders(parentId){
-    let ids=[parentId];
-    Object.keys(currentFolders).forEach(id=>{
-        if(currentFolders[id].parentId===parentId){
-            ids=ids.concat(getPanelChildFolders(id));
-        }
-    });
-    return ids;
-}
-
-function getVisiblePoints(activeFolderId, allPoints){
-    const keys = Object.keys(allPoints);
-    if(activeFolderId==="root"){
-        return keys;
-    }
-    return keys.filter(key=>{
-        const point=allPoints[key];
-        let folders=[];
-        if(point.folderId){
-            folders.push(point.folderId);
-        }
-        if(point.folders){
-            folders.push(...Object.keys(point.folders));
-        }
-        return folders.some(folderId=>{
-            let current=folderId;
-            while(current){
-                if(current===activeFolderId){
-                    return true;
-                }
-                if(!currentFolders[current]){
-                    break;
-                }
-                current=currentFolders[current].parentId;
-            }
-            return false;
-        });
-    });
-}
-
 if (panelTabItems) {
     panelTabItems.addEventListener('click', () => {
         if (panelTabItems) panelTabItems.classList.add('active');
@@ -2553,10 +2512,10 @@ if (panelTabItems) {
         panelInternalMarkers = [];
 
         // Bazadan faqat tanlangan guruh ma'lumotlarini filtrlash
-     
         database.ref('TPs').once('value', (snapshot) => {
             const allPoints = snapshot.val() || {};
-          const filteredKeys = getVisiblePoints(activeFolderId, allPoints);
+            const keys = Object.keys(allPoints);
+            const filteredKeys = activeFolderId === 'root' ? keys : keys.filter(key => allPoints[key].folderId === activeFolderId);
             
             let bounds = [];
 
