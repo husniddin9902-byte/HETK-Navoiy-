@@ -2175,6 +2175,17 @@ function isPointInsideFolder(pointFolderId, selectedFolderId){
     return false;
 }
 
+ // Bola guruhlarni (fiderlarni) recursively yig'ish funksiyasi (Ona papka bosilganda hamma pastidagilarni ko'rish uchun)
+        function getAllChildFolderIds(parentId) {
+            let ids = [parentId];
+            Object.keys(currentFolders).forEach(id => {
+                if (currentFolders[id].parentId === parentId) {
+                    ids = ids.concat(getAllChildFolderIds(id));
+                }
+            });
+            return ids;
+        }
+
 // 3. SIZ AYTGAN ASOSIY SCADA MANTIQI: Xaritada filtrlash, Birlashish va Miltillovchi markerlar (Override)
 function loadFilteredPoints() {
     const tpListContainer = document.getElementById('tp-list');
@@ -2193,16 +2204,7 @@ function loadFilteredPoints() {
         let bounds = [];
         const displayedPointsMap = new Map(); // Ona papkada bitta nuqtani bir marta chizish (dublikat oldini olish) uchun
 
-        // Bola guruhlarni (fiderlarni) recursively yig'ish funksiyasi (Ona papka bosilganda hamma pastidagilarni ko'rish uchun)
-        function getAllChildFolderIds(parentId) {
-            let ids = [parentId];
-            Object.keys(currentFolders).forEach(id => {
-                if (currentFolders[id].parentId === parentId) {
-                    ids = ids.concat(getAllChildFolderIds(id));
-                }
-            });
-            return ids;
-        }
+      
 
         // Tanlangan guruh va uning pastki fiderlari IDlari ro'yxati
         const allowedFolderIds = activeFolderId === 'root' ? [] : getAllChildFolderIds(activeFolderId);
