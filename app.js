@@ -2184,7 +2184,7 @@ function isPointInsideFolder(pointFolderId, selectedFolderId){
                 }
             });
 
- alert(ids.join("\n"));   // vaqtincha 
+ alert(ids.join("\n"));   // vaqtincha  
           
             return ids;
         }
