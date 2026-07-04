@@ -2447,6 +2447,25 @@ if (tabItemsBtn) {
     ? []
     : getAllChildFolderIds(activeFolderId);
 
+
+
+          function getBranchColor(folderId, selectedFolderId) {
+    if (selectedFolderId === "root") {
+        return currentFolders[folderId]?.color || "#ff4444";
+    }
+    let current = folderId;
+    while (currentFolders[current]) {
+        const parentId = currentFolders[current].parentId;
+        if (parentId === selectedFolderId) {
+            return currentFolders[current].color || "#ff4444";
+        }
+        current = parentId;
+    }
+    return currentFolders[folderId]?.color || "#ff4444";
+}
+
+
+          
 const allowedFolderSet = new Set(allowedFolderIds);
 
 const filteredKeys = activeFolderId === 'root'
@@ -2473,7 +2492,11 @@ const filteredKeys = activeFolderId === 'root'
                     bounds.push([lat, lng]);
 
                     // Guruh rangini koddagi o'zgaruvchidan olamiz
-                    const folderColor = (currentFolders[point.folderId] && currentFolders[point.folderId].color) ? currentFolders[point.folderId].color : '#ff4444';
+                   const firstFolderId = point.folders
+    ? Object.keys(point.folders)[0]
+    : point.folderId;
+
+const folderColor = getBranchColor(firstFolderId, activeFolderId);
 
                     // Faqat shu ichki xarita uchun marker dizayni (o'z rangi bilan)
                     const pIcon = L.divIcon({
