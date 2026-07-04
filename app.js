@@ -2196,15 +2196,12 @@ function isPointInsideFolder(pointFolderId, selectedFolderId){
                     ids = ids.concat(getAllChildFolderIds(id));
                 }
             });
-
- alert(ids.join("\n"));   // vaqtincha  
           
             return ids;
         }
 
 // 3. SIZ AYTGAN ASOSIY SCADA MANTIQI: Xaritada filtrlash, Birlashish va Miltillovchi markerlar (Override)
 function loadFilteredPoints() {
-  alert("1");
     const tpListContainer = document.getElementById('tp-list');
     if (!tpListContainer) return;
     
