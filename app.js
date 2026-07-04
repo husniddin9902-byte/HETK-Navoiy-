@@ -386,6 +386,7 @@ if (tabFolders && tabItems) {
 
 // NUQTALARNI XARITADA O'Z RANGI BILAN CHIQARISH VA PANELNI YOPISH MANTIQI
 function loadFilteredPoints() {
+   alert("388");
     const tpListContainer = document.getElementById('tp-list');
     if (!tpListContainer) return;
     
