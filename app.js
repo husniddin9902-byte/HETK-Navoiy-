@@ -402,7 +402,19 @@ function loadFilteredPoints() {
 
         // Agar biror papka tanlangan bo'lsa filterlaydi, tanlanmagan bo'lsa hamma elementlarni oladi
         const keys = Object.keys(allPoints);
-        const filteredKeys = activeFolderId === 'root' ? keys : keys.filter(key => allPoints[key].folderId === activeFolderId);
+       const allowedFolderIds = activeFolderId === 'root'
+    ? []
+    : getAllChildFolderIds(activeFolderId);
+const allowedFolderSet = new Set(allowedFolderIds);
+const filteredKeys = activeFolderId === 'root'
+    ? keys
+    : keys.filter(key => {
+        const point = allPoints[key];
+        const folders = point.folders
+            ? Object.keys(point.folders)
+            : (point.folderId ? [point.folderId] : []);
+        return folders.some(id => allowedFolderSet.has(id));
+    });
 
         if (filteredKeys.length === 0) {
             tpListContainer.innerHTML = "<p style='color:gray; padding:15px; text-align:center;'>Elementlar mavjud emas.</p>";
