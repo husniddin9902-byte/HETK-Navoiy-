@@ -2191,6 +2191,7 @@ function isPointInsideFolder(pointFolderId, selectedFolderId){
 
 // 3. SIZ AYTGAN ASOSIY SCADA MANTIQI: Xaritada filtrlash, Birlashish va Miltillovchi markerlar (Override)
 function loadFilteredPoints() {
+  alert("1");
     const tpListContainer = document.getElementById('tp-list');
     if (!tpListContainer) return;
     
