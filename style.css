@@ -948,3 +948,25 @@ overflow-y:auto;
 .tree-child-container{
 min-width:max-content;
 }
+
+/* Filtrlash tizimi */
+
+#filter-btn{
+    position:relative;
+}
+
+#filter-count{
+    position:absolute;
+    top:-5px;
+    right:-5px;
+    min-width:18px;
+    height:18px;
+    border-radius:50%;
+    background:#ff3b30;
+    color:#fff;
+    font-size:11px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-weight:bold;
+}
