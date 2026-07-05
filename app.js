@@ -2618,3 +2618,16 @@ if (panelTabItems) {
         });
     });
 }
+
+
+// Qidiruv tizimi
+const filterBtn = document.getElementById("filter-btn");
+const filterPanel = document.getElementById("filter-panel");
+if (filterBtn) {
+    filterBtn.addEventListener("click", () => {
+        filterPanel.style.display =
+            filterPanel.style.display === "block"
+                ? "none"
+                : "block";
+    });
+}
