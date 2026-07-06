@@ -527,7 +527,10 @@ function buildFolderPath(folderId){
 // Natijalarni yangilash (hozircha bo'sh)
 function refreshSearchResults(){
    searchState.folderId = activeFolderId;
-    console.log(searchState);
+    alert(
+        "Papka: " + searchState.folderId +
+        "\nQidiruv: " + searchState.text
+    );
 }
 
 // Qidiruv matni o'zgarganda
