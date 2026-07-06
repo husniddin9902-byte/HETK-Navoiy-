@@ -2631,3 +2631,14 @@ if (filterBtn) {
                 : "block";
     });
 }
+
+
+// Filtrlash tizimi
+const filterState = {
+    balance: "all",      // all | etk | private
+    owner: "all",        // keyin admin ID bo'ladi
+    updated: "all",      // all | day | week | month
+    power: [],           // [100,160,250]
+    dualFeed: false,     // true / false
+    comments: "all"      // all | day | week | month
+};
