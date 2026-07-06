@@ -2412,6 +2412,95 @@ document.addEventListener('DOMContentLoaded', () => {
 });                                                 
 
 // =========================================================================
+// BOSHQRUV PANELIDAGI ICHKI XARITA MANTIQI (GLAVNIYGA TA'SIR QILMAYDI)
+// =========================================================================
+var panelMap = null;
+var panelMarkersArray = [];
+
+const tabItemsBtn = document.getElementById('tab-items');
+
+if (tabItemsBtn) {
+    // Sizning kodingizdagi eski click mantiqini butunlay yangilaymiz va boyitamiz
+    tabItemsBtn.addEventListener('click', () => {
+        // 1. Panel ichidagi kichik xarita hali yaratilmagan bo'lsa, uni ishga tushiramiz
+        if (!panelMap) {
+            panelMap = L.map('panel-map', { zoomControl: true }).setView([40.10, 65.81], 14);
+            
+            // Unga ham loyihangizdagi Google Satellit qatlamini beramiz
+            L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
+                maxZoom: 20,
+                subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+            }).addTo(panelMap);
+        }
+
+        // 2. Ichki xaritadagi eski markerlarni tozalaymiz (Glavniy xaritaga tegmaydi)
+        panelMarkersArray.forEach(m => panelMap.removeLayer(m));
+        panelMarkersArray = [];
+
+        // 3. Ma'lumotlar bazasidan tanlangan guruh elementlarini olamiz
+        database.ref('TPs').once('value', (snapshot) => {
+            const allPoints = snapshot.val() || {};
+            const keys = Object.keys(allPoints);
+            
+            // Faqat siz tanlagan guruh (activeFolderId) elementlarini filterlaymiz
+            const allowedFolderIds = activeFolderId === 'root'
+    ? []
+    : getAllChildFolderIds(activeFolderId);
+
+const allowedFolderSet = new Set(allowedFolderIds);
+
+const filteredKeys = activeFolderId === 'root'
+    ? keys
+    : keys.filter(key => {
+        const point = allPoints[key];
+
+        const folders = point.folders
+            ? Object.keys(point.folders)
+            : (point.folderId ? [point.folderId] : []);
+
+        return folders.some(id => allowedFolderSet.has(id));
+    });
+            
+            let bounds = [];
+
+            filteredKeys.forEach(key => {
+                const point = allPoints[key];
+                const lat = parseFloat(point.lat);
+                const lng = parseFloat(point.lng);
+                const displayName = point.address.split(',')[0] || "Noma'lum";
+
+                if (!isNaN(lat) && !isNaN(lng)) {
+                    bounds.push([lat, lng]);
+
+                    // Guruh rangini koddagi o'zgaruvchidan olamiz
+                    const folderColor = (currentFolders[point.folderId] && currentFolders[point.folderId].color) ? currentFolders[point.folderId].color : '#ff4444';
+
+                    // Faqat shu ichki xarita uchun marker dizayni (o'z rangi bilan)
+                    const pIcon = L.divIcon({
+                        className: 'panel-internal-marker',
+                        html: `<i class="fas fa-map-marker-alt" style="color: ${folderColor}; font-size: 22px; text-shadow: 0 0 3px black;"></i>`,
+                        iconSize: [22, 22],
+                        iconAnchor: [11, 22]
+                    });
+
+                    const marker = L.marker([lat, lng], { icon: pIcon }).addTo(panelMap);
+                    marker.bindPopup(`<b>${displayName}</b><br>${point.address}`);
+                    panelMarkersArray.push(marker);
+                }
+            });
+
+            // 4. Xarita qotib qolmasligi va faqat o'sha elementlarga markazlashishi (Yaqinlashishi)
+            setTimeout(() => {
+                panelMap.invalidateSize();
+                if (bounds.length > 0) {
+                    panelMap.fitBounds(bounds, { padding: [20, 20], maxZoom: 16 });
+                }
+            }, 300);
+        });
+    });
+}
+
+// =========================================================================
 // UNIVERSAL ICHKI XARITA: FAQAT "XARITA" TABI BOSILGANDA ISHLAYDI
 // =========================================================================
 const panelTabFolders = document.getElementById('tab-folders');
@@ -2436,7 +2525,6 @@ var panelInternalMarkers = [];
 
 if (panelTabItems) {
     panelTabItems.addEventListener('click', () => {
-      alert("Xarita bosildi");
         if (panelTabItems) panelTabItems.classList.add('active');
         if (panelTabFolders) panelTabFolders.classList.remove('active');
         
@@ -2462,7 +2550,8 @@ if (panelTabItems) {
             const allPoints = snapshot.val() || {};
 
 // MANA SHUNI QO'YING
-
+    const firstKey = Object.keys(allPoints)[0];
+    alert(JSON.stringify(allPoints[firstKey], null, 2));
           
             const keys = Object.keys(allPoints);
             const filteredKeys = activeFolderId === 'root' ? keys : keys.filter(key => allPoints[key].folderId === activeFolderId);
@@ -2507,48 +2596,3 @@ if (panelTabItems) {
         });
     });
 }
-
-
-// Qidiruv tizimi
-const filterBtn = document.getElementById("filter-btn");
-const filterPanel = document.getElementById("filter-panel");
-if (filterBtn) {
-    filterBtn.addEventListener("click", () => {
-        filterPanel.style.display =
-            filterPanel.style.display === "block"
-                ? "none"
-                : "block";
-    });
-}
-
-// Filtr tugmalari
-const filterCancel = document.getElementById("filter-cancel");
-const filterClear = document.getElementById("filter-clear");
-const filterApply = document.getElementById("filter-apply");
-if(filterCancel){
-    filterCancel.addEventListener("click",()=>{
-        filterPanel.style.display="none";
-    });
-}
-if(filterClear){
-    filterClear.addEventListener("click",()=>{
-        document.querySelectorAll("#filter-panel select").forEach(s=>{
-            s.selectedIndex=0;
-        });
-    });
-}
-if(filterApply){
-    filterApply.addEventListener("click",()=>{
-        filterPanel.style.display="none";
-    });
-}
-
-// Filtrlash tizimi
-const filterState = {
-    balance: "all",      // all | etk | private
-    owner: "all",        // keyin admin ID bo'ladi
-    updated: "all",      // all | day | week | month
-    power: [],           // [100,160,250]
-    dualFeed: false,     // true / false
-    comments: "all"      // all | day | week | month
-};
