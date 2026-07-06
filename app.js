@@ -554,14 +554,33 @@ function refreshSearchResults(){
         return;
     }
 
-    // Keyingi bosqichda Firebase qidiruvi yoziladi
+   // Firebase qidiruvi
+database.ref("TPs").once("value",(snapshot)=>{
+    const allTPs=snapshot.val()||{};
+    const found=[];
+    Object.values(allTPs).forEach(tp=>{
+
+        // Papka tekshiruvi
+        const inFolder=
+            tp.folders &&
+            tp.folders[searchState.folderId];
+        if(!inFolder) return;
+
+        // Nom bo'yicha qidiruv
+        const name=(tp.name||"").toLowerCase();
+        if(name.includes(text.toLowerCase())){
+            found.push(tp);
+        }
+    });
+    // Vaqtincha test
     resultsBox.style.display="block";
     foldersBox.style.display="none";
     resultsBox.innerHTML=`
         <div class="search-info">
-            🔍 "${text}" bo'yicha qidirilmoqda...
+            Topildi: ${found.length} ta element
         </div>
     `;
+});
 }
 
 // Qidiruv matni o'zgarganda
