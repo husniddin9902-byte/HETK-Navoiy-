@@ -114,10 +114,46 @@ cursor:pointer;
 </button>
         </button>
     </div>
-    <div id="filter-panel"
-         style="display:none;margin-top:10px;padding:10px;border-radius:8px;background:#00223a;color:white;">
-        Filtrlash tizimi (keyin to'ldiriladi)
+    <!-- Filtrlash tizimi -->
+<div id="filter-panel"
+     style="display:none;margin-top:10px;padding:12px;border-radius:8px;background:#00223a;color:white;">
+    <div id="filter-content">
+
+        <!-- Balans -->
+        <div class="filter-block">
+            <div class="filter-title">Balans</div>
+            <label><input type="radio" name="balance" value="all" checked> Hammasi</label><br>
+            <label><input type="radio" name="balance" value="etk"> ETK</label><br>
+            <label><input type="radio" name="balance" value="private"> Xususiy</label>
+        </div>
+        <hr>
+
+        <!-- Javobgar -->
+        <div class="filter-block">
+            <div class="filter-title">Javobgar shaxs</div>
+            <select id="filter-owner" style="width:100%;">
+                <option value="all">Hammasi</option>
+            </select>
+        </div>
+        <hr>
+
+        <!-- Oxirgi tahrir -->
+        <div class="filter-block">
+            <div class="filter-title">Oxirgi tahrir</div>
+            <select id="filter-updated" style="width:100%;">
+                <option value="all">Hammasi</option>
+                <option value="day">1 kun</option>
+                <option value="week">1 hafta</option>
+                <option value="month">1 oy</option>
+            </select>
+        </div>
     </div>
+    <div style="display:flex;gap:8px;margin-top:15px;">
+        <button id="filter-cancel" style="flex:1;">Bekor qilish</button>
+        <button id="filter-clear" style="flex:1;">Tozalash</button>
+        <button id="filter-apply" style="flex:1;">Qo'llash</button>
+    </div>
+</div>
 </div>
 
         <div id="folders-section" class="tab-content active">
