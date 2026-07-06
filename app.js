@@ -527,10 +527,11 @@ function buildFolderPath(folderId){
 // Natijalarni yangilash (hozircha bo'sh)
 function refreshSearchResults(){
    searchState.folderId = activeFolderId;
-    alert(
-        "Papka: " + searchState.folderId +
-        "\nQidiruv: " + searchState.text
-    );
+     // Papka tanlanmagan bo'lsa qidiruv ishlamaydi
+    if(searchState.folderId === "root"){
+        alert("Avval papka tanlang!");
+        return;
+    }
 }
 
 // Qidiruv matni o'zgarganda
