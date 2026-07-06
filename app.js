@@ -560,11 +560,13 @@ database.ref("TPs").once("value",(snapshot)=>{
     const found=[];
     Object.values(allTPs).forEach(tp=>{
 
-        // Papka tekshiruvi
-        const inFolder=
-            tp.folders &&
-            tp.folders[searchState.folderId];
-        if(!inFolder) return;
+       // Tanlangan papka va barcha ichki papkalar
+const allowedFolderIds = getAllChildFolderIds(searchState.folderId);
+allowedFolderIds.push(searchState.folderId);
+const inFolder =
+    tp.folders &&
+    Object.keys(tp.folders).some(id => allowedFolderIds.includes(id));
+if(!inFolder) return;
 
         // Nom bo'yicha qidiruv
         const name=(tp.name||"").toLowerCase();
