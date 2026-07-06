@@ -96,89 +96,12 @@ cursor:pointer;
         </div>
         
 
-        <!-- Qidiruv tizimi -->
-<div id="search-container-box" style="padding:10px 15px;background:#001220;">
-    <div style="display:flex;gap:8px;align-items:center;">
-        <div class="search-input-field" style="flex:1;position:relative;">
-            <i class="fas fa-search"
-               style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#88a0b0;"></i>
-            <input
-                type="text"
-                id="element-search"
-                placeholder="Element qidirish..."
-                style="width:100%;padding:10px 12px 10px 38px;border-radius:8px;background:#00223a;border:1px solid rgba(255,255,255,.1);color:white;outline:none;">
-        </div> 
-        <button id="filter-btn">
-    <i class="fas fa-filter"></i>
-    <span id="filter-count">0</span>
-</button>
-       
-    </div>
-    
-    <!-- Filtrlash tizimi -->
-<div id="filter-panel"
-     style="display:none;margin-top:10px;padding:12px;border-radius:8px;background:#00223a;color:white;">
-    <div class="filter-block">
-        <div class="filter-title">Balans</div>
-        <select id="filter-balance" class="filter-select">
-            <option value="all">Hammasi</option>
-            <option value="etk">ETK balansi</option>
-            <option value="private">Xususiy balans</option>
-        </select>
-    </div>
-    <div class="filter-block">
-        <div class="filter-title">Javobgar shaxs</div>
-        <select id="filter-owner" class="filter-select">
-            <option value="all">Hammasi</option>
-        </select>
-    </div>
-    <div class="filter-block">
-        <div class="filter-title">Oxirgi qo'shilgan</div>
-        <select id="filter-created" class="filter-select">
-            <option value="all">Hammasi</option>
-            <option value="day">Bugun</option>
-            <option value="week">1 hafta</option>
-            <option value="month">1 oy</option>
-        </select>
-    </div>
-    <div class="filter-block">
-        <div class="filter-title">Oxirgi tahrirlangan</div>
-        <select id="filter-updated" class="filter-select">
-            <option value="all">Hammasi</option>
-            <option value="day">Bugun</option>
-            <option value="week">1 hafta</option>
-            <option value="month">1 oy</option>
-        </select>
-    </div>
-    <div class="filter-block">
-        <div class="filter-title">Quvvati</div>
-        <select id="filter-power" class="filter-select">
-            <option value="all">Hammasi</option>
-        </select>
-    </div>
-    <div class="filter-block">
-        <div class="filter-title">Ikki tomonlama ta'minlangan</div>
-        <select id="filter-dual" class="filter-select">
-            <option value="all">Hammasi</option>
-            <option value="yes">Ha</option>
-            <option value="no">Yo'q</option>
-        </select>
-    </div>
-    <div class="filter-block">
-        <div class="filter-title">Oxirgi izoh</div>
-        <select id="filter-comment" class="filter-select">
-            <option value="all">Hammasi</option>
-            <option value="day">Bugun</option>
-            <option value="week">1 hafta</option>
-            <option value="month">1 oy</option>
-        </select>
-    </div>
-    <div style="display:flex;gap:8px;margin-top:18px;">
-        <button id="filter-cancel" style="flex:1;">Bekor qilish</button>
-        <button id="filter-clear" style="flex:1;">Tozalash</button>
-        <button id="filter-apply" style="flex:1;">Qo'llash</button>
-    </div>
-</div>
+        <div id="search-container-box" class="search-bar-wrapper" style="padding: 10px 15px; background: #001220;">
+            <div class="search-input-field" style="position: relative; display: flex; align-items: center;">
+                <i class="fas fa-search search-icon" style="position: absolute; left: 12px; color: #88a0b0;"></i>
+                <input type="text" id="element-search" placeholder="Поиск по названию местоположения" style="width: 100%; padding: 10px 12px 10px 38px; border-radius: 8px; background: #00223a; border: 1px solid rgba(255, 255, 255, 0.1); color: white; outline: none;">
+            </div>
+        </div>
 
         <div id="folders-section" class="tab-content active">
             <div id="tree-root"></div>
