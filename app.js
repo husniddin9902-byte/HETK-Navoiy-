@@ -513,6 +513,17 @@ const searchState = {
     }
 };
 
+// Papka yo'lini yig'ish
+function buildFolderPath(folderId){
+    const path=[];
+    let current=folderId;
+    while(current && currentFolders[current]){
+        path.unshift(currentFolders[current].name);
+        current=currentFolders[current].parentId;
+    }
+    return path;
+}
+
 // Natijalarni yangilash (hozircha bo'sh)
 function refreshSearchResults(){
 }
