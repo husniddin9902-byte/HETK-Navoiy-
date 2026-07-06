@@ -479,6 +479,7 @@ const filteredKeys = activeFolderId === 'root'
     });
 }
 
+/*
 // SIZ AYTGAN QIDIRUV TIZIMI MANTIQI
 const elementSearchInput = document.getElementById('element-search');
 if (elementSearchInput) {
@@ -489,7 +490,7 @@ if (elementSearchInput) {
             item.style.display = searchStr.includes(query) ? 'block' : 'none';
         });
     });
-}
+}  */
 
 // TAHRIRLASH VA O'ZGARTIRISH PANELI
 const editColorSlider = document.getElementById('edit-color-slider');
