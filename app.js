@@ -542,12 +542,24 @@ function refreshSearchResults(){
         return;
     }
 
-    // 2 ta harfdan kam bo'lsa
-    if(searchState.text.length<2){
-        resultsBox.style.display="none";
-        foldersBox.style.display="block";
-        return;
-    }
+   // Qidiruv bo'sh bo'lsa
+if(searchState.text.length===0){
+    resultsBox.style.display="none";
+    foldersBox.style.display="block";
+    return;
+}
+
+// 2 ta harfdan kam bo'lsa
+if(searchState.text.length<2){
+    resultsBox.style.display="block";
+    foldersBox.style.display="none";
+    resultsBox.innerHTML=`
+        <div class="search-info">
+            Kamida 2 ta harf kiriting...
+        </div>
+    `;
+    return;
+}
 
     // Keyingi bosqichda shu yerga haqiqiy qidiruv yoziladi.
 
