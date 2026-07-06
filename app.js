@@ -492,6 +492,32 @@ if (elementSearchInput) {
     });
 }  */
 
+
+// ===============================
+// Qidiruv tizimi
+// ===============================
+
+// Qidiruv va filtrlash holati
+const searchState = {
+    folderId: "root",
+    text: "",
+    filters: {
+        balance: "all",
+        owner: "all",
+        created: "all",
+        updated: "all",
+        power: "all",
+        dualSupply: "all",
+        comment: "all"
+    }
+};
+
+// Natijalarni yangilash (hozircha bo'sh)
+function refreshSearchResults(){
+}
+
+
+
 // TAHRIRLASH VA O'ZGARTIRISH PANELI
 const editColorSlider = document.getElementById('edit-color-slider');
 const editColorPreview = document.getElementById('edit-color-preview');
