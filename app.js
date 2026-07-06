@@ -526,12 +526,31 @@ function buildFolderPath(folderId){
 
 // Natijalarni yangilash (hozircha bo'sh)
 function refreshSearchResults(){
-   searchState.folderId = activeFolderId;
-     // Papka tanlanmagan bo'lsa qidiruv ishlamaydi
-    if(searchState.folderId === "root"){
-        alert("Avval papka tanlang!");
+    searchState.folderId = activeFolderId;
+    const resultsBox = document.getElementById("search-results");
+    const foldersBox = document.getElementById("folders-section");
+
+    // Papka tanlanmagan
+    if(searchState.folderId==="root"){
+        resultsBox.style.display="block";
+        foldersBox.style.display="none";
+        resultsBox.innerHTML=`
+            <div class="search-info">
+                ⚠ Qidiruvni boshlash uchun avval papkani tanlang.
+            </div>
+        `;
         return;
     }
+
+    // 2 ta harfdan kam bo'lsa
+    if(searchState.text.length<2){
+        resultsBox.style.display="none";
+        foldersBox.style.display="block";
+        return;
+    }
+
+    // Keyingi bosqichda shu yerga haqiqiy qidiruv yoziladi.
+
 }
 
 // Qidiruv matni o'zgarganda
