@@ -2548,6 +2548,7 @@ var panelInternalMarkers = [];
 
 if (panelTabItems) {
     panelTabItems.addEventListener('click', () => {
+      alert("Xarita bosildi");
         if (panelTabItems) panelTabItems.classList.add('active');
         if (panelTabFolders) panelTabFolders.classList.remove('active');
         
