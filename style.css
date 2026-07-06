@@ -1030,14 +1030,14 @@ min-width:max-content;
     cursor:pointer;
 }
 #filter-cancel{
-    background:#4b5563;
+    background:#dc3545;
     color:white;
 }
 #filter-clear{
-    background:#ef4444;
+    background:#6c757d;
     color:white;
 }
 #filter-apply{
-    background:#2563eb;
+    background:#0d6efd;
     color:white;
 }
