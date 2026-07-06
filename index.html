@@ -96,12 +96,62 @@ cursor:pointer;
         </div>
         
 
-        <div id="search-container-box" class="search-bar-wrapper" style="padding: 10px 15px; background: #001220;">
-            <div class="search-input-field" style="position: relative; display: flex; align-items: center;">
-                <i class="fas fa-search search-icon" style="position: absolute; left: 12px; color: #88a0b0;"></i>
-                <input type="text" id="element-search" placeholder="Поиск по названию местоположения" style="width: 100%; padding: 10px 12px 10px 38px; border-radius: 8px; background: #00223a; border: 1px solid rgba(255, 255, 255, 0.1); color: white; outline: none;">
-            </div>
+        <!-- Qidiruv tizimi -->
+<div id="search-container-box"
+     class="search-bar-wrapper"
+     style="padding:10px 15px;background:#001220;">
+    <div style="display:flex;gap:8px;align-items:center;">
+
+        <!-- Qidiruv -->
+        <div class="search-input-field"
+             style="position:relative;flex:1;display:flex;align-items:center;">
+            <i class="fas fa-search"
+               style="position:absolute;left:12px;color:#88a0b0;"></i>
+            <input
+                type="text"
+                id="element-search"
+                placeholder="Element nomi bo'yicha qidirish..."
+                style="
+                    width:100%;
+                    padding:10px 12px 10px 38px;
+                    border-radius:8px;
+                    background:#00223a;
+                    border:1px solid rgba(255,255,255,.1);
+                    color:white;
+                    outline:none;">
         </div>
+
+        <!-- Filtrlash tizimi -->
+        <button id="filter-btn"
+                style="
+                    width:42px;
+                    height:42px;
+                    border:none;
+                    border-radius:8px;
+                    background:#00223a;
+                    color:white;
+                    cursor:pointer;
+                    position:relative;">
+            <i class="fas fa-filter"></i>
+            <span id="filter-count"
+                  style="
+                    position:absolute;
+                    top:-5px;
+                    right:-5px;
+                    width:18px;
+                    height:18px;
+                    border-radius:50%;
+                    background:#e53935;
+                    color:white;
+                    font-size:11px;
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;">
+                0
+            </span>
+        </button>
+    </div>
+</div>
 
         <div id="folders-section" class="tab-content active">
             <div id="tree-root"></div>
