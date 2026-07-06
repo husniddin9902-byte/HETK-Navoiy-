@@ -498,6 +498,7 @@ if (elementSearchInput) {
 // ===============================
 
 // Qidiruv va filtrlash holati
+const elementSearchInput = document.getElementById("element-search");
 const searchState = {
     folderId: "root",
     text: "",
@@ -516,7 +517,13 @@ const searchState = {
 function refreshSearchResults(){
 }
 
-
+// Qidiruv matni o'zgarganda
+if (elementSearchInput) {
+    elementSearchInput.addEventListener("input", function () {
+        searchState.text = this.value.trim();
+        refreshSearchResults();
+    });
+}
 
 // TAHRIRLASH VA O'ZGARTIRISH PANELI
 const editColorSlider = document.getElementById('edit-color-slider');
