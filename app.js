@@ -548,7 +548,7 @@ if(searchState.text.length===0){
     foldersBox.style.display="block";
     return;
 }
-
+ 
 // 2 ta harfdan kam bo'lsa
 if(searchState.text.length<2){
     resultsBox.style.display="block";
