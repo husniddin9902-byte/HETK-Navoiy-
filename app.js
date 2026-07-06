@@ -529,11 +529,23 @@ function refreshSearchResults(){
     searchState.folderId = activeFolderId;
     const resultsBox = document.getElementById("search-results");
     const foldersBox = document.getElementById("folders-section");
+    const text = searchState.text.trim();
+
+    
+    // Qidiruv bo'sh
+    if(text===""){
+        resultsBox.style.display="none";
+        resultsBox.innerHTML="";
+        foldersBox.style.display="block";
+        return;
+    }
 
     // Papka tanlanmagan
     if(searchState.folderId==="root"){
-        resultsBox.style.display="block";
-        foldersBox.style.display="none";
+    resultsBox.style.display="block";
+
+        // Papkalar yashirilmaydi
+        foldersBox.style.display="block";
         resultsBox.innerHTML=`
             <div class="search-info">
                 ⚠ Qidiruvni boshlash uchun avval papkani tanlang.
@@ -542,27 +554,14 @@ function refreshSearchResults(){
         return;
     }
 
-   // Qidiruv bo'sh bo'lsa
-if(searchState.text.length===0){
-    resultsBox.style.display="none";
-    foldersBox.style.display="block";
-    return;
-}
- 
-// 2 ta harfdan kam bo'lsa
-if(searchState.text.length<2){
+    // Keyingi bosqichda Firebase qidiruvi yoziladi
     resultsBox.style.display="block";
     foldersBox.style.display="none";
     resultsBox.innerHTML=`
         <div class="search-info">
-            Kamida 2 ta harf kiriting...
+            🔍 "${text}" bo'yicha qidirilmoqda...
         </div>
     `;
-    return;
-}
-
-    // Keyingi bosqichda shu yerga haqiqiy qidiruv yoziladi.
-
 }
 
 // Qidiruv matni o'zgarganda
