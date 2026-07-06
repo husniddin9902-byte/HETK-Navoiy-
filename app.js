@@ -2632,6 +2632,27 @@ if (filterBtn) {
     });
 }
 
+// Filtr tugmalari
+const filterCancel = document.getElementById("filter-cancel");
+const filterClear = document.getElementById("filter-clear");
+const filterApply = document.getElementById("filter-apply");
+if(filterCancel){
+    filterCancel.addEventListener("click",()=>{
+        filterPanel.style.display="none";
+    });
+}
+if(filterClear){
+    filterClear.addEventListener("click",()=>{
+        document.querySelectorAll("#filter-panel select").forEach(s=>{
+            s.selectedIndex=0;
+        });
+    });
+}
+if(filterApply){
+    filterApply.addEventListener("click",()=>{
+        filterPanel.style.display="none";
+    });
+}
 
 // Filtrlash tizimi
 const filterState = {
