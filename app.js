@@ -526,6 +526,8 @@ function buildFolderPath(folderId){
 
 // Natijalarni yangilash (hozircha bo'sh)
 function refreshSearchResults(){
+   searchState.folderId = activeFolderId;
+    console.log(searchState);
 }
 
 // Qidiruv matni o'zgarganda
