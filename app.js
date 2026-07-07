@@ -526,6 +526,42 @@ function buildFolderPath(folderId){
     return path;
 }
 
+// Qidiruv daraxtini qurish
+function buildSearchTree(results){
+    const tree = {};
+    results.forEach(tp=>{
+        const folderIds = Object.keys(tp.folders || {});
+        if(folderIds.length===0) return;
+        const folderId = folderIds[0];
+        const path = buildFolderPath(folderId);
+        let current = tree;
+        path.forEach(folder=>{
+            if(!current[folder.id]){
+                current[folder.id]={
+                    id:folder.id,
+                    name:folder.name,
+                    folders:{},
+                    items:[]
+                };
+            }
+            current=current[folder.id].folders;
+        });
+        const lastFolder=currentFolders[folderId];
+        if(lastFolder){
+            if(!current[folderId]){
+                current[folderId]={
+                    id:folderId,
+                    name:lastFolder.name,
+                    folders:{},
+                    items:[]
+                };
+            }
+            current[folderId].items.push(tp);
+        }
+    });
+    return tree;
+}
+
 // Natijalarni yangilash (hozircha bo'sh)
 function refreshSearchResults(){
     searchState.folderId = activeFolderId;
