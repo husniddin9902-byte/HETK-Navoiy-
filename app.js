@@ -574,22 +574,46 @@ if(!inFolder) return;
             found.push(tp);
         }
     });
+  
     // Vaqtincha test
     resultsBox.style.display="block";
     foldersBox.style.display="none";
-   let html = `
+  
+  // Papkalar bo'yicha guruhlash
+const groups = {};
+found.forEach(tp=>{
+    const folderIds = Object.keys(tp.folders || {});
+    if(folderIds.length===0) return;
+    const folderId = folderIds[0];
+    const folderName =
+        currentFolders[folderId]
+            ? currentFolders[folderId].name
+            : "Noma'lum papka";
+    if(!groups[folderName]){
+        groups[folderName]=[];
+    }
+    groups[folderName].push(tp);
+});
+let html=`
 <div class="search-info">
 Topildi: ${found.length} ta element
 </div>
 `;
-found.forEach(tp=>{
-    html += `
-        <div class="search-item">
-            ⚡ ${tp.name}
+Object.keys(groups).forEach(folderName=>{
+    html+=`
+        <div class="search-folder">
+            📂 <b>${folderName}</b>
         </div>
     `;
+    groups[folderName].forEach(tp=>{
+        html+=`
+            <div class="search-item" style="padding-left:25px;">
+                ⚡ ${tp.name}
+            </div>
+        `;
+    });
 });
-resultsBox.innerHTML = html;
+resultsBox.innerHTML=html;
   
 });
 }
