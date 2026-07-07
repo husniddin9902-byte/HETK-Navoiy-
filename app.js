@@ -607,6 +607,45 @@ function attachResultsToTree(tree, results){
     });
 }
 
+
+function renderSearchTree(tree){
+    let html = "";
+    function renderNode(node, level){
+
+        // Bu papkada natija bo'lmasa chiqarma
+        const hasChildren = node.children.some(child =>
+            child.items.length || child.children.length
+        );
+        if(node.items.length===0 && !hasChildren){
+            return;
+        }
+        html += `
+<div class="search-folder"
+     data-folder-id="${node.id}"
+     style="padding-left:${level*18}px;cursor:pointer;">
+📂 ${node.name} (${node.items.length})
+</div>`;
+        node.items.forEach(tp=>{
+            html += `
+<div class="search-item"
+     data-id="${tp.id||''}"
+     style="padding-left:${(level+1)*18}px;">
+⚡ ${tp.name}
+</div>`;
+        });
+        node.children.forEach(child=>{
+            renderNode(child, level+1);
+        });
+    }
+    Object.values(tree)
+        .filter(n=>n.parentId==="root")
+        .forEach(root=>{
+            renderNode(root,0);
+        });
+    return html;
+}
+
+
 // Natijalarni yangilash (hozircha bo'sh)
 function refreshSearchResults(){
     searchState.folderId = activeFolderId;
