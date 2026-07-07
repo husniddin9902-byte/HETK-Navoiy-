@@ -562,6 +562,35 @@ function buildSearchTree(results){
     return tree;
 }
 
+// Papkalar daraxtini qurish
+function buildFolderTree(){
+    const tree = {};
+    Object.keys(currentFolders).forEach(folderId=>{
+        const folder = currentFolders[folderId];
+        tree[folderId]={
+            id:folderId,
+            name:folder.name,
+            color:folder.color,
+            parentId:folder.parentId,
+            children:[],
+            items:[]
+        };
+    });
+    Object.values(tree).forEach(folder=>{
+        if(
+            folder.parentId &&
+            folder.parentId!=="root" &&
+            tree[folder.parentId]
+        ){
+            tree[folder.parentId]
+                .children
+                .push(folder);
+        }
+    });
+    return tree;
+}
+
+
 // Natijalarni yangilash (hozircha bo'sh)
 function refreshSearchResults(){
     searchState.folderId = activeFolderId;
