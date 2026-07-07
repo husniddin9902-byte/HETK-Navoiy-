@@ -636,9 +636,6 @@ function refreshSearchResults(){
 database.ref("TPs").once("value",(snapshot)=>{
     const allTPs=snapshot.val()||{};
     const found=[];
-
-// Oxirgi qidiruv natijalari
-searchState.results = found;
   
     Object.values(allTPs).forEach(tp=>{
 
@@ -656,25 +653,31 @@ if(!inFolder) return;
             found.push(tp);
         }
     });
+
+  // Oxirgi qidiruv natijalarini saqlash
+searchState.results = found;
+
+// Papkalar daraxtini qurish
+const folderTree = buildFolderTree();
+
+// Natijalarni daraxtga joylashtirish
+attachResultsToTree(folderTree, searchState.results);
   
     // Vaqtincha test
     resultsBox.style.display="block";
     foldersBox.style.display="none";
   
- const tree = buildSearchTree(searchState.results);
-
-resultsBox.innerHTML = `
+ resultsBox.innerHTML = `
 <div class="search-info">
 Topildi: ${found.length} ta element
 </div>
 
 <pre style="
-margin-top:10px;
+font-size:11px;
 color:#9be7ff;
-font-size:12px;
 white-space:pre-wrap;
 word-break:break-word;
-">${JSON.stringify(tree,null,2)}</pre>
+">${JSON.stringify(folderTree,null,2)}</pre>
 `;
 });
 }
