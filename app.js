@@ -647,7 +647,7 @@ function attachResultsToTree(tree, results){
 
 function renderSearchTree(tree){
     let html = "";
-    function renderNode(node, level){
+    function renderNode(node, level, treePrefix = "", isLast = true){
         const hasChildren = node.children.some(child =>
             child.items.length || child.children.length
         );
@@ -656,47 +656,65 @@ function renderSearchTree(tree){
         }
 
         // Faqat elementi bor papkaga son chiqariladi
-        const countText = node.items.length > 0
-            ? ` (${node.items.length})`
-            : "";
+        const countText =
+    node.items.length > 0
+        ? ` (${node.items.length})`
+        : "";
 
-        html += `
+const branch =
+    level === 0
+        ? ""
+        : (isLast ? "└── " : "├── ");
+
+html += `
 <div class="search-folder"
      data-folder-id="${node.id}"
      style="
-        padding-left:${level*22}px;
+        white-space:pre;
+        font-family:Consolas,monospace;
         cursor:pointer;
-        position:relative;
         margin:2px 0;
-     ">
-    ${
-        level>0
-        ? `<span style="
-            position:absolute;
-            left:${(level-1)*22+8}px;
-            top:-8px;
-            bottom:-8px;
-            border-left:1px dashed rgba(255,255,255,.25);
-        "></span>`
-        : ""
-    }
-    📂 ${node.name}${countText}
+    ">
+${treePrefix}${branch}📂 ${node.name}${countText}
 </div>`;
-        node.items.forEach(tp=>{
-            html += `
+
+node.items.forEach((tp,index)=>{
+
+    const itemBranch =
+        index === node.items.length-1 &&
+        node.children.length===0
+            ? "└── "
+            : "├── ";
+
+    html += `
 <div class="search-item"
      data-id="${tp.id||''}"
      style="
-        padding-left:${(level+1)*22}px;
+        white-space:pre;
+        font-family:Consolas,monospace;
         margin:2px 0;
-     ">
-⚡ ${tp.name}
+    ">
+${treePrefix}${level===0?"":"    "}${itemBranch}⚡ ${tp.name}
 </div>`;
-        });
-        node.children.forEach(child=>{
-            renderNode(child, level+1);
-        });
+
+});
+      
+       node.children.forEach((child,index)=>{
+    const last = index === node.children.length - 1;
+    const nextPrefix =
+        treePrefix +
+        (level === 0
+            ? ""
+            : (isLast ? "    " : "│   "));
+    renderNode(
+        child,
+        level + 1,
+        nextPrefix,
+        last
+    );
+});
     }
+  
     Object.values(tree)
         .filter(n=>n.parentId==="root")
         .forEach(root=>{
