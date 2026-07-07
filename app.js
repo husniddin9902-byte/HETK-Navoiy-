@@ -526,40 +526,46 @@ function buildFolderPath(folderId){
     return path;
 }
 
+
 // Qidiruv daraxtini qurish
-function buildSearchTree(results){
-    const tree = {};
-    results.forEach(tp=>{
-        const folderIds = Object.keys(tp.folders || {});
-        if(folderIds.length===0) return;
-        const folderId = folderIds[0];
-        const path = buildFolderPath(folderId);
-        let current = tree;
-        path.forEach(folder=>{
-            if(!current[folder.id]){
-                current[folder.id]={
-                    id:folder.id,
-                    name:folder.name,
-                    folders:{},
-                    items:[]
-                };
+function buildSearchTree(found){
+    const roots = {};
+    function ensureNode(folderId){
+        if(!folderId || !currentFolders[folderId]) return null;
+        const folder = currentFolders[folderId];
+        const node = {
+            id: folderId,
+            name: folder.name,
+            color: folder.color,
+            parentId: folder.parentId,
+            children: [],
+            items: []
+        };
+        if(folder.parentId === "root"){
+            if(!roots[folderId]){
+                roots[folderId]=node;
             }
-            current=current[folder.id].folders;
-        });
-        const lastFolder=currentFolders[folderId];
-        if(lastFolder){
-            if(!current[folderId]){
-                current[folderId]={
-                    id:folderId,
-                    name:lastFolder.name,
-                    folders:{},
-                    items:[]
-                };
-            }
-            current[folderId].items.push(tp);
+            return roots[folderId];
         }
+        const parent = ensureNode(folder.parentId);
+        let existing = parent.children.find(c=>c.id===folderId);
+        if(!existing){
+            parent.children.push(node);
+            existing=node;
+        }
+        return existing;
+    }
+    found.forEach(tp=>{
+        if(!tp.folders) return;
+        Object.keys(tp.folders).forEach(folderId=>{
+            const node = ensureNode(folderId);
+            if(node){
+                node.items.push(tp);
+            }
+        });
     });
-    return tree;
+    return roots;
+}
 }
 
 // Papkalar daraxtini qurish
