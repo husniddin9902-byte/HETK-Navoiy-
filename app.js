@@ -621,45 +621,21 @@ if(!inFolder) return;
     resultsBox.style.display="block";
     foldersBox.style.display="none";
   
-  // Papkalar bo'yicha guruhlash
-const groups = {};
-found.forEach(tp=>{
-    const folderIds = Object.keys(tp.folders || {});
-    if(folderIds.length===0) return;
-    const folderId = folderIds[0];
-    if(!groups[folderId]){
-        groups[folderId]={
-            name: currentFolders[folderId]
-                ? currentFolders[folderId].name
-                : "Noma'lum papka",
-            items:[]
-        };
-    }
-    groups[folderId].items.push(tp);
-});
-  
-let html=`
+ const tree = buildSearchTree(searchState.results);
+
+resultsBox.innerHTML = `
 <div class="search-info">
 Topildi: ${found.length} ta element
 </div>
+
+<pre style="
+margin-top:10px;
+color:#9be7ff;
+font-size:12px;
+white-space:pre-wrap;
+word-break:break-word;
+">${JSON.stringify(tree,null,2)}</pre>
 `;
-  
-Object.keys(groups).forEach(folderId=>{
-    const group=groups[folderId];
-    html+=`
-        <div class="search-folder">
-            📂 <b>${group.name}</b> (${group.items.length})
-        </div>
-    `;
-    group.items.forEach(tp=>{
-        html+=`
-            <div class="search-item" style="padding-left:25px;">
-                ⚡ ${tp.name}
-            </div>
-        `;
-    });
-});
-resultsBox.innerHTML=html; 
 });
 }
 
