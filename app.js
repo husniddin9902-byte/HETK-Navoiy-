@@ -582,6 +582,11 @@ if(!inFolder) return;
             Topildi: ${found.length} ta element
         </div>
     `;
+
+          if(found.length>0){
+    alert(JSON.stringify(found[0],null,2));
+}
+  
 });
 }
 
