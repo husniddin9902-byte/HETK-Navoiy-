@@ -585,27 +585,31 @@ found.forEach(tp=>{
     const folderIds = Object.keys(tp.folders || {});
     if(folderIds.length===0) return;
     const folderId = folderIds[0];
-    const folderName =
-        currentFolders[folderId]
-            ? currentFolders[folderId].name
-            : "Noma'lum papka";
-    if(!groups[folderName]){
-        groups[folderName]=[];
+    if(!groups[folderId]){
+        groups[folderId]={
+            name: currentFolders[folderId]
+                ? currentFolders[folderId].name
+                : "Noma'lum papka",
+            items:[]
+        };
     }
-    groups[folderName].push(tp);
+    groups[folderId].items.push(tp);
 });
+  
 let html=`
 <div class="search-info">
 Topildi: ${found.length} ta element
 </div>
 `;
-Object.keys(groups).forEach(folderName=>{
+  
+Object.keys(groups).forEach(folderId=>{
+    const group=groups[folderId];
     html+=`
         <div class="search-folder">
-            📂 <b>${folderName}</b>
+            📂 <b>${group.name}</b> (${group.items.length})
         </div>
     `;
-    groups[folderName].forEach(tp=>{
+    group.items.forEach(tp=>{
         html+=`
             <div class="search-item" style="padding-left:25px;">
                 ⚡ ${tp.name}
@@ -613,8 +617,7 @@ Object.keys(groups).forEach(folderName=>{
         `;
     });
 });
-resultsBox.innerHTML=html;
-  
+resultsBox.innerHTML=html; 
 });
 }
 
