@@ -510,7 +510,9 @@ const searchState = {
         power: "all",
         dualSupply: "all",
         comment: "all"
-    }
+    },
+     resultFolderId: null,
+results: []
 };
 
 // Papka yo'lini yig'ish
