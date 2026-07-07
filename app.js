@@ -607,8 +607,8 @@ function attachResultsToTree(tree, results){
     });
 }
 
-
-function renderSearchTree(tree){
+/*
+ function renderSearchTree(tree){
     let html = "";
     function renderNode(node, level){
 
@@ -630,6 +630,66 @@ function renderSearchTree(tree){
 <div class="search-item"
      data-id="${tp.id||''}"
      style="padding-left:${(level+1)*18}px;">
+⚡ ${tp.name}
+</div>`;
+        });
+        node.children.forEach(child=>{
+            renderNode(child, level+1);
+        });
+    }
+    Object.values(tree)
+        .filter(n=>n.parentId==="root")
+        .forEach(root=>{
+            renderNode(root,0);
+        });
+    return html;
+}    */
+
+function renderSearchTree(tree){
+    let html = "";
+    function renderNode(node, level){
+        const hasChildren = node.children.some(child =>
+            child.items.length || child.children.length
+        );
+        if(node.items.length===0 && !hasChildren){
+            return;
+        }
+
+        // Faqat elementi bor papkaga son chiqariladi
+        const countText = node.items.length > 0
+            ? ` (${node.items.length})`
+            : "";
+
+        html += `
+<div class="search-folder"
+     data-folder-id="${node.id}"
+     style="
+        padding-left:${level*22}px;
+        cursor:pointer;
+        position:relative;
+        margin:2px 0;
+     ">
+    ${
+        level>0
+        ? `<span style="
+            position:absolute;
+            left:${(level-1)*22+8}px;
+            top:-8px;
+            bottom:-8px;
+            border-left:1px dashed rgba(255,255,255,.25);
+        "></span>`
+        : ""
+    }
+    📂 ${node.name}${countText}
+</div>`;
+        node.items.forEach(tp=>{
+            html += `
+<div class="search-item"
+     data-id="${tp.id||''}"
+     style="
+        padding-left:${(level+1)*22}px;
+        margin:2px 0;
+     ">
 ⚡ ${tp.name}
 </div>`;
         });
