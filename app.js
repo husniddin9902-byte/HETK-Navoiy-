@@ -590,6 +590,17 @@ function buildFolderTree(){
     return tree;
 }
 
+// Natijalarni daraxtga joylashtirish
+function attachResultsToTree(tree, results){
+    results.forEach(tp=>{
+        const folderIds = Object.keys(tp.folders || {});
+        folderIds.forEach(folderId=>{
+            if(tree[folderId]){
+                tree[folderId].items.push(tp);
+            }
+        });
+    });
+}
 
 // Natijalarni yangilash (hozircha bo'sh)
 function refreshSearchResults(){
