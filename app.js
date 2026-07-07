@@ -566,7 +566,6 @@ function buildSearchTree(found){
     });
     return roots;
 }
-}
 
 // Papkalar daraxtini qurish
 function buildFolderTree(){
