@@ -577,15 +577,19 @@ if(!inFolder) return;
     // Vaqtincha test
     resultsBox.style.display="block";
     foldersBox.style.display="none";
-    resultsBox.innerHTML=`
-        <div class="search-info">
-            Topildi: ${found.length} ta element
+   let html = `
+<div class="search-info">
+Topildi: ${found.length} ta element
+</div>
+`;
+found.forEach(tp=>{
+    html += `
+        <div class="search-item">
+            ⚡ ${tp.name}
         </div>
     `;
-
-          if(found.length>0){
-    alert(JSON.stringify(found[0],null,2));
-}
+});
+resultsBox.innerHTML = html;
   
 });
 }
