@@ -558,6 +558,10 @@ function refreshSearchResults(){
 database.ref("TPs").once("value",(snapshot)=>{
     const allTPs=snapshot.val()||{};
     const found=[];
+
+// Oxirgi qidiruv natijalari
+searchState.results = found;
+  
     Object.values(allTPs).forEach(tp=>{
 
        // Tanlangan papka va barcha ichki papkalar
