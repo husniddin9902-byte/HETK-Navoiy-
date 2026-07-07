@@ -711,17 +711,12 @@ attachResultsToTree(folderTree, searchState.results);
     resultsBox.style.display="block";
     foldersBox.style.display="none";
   
- resultsBox.innerHTML = `
+resultsBox.innerHTML = `
 <div class="search-info">
 Topildi: ${found.length} ta element
 </div>
 
-<pre style="
-font-size:11px;
-color:#9be7ff;
-white-space:pre-wrap;
-word-break:break-word;
-">${JSON.stringify(folderTree,null,2)}</pre>
+${renderSearchTree(folderTree)}
 `;
 });
 }
