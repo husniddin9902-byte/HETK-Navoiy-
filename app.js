@@ -667,12 +667,23 @@ html += `
 <div class="search-folder"
      data-folder-id="${node.id}"
      onclick="selectFolder('${node.id}')"
-     style="
-        white-space:pre;
-        font-family:Consolas,monospace;
-        cursor:pointer;
-        margin:2px 0;
-    ">
+    style="
+    padding-left:${level*22}px;
+    cursor:pointer;
+    position:relative;
+    margin:2px 0;
+">
+${
+    level>0
+    ? `<span style="
+        position:absolute;
+        left:${(level-1)*22+8}px;
+        top:-8px;
+        bottom:-8px;
+        border-left:1px dashed rgba(255,255,255,.25);
+    "></span>`
+    : ""
+}
 📂 ${node.name}${countText}
 </div>`;
 
@@ -682,9 +693,9 @@ node.items.forEach(tp=>{
 <div class="search-item"
      data-id="${tp.id||''}"
      style="
-        padding-left:${(level+1)*18}px;
-        margin:2px 0;
-    ">
+    padding-left:${(level+1)*22}px;
+    margin:2px 0;
+">
 ⚡ ${tp.name}
 </div>`;
 
