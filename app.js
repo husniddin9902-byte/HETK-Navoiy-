@@ -669,6 +669,7 @@ const branch =
 html += `
 <div class="search-folder"
      data-folder-id="${node.id}"
+     onclick="selectFolder('${node.id}')"
      style="
         white-space:pre;
         font-family:Consolas,monospace;
