@@ -681,11 +681,7 @@ ${treePrefix}${branch}📂 ${node.name}${countText}
 
 node.items.forEach((tp,index)=>{
 
-    const itemBranch =
-        index === node.items.length-1 &&
-        node.children.length===0
-            ? "└── "
-            : "├── ";
+    const branch = "";
 
     html += `
 <div class="search-item"
