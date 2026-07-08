@@ -678,6 +678,12 @@ html += `
     cursor:pointer;
     position:relative;
     margin:2px 0;
+    border-radius:6px;
+    padding-top:4px;
+    padding-bottom:4px;
+    padding-right:6px;
+    background:${activeFolderId===node.id ? "rgba(0,122,255,.20)" : "transparent"};
+    color:${activeFolderId===node.id ? "#4FC3FF" : "#ffffff"};
 ">
 ${
     level>0
@@ -698,9 +704,18 @@ node.items.forEach(tp=>{
     html += `
 <div class="search-item"
      data-id="${tp.id||''}"
-     style="
+   style="
     padding-left:${(level+1)*22}px;
     margin:2px 0;
+    border-radius:5px;
+    padding-top:3px;
+    padding-bottom:3px;
+
+    background:${
+        activeFolderId===node.id
+            ? "rgba(0,122,255,.10)"
+            : "transparent"
+    };
 ">
 ⚡ ${tp.name}
 </div>`;
