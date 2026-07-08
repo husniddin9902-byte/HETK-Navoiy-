@@ -316,11 +316,6 @@ window.selectFolder = function(id) {
     
     showToast(`Tanlandi: ${currentFolders[id].name}`);
 
-// Agar qidiruv ishlayotgan bo'lsa natijani yangilash
-if (searchState.text.trim() !== "") {
-    refreshSearchResults();
-}
-  
 };
 
 window.toggleFolderView = function(id) {
