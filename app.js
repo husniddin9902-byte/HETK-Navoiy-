@@ -661,10 +661,7 @@ function renderSearchTree(tree){
         ? ` (${node.items.length})`
         : "";
 
-const branch =
-    level === 0
-        ? ""
-        : (isLast ? "└── " : "├── ");
+const branch = "";
 
 html += `
 <div class="search-folder"
@@ -676,7 +673,7 @@ html += `
         cursor:pointer;
         margin:2px 0;
     ">
-${treePrefix}${branch}📂 ${node.name}${countText}
+📂 ${node.name}${countText}
 </div>`;
 
 node.items.forEach((tp,index)=>{
