@@ -711,11 +711,18 @@ node.items.forEach(tp=>{
     padding-top:3px;
     padding-bottom:3px;
 
-    background:${
-        activeFolderId===node.id
-            ? "rgba(0,122,255,.10)"
-            : "transparent"
-    };
+   background:${
+    (
+        tp.folders &&
+        Object.keys(tp.folders).some(id=>{
+            const ids=getAllChildFolderIds(activeFolderId);
+            ids.push(activeFolderId);
+            return ids.includes(id);
+        })
+    )
+    ? "rgba(0,122,255,.12)"
+    : "transparent"
+};
 ">
 ⚡ ${tp.name}
 </div>`;
