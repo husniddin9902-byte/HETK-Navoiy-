@@ -667,7 +667,10 @@ const branch = "";
 html += `
 <div class="search-folder"
      data-folder-id="${node.id}"
-     onclick="selectFolder('${node.id}')"
+    onclick="
+selectFolder('${node.id}');
+updateSearchHighlight();
+"
     style="
     padding-left:${level*22}px;
     cursor:pointer;
@@ -746,6 +749,31 @@ node.items.forEach(tp=>{
             renderNode(root,0);
         });
     return html;
+}
+
+function updateSearchHighlight(){
+    document.querySelectorAll(".search-folder").forEach(folder=>{
+        const id = folder.dataset.folderId;
+        if(id===activeFolderId){
+            folder.style.background="rgba(0,122,255,.20)";
+            folder.style.color="#4FC3FF";
+        }else{
+            folder.style.background="transparent";
+            folder.style.color="#ffffff";
+        }
+    });
+    const ids = getAllChildFolderIds(activeFolderId);
+    ids.push(activeFolderId);
+    document.querySelectorAll(".search-item").forEach(item=>{
+        const folder = item.closest(".search-folder");
+        if(!folder) return;
+        const folderId = folder.dataset.folderId;
+        if(ids.includes(folderId)){
+            item.style.background="rgba(0,122,255,.10)";
+        }else{
+            item.style.background="transparent";
+        }
+    });
 }
 
 
