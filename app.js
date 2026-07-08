@@ -676,19 +676,16 @@ html += `
 📂 ${node.name}${countText}
 </div>`;
 
-node.items.forEach((tp,index)=>{
-
-    const branch = "";
+node.items.forEach(tp=>{
 
     html += `
 <div class="search-item"
      data-id="${tp.id||''}"
      style="
-        white-space:pre;
-        font-family:Consolas,monospace;
+        padding-left:${(level+1)*18}px;
         margin:2px 0;
     ">
-${treePrefix}${level===0?"":"    "}${itemBranch}⚡ ${tp.name}
+⚡ ${tp.name}
 </div>`;
 
 });
