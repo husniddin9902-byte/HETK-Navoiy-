@@ -712,6 +712,8 @@ node.items.forEach(tp=>{
     html += `
 <div class="search-item"
      data-id="${tp.id||''}"
+     data-folder-id="${node.id}"
+     onclick="openSearchResult('${tp.id}')"
    style="
     padding-left:${(level+1)*22}px;
     margin:2px 0;
@@ -719,11 +721,10 @@ node.items.forEach(tp=>{
     padding-top:3px;
     padding-bottom:3px;
 
-  background:${
-    isElementInSelectedFolder(tp)
-        ? "rgba(0,122,255,.12)"
-        : "transparent"
-};
+  style="
+    padding-left:${(level+1)*22}px;
+    margin:2px 0;
+"
 ">
 ⚡ ${tp.name}
 </div>`;
@@ -753,6 +754,11 @@ node.items.forEach(tp=>{
         });
     return html;
 }
+
+window.openSearchResult = function(id){
+    console.log("Tanlangan element:", id);
+
+};
 
 function updateSearchHighlight(){
     document.querySelectorAll(".search-folder").forEach(folder=>{
