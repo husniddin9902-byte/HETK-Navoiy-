@@ -608,6 +608,16 @@ function attachResultsToTree(tree, results){
     });
 }
 
+function isElementInSelectedFolder(tp){
+    if(!activeFolderId) return false;
+    const allowed = getAllChildFolderIds(activeFolderId);
+    allowed.push(activeFolderId);
+    if(!tp.folders) return false;
+    return Object.keys(tp.folders).some(id =>
+        allowed.includes(id)
+    );
+}
+
 /*
  function renderSearchTree(tree){
     let html = "";
@@ -709,17 +719,10 @@ node.items.forEach(tp=>{
     padding-top:3px;
     padding-bottom:3px;
 
-   background:${
-    (
-        tp.folders &&
-        Object.keys(tp.folders).some(id=>{
-            const ids=getAllChildFolderIds(activeFolderId);
-            ids.push(activeFolderId);
-            return ids.includes(id);
-        })
-    )
-    ? "rgba(0,122,255,.12)"
-    : "transparent"
+  background:${
+    isElementInSelectedFolder(tp)
+        ? "rgba(0,122,255,.12)"
+        : "transparent"
 };
 ">
 ⚡ ${tp.name}
