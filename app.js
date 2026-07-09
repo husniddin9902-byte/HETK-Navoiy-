@@ -740,11 +740,14 @@ node.items.forEach(tp=>{
 });
     }
   
-    Object.values(tree)
-        .filter(n=>n.parentId==="root")
-        .forEach(root=>{
-            renderNode(root,0);
-        });
+   Object.values(tree)
+    .filter(n => n.parentId === "root")
+    .forEach(root => {
+        if(root.items.length === 0 && root.children.length === 0){
+            return;
+        }
+        renderNode(root,0);
+    });
     return html;
 }
 
