@@ -714,18 +714,11 @@ node.items.forEach(tp=>{
      data-id="${tp.id||''}"
      data-folder-id="${node.id}"
      onclick="openSearchResult('${tp.id}')"
-   style="
-    padding-left:${(level+1)*22}px;
-    margin:2px 0;
-    border-radius:5px;
-    padding-top:3px;
-    padding-bottom:3px;
-
-  style="
-    padding-left:${(level+1)*22}px;
-    margin:2px 0;
-"
-">
+     style="
+        padding-left:${(level+1)*22}px;
+        margin:2px 0;
+        cursor:pointer;
+     ">
 ⚡ ${tp.name}
 </div>`;
 
