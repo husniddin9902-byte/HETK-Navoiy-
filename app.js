@@ -2570,9 +2570,27 @@ function isPointInsideFolder(pointFolderId, selectedFolderId){
                     ids = ids.concat(getAllChildFolderIds(id));
                 }
             });
-          
             return ids;
         }
+function getBranchColor(folderId, selectedFolderId){
+    if(!currentFolders[folderId]){
+        return "#007AFF";
+    }
+  
+    // Tanlangan papkaning bevosita bolalari
+    const firstChildren = Object.keys(currentFolders)
+        .filter(id => currentFolders[id].parentId === selectedFolderId);
+    for(const childId of firstChildren){
+        if(childId === folderId){
+            return currentFolders[childId].color;
+        }
+        const ids = getAllChildFolderIds(childId);
+        if(ids.includes(folderId)){
+            return currentFolders[childId].color;
+        }
+    }
+    return currentFolders[folderId].color || "#007AFF";
+}
 
 // 3. SIZ AYTGAN ASOSIY SCADA MANTIQI: Xaritada filtrlash, Birlashish va Miltillovchi markerlar (Override)
 function loadFilteredPoints() {
