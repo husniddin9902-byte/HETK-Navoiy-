@@ -2596,8 +2596,6 @@ function loadFilteredPoints() {
 
         // Tanlangan guruh va uning pastki fiderlari IDlari ro'yxati
         const allowedFolderIds = activeFolderId === 'root' ? [] : getAllChildFolderIds(activeFolderId);
-if (activeFolderId !== "root") {
-    allowedFolderIds.push(activeFolderId);
 
       
 // Tez tekshirish uchun Set
