@@ -2655,10 +2655,10 @@ if (activeFolderId === "root") {
             const displayName = point.name || point.address.split(',')[0] || "TP";
 
             // Markerning standart fider rangini aniqlash
-            const primaryFolderId = tpFoldersArr[0]; 
-            const primaryColor = (currentFolders[primaryFolderId] && currentFolders[primaryFolderId].color) ? currentFolders[primaryFolderId].color : '#007AFF';
-
-            // Xususiy yoki ETK ekanligiga qarab sarlavha tayyorlash
+            const primaryFolderId = tpFoldersArr[0];
+const primaryColor = getBranchColor(primaryFolderId, activeFolderId);          
+          
+          // Xususiy yoki ETK ekanligiga qarab sarlavha tayyorlash
             const balanceBadge = point.isPrivate ? `<span style="color:#ff4444; font-weight:bold;">[Xususiy - ${point.ownerFirm || ''}]</span>` : `<span style="color:#007AFF; font-weight:bold;">[ЕТК balansi]</span>`;
 
             // Maxsus divIcon marker yaratish
