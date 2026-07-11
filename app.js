@@ -2570,9 +2570,21 @@ function isPointInsideFolder(pointFolderId, selectedFolderId){
                     ids = ids.concat(getAllChildFolderIds(id));
                 }
             });
-          
             return ids;
         }
+
+// papaka rangi xaritadan
+function getDisplayFolderId(selectedFolderId, elementFolderId){
+    let current = elementFolderId;
+    while(currentFolders[current]){
+        const parent = currentFolders[current].parentId;
+        if(parent === selectedFolderId){
+            return current;
+        }
+        current = parent;
+    }
+    return elementFolderId;
+}
 
 // 3. SIZ AYTGAN ASOSIY SCADA MANTIQI: Xaritada filtrlash, Birlashish va Miltillovchi markerlar (Override)
 function loadFilteredPoints() {
