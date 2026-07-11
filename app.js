@@ -2570,27 +2570,9 @@ function isPointInsideFolder(pointFolderId, selectedFolderId){
                     ids = ids.concat(getAllChildFolderIds(id));
                 }
             });
+          
             return ids;
         }
-function getBranchColor(folderId, selectedFolderId){
-    if(!currentFolders[folderId]){
-        return "#007AFF";
-    }
-  
-    // Tanlangan papkaning bevosita bolalari
-    const firstChildren = Object.keys(currentFolders)
-        .filter(id => currentFolders[id].parentId === selectedFolderId);
-    for(const childId of firstChildren){
-        if(childId === folderId){
-            return currentFolders[childId].color;
-        }
-        const ids = getAllChildFolderIds(childId);
-        if(ids.includes(folderId)){
-            return currentFolders[childId].color;
-        }
-    }
-    return currentFolders[folderId].color || "#007AFF";
-}
 
 // 3. SIZ AYTGAN ASOSIY SCADA MANTIQI: Xaritada filtrlash, Birlashish va Miltillovchi markerlar (Override)
 function loadFilteredPoints() {
@@ -2655,10 +2637,10 @@ if (activeFolderId === "root") {
             const displayName = point.name || point.address.split(',')[0] || "TP";
 
             // Markerning standart fider rangini aniqlash
-            const primaryFolderId = tpFoldersArr[0];
-const primaryColor = getBranchColor(primaryFolderId, activeFolderId);          
-          
-          // Xususiy yoki ETK ekanligiga qarab sarlavha tayyorlash
+            const primaryFolderId = tpFoldersArr[0]; 
+            const primaryColor = (currentFolders[primaryFolderId] && currentFolders[primaryFolderId].color) ? currentFolders[primaryFolderId].color : '#007AFF';
+
+            // Xususiy yoki ETK ekanligiga qarab sarlavha tayyorlash
             const balanceBadge = point.isPrivate ? `<span style="color:#ff4444; font-weight:bold;">[Xususiy - ${point.ownerFirm || ''}]</span>` : `<span style="color:#007AFF; font-weight:bold;">[ЕТК balansi]</span>`;
 
             // Maxsus divIcon marker yaratish
