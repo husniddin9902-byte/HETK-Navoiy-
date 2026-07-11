@@ -2637,14 +2637,7 @@ if (activeFolderId === "root") {
             const displayName = point.name || point.address.split(',')[0] || "TP";
 
             // Markerning standart fider rangini aniqlash
-            const primaryFolderId = tpFoldersArr[0];
-          
-          alert(
-"Tanlangan papka: " + activeFolderId +
-"\nElement papkalari:\n" +
-tpFoldersArr.join("\n")
-);
-          
+            const primaryFolderId = tpFoldersArr[0]; 
             const primaryColor = (currentFolders[primaryFolderId] && currentFolders[primaryFolderId].color) ? currentFolders[primaryFolderId].color : '#007AFF';
 
             // Xususiy yoki ETK ekanligiga qarab sarlavha tayyorlash
