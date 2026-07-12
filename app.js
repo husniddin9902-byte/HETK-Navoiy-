@@ -2808,6 +2808,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 1500); // 1.5 sekund Firebase'dan guruhlar kelib tushishi uchun ideal vaqt
 });                                                 
 
+/*
 // =========================================================================
 // BOSHQRUV PANELIDAGI ICHKI XARITA MANTIQI (GLAVNIYGA TA'SIR QILMAYDI)
 // =========================================================================
@@ -2884,7 +2885,7 @@ const filteredKeys = activeFolderId === 'root'
                     marker.bindPopup(`<b>${displayName}</b><br>${point.address}`);
                     panelMarkersArray.push(marker);
                 }
-            });
+            }); */
 
             // 4. Xarita qotib qolmasligi va faqat o'sha elementlarga markazlashishi (Yaqinlashishi)
             setTimeout(() => {
@@ -2992,4 +2993,4 @@ if (panelTabItems) {
             }, 300);
         });
     });
-}
+}  
