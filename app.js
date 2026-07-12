@@ -313,10 +313,9 @@ window.selectFolder = function(id) {
     if (currentFolderEl) {
         currentFolderEl.classList.add('active-folder');
     }
-
-  loadFilteredPoints();
-//refreshSearchResults();
-  
+ loadFilteredPoints();
+    searchState.folderId = id;
+    refreshSearchResults();
     showToast(`Tanlandi: ${currentFolders[id].name}`);
 };
 
