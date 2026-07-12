@@ -313,9 +313,14 @@ window.selectFolder = function(id) {
     if (currentFolderEl) {
         currentFolderEl.classList.add('active-folder');
     }
-    
+
+  loadFilteredPoints();
+refreshSearchResults();
+  
     showToast(`Tanlandi: ${currentFolders[id].name}`);
 };
+
+
 
 window.toggleFolderView = function(id) {
     const childDiv = document.getElementById(`children-${id}`);
