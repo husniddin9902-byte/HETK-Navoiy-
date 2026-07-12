@@ -2586,6 +2586,31 @@ function getDisplayFolderId(selectedFolderId, elementFolderId){
     return elementFolderId;
 }
 
+// Xaritada ranggi chiqishi
+function getDisplayFolderId(selectedFolderId, tpFoldersArr){
+
+    // Root bo'lsa elementning eng yuqori papkasini qaytaramiz
+    if(selectedFolderId === "root"){
+        return tpFoldersArr[0];
+    }
+
+    // Tanlangan papkaning bevosita bolalari
+    const childs = Object.keys(currentFolders).filter(id =>
+        currentFolders[id].parentId === selectedFolderId
+    );
+
+    // Har bir bola daraxtini tekshiramiz
+    for(const childId of childs){
+        const ids = getAllChildFolderIds(childId);
+        for(const folderId of tpFoldersArr){
+            if(ids.includes(folderId)){
+                return childId;
+            }
+        }
+    }
+    return tpFoldersArr[0];
+}
+
 // 3. SIZ AYTGAN ASOSIY SCADA MANTIQI: Xaritada filtrlash, Birlashish va Miltillovchi markerlar (Override)
 function loadFilteredPoints() {
     const tpListContainer = document.getElementById('tp-list');
