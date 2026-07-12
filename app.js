@@ -2675,7 +2675,7 @@ if (activeFolderId === "root") {
 
             // Markerning standart fider rangini aniqlash
            const primaryFolderId =
-    getDisplayFolderId(activeFolderId, tpFoldersArr[0]);
+    getDisplayFolderId(activeFolderId, tpFoldersArr);
             const primaryColor = (currentFolders[primaryFolderId] && currentFolders[primaryFolderId].color) ? currentFolders[primaryFolderId].color : '#007AFF';
 
             // Xususiy yoki ETK ekanligiga qarab sarlavha tayyorlash
