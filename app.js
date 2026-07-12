@@ -315,7 +315,7 @@ window.selectFolder = function(id) {
     }
 
   loadFilteredPoints();
-refreshSearchResults();
+//refreshSearchResults();
   
     showToast(`Tanlandi: ${currentFolders[id].name}`);
 };
