@@ -479,17 +479,26 @@ const filteredKeys = activeFolderId === 'root'
     });
 }
 
-// SIZ AYTGAN QIDIRUV TIZIMI MANTIQI
-const elementSearchInput = document.getElementById('element-search');
-if (elementSearchInput) {
-    elementSearchInput.addEventListener('input', (e) => {
-        const query = e.target.value.toLowerCase();
-        document.querySelectorAll('.tp-item').forEach(item => {
-            const searchStr = item.getAttribute('data-search-name') || '';
-            item.style.display = searchStr.includes(query) ? 'block' : 'none';
-        });
-    });
-}
+// ===============================
+// Qidiruv tizimi
+// ===============================
+
+const elementSearchInput = document.getElementById("element-search");
+
+const searchState = {
+    folderId: "root",
+    text: "",
+    filters: {
+        balance: "all",
+        owner: "all",
+        created: "all",
+        updated: "all",
+        power: "all",
+        dualSupply: "all",
+        comment: "all"
+    },
+    results: []
+};
 
 // TAHRIRLASH VA O'ZGARTIRISH PANELI
 const editColorSlider = document.getElementById('edit-color-slider');
