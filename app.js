@@ -2253,6 +2253,58 @@ function attachResultsToTree(tree, results){
     });
 }
 
+// Natijalarni yangilash
+function refreshSearchResults(){
+    searchState.folderId = activeFolderId;
+    const resultsBox = document.getElementById("search-results");
+    const foldersBox = document.getElementById("folders-section");
+    const text = searchState.text.trim();
+
+    if(text===""){
+        resultsBox.style.display="none";
+        resultsBox.innerHTML="";
+        foldersBox.style.display="block";
+        return;
+    }
+    if(searchState.folderId==="root"){
+        resultsBox.style.display="block";
+        foldersBox.style.display="block";
+        resultsBox.innerHTML=`
+            <div class="search-info">
+                ⚠ Qidiruvni boshlash uchun avval papkani tanlang.
+            </div>
+        `;
+        return;
+    }
+
+    database.ref("TPs").once("value",(snapshot)=>{
+        const allTPs = snapshot.val() || {};
+        const found = [];
+        const allowedFolderIds = getAllChildFolderIds(searchState.folderId);
+        allowedFolderIds.push(searchState.folderId);
+        Object.values(allTPs).forEach(tp=>{
+            const inFolder =
+                tp.folders &&
+                Object.keys(tp.folders).some(id=>allowedFolderIds.includes(id));
+            if(!inFolder) return;
+            const name = (tp.name || "").toLowerCase();
+            if(name.includes(text.toLowerCase())){
+                found.push(tp);
+            }
+        });
+        searchState.results = found;
+        const folderTree = buildFolderTree();
+        attachResultsToTree(folderTree, searchState.results);
+        resultsBox.style.display="block";
+        foldersBox.style.display="none";
+        resultsBox.innerHTML = `
+            <div class="search-info">
+                Topildi: ${found.length} ta element
+            </div>
+            ${renderSearchTree(folderTree)}
+        `;
+    });
+}
 
 // 3. SIZ AYTGAN ASOSIY SCADA MANTIQI: Xaritada filtrlash, Birlashish va Miltillovchi markerlar (Override)
 function loadFilteredPoints() {
