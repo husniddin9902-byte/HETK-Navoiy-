@@ -505,6 +505,14 @@ const searchState = {
     results: []
 };
 
+// Qidiruv inputi
+if (elementSearchInput) {
+    elementSearchInput.addEventListener("input", function () {
+        searchState.text = this.value.trim();
+        refreshSearchResults();
+    });
+}
+
 // TAHRIRLASH VA O'ZGARTIRISH PANELI
 const editColorSlider = document.getElementById('edit-color-slider');
 const editColorPreview = document.getElementById('edit-color-preview');
