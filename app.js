@@ -1,5 +1,5 @@
 // "Bismillahir Rohmanir Rohim" — "Mehribon va Rahmli Alloh nomi bilan boshlayman" 
-// 1. Firebase Sozlamalari  
+// 1. Firebase Sozlamalari
 const firebaseConfig = {
   apiKey: "AIzaSyBFOoT_ZhvE1tT1Qglh5GjPPhs8ZsyRWoc",
   authDomain: "energo-monitoring.firebaseapp.com",
@@ -315,7 +315,6 @@ window.selectFolder = function(id) {
     }
     
     showToast(`Tanlandi: ${currentFolders[id].name}`);
-
 };
 
 window.toggleFolderView = function(id) {
@@ -480,7 +479,6 @@ const filteredKeys = activeFolderId === 'root'
     });
 }
 
-/*
 // SIZ AYTGAN QIDIRUV TIZIMI MANTIQI
 const elementSearchInput = document.getElementById('element-search');
 if (elementSearchInput) {
@@ -490,378 +488,6 @@ if (elementSearchInput) {
             const searchStr = item.getAttribute('data-search-name') || '';
             item.style.display = searchStr.includes(query) ? 'block' : 'none';
         });
-    });
-}  */
-
-
-// ===============================
-// Qidiruv tizimi
-// ===============================
-
-// Qidiruv va filtrlash holati
-const elementSearchInput = document.getElementById("element-search");
-const searchState = {
-    folderId: "root",
-    text: "",
-    filters: {
-        balance: "all",
-        owner: "all",
-        created: "all",
-        updated: "all",
-        power: "all",
-        dualSupply: "all",
-        comment: "all"
-    },
-     resultFolderId: null,
-results: []
-};
-
-// Papka yo'lini yig'ish
-function buildFolderPath(folderId){
-    const path=[];
-    let current=folderId;
-    while(current && currentFolders[current]){
-        path.unshift(currentFolders[current].name);
-        current=currentFolders[current].parentId;
-    }
-    return path;
-}
-
-
-// Qidiruv daraxtini qurish
-function buildSearchTree(found){
-    const roots = {};
-    function ensureNode(folderId){
-        if(!folderId || !currentFolders[folderId]) return null;
-        const folder = currentFolders[folderId];
-        const node = {
-            id: folderId,
-            name: folder.name,
-            color: folder.color,
-            parentId: folder.parentId,
-            children: [],
-            items: []
-        };
-        if(folder.parentId === "root"){
-            if(!roots[folderId]){
-                roots[folderId]=node;
-            }
-            return roots[folderId];
-        }
-        const parent = ensureNode(folder.parentId);
-        let existing = parent.children.find(c=>c.id===folderId);
-        if(!existing){
-            parent.children.push(node);
-            existing=node;
-        }
-        return existing;
-    }
-    found.forEach(tp=>{
-        if(!tp.folders) return;
-        Object.keys(tp.folders).forEach(folderId=>{
-            const node = ensureNode(folderId);
-            if(node){
-                node.items.push(tp);
-            }
-        });
-    });
-    return roots;
-}
-
-// Papkalar daraxtini qurish
-function buildFolderTree(){
-    const tree = {};
-    Object.keys(currentFolders).forEach(folderId=>{
-        const folder = currentFolders[folderId];
-        tree[folderId]={
-            id:folderId,
-            name:folder.name,
-            color:folder.color,
-            parentId:folder.parentId,
-            children:[],
-            items:[]
-        };
-    });
-    Object.values(tree).forEach(folder=>{
-        if(
-            folder.parentId &&
-            folder.parentId!=="root" &&
-            tree[folder.parentId]
-        ){
-            tree[folder.parentId]
-                .children
-                .push(folder);
-        }
-    });
-    return tree;
-}
-
-// Natijalarni daraxtga joylashtirish
-function attachResultsToTree(tree, results){
-    results.forEach(tp=>{
-        const folderIds = Object.keys(tp.folders || {});
-        folderIds.forEach(folderId=>{
-            if(tree[folderId]){
-                tree[folderId].items.push(tp);
-            }
-        });
-    });
-}
-
-function isElementInSelectedFolder(tp){
-    if(!activeFolderId) return false;
-    const allowed = getAllChildFolderIds(activeFolderId);
-    allowed.push(activeFolderId);
-    if(!tp.folders) return false;
-    return Object.keys(tp.folders).some(id =>
-        allowed.includes(id)
-    );
-}
-
-/*
- function renderSearchTree(tree){
-    let html = "";
-    function renderNode(node, level){
-
-        // Bu papkada natija bo'lmasa chiqarma
-        const hasChildren = node.children.some(child =>
-            child.items.length || child.children.length
-        );
-        if(node.items.length===0 && !hasChildren){
-            return;
-        }
-        html += `
-<div class="search-folder"
-     data-folder-id="${node.id}"
-     style="padding-left:${level*18}px;cursor:pointer;">
-📂 ${node.name} (${node.items.length})
-</div>`;
-        node.items.forEach(tp=>{
-            html += `
-<div class="search-item"
-     data-id="${tp.id||''}"
-     style="padding-left:${(level+1)*18}px;">
-⚡ ${tp.name}
-</div>`;
-        });
-        node.children.forEach(child=>{
-            renderNode(child, level+1);
-        });
-    }
-    Object.values(tree)
-        .filter(n=>n.parentId==="root")
-        .forEach(root=>{
-            renderNode(root,0);
-        });
-    return html;
-}    */
-
-function renderSearchTree(tree){
-    let html = "";
-    function renderNode(node, level, treePrefix = "", isLast = true){
-        const hasChildren = node.children.some(child =>
-            child.items.length || child.children.length
-        );
-        if(node.items.length===0 && !hasChildren){
-            return;
-        }
-
-        // Faqat elementi bor papkaga son chiqariladi
-        const countText =
-    node.items.length > 0
-        ? ` (${node.items.length})`
-        : "";
-
-const branch = "";
-
-html += `
-<div class="search-folder"
-     data-folder-id="${node.id}"
-    onclick="
-selectFolder('${node.id}');
-updateSearchHighlight();
-"
-    style="
-    padding-left:${level*22}px;
-    cursor:pointer;
-    position:relative;
-    margin:2px 0;
-    border-radius:6px;
-    padding-top:4px;
-    padding-bottom:4px;
-    padding-right:6px;
-    background:${activeFolderId===node.id ? "rgba(0,122,255,.20)" : "transparent"};
-    color:${activeFolderId===node.id ? "#4FC3FF" : "#ffffff"};
-">
-${
-    level>0
-    ? `<span style="
-        position:absolute;
-        left:${(level-1)*22+8}px;
-        top:-8px;
-        bottom:-8px;
-        border-left:1px dashed rgba(255,255,255,.25);
-    "></span>`
-    : ""
-}
-📂 ${node.name}${countText}
-</div>`;
-
-node.items.forEach(tp=>{
-
-    html += `
-<div class="search-item"
-     data-id="${tp.id||''}"
-     data-folder-id="${node.id}"
-     onclick="openSearchResult('${tp.id}')"
-     style="
-        padding-left:${(level+1)*22}px;
-        margin:2px 0;
-        cursor:pointer;
-     ">
-⚡ ${tp.name}
-</div>`;
-
-});
-      
-       node.children.forEach((child,index)=>{
-    const last = index === node.children.length - 1;
-    const nextPrefix =
-        treePrefix +
-        (level === 0
-            ? ""
-            : (isLast ? "    " : "│   "));
-    renderNode(
-        child,
-        level + 1,
-        nextPrefix,
-        last
-    );
-});
-    }
-  
-   Object.values(tree)
-    .filter(n => n.parentId === "root")
-    .forEach(root => {
-        if(root.items.length === 0 && root.children.length === 0){
-            return;
-        }
-        renderNode(root,0);
-    });
-    return html;
-}
-
-window.openSearchResult = function(id){
-    console.log("Tanlangan element:", id);
-
-};
-
-function updateSearchHighlight(){
-    document.querySelectorAll(".search-folder").forEach(folder=>{
-        const id = folder.dataset.folderId;
-        if(id===activeFolderId){
-            folder.style.background="rgba(0,122,255,.20)";
-            folder.style.color="#4FC3FF";
-        }else{
-            folder.style.background="transparent";
-            folder.style.color="#ffffff";
-        }
-    });
-    const ids = getAllChildFolderIds(activeFolderId);
-    ids.push(activeFolderId);
-    document.querySelectorAll(".search-item").forEach(item=>{
-        const folder = item.closest(".search-folder");
-        if(!folder) return;
-        const folderId = folder.dataset.folderId;
-        if(ids.includes(folderId)){
-            item.style.background="rgba(0,122,255,.10)";
-        }else{
-            item.style.background="transparent";
-        }
-    });
-}
-
-
-// Natijalarni yangilash (hozircha bo'sh)
-function refreshSearchResults(){
-    searchState.folderId = activeFolderId;
-    const resultsBox = document.getElementById("search-results");
-    const foldersBox = document.getElementById("folders-section");
-    const text = searchState.text.trim();
-
-    
-    // Qidiruv bo'sh
-    if(text===""){
-        resultsBox.style.display="none";
-        resultsBox.innerHTML="";
-        foldersBox.style.display="block";
-        return;
-    }
-
-    // Papka tanlanmagan
-    if(searchState.folderId==="root"){
-    resultsBox.style.display="block";
-
-        // Papkalar yashirilmaydi
-        foldersBox.style.display="block";
-        resultsBox.innerHTML=`
-            <div class="search-info">
-                ⚠ Qidiruvni boshlash uchun avval papkani tanlang.
-            </div>
-        `;
-        return;
-    }
-
-   // Firebase qidiruvi
-database.ref("TPs").once("value",(snapshot)=>{
-    const allTPs=snapshot.val()||{};
-    const found=[];
-  
-    Object.values(allTPs).forEach(tp=>{
-
-       // Tanlangan papka va barcha ichki papkalar
-const allowedFolderIds = getAllChildFolderIds(searchState.folderId);
-allowedFolderIds.push(searchState.folderId);
-const inFolder =
-    tp.folders &&
-    Object.keys(tp.folders).some(id => allowedFolderIds.includes(id));
-if(!inFolder) return;
-
-        // Nom bo'yicha qidiruv
-        const name=(tp.name||"").toLowerCase();
-        if(name.includes(text.toLowerCase())){
-            found.push(tp);
-        }
-    });
-
-  // Oxirgi qidiruv natijalarini saqlash
-searchState.results = found;
-
-// Papkalar daraxtini qurish
-const folderTree = buildFolderTree();
-
-// Natijalarni daraxtga joylashtirish
-attachResultsToTree(folderTree, searchState.results);
-  
-    // Vaqtincha test
-    resultsBox.style.display="block";
-    foldersBox.style.display="none";
-  
-resultsBox.innerHTML = `
-<div class="search-info">
-Topildi: ${found.length} ta element
-</div>
-
-${renderSearchTree(folderTree)}
-`;
-});
-}
-
-// Qidiruv matni o'zgarganda
-if (elementSearchInput) {
-    elementSearchInput.addEventListener("input", function () {
-        searchState.text = this.value.trim();
-        refreshSearchResults();
     });
 }
 
@@ -2570,25 +2196,9 @@ function isPointInsideFolder(pointFolderId, selectedFolderId){
                     ids = ids.concat(getAllChildFolderIds(id));
                 }
             });
+          
             return ids;
         }
-
-
-function getBranchColor(folderId, selectedFolderId) {
-    if (selectedFolderId === "root") {
-        return currentFolders[folderId]?.color || "#ff4444";
-    }
-    let current = folderId;
-    while (currentFolders[current]) {
-        const parentId = currentFolders[current].parentId;
-        if (parentId === selectedFolderId) {
-            return currentFolders[current].color || "#ff4444";
-        }
-        current = parentId;
-    }
-    return currentFolders[folderId]?.color || "#ff4444";
-}
-
 
 // 3. SIZ AYTGAN ASOSIY SCADA MANTIQI: Xaritada filtrlash, Birlashish va Miltillovchi markerlar (Override)
 function loadFilteredPoints() {
@@ -2612,6 +2222,7 @@ function loadFilteredPoints() {
 
         // Tanlangan guruh va uning pastki fiderlari IDlari ro'yxati
         const allowedFolderIds = activeFolderId === 'root' ? [] : getAllChildFolderIds(activeFolderId);
+alert(JSON.stringify(allowedFolderIds));
 
       
 // Tez tekshirish uchun Set
@@ -2653,15 +2264,7 @@ if (activeFolderId === "root") {
             const displayName = point.name || point.address.split(',')[0] || "TP";
 
             // Markerning standart fider rangini aniqlash
-           const primaryFolderId =
-    getDisplayFolderId(activeFolderId, tpFoldersArr);
-
-alert(
-"activeFolderId = " + activeFolderId +
-"\n\n" +
-JSON.stringify(tpFoldersArr)
-);
-          
+            const primaryFolderId = tpFoldersArr[0];
             const primaryColor = (currentFolders[primaryFolderId] && currentFolders[primaryFolderId].color) ? currentFolders[primaryFolderId].color : '#007AFF';
 
             // Xususiy yoki ETK ekanligiga qarab sarlavha tayyorlash
@@ -2844,6 +2447,25 @@ if (tabItemsBtn) {
     ? []
     : getAllChildFolderIds(activeFolderId);
 
+
+
+          function getBranchColor(folderId, selectedFolderId) {
+    if (selectedFolderId === "root") {
+        return currentFolders[folderId]?.color || "#ff4444";
+    }
+    let current = folderId;
+    while (currentFolders[current]) {
+        const parentId = currentFolders[current].parentId;
+        if (parentId === selectedFolderId) {
+            return currentFolders[current].color || "#ff4444";
+        }
+        current = parentId;
+    }
+    return currentFolders[folderId]?.color || "#ff4444";
+}
+
+
+          
 const allowedFolderSet = new Set(allowedFolderIds);
 
 const filteredKeys = activeFolderId === 'root'
@@ -2870,7 +2492,11 @@ const filteredKeys = activeFolderId === 'root'
                     bounds.push([lat, lng]);
 
                     // Guruh rangini koddagi o'zgaruvchidan olamiz
-                    const folderColor = (currentFolders[point.folderId] && currentFolders[point.folderId].color) ? currentFolders[point.folderId].color : '#ff4444';
+                   const firstFolderId = point.folders
+    ? Object.keys(point.folders)[0]
+    : point.folderId;
+
+const folderColor = getBranchColor(firstFolderId, activeFolderId);
 
                     // Faqat shu ichki xarita uchun marker dizayni (o'z rangi bilan)
                     const pIcon = L.divIcon({
@@ -2945,6 +2571,9 @@ if (panelTabItems) {
         // Bazadan faqat tanlangan guruh ma'lumotlarini filtrlash
         database.ref('TPs').once('value', (snapshot) => {
             const allPoints = snapshot.val() || {};
+
+// MANA SHUNI QO'YING
+
           
             const keys = Object.keys(allPoints);
             const filteredKeys = activeFolderId === 'root' ? keys : keys.filter(key => allPoints[key].folderId === activeFolderId);
@@ -2961,11 +2590,7 @@ if (panelTabItems) {
                     bounds.push([lat, lng]);
                     
                     // Guruh rangini aniqlash
-                   const firstFolderId = point.folders
-    ? Object.keys(point.folders)[0]
-    : point.folderId;
-
-const folderColor = getBranchColor(firstFolderId, activeFolderId);
+                    const folderColor = (currentFolders[point.folderId] && currentFolders[point.folderId].color) ? currentFolders[point.folderId].color : '#ff4444';
 
                     // Marker dizayni (O'z rangi bilan)
                     const pIcon = L.divIcon({
