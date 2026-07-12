@@ -2214,6 +2214,46 @@ function isPointInsideFolder(pointFolderId, selectedFolderId){
             return ids;
         }
 
+// qidiruv tizim funksiyalari
+function buildFolderTree(){
+    const tree = {};
+    Object.keys(currentFolders).forEach(folderId=>{
+        const folder = currentFolders[folderId];
+        tree[folderId]={
+            id:folderId,
+            name:folder.name,
+            color:folder.color,
+            parentId:folder.parentId,
+            children:[],
+            items:[]
+        };
+    });
+    Object.values(tree).forEach(folder=>{
+        if(
+            folder.parentId &&
+            folder.parentId!=="root" &&
+            tree[folder.parentId]
+        ){
+            tree[folder.parentId]
+                .children
+                .push(folder);
+        }
+    });
+    return tree;
+}
+
+function attachResultsToTree(tree, results){
+    results.forEach(tp=>{
+        const folderIds = Object.keys(tp.folders || {});
+        folderIds.forEach(folderId=>{
+            if(tree[folderId]){
+                tree[folderId].items.push(tp);
+            }
+        });
+    });
+}
+
+
 // 3. SIZ AYTGAN ASOSIY SCADA MANTIQI: Xaritada filtrlash, Birlashish va Miltillovchi markerlar (Override)
 function loadFilteredPoints() {
 
