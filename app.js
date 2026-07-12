@@ -2966,10 +2966,6 @@ if (panelTabItems) {
         // Bazadan faqat tanlangan guruh ma'lumotlarini filtrlash
         database.ref('TPs').once('value', (snapshot) => {
             const allPoints = snapshot.val() || {};
-
-// MANA SHUNI QO'YING
-    const firstKey = Object.keys(allPoints)[0];
-    alert(JSON.stringify(allPoints[firstKey], null, 2));
           
             const keys = Object.keys(allPoints);
             const filteredKeys = activeFolderId === 'root' ? keys : keys.filter(key => allPoints[key].folderId === activeFolderId);
