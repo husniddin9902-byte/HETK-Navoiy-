@@ -2294,10 +2294,15 @@ function refreshSearchResults(){
                 tp.folders &&
                 Object.keys(tp.folders).some(id=>allowedFolderIds.includes(id));
             if(!inFolder) return;
-            const name = (tp.name || "").toLowerCase();
-            if(name.includes(text.toLowerCase())){
-                found.push(tp);
-            }
+            const searchValue = (
+    tp.name ||
+    tp.address ||
+    ""
+).toLowerCase();
+
+if (searchValue.includes(text.toLowerCase())) {
+    found.push(tp);
+}
         });
         searchState.results = found;
         const folderTree = buildFolderTree();
