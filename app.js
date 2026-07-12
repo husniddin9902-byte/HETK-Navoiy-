@@ -2573,6 +2573,31 @@ function isPointInsideFolder(pointFolderId, selectedFolderId){
             return ids;
         }
 
+
+function getColorFolderId(selectedFolderId, pointFolderId){
+    if(selectedFolderId === "root"){
+        let current = pointFolderId;
+        while(
+            currentFolders[current] &&
+            currentFolders[current].parentId !== "root"
+        ){
+            current = currentFolders[current].parentId;
+        }
+        return current;
+    }
+    const childs = Object.keys(currentFolders)
+        .filter(id => currentFolders[id].parentId === selectedFolderId);
+    for(const childId of childs){
+        const ids = getAllChildFolderIds(childId);
+        if(ids.includes(pointFolderId)){
+            return childId;
+        }
+    }
+
+    return pointFolderId;
+}
+
+
 // 3. SIZ AYTGAN ASOSIY SCADA MANTIQI: Xaritada filtrlash, Birlashish va Miltillovchi markerlar (Override)
 function loadFilteredPoints() {
     const tpListContainer = document.getElementById('tp-list');
