@@ -2961,7 +2961,11 @@ if (panelTabItems) {
                     bounds.push([lat, lng]);
                     
                     // Guruh rangini aniqlash
-                    const folderColor = (currentFolders[point.folderId] && currentFolders[point.folderId].color) ? currentFolders[point.folderId].color : '#ff4444';
+                   const firstFolderId = point.folders
+    ? Object.keys(point.folders)[0]
+    : point.folderId;
+
+const folderColor = getBranchColor(firstFolderId, activeFolderId);
 
                     // Marker dizayni (O'z rangi bilan)
                     const pIcon = L.divIcon({
