@@ -2573,30 +2573,43 @@ function isPointInsideFolder(pointFolderId, selectedFolderId){
             return ids;
         }
 
-
-function getColorFolderId(selectedFolderId, pointFolderId){
-    if(selectedFolderId === "root"){
-        let current = pointFolderId;
-        while(
-            currentFolders[current] &&
-            currentFolders[current].parentId !== "root"
-        ){
-            current = currentFolders[current].parentId;
+// papaka rangi xaritadan
+function getDisplayFolderId(selectedFolderId, elementFolderId){
+    let current = elementFolderId;
+    while(currentFolders[current]){
+        const parent = currentFolders[current].parentId;
+        if(parent === selectedFolderId){
+            return current;
         }
-        return current;
+        current = parent;
     }
-    const childs = Object.keys(currentFolders)
-        .filter(id => currentFolders[id].parentId === selectedFolderId);
-    for(const childId of childs){
-        const ids = getAllChildFolderIds(childId);
-        if(ids.includes(pointFolderId)){
-            return childId;
-        }
-    }
-
-    return pointFolderId;
+    return elementFolderId;
 }
 
+// Xaritada ranggi chiqishi
+function getDisplayFolderId(selectedFolderId, tpFoldersArr){
+
+    // Root bo'lsa elementning eng yuqori papkasini qaytaramiz
+    if(selectedFolderId === "root"){
+        return tpFoldersArr[0];
+    }
+
+    // Tanlangan papkaning bevosita bolalari
+    const childs = Object.keys(currentFolders).filter(id =>
+        currentFolders[id].parentId === selectedFolderId
+    );
+
+    // Har bir bola daraxtini tekshiramiz
+    for(const childId of childs){
+        const ids = getAllChildFolderIds(childId);
+        for(const folderId of tpFoldersArr){
+            if(ids.includes(folderId)){
+                return childId;
+            }
+        }
+    }
+    return tpFoldersArr[0];
+}
 
 // 3. SIZ AYTGAN ASOSIY SCADA MANTIQI: Xaritada filtrlash, Birlashish va Miltillovchi markerlar (Override)
 function loadFilteredPoints() {
@@ -2661,7 +2674,15 @@ if (activeFolderId === "root") {
             const displayName = point.name || point.address.split(',')[0] || "TP";
 
             // Markerning standart fider rangini aniqlash
-           const primaryFolderId = tpFoldersArr[0];
+           const primaryFolderId =
+    getDisplayFolderId(activeFolderId, tpFoldersArr);
+
+alert(
+"activeFolderId = " + activeFolderId +
+"\n\n" +
+JSON.stringify(tpFoldersArr)
+);
+          
             const primaryColor = (currentFolders[primaryFolderId] && currentFolders[primaryFolderId].color) ? currentFolders[primaryFolderId].color : '#007AFF';
 
             // Xususiy yoki ETK ekanligiga qarab sarlavha tayyorlash
@@ -2808,7 +2829,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 1500); // 1.5 sekund Firebase'dan guruhlar kelib tushishi uchun ideal vaqt
 });                                                 
 
-/*
 // =========================================================================
 // BOSHQRUV PANELIDAGI ICHKI XARITA MANTIQI (GLAVNIYGA TA'SIR QILMAYDI)
 // =========================================================================
@@ -2885,7 +2905,7 @@ const filteredKeys = activeFolderId === 'root'
                     marker.bindPopup(`<b>${displayName}</b><br>${point.address}`);
                     panelMarkersArray.push(marker);
                 }
-            }); */
+            });
 
             // 4. Xarita qotib qolmasligi va faqat o'sha elementlarga markazlashishi (Yaqinlashishi)
             setTimeout(() => {
@@ -2993,4 +3013,4 @@ if (panelTabItems) {
             }, 300);
         });
     });
-}  
+}
