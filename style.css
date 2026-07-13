@@ -318,6 +318,7 @@ body {
     border-radius: 0 !important;
     display: flex;
     flex-direction: column;
+    overflow:hidden;
     padding: 0px !important; /* Ichki 20px paddingni butunlay yo'qotamiz, shunda tepadagi qism chetga taqalib ingichkalashadi */
  }
 
@@ -365,11 +366,15 @@ body {
     color: white;
 }
 
-.tab-content { 
-    display: none; 
-    padding: 15px; 
-    overflow-y: auto; 
-    flex: 1; 
+.tab-content{
+    display:none;
+    padding:15px;
+    overflow-y:auto;
+
+    flex:1;
+    min-height:0;
+    height:100%;
+    box-sizing:border-box;
 }
 
 .tab-content.active { 
