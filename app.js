@@ -2260,6 +2260,126 @@ function attachResultsToTree(tree, results){
     });
 }
 
+function renderSearchTree(tree){
+    let html = "";
+    function renderNode(node, level, treePrefix = "", isLast = true){
+        const hasChildren = node.children.some(child =>
+            child.items.length || child.children.length
+        );
+        if(node.items.length===0 && !hasChildren){
+            return;
+        }
+
+        const countText =
+            node.items.length > 0
+                ? ` (${node.items.length})`
+                : "";
+
+        html += `
+<div class="search-folder"
+     data-folder-id="${node.id}"
+     onclick="
+selectFolder('${node.id}');
+updateSearchHighlight();
+"
+     style="
+        padding-left:${level*22}px;
+        cursor:pointer;
+        position:relative;
+        margin:2px 0;
+        border-radius:6px;
+        padding-top:4px;
+        padding-bottom:4px;
+        padding-right:6px;
+        background:${activeFolderId===node.id ? "rgba(0,122,255,.20)" : "transparent"};
+        color:${activeFolderId===node.id ? "#4FC3FF" : "#ffffff"};
+">
+
+${
+level>0
+? `<span style="
+position:absolute;
+left:${(level-1)*22+8}px;
+top:-8px;
+bottom:-8px;
+border-left:1px dashed rgba(255,255,255,.25);
+"></span>`
+: ""
+}
+
+📂 ${node.name}${countText}
+</div>
+`;
+        node.items.forEach(tp=>{
+            html += `
+<div class="search-item"
+     data-id="${tp.id||''}"
+     data-folder-id="${node.id}"
+     onclick="openSearchResult('${tp.id}')"
+     style="
+        padding-left:${(level+1)*22}px;
+        margin:2px 0;
+        cursor:pointer;
+">
+⚡ ${tp.name}
+</div>`;
+        });
+        node.children.forEach((child,index)=>{
+            const last = index === node.children.length - 1;
+            const nextPrefix =
+                treePrefix +
+                (level===0 ? "" : (isLast ? "    " : "│   "));
+
+            renderNode(
+                child,
+                level+1,
+                nextPrefix,
+                last
+            );
+        });
+    }
+
+    Object.values(tree)
+        .filter(n => n.parentId === "root")
+        .forEach(root => {
+            if(root.items.length===0 && root.children.length===0){
+                return;
+            }
+            renderNode(root,0);
+        });
+    return html;
+}
+window.openSearchResult = function(id){
+    console.log("Tanlangan element:", id);
+
+};
+
+function updateSearchHighlight(){
+    document.querySelectorAll(".search-folder").forEach(folder=>{
+        const id = folder.dataset.folderId;
+        if(id===activeFolderId){
+            folder.style.background="rgba(0,122,255,.20)";
+            folder.style.color="#4FC3FF";
+        }else{
+            folder.style.background="transparent";
+            folder.style.color="#ffffff";
+        }
+    });
+
+    const ids = getAllChildFolderIds(activeFolderId);
+    ids.push(activeFolderId);
+    document.querySelectorAll(".search-item").forEach(item=>{
+        const folder = item.closest(".search-folder");
+        if(!folder) return;
+        const folderId = folder.dataset.folderId;
+        if(ids.includes(folderId)){
+            item.style.background="rgba(0,122,255,.10)";
+        }else{
+            item.style.background="transparent";
+        }
+    });
+}
+
 // Natijalarni yangilash
 function refreshSearchResults(){
     searchState.folderId = activeFolderId;
