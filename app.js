@@ -2387,16 +2387,10 @@ function refreshSearchResults(){
     const foldersBox = document.getElementById("folders-section");
     const text = searchState.text.trim();
 
-  if(text===""){
-
+ if(text===""){
     resultsBox.style.display="none";
     resultsBox.innerHTML="";
-
-    document.getElementById("tree-root").style.display="block";
-    document.getElementById("open-add-folder").style.display="block";
-
     foldersBox.style.display="block";
-
     return;
 }
   
@@ -2435,11 +2429,7 @@ if (searchValue.includes(text.toLowerCase())) {
         const folderTree = buildFolderTree();
         attachResultsToTree(folderTree, searchState.results);
         resultsBox.style.display="block";
-
-document.getElementById("tree-root").style.display="none";
-document.getElementById("open-add-folder").style.display="none";
-
-foldersBox.style.display="block";
+foldersBox.style.display="none";
       
         resultsBox.innerHTML = `
             <div class="search-info">
