@@ -2387,12 +2387,19 @@ function refreshSearchResults(){
     const foldersBox = document.getElementById("folders-section");
     const text = searchState.text.trim();
 
-    if(text===""){
-        resultsBox.style.display="none";
-        resultsBox.innerHTML="";
-        foldersBox.style.display="block";
-        return;
-    }
+  if(text===""){
+
+    resultsBox.style.display="none";
+    resultsBox.innerHTML="";
+
+    document.getElementById("tree-root").style.display="block";
+    document.getElementById("open-add-folder").style.display="block";
+
+    foldersBox.style.display="block";
+
+    return;
+}
+  
     if(searchState.folderId==="root"){
         resultsBox.style.display="block";
         foldersBox.style.display="block";
@@ -2428,7 +2435,12 @@ if (searchValue.includes(text.toLowerCase())) {
         const folderTree = buildFolderTree();
         attachResultsToTree(folderTree, searchState.results);
         resultsBox.style.display="block";
-        foldersBox.style.display="none";
+
+document.getElementById("tree-root").style.display="none";
+document.getElementById("open-add-folder").style.display="none";
+
+foldersBox.style.display="block";
+      
         resultsBox.innerHTML = `
             <div class="search-info">
                 Topildi: ${found.length} ta element
