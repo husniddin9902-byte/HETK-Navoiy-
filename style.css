@@ -377,8 +377,11 @@ body {
     box-sizing:border-box;
 }
 
-.tab-content.active { 
-    display: block; 
+.tab-content.active{
+    display:flex;
+    flex-direction:column;
+    flex:1;
+    min-height:0;
 }
 
 /* Qidiruv maydoni */
