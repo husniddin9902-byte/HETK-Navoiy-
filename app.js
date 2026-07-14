@@ -2526,7 +2526,7 @@ if (activeFolderId === "root") {
                 markerDiv.style.setProperty('--fider-color-2', secondaryColor);
             }
 
-            markerDiv.innerHTML = `<i class="fas fa-map-marker-alt" style="color: ${primaryColor}; font-size: 28px; text-shadow: 0 0 4px black;"></i>`;
+         markerDiv.innerHTML = `<i class="fas fa-map-marker-alt" style="color: ${primaryColor}; font-size: 44px; text-shadow: 0 0 5px black;"></i>`;
 
             const mIcon = L.divIcon({
                 className: 'custom-leaflet-tp-wrapper',
