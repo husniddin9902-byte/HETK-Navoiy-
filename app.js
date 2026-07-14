@@ -2531,8 +2531,8 @@ if (activeFolderId === "root") {
             const mIcon = L.divIcon({
                 className: 'custom-leaflet-tp-wrapper',
                 html: markerDiv,
-                iconSize: [28, 28],
-                iconAnchor: [14, 28]
+                iconSize: [44, 44],
+                iconAnchor: [22, 44]
             });
 
             const marker = L.marker([lat, lng], {icon: mIcon}).addTo(map);
