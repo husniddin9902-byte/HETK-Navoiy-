@@ -492,16 +492,17 @@ const elementSearchInput = document.getElementById("element-search");
 const searchState = {
     folderId: "root",
     text: "",
-    filters: {
-        balance: "all",
-        owner: "all",
-        created: "all",
-        updated: "all",
-        power: "all",
-        dualSupply: "all",
-        comment: "all"
-    },
     results: []
+};
+
+const filterState = {
+    balance: "all",
+    responsible: "all",
+    created: "all",
+    updated: "all",
+    comment: "all",
+    dualSupply: "all",
+    power: "all"
 };
 
 // Qidiruv inputi
