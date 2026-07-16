@@ -621,6 +621,16 @@ if (filterBtn && filterMenu) {
             : "block";
 };
 
+  
+  responsibleSelected.onclick = function (e) {
+    e.stopPropagation();
+    responsibleOptions.style.display =
+        responsibleOptions.style.display === "block"
+            ? "none"
+            : "block";
+};
+
+  
   document.querySelectorAll(".balance-option").forEach(option => {
     option.onclick = function () {
         const value = this.dataset.value;
