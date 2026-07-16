@@ -601,6 +601,12 @@ const clearFilterBtn = document.getElementById("clear-filter");
 const balanceSelected = document.getElementById("balance-selected");
 const balanceSelectedText = document.getElementById("balance-selected-text");
 const balanceOptions = document.getElementById("balance-options");
+
+// Mas'ul shaxs dropdown
+const responsibleSelected = document.getElementById("responsible-selected");
+const responsibleSelectedText = document.getElementById("responsible-selected-text");
+const responsibleOptions = document.getElementById("responsible-options");
+
 if (filterBtn && filterMenu) {
     filterBtn.onclick = function (e) {
         e.stopPropagation();
