@@ -618,9 +618,16 @@ if (filterBtn && filterMenu) {
   document.querySelectorAll(".balance-option").forEach(option => {
     option.onclick = function () {
         const value = this.dataset.value;
-        filterState.balance = value;
-        balanceSelectedText.textContent = this.textContent.trim();
-        balanceOptions.style.display = "none";
+        
+     document.querySelectorAll(".balance-option").forEach(x=>{
+    x.classList.remove("active");
+});
+
+this.classList.add("active");
+filterState.balance = value;
+balanceSelectedText.textContent =
+    this.querySelector("span").textContent;
+balanceOptions.style.display = "none";
     };
 });
   
