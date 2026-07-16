@@ -953,3 +953,20 @@ overflow-y:auto;
 .tree-child-container{
 min-width:max-content;
 }
+
+
+/* ===============================
+   FILTER
+=============================== */
+.balance-option{
+    padding:12px 14px;
+    cursor:pointer;
+    border-bottom:1px solid rgba(255,255,255,.08);
+    transition:.15s;
+}
+.balance-option:last-child{
+    border-bottom:none;
+}
+.balance-option:hover{
+    background:#0a3b63;
+}
