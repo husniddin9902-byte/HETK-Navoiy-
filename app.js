@@ -2524,12 +2524,12 @@ if (matched) {
         resultsBox.style.display="block";
 foldersBox.style.display="none";
       
-        resultsBox.innerHTML = `
-            <div class="search-info">
-                Topildi: ${found.length} ta element
-            </div>
-            ${renderSearchTree(folderTree)}
-        `;
+       resultsBox.innerHTML = `
+    <div class="search-info">
+        🔑 ${getSearchTypeName()} • Topildi: ${found.length} ta element
+    </div>
+    ${renderSearchTree(folderTree)}
+`;
     });
 }
 
