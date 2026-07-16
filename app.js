@@ -613,8 +613,16 @@ if (filterBtn && filterMenu) {
         balanceOptions.style.display === "block"
             ? "none"
             : "block";
-
 };
+
+  document.querySelectorAll(".balance-option").forEach(option => {
+    option.onclick = function () {
+        const value = this.dataset.value;
+        filterState.balance = value;
+        balanceSelectedText.textContent = this.textContent.trim();
+        balanceOptions.style.display = "none";
+    };
+});
   
     cancelFilterBtn.onclick = function () {
         filterMenu.style.display = "none";
