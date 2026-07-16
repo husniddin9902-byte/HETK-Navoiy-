@@ -518,6 +518,22 @@ const searchTypeMenu = document.getElementById("search-type-menu");
 const applySearchType = document.getElementById("apply-search-type");
 const cancelSearchType = document.getElementById("cancel-search-type");
 let currentSearchType = "name";
+
+function getSearchTypeName() {
+    switch (currentSearchType) {
+        case "name": return "Nomi";
+        case "address": return "Manzil";
+        case "responsible": return "Javobgar shaxs";
+        case "note": return "Izoh";
+        case "company": return "Korxona (F/X)";
+        case "phone": return "Egasining telefoni";
+        case "owner": return "Egasining ism-sharifi";
+        case "meter": return "Hisoblagich raqami";
+        case "all": return "Barcha maydonlarda";
+        default: return "Nomi";
+    }
+}
+
 let tempSearchType = "name";
 if (searchTypeBtn && searchTypeMenu) {
     searchTypeBtn.onclick = function (e) {
