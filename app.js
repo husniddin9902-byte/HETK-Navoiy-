@@ -537,10 +537,17 @@ if (searchTypeBtn && searchTypeMenu) {
         const selected = document.querySelector(
             'input[name="searchType"]:checked'
         );
+      
         if (selected) {
-            currentSearchType = selected.value;
-        }
-        searchTypeMenu.style.display = "none";
+    currentSearchType = selected.value;
+}
+
+searchTypeMenu.style.display = "none";
+
+// Agar qidiruv matni yozilgan bo'lsa, darhol natijani yangilash
+if (searchState.text !== "") {
+    refreshSearchResults();
+}
     };
     document.addEventListener("click", function (e) {
         if (
