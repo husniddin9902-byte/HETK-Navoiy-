@@ -524,8 +524,8 @@ function getSearchTypeName() {
         case "name": return "Nomi";
         case "address": return "Manzil";
         case "responsible": return "Javobgar shaxs";
-        case "note": return "Izoh";
-        case "company": return "Korxona (F/X)";
+        case "note": return "Izohi ";
+        case "company": return "Korxona (F/X) nomi ";
         case "phone": return "Egasining telefoni";
         case "owner": return "Egasining ism-sharifi";
         case "meter": return "Hisoblagich raqami";
