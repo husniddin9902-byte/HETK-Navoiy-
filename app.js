@@ -2512,29 +2512,34 @@ if (activeFolderId === "root") {
             const balanceBadge = point.isPrivate ? `<span style="color:#ff4444; font-weight:bold;">[Xususiy - ${point.ownerFirm || ''}]</span>` : `<span style="color:#007AFF; font-weight:bold;">[ЕТК balansi]</span>`;
 
             // Maxsus divIcon marker yaratish
-            const markerDiv = document.createElement('div');
-            markerDiv.className = 'custom-tp-marker';
-            
-            // Agar element 1 tadan ko'p fiderga ulangan bo'lsa va ona papka ochiq bo'lsa dynamic CSS o'zgaruvchilarni biriktiramiz (Blinking uchun)
-            if (tpFoldersArr.length > 1) {
-                markerDiv.classList.add('blinking-marker-icon');
-                const secondFolderId = tpFoldersArr[1];
-                const secondaryColor = (currentFolders[secondFolderId] && currentFolders[secondFolderId].color) ? currentFolders[secondFolderId].color : '#34C759';
-                markerDiv.style.setProperty('--fider-color-1', primaryColor);
-                markerDiv.style.setProperty('--fider-color-2', secondaryColor);
-            }
+          const markerDiv = document.createElement('div');
+markerDiv.className = 'custom-tp-marker';
 
-         markerDiv.innerHTML = `<i class="fas fa-map-marker-alt" style="color: ${primaryColor}; font-size: 44px; text-shadow: 0 0 5px black;"></i>`;
+if (isBlinking) {
+    markerDiv.classList.add('blinking-marker-icon');
+    markerDiv.style.setProperty('--fider-color-1', primaryColor);
+    markerDiv.style.setProperty('--fider-color-2', secondaryColor);
+}
 
-          alert("MARKER SHU YERDAN YARALDI");
-            const mIcon = L.divIcon({
-                className: 'custom-leaflet-tp-wrapper',
-                html: markerDiv,
-                iconSize: [44, 44],
-                iconAnchor: [22, 44]
-            });
+markerDiv.innerHTML = `
+<i class="fas fa-map-marker-alt"
+style="
+color:${primaryColor};
+font-size:52px;
+filter:drop-shadow(0 0 6px black);
+"></i>
+`;
 
-            const marker = L.marker([lat, lng], {icon: mIcon}).addTo(map);
+const mIcon = L.divIcon({
+    className: '',
+    html: markerDiv.outerHTML,
+    iconSize: [52, 52],
+    iconAnchor: [26, 52]
+});
+
+const marker = L.marker([lat, lng], {
+    icon: mIcon
+}).addTo(map);
             
             // Popup oynasida barcha muhandislik va schotchik ma'lumotlarini chiroyli chiqarish
             let popupHtml = `
