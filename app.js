@@ -605,6 +605,16 @@ if (filterBtn && filterMenu) {
         e.stopPropagation();
         filterMenu.style.display = "block";
     };
+
+  balanceSelected.onclick = function (e) {
+    e.stopPropagation();
+    balanceOptions.style.display =
+        balanceOptions.style.display === "block"
+            ? "none"
+            : "block";
+
+};
+  
     cancelFilterBtn.onclick = function () {
         filterMenu.style.display = "none";
     };
