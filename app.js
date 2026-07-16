@@ -582,7 +582,7 @@ if (searchState.text !== "") {
             !searchTypeMenu.contains(e.target) &&
             !searchTypeBtn.contains(e.target)
         ) {
-          balanceOptions.style.display = "none";
+         
             searchTypeMenu.style.display = "none";
         }
     });
