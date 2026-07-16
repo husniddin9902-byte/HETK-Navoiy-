@@ -2442,8 +2442,6 @@ foldersBox.style.display="none";
 
 // 3. SIZ AYTGAN ASOSIY SCADA MANTIQI: Xaritada filtrlash, Birlashish va Miltillovchi markerlar (Override)
 function loadFilteredPoints() {
-
-alert("2218");
   
     const tpListContainer = document.getElementById('tp-list');
     if (!tpListContainer) return;
