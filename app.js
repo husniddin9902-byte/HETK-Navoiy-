@@ -2528,6 +2528,7 @@ if (activeFolderId === "root") {
 
          markerDiv.innerHTML = `<i class="fas fa-map-marker-alt" style="color: ${primaryColor}; font-size: 44px; text-shadow: 0 0 5px black;"></i>`;
 
+          alert("MARKER SHU YERDAN YARALDI");
             const mIcon = L.divIcon({
                 className: 'custom-leaflet-tp-wrapper',
                 html: markerDiv,
