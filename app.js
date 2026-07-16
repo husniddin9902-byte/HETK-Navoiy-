@@ -2455,14 +2455,60 @@ function refreshSearchResults(){
                 tp.folders &&
                 Object.keys(tp.folders).some(id=>allowedFolderIds.includes(id));
             if(!inFolder) return;
-            const searchValue = (
-    tp.name ||
-    tp.address ||
-    ""
-).toLowerCase();
+         
+       
+          const q = text.toLowerCase();
+let matched = false;
+switch (currentSearchType) {
+    case "name":
+        matched = (tp.name || "").toLowerCase().includes(q);
+        break;
 
-if (searchValue.includes(text.toLowerCase())) {
+    case "address":
+        matched = (tp.address || "").toLowerCase().includes(q);
+        break;
+
+    case "responsible":
+        matched = (tp.responsiblePerson || "").toLowerCase().includes(q);
+        break;
+
+    case "note":
+        matched = (tp.note || "").toLowerCase().includes(q);
+        break;
+
+    case "company":
+        matched = (tp.ownerFirm || "").toLowerCase().includes(q);
+        break;
+
+    case "phone":
+        matched = (tp.ownerPhone || "").toLowerCase().includes(q);
+        break;
+
+    case "owner":
+        matched = (tp.ownerName || "").toLowerCase().includes(q);
+        break;
+
+    case "meter":
+        matched = (tp.meterNumber || "").toLowerCase().includes(q);
+        break;
+
+    case "all":
+        matched =
+            (tp.name || "").toLowerCase().includes(q) ||
+            (tp.address || "").toLowerCase().includes(q) ||
+            (tp.responsiblePerson || "").toLowerCase().includes(q) ||
+            (tp.note || "").toLowerCase().includes(q) ||
+            (tp.ownerFirm || "").toLowerCase().includes(q) ||
+            (tp.ownerPhone || "").toLowerCase().includes(q) ||
+            (tp.ownerName || "").toLowerCase().includes(q) ||
+            (tp.meterNumber || "").toLowerCase().includes(q);
+        break;
+}
+
+if (matched) {
     found.push(tp);
+
+  
 }
         });
         searchState.results = found;
