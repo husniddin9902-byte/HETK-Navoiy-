@@ -2355,7 +2355,7 @@ updateSearchHighlight();
         padding-bottom:4px;
         padding-right:6px;
         background:${activeFolderId===node.id ? "rgba(0,122,255,.20)" : "transparent"};
-        color:${activeFolderId===node.id ? "#4FC3FF" : "#ffffff"};
+        color:${activeFolderId===node.id ? "#4FC3FF" : (node.color || "#ffffff")};
 ">
 
 ${
@@ -2370,7 +2370,10 @@ border-left:1px dashed rgba(255,255,255,.25);
 : ""
 }
 
-📂 ${node.name}${countText}
+<span style="color:${node.color || '#ffffff'};">📁</span>
+<span style="color:${activeFolderId===node.id ? '#4FC3FF' : (node.color || '#ffffff')};">
+    ${node.name}${countText}
+</span>
 </div>
 `;
         node.items.forEach(tp=>{
