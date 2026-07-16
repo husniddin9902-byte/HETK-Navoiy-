@@ -166,13 +166,13 @@ cursor:pointer;
             </span>
         </button>
     </div>
-             <div id="search-type-menu"
+            <div id="search-type-menu"
      style="
         display:none;
         position:absolute;
         top:58px;
         left:10px;
-        width:260px;
+        width:280px;
         background:#00223a;
         border:1px solid rgba(255,255,255,.15);
         border-radius:10px;
@@ -181,7 +181,7 @@ cursor:pointer;
         color:white;
         box-shadow:0 8px 20px rgba(0,0,0,.45);">
 
-    <div style="font-weight:bold;margin-bottom:10px;">
+    <div style="font-weight:bold;margin-bottom:12px;">
         🔑 Qidiruv turi
     </div>
 
@@ -198,6 +198,33 @@ cursor:pointer;
     <label><input type="radio" name="searchType" value="owner"> Egasining ism-sharifi</label><br><br>
     <label><input type="radio" name="searchType" value="meter"> Hisoblagich raqami</label><br><br>
     <label><input type="radio" name="searchType" value="all"> Barcha maydonlarda</label>
+    <hr style="border-color:rgba(255,255,255,.12);margin:14px 0;">
+    <div style="display:flex;justify-content:space-between;gap:10px;">
+        <button id="cancel-search-type"
+                style="
+                    flex:1;
+                    height:38px;
+                    border:none;
+                    border-radius:8px;
+                    background:#b71c1c;
+                    color:white;
+                    cursor:pointer;">
+            ❌ Bekor qilish
+        </button>
+
+        <button id="apply-search-type"
+                style="
+                    flex:1;
+                    height:38px;
+                    border:none;
+                    border-radius:8px;
+                    background:#2e7d32;
+                    color:white;
+                    cursor:pointer;">
+            ✅ Qo'llash
+        </button>
+
+    </div>
 
 </div>
 </div>
