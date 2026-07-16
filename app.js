@@ -512,6 +512,46 @@ if (elementSearchInput) {
     });
 }
 
+// 🔑 Qidiruv turi kodi
+   const searchTypeBtn = document.getElementById("search-type-btn");
+const searchTypeMenu = document.getElementById("search-type-menu");
+const applySearchType = document.getElementById("apply-search-type");
+const cancelSearchType = document.getElementById("cancel-search-type");
+let currentSearchType = "name";
+let tempSearchType = "name";
+if (searchTypeBtn && searchTypeMenu) {
+    searchTypeBtn.onclick = function (e) {
+        e.stopPropagation();
+        tempSearchType = currentSearchType;
+        const radio = document.querySelector(
+            `input[name="searchType"][value="${currentSearchType}"]`
+        );
+
+        if (radio) radio.checked = true;
+        searchTypeMenu.style.display = "block";
+    };
+    cancelSearchType.onclick = function () {
+        searchTypeMenu.style.display = "none";
+    };
+    applySearchType.onclick = function () {
+        const selected = document.querySelector(
+            'input[name="searchType"]:checked'
+        );
+        if (selected) {
+            currentSearchType = selected.value;
+        }
+        searchTypeMenu.style.display = "none";
+    };
+    document.addEventListener("click", function (e) {
+        if (
+            !searchTypeMenu.contains(e.target) &&
+            !searchTypeBtn.contains(e.target)
+        ) {
+            searchTypeMenu.style.display = "none";
+        }
+    });
+}
+
 // TAHRIRLASH VA O'ZGARTIRISH PANELI
 const editColorSlider = document.getElementById('edit-color-slider');
 const editColorPreview = document.getElementById('edit-color-preview');
