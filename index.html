@@ -249,14 +249,39 @@ cursor:pointer;
         <i class="fas fa-filter"></i> Filtr
     </div>
 
-            
-    <label>Balans</label>
-<select id="filter-balance"
-style="width:100%;margin:8px 0 14px 0;padding:8px;border-radius:6px;background:#001a2c;color:white;border:1px solid rgba(255,255,255,.15);">
-<option value="all">Hammasi</option>
-<option value="etk">ETK balansda</option>
-<option value="private">Xususiy balansda</option>
-</select>
+           
+  <label>Balans</label>
+<div id="balance-dropdown"
+     style="position:relative;margin:8px 0 14px 0;">
+
+    <div id="balance-selected"
+         style="
+            background:#001a2c;
+            border:1px solid rgba(255,255,255,.15);
+            border-radius:8px;
+            padding:10px 12px;
+            cursor:pointer;
+            display:flex;
+            justify-content:space-between;
+            align-items:center;">
+        <span id="balance-selected-text">Hammasi</span>
+        <i class="fas fa-chevron-down"></i>
+    </div>
+
+    <div id="balance-options"
+         style="
+            display:none;
+            margin-top:6px;
+            background:#001a2c;
+            border:1px solid rgba(255,255,255,.15);
+            border-radius:8px;
+            overflow:hidden;">
+
+        <div class="balance-option" data-value="all">Hammasi</div>
+        <div class="balance-option" data-value="etk">ETK balansda</div>
+        <div class="balance-option" data-value="private">Xususiy balansda</div>
+    </div>
+</div>
 
             
     <hr style="border-color:rgba(255,255,255,.12);margin:14px 0;">
