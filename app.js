@@ -595,6 +595,11 @@ const filterMenu = document.getElementById("filter-menu");
 const applyFilterBtn = document.getElementById("apply-filter");
 const cancelFilterBtn = document.getElementById("cancel-filter");
 const clearFilterBtn = document.getElementById("clear-filter");
+
+// Balans dropdown
+const balanceSelected = document.getElementById("balance-selected");
+const balanceSelectedText = document.getElementById("balance-selected-text");
+const balanceOptions = document.getElementById("balance-options");
 if (filterBtn && filterMenu) {
     filterBtn.onclick = function (e) {
         e.stopPropagation();
