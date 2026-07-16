@@ -587,6 +587,32 @@ if (searchState.text !== "") {
     });
 }
 
+ // ===============================
+// Filtr paneli
+// ===============================
+const filterBtn = document.getElementById("filter-btn");
+const filterMenu = document.getElementById("filter-menu");
+const applyFilterBtn = document.getElementById("apply-filter");
+const cancelFilterBtn = document.getElementById("cancel-filter");
+const clearFilterBtn = document.getElementById("clear-filter");
+if (filterBtn && filterMenu) {
+    filterBtn.onclick = function (e) {
+        e.stopPropagation();
+        filterMenu.style.display = "block";
+    };
+    cancelFilterBtn.onclick = function () {
+        filterMenu.style.display = "none";
+    };
+    document.addEventListener("click", function (e) {
+        if (
+            !filterMenu.contains(e.target) &&
+            !filterBtn.contains(e.target)
+        ) {
+            filterMenu.style.display = "none";
+        }
+    });
+}
+
 // TAHRIRLASH VA O'ZGARTIRISH PANELI
 const editColorSlider = document.getElementById('edit-color-slider');
 const editColorPreview = document.getElementById('edit-color-preview');
