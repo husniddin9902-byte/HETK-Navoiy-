@@ -230,6 +230,45 @@ cursor:pointer;
 </div>
 </div>
 
+        <div id="filter-menu"
+     style="
+        display:none;
+        position:absolute;
+        top:58px;
+        right:10px;
+        width:320px;
+        background:#00223a;
+        border:1px solid rgba(255,255,255,.15);
+        border-radius:10px;
+        padding:12px;
+        z-index:99999;
+        color:white;
+        box-shadow:0 8px 20px rgba(0,0,0,.45);">
+
+    <div style="font-weight:bold;margin-bottom:12px;">
+        <i class="fas fa-filter"></i> Filtr
+    </div>
+
+    <!-- Keyin to'ldiramiz -->
+    <hr style="border-color:rgba(255,255,255,.12);margin:14px 0;">
+    <div style="display:flex;gap:8px;">
+
+        <button id="cancel-filter"
+                style="flex:1;height:38px;border:none;border-radius:8px;background:#b71c1c;color:white;">
+            ❌ Bekor qilish
+        </button>
+        <button id="clear-filter"
+                style="flex:1;height:38px;border:none;border-radius:8px;background:#666;color:white;">
+            ♻ Tozalash
+        </button>
+        <button id="apply-filter"
+                style="flex:1;height:38px;border:none;border-radius:8px;background:#2e7d32;color:white;">
+            ✅ Qo'llash
+        </button>
+    </div>
+</div>
+
+        
  <!-- Qidiruv natijalari -->
 <div id="search-results"
      style="
