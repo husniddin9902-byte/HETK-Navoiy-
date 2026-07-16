@@ -2526,7 +2526,7 @@ foldersBox.style.display="none";
       
        resultsBox.innerHTML = `
     <div class="search-info">
-        🔑 ${getSearchTypeName()} • Topildi: ${found.length} ta element
+        Topildi: ${found.length} ta element
     </div>
     ${renderSearchTree(folderTree)}
 `;
