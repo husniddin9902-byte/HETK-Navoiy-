@@ -2522,19 +2522,27 @@ if (isBlinking) {
 }
 
 markerDiv.innerHTML = `
+<div style="
+width:52px;
+height:52px;
+display:flex;
+align-items:flex-end;
+justify-content:center;
+">
 <i class="fas fa-map-marker-alt"
 style="
-color:${primaryColor};
 font-size:52px;
-filter:drop-shadow(0 0 6px black);
+color:${primaryColor};
+line-height:52px;
+text-shadow:0 0 6px black;
 "></i>
-`;
+</div>`;
 
 const mIcon = L.divIcon({
-    className: '',
-    html: markerDiv.outerHTML,
-    iconSize: [52, 52],
-    iconAnchor: [26, 52]
+    className: 'custom-leaflet-tp-wrapper',
+    html: markerDiv,
+    iconSize: [52,52],
+    iconAnchor: [26,52]
 });
 
 const marker = L.marker([lat, lng], {
