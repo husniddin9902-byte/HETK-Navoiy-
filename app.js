@@ -505,6 +505,17 @@ const filterState = {
     power: "all"
 };
 
+function resetFilters() {
+
+    filterState.balance = "all";
+    filterState.responsible = "all";
+    filterState.created = "all";
+    filterState.updated = "all";
+    filterState.comment = "all";
+    filterState.dualSupply = "all";
+    filterState.power = "all";
+}
+
 // Qidiruv inputi
 if (elementSearchInput) {
     elementSearchInput.addEventListener("input", function () {
