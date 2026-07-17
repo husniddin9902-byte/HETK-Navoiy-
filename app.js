@@ -672,6 +672,7 @@ balanceOptions.style.display = "none";
     ) {
         balanceOptions.style.display = "none";
         responsibleOptions.style.display = "none";
+        updatedOptions.style.display = "none";
         filterMenu.style.display = "none";
     }
 });
