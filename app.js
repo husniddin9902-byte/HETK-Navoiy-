@@ -660,6 +660,22 @@ balanceSelectedText.textContent =
 balanceOptions.style.display = "none";
     };
 });
+
+  
+document.querySelectorAll(".updated-option").forEach(option => {
+    option.onclick = function () {
+        const value = this.dataset.value;
+        document.querySelectorAll(".updated-option").forEach(x=>{
+            x.classList.remove("active");
+        });
+        this.classList.add("active");
+        filterState.updated = value;
+        updatedSelectedText.textContent =
+            this.querySelector("span").textContent;
+        updatedOptions.style.display = "none";
+    };
+});
+  
   
     cancelFilterBtn.onclick = function () {
         filterMenu.style.display = "none";
