@@ -993,3 +993,26 @@ min-width:max-content;
 .balance-option.active .option-check{
     display:block;
 }
+
+
+/* ===== Filtr dropdownlari ===== */
+.filter-option{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px 12px;
+    cursor:pointer;
+    transition:.2s;
+}
+.filter-option:hover{
+    background:rgba(255,255,255,.08);
+}
+.filter-option.active{
+    background:rgba(255,255,255,.10);
+}
+.filter-option .option-check{
+    opacity:0;
+}
+.filter-option.active .option-check{
+    opacity:1;
+}
