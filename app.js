@@ -650,14 +650,17 @@ balanceOptions.style.display = "none";
     cancelFilterBtn.onclick = function () {
         filterMenu.style.display = "none";
     };
-    document.addEventListener("click", function (e) {
-        if (
-            !filterMenu.contains(e.target) &&
-            !filterBtn.contains(e.target)
-        ) {
-            filterMenu.style.display = "none";
-        }
-    });
+  
+   document.addEventListener("click", function (e) {
+    if (
+        !filterMenu.contains(e.target) &&
+        !filterBtn.contains(e.target)
+    ) {
+        balanceOptions.style.display = "none";
+        responsibleOptions.style.display = "none";
+        filterMenu.style.display = "none";
+    }
+});
 }
 
 // TAHRIRLASH VA O'ZGARTIRISH PANELI
