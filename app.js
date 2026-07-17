@@ -607,6 +607,12 @@ const responsibleSelected = document.getElementById("responsible-selected");
 const responsibleSelectedText = document.getElementById("responsible-selected-text");
 const responsibleOptions = document.getElementById("responsible-options");
 
+// Oxirgi yangilangan dropdown
+const updatedSelected = document.getElementById("updated-selected");
+const updatedSelectedText = document.getElementById("updated-selected-text");
+const updatedOptions = document.getElementById("updated-options");
+
+
 if (filterBtn && filterMenu) {
     filterBtn.onclick = function (e) {
         e.stopPropagation();
@@ -626,6 +632,14 @@ if (filterBtn && filterMenu) {
     e.stopPropagation();
     responsibleOptions.style.display =
         responsibleOptions.style.display === "block"
+            ? "none"
+            : "block";
+};
+
+  updatedSelected.onclick = function (e) {
+    e.stopPropagation();
+    updatedOptions.style.display =
+        updatedOptions.style.display === "block"
             ? "none"
             : "block";
 };
