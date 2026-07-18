@@ -955,46 +955,6 @@ min-width:max-content;
 }
 
 
-/* ===============================
-   FILTER
-=============================== */
-.balance-option{
-    padding:12px 14px;
-    cursor:pointer;
-    border-bottom:1px solid rgba(255,255,255,.08);
-    transition:.15s;
-}
-.balance-option:last-child{
-    border-bottom:none;
-}
-.balance-option:hover{
-    background:#0a3b63;
-}
-
-.balance-option{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    padding:12px 14px;
-    cursor:pointer;
-    border-bottom:1px solid rgba(255,255,255,.08);
-    transition:.15s;
-}
-.balance-option:last-child{
-    border-bottom:none;
-}
-.balance-option:hover{
-    background:#0a3b63;
-}
-.option-check{
-    display:none;
-    color:#4FC3FF;
-}
-.balance-option.active .option-check{
-    display:block;
-}
-
-
 /* ===== Filtr dropdownlari ===== */
 .filter-option{
     display:flex;
