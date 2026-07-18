@@ -688,7 +688,21 @@ document.querySelectorAll(".updated-option").forEach(option => {
         updatedOptions.style.display = "none";
     };
 });
-  
+
+  document.querySelectorAll(".created-option").forEach(option => {
+    option.onclick = function () {
+        const value = this.dataset.value;
+        document.querySelectorAll(".created-option").forEach(x=>{
+            x.classList.remove("active");
+        });
+        this.classList.add("active");
+        filterState.created = value;
+        createdSelectedText.textContent =
+            this.querySelector("span").textContent;
+        createdOptions.style.display = "none";
+    };
+});
+
   
     cancelFilterBtn.onclick = function () {
         filterMenu.style.display = "none";
