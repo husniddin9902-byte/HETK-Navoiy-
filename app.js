@@ -617,6 +617,11 @@ const createdSelected = document.getElementById("created-selected");
 const createdSelectedText = document.getElementById("created-selected-text");
 const createdOptions = document.getElementById("created-options");
 
+// Oxirgi izoh dropdown
+const commentSelected = document.getElementById("comment-selected");
+const commentSelectedText = document.getElementById("comment-selected-text");
+const commentOptions = document.getElementById("comment-options");
+
 
 if (filterBtn && filterMenu) {
     filterBtn.onclick = function (e) {
@@ -656,7 +661,14 @@ if (filterBtn && filterMenu) {
             ? "none"
             : "block";
 };
-  
+
+  commentSelected.onclick = function (e) {
+    e.stopPropagation();
+    commentOptions.style.display =
+        commentOptions.style.display === "block"
+            ? "none"
+            : "block";
+};
   
   document.querySelectorAll(".balance-option").forEach(option => {
     option.onclick = function () {
@@ -717,6 +729,7 @@ document.querySelectorAll(".updated-option").forEach(option => {
         responsibleOptions.style.display = "none";
         updatedOptions.style.display = "none";
         createdOptions.style.display = "none";
+        commentOptions.style.display = "none";
       
       filterMenu.style.display = "none";
     }
