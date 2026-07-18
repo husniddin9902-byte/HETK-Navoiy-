@@ -627,6 +627,11 @@ const dualSelected = document.getElementById("dual-selected");
 const dualSelectedText = document.getElementById("dual-selected-text");
 const dualOptions = document.getElementById("dual-options");
 
+// Quvvat dropdown
+const powerSelected = document.getElementById("power-selected");
+const powerSelectedText = document.getElementById("power-selected-text");
+const powerOptions = document.getElementById("power-options");
+
 
 if (filterBtn && filterMenu) {
     filterBtn.onclick = function (e) {
@@ -683,6 +688,13 @@ dualSelected.onclick = function (e) {
             : "block";
 };
   
+powerSelected.onclick = function (e) {
+    e.stopPropagation();
+    powerOptions.style.display =
+        powerOptions.style.display === "block"
+            ? "none"
+            : "block";
+};
   
   document.querySelectorAll(".balance-option").forEach(option => {
     option.onclick = function () {
@@ -757,6 +769,21 @@ document.querySelectorAll(".dual-option").forEach(option => {
         dualOptions.style.display = "none";
     };
 });
+
+document.querySelectorAll(".power-option").forEach(option => {
+    option.onclick = function () {
+        const value = this.dataset.value;
+        document.querySelectorAll(".power-option").forEach(x=>{
+            x.classList.remove("active");
+        });
+        this.classList.add("active");
+        filterState.power = value;
+        powerSelectedText.textContent =
+            this.querySelector("span").textContent;
+        powerOptions.style.display = "none";
+    };
+});
+
   
     cancelFilterBtn.onclick = function () {
         filterMenu.style.display = "none";
@@ -773,6 +800,7 @@ document.querySelectorAll(".dual-option").forEach(option => {
         createdOptions.style.display = "none";
         commentOptions.style.display = "none";
         dualOptions.style.display = "none";
+        powerOptions.style.display = "none";
       
       filterMenu.style.display = "none";
     }
