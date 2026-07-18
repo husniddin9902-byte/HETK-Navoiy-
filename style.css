@@ -954,24 +954,41 @@ overflow-y:auto;
 min-width:max-content;
 }
 
-
 /* ===== Filtr dropdownlari ===== */
+
 .filter-option{
     display:flex;
     justify-content:space-between;
     align-items:center;
-    padding:10px 12px;
+    padding:12px 14px;
     cursor:pointer;
-    transition:.2s;
+    user-select:none;
+    border-bottom:1px solid rgba(255,255,255,.08);
+    transition:
+        background .18s,
+        color .18s;
 }
+.filter-option:last-child{
+    border-bottom:none;
+}
+
+/* Sichqoncha olib borganda */
 .filter-option:hover{
-    background:rgba(255,255,255,.08);
+    background:#0a3b63;
 }
+
+/* Tanlangan holat */
 .filter-option.active{
-    background:rgba(255,255,255,.10);
+    background:#0f4f83;
+    color:#ffffff;
 }
-.filter-option .option-check{
+
+/* Ptichka */
+.option-check{
     opacity:0;
+    color:#4FC3FF;
+    font-size:15px;
+    transition:opacity .18s;
 }
 .filter-option.active .option-check{
     opacity:1;
