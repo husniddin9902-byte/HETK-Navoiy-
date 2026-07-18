@@ -622,6 +622,11 @@ const commentSelected = document.getElementById("comment-selected");
 const commentSelectedText = document.getElementById("comment-selected-text");
 const commentOptions = document.getElementById("comment-options");
 
+// Ikki tomonlama ta'minlangan dropdown
+const dualSelected = document.getElementById("dual-selected");
+const dualSelectedText = document.getElementById("dual-selected-text");
+const dualOptions = document.getElementById("dual-options");
+
 
 if (filterBtn && filterMenu) {
     filterBtn.onclick = function (e) {
@@ -669,6 +674,15 @@ if (filterBtn && filterMenu) {
             ? "none"
             : "block";
 };
+
+dualSelected.onclick = function (e) {
+    e.stopPropagation();
+    dualOptions.style.display =
+        dualOptions.style.display === "block"
+            ? "none"
+            : "block";
+};
+  
   
   document.querySelectorAll(".balance-option").forEach(option => {
     option.onclick = function () {
@@ -730,6 +744,20 @@ document.querySelectorAll(".updated-option").forEach(option => {
 });
 
   
+document.querySelectorAll(".dual-option").forEach(option => {
+    option.onclick = function () {
+        const value = this.dataset.value;
+        document.querySelectorAll(".dual-option").forEach(x=>{
+            x.classList.remove("active");
+        });
+        this.classList.add("active");
+        filterState.dualSupply = value;
+        dualSelectedText.textContent =
+            this.querySelector("span").textContent;
+        dualOptions.style.display = "none";
+    };
+});
+  
     cancelFilterBtn.onclick = function () {
         filterMenu.style.display = "none";
     };
@@ -744,6 +772,7 @@ document.querySelectorAll(".updated-option").forEach(option => {
         updatedOptions.style.display = "none";
         createdOptions.style.display = "none";
         commentOptions.style.display = "none";
+        dualOptions.style.display = "none";
       
       filterMenu.style.display = "none";
     }
