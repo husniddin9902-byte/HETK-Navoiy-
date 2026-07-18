@@ -612,6 +612,11 @@ const updatedSelected = document.getElementById("updated-selected");
 const updatedSelectedText = document.getElementById("updated-selected-text");
 const updatedOptions = document.getElementById("updated-options");
 
+// Yaratilgan sana dropdown
+const createdSelected = document.getElementById("created-selected");
+const createdSelectedText = document.getElementById("created-selected-text");
+const createdOptions = document.getElementById("created-options");
+
 
 if (filterBtn && filterMenu) {
     filterBtn.onclick = function (e) {
@@ -644,6 +649,14 @@ if (filterBtn && filterMenu) {
             : "block";
 };
 
+  createdSelected.onclick = function (e) {
+    e.stopPropagation();
+    createdOptions.style.display =
+        createdOptions.style.display === "block"
+            ? "none"
+            : "block";
+};
+  
   
   document.querySelectorAll(".balance-option").forEach(option => {
     option.onclick = function () {
@@ -689,7 +702,9 @@ document.querySelectorAll(".updated-option").forEach(option => {
         balanceOptions.style.display = "none";
         responsibleOptions.style.display = "none";
         updatedOptions.style.display = "none";
-        filterMenu.style.display = "none";
+        createdOptions.style.display = "none";
+      
+      filterMenu.style.display = "none";
     }
 });
 }
