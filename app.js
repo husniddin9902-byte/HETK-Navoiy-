@@ -715,6 +715,20 @@ document.querySelectorAll(".updated-option").forEach(option => {
     };
 });
 
+  document.querySelectorAll(".comment-option").forEach(option => {
+    option.onclick = function () {
+        const value = this.dataset.value;
+        document.querySelectorAll(".comment-option").forEach(x=>{
+            x.classList.remove("active");
+        });
+        this.classList.add("active");
+        filterState.comment = value;
+        commentSelectedText.textContent =
+            this.querySelector("span").textContent;
+        commentOptions.style.display = "none";
+    };
+});
+
   
     cancelFilterBtn.onclick = function () {
         filterMenu.style.display = "none";
