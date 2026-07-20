@@ -765,78 +765,7 @@ initFilterDropdown(
     powerOptions
 );
   
-document.querySelectorAll(".updated-option").forEach(option => {
-    option.onclick = function () {
-        const value = this.dataset.value;
-        document.querySelectorAll(".updated-option").forEach(x=>{
-            x.classList.remove("active");
-        });
-        this.classList.add("active");
-        filterState.updated = value;
-        updatedSelectedText.textContent =
-            this.querySelector("span").textContent;
-        updatedOptions.style.display = "none";
-    };
-});
 
-  document.querySelectorAll(".created-option").forEach(option => {
-    option.onclick = function () {
-        const value = this.dataset.value;
-        document.querySelectorAll(".created-option").forEach(x=>{
-            x.classList.remove("active");
-        });
-        this.classList.add("active");
-        filterState.created = value;
-        createdSelectedText.textContent =
-            this.querySelector("span").textContent;
-        createdOptions.style.display = "none";
-    };
-});
-
-  document.querySelectorAll(".comment-option").forEach(option => {
-    option.onclick = function () {
-        const value = this.dataset.value;
-        document.querySelectorAll(".comment-option").forEach(x=>{
-            x.classList.remove("active");
-        });
-        this.classList.add("active");
-        filterState.comment = value;
-        commentSelectedText.textContent =
-            this.querySelector("span").textContent;
-        commentOptions.style.display = "none";
-    };
-});
-
-  
-document.querySelectorAll(".dual-option").forEach(option => {
-    option.onclick = function () {
-        const value = this.dataset.value;
-        document.querySelectorAll(".dual-option").forEach(x=>{
-            x.classList.remove("active");
-        });
-        this.classList.add("active");
-        filterState.dualSupply = value;
-        dualSelectedText.textContent =
-            this.querySelector("span").textContent;
-        dualOptions.style.display = "none";
-    };
-});
-
-document.querySelectorAll(".power-option").forEach(option => {
-    option.onclick = function () {
-        const value = this.dataset.value;
-        document.querySelectorAll(".power-option").forEach(x=>{
-            x.classList.remove("active");
-        });
-        this.classList.add("active");
-        filterState.power = value;
-        powerSelectedText.textContent =
-            this.querySelector("span").textContent;
-        powerOptions.style.display = "none";
-    };
-});
-
-  
     cancelFilterBtn.onclick = function () {
         filterMenu.style.display = "none";
     };
