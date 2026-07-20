@@ -967,7 +967,7 @@ min-width:max-content;
 .filter-option:hover{
     background:rgba(255,255,255,.08);
 }
-..filter-option.active{
+.filter-option.active{
     background:#007AFF;
     color:#fff;
 }
