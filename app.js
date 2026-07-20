@@ -1834,6 +1834,12 @@ console.error(mainResult);
             lat: inputLatitude.value,
             lng: inputLongitude.value,
             address: inputElementAddress.value,
+ 
+power:
+inputPowerSelect.value === "other"
+? Number(inputCustomPower.value)
+: Number(inputPowerSelect.value),
+          
            responsiblePerson:
 inputResponsiblePerson.value,
 
