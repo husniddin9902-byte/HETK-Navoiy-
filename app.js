@@ -1651,6 +1651,11 @@ ${updatedBy}
 👤 Javobgar shaxs:
 ${inputResponsiblePerson.value || "-"}
 
+⚡ Quvvati:
+${inputPowerSelect.value === "other"
+? inputCustomPower.value
+: inputPowerSelect.value} kVA
+
 📱 Javobgar telefon:
 ${inputResponsiblePhone.value || "-"}
 
