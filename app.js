@@ -1104,6 +1104,14 @@ returnElementBtn.addEventListener("click",function(){
 
 const inputElementName = document.getElementById('input-element-name');
 const inputElementAddress = document.getElementById('input-element-address');
+
+const inputPowerSelect =
+document.getElementById("input-power-select");
+const customPowerBox =
+document.getElementById("custom-power-box");
+const inputCustomPower =
+document.getElementById("input-custom-power");
+
 //const inputElementPhone = document.getElementById('input-element-phone');
 const inputResponsiblePerson =
 document.getElementById('input-responsible-person');
