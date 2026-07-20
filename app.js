@@ -723,6 +723,47 @@ powerSelected.onclick = function (e) {
     balanceOptions
 );
 
+  initFilterDropdown(
+    "responsible-option",
+    "responsible",
+    responsibleSelectedText,
+    responsibleOptions
+);
+
+initFilterDropdown(
+    "updated-option",
+    "updated",
+    updatedSelectedText,
+    updatedOptions
+);
+
+initFilterDropdown(
+    "created-option",
+    "created",
+    createdSelectedText,
+    createdOptions
+);
+
+initFilterDropdown(
+    "comment-option",
+    "comment",
+    commentSelectedText,
+    commentOptions
+);
+
+initFilterDropdown(
+    "dual-option",
+    "dual",
+    dualSelectedText,
+    dualOptions
+);
+
+initFilterDropdown(
+    "power-option",
+    "power",
+    powerSelectedText,
+    powerOptions
+);
   
 document.querySelectorAll(".updated-option").forEach(option => {
     option.onclick = function () {
