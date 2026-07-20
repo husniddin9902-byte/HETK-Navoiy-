@@ -632,6 +632,26 @@ const powerSelected = document.getElementById("power-selected");
 const powerSelectedText = document.getElementById("power-selected-text");
 const powerOptions = document.getElementById("power-options");
 
+function initFilterDropdown(
+    optionClass,
+    stateKey,
+    selectedTextElement,
+    optionsContainer
+){
+    document.querySelectorAll("." + optionClass).forEach(option => {
+        option.onclick = function () {
+            const value = this.dataset.value;
+            document.querySelectorAll("." + optionClass).forEach(x => {
+                x.classList.remove("active");
+            });
+            this.classList.add("active");
+            filterState[stateKey] = value;
+            selectedTextElement.textContent =
+                this.querySelector("span").textContent;
+            optionsContainer.style.display = "none";
+        };
+    });
+}
 
 if (filterBtn && filterMenu) {
     filterBtn.onclick = function (e) {
