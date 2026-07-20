@@ -967,8 +967,15 @@ min-width:max-content;
 .filter-option:hover{
     background:rgba(255,255,255,.08);
 }
-.filter-option.active{
-    background:rgba(255,255,255,.10);
+..filter-option.active{
+    background:#007AFF;
+    color:#fff;
+}
+.filter-option.active span{
+    color:#fff;
+}
+.filter-option.active .option-check{
+    color:#fff;
 }
 .filter-option .option-check{
     opacity:0;
