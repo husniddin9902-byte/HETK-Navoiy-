@@ -733,12 +733,72 @@ cursor:pointer;
             </div>
 
             <div>
-                <label style="font-size: 13px; color: #88a0b0; margin-left: 4px;">Название местоположения:</label>
+                <label style="font-size: 13px; color: #88a0b0; margin-left: 4px;">Joylashuv nomi:</label>
                 <input type="text" id="input-element-name" placeholder="Masalan: TP-312" style="width:100%; padding:12px; margin-top:5px; border-radius:8px; background:#001a2c; color:white; border:1px solid rgba(255,255,255,0.05); outline: none;" required>
             </div>
 
+<div>
+
+<label style="font-size:13px;color:#88a0b0;margin-left:4px;">
+⚡ Quvvati:
+</label>
+
+<select
+id="input-power-select"
+style="
+width:100%;
+padding:12px;
+margin-top:5px;
+border-radius:8px;
+background:#001a2c;
+color:white;
+border:1px solid rgba(255,255,255,.05);
+outline:none;">
+
+<option value="25">25 kVA</option>
+<option value="40">40 kVA</option>
+<option value="63">63 kVA</option>
+<option value="100">100 kVA</option>
+<option value="160">160 kVA</option>
+<option value="250" selected>250 kVA</option>
+<option value="315">315 kVA</option>
+<option value="400">400 kVA</option>
+<option value="630">630 kVA</option>
+<option value="1000">1000 kVA</option>
+<option value="1250">1250 kVA</option>
+<option value="1600">1600 kVA</option>
+<option value="2000">2000 kVA</option>
+<option value="2500">2500 kVA</option>
+
+<option value="other">Boshqa...</option>
+
+</select>
+
+<div
+id="custom-power-box"
+style="
+display:none;
+margin-top:10px;">
+
+<input
+type="number"
+id="input-custom-power"
+placeholder="Quvvatni kiriting"
+style="
+width:100%;
+padding:12px;
+border-radius:8px;
+background:#001a2c;
+color:white;
+border:1px solid rgba(255,255,255,.05);
+outline:none;">
+
+</div>
+
+</div>
+            
             <div>
-                <label style="font-size: 13px; color: #88a0b0; margin-left: 4px;">Адрес:</label>
+                <label style="font-size: 13px; color: #88a0b0; margin-left: 4px;">Manzili:</label>
                 <textarea id="input-element-address" rows="2" placeholder="Адрес определяется автоматически..." style="width:100%; padding:10px; margin-top:5px; border-radius:8px; background:#001a2c; color:#88a0b0; border:1px solid rgba(255,255,255,0.05); resize: none; outline: none;" readonly></textarea>
             </div>
 
@@ -751,7 +811,7 @@ cursor:pointer;
     <input
     type="text"
     id="input-responsible-person"
-    placeholder="Masalan: Nuriddin Juraqulov"
+    placeholder="Masalan: Husniddin Juraqulov"
     style="width:100%; padding:12px; margin-top:5px; border-radius:8px; background:#001a2c; color:white; border:1px solid rgba(255,255,255,0.05); outline:none;">
 </div>
 
