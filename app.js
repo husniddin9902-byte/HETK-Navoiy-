@@ -1183,6 +1183,20 @@ if (inputBalanceToggle) {
     });
 }
 
+function updatePowerInput() {
+    if (!inputPowerSelect) return;
+    if (inputPowerSelect.value === "other") {
+        customPowerBox.style.display = "block";
+    } else {
+        customPowerBox.style.display = "none";
+        inputCustomPower.value = "";
+    }
+}
+if (inputPowerSelect) {
+    inputPowerSelect.addEventListener("change", updatePowerInput);
+}
+
+
 function togglePrivateFieldsRequired(isRequired) {
     inputOwnerFirm.required = isRequired;
     inputOwnerName.required = isRequired;
