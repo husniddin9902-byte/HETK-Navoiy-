@@ -1925,6 +1925,7 @@ originalElementData.address !== elementData.address ||
 originalElementData.phone !== elementData.phone ||
 originalElementData.power !== elementData.power ||
 originalElementData.note !== elementData.note ||
+originalElementData.power !== elementData.power ||
 originalElementData.folderId !== elementData.folderId ||
 originalElementData.lat !== elementData.lat ||
 originalElementData.lng !== elementData.lng ||
