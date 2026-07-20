@@ -1196,6 +1196,12 @@ if (inputPowerSelect) {
     inputPowerSelect.addEventListener("change", updatePowerInput);
 }
 
+if (inputCustomPower) {
+    inputCustomPower.addEventListener("wheel", function(e) {
+        e.preventDefault();
+    }, { passive: false });
+}
+
 
 function togglePrivateFieldsRequired(isRequired) {
     inputOwnerFirm.required = isRequired;
