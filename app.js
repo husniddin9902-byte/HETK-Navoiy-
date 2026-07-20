@@ -2445,6 +2445,26 @@ function renderElementsInTree(folderId, childContainer) {
         inputLatitude.value = tp.lat;
         inputLongitude.value = tp.lng;
         inputElementAddress.value = tp.address || "";
+
+// Quvvatni yuklash
+const standardPowers = [
+25,40,63,100,160,250,315,400,
+630,1000,1250,1600,2000,2500
+];
+if (standardPowers.includes(Number(tp.power))) {
+    inputPowerSelect.value = String(tp.power);
+    customPowerBox.style.display = "none";
+    inputCustomPower.value = "";
+} else if (tp.power) {
+    inputPowerSelect.value = "other";
+    customPowerBox.style.display = "block";
+    inputCustomPower.value = tp.power;
+} else {
+    inputPowerSelect.value = "250";
+    customPowerBox.style.display = "none";
+    inputCustomPower.value = "";
+}
+      
        inputResponsiblePerson.value =
 tp.responsiblePerson || "";
 
