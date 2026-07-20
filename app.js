@@ -1923,6 +1923,7 @@ if(
 originalElementData.name !== elementData.name ||
 originalElementData.address !== elementData.address ||
 originalElementData.phone !== elementData.phone ||
+originalElementData.power !== elementData.power ||
 originalElementData.note !== elementData.note ||
 originalElementData.folderId !== elementData.folderId ||
 originalElementData.lat !== elementData.lat ||
@@ -1952,20 +1953,7 @@ existingImages.length !== (originalElementData.images || []).length
 ){
 needArchiveRebuild = true;
 }
-      
-      
-/* let needArchiveRebuild = false;
-if(
-selectedFiles.length > 0 ||
-(
-editingElementId &&
-originalElementData &&
-originalElementData.mainImageIndex !== mainImageIndex
-)
-){
-needArchiveRebuild = true;
-} */
-      
+         
        if (!editingElementId) {
           
     // Yangi element yaratish holati
