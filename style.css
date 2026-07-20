@@ -960,35 +960,18 @@ min-width:max-content;
     display:flex;
     justify-content:space-between;
     align-items:center;
-    padding:12px 14px;
+    padding:10px 12px;
     cursor:pointer;
-    user-select:none;
-    border-bottom:1px solid rgba(255,255,255,.08);
-    transition:
-        background .18s,
-        color .18s;
+    transition:.2s;
 }
-.filter-option:last-child{
-    border-bottom:none;
-}
-
-/* Sichqoncha olib borganda */
 .filter-option:hover{
-    background:#0a3b63;
+    background:rgba(255,255,255,.08);
 }
-
-/* Tanlangan holat */
 .filter-option.active{
-    background:#0f4f83;
-    color:#ffffff;
+    background:rgba(255,255,255,.10);
 }
-
-/* Ptichka */
-.option-check{
+.filter-option .option-check{
     opacity:0;
-    color:#4FC3FF;
-    font-size:15px;
-    transition:opacity .18s;
 }
 .filter-option.active .option-check{
     opacity:1;
