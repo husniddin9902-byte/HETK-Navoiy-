@@ -2792,12 +2792,15 @@ switch (currentSearchType) {
         break;
 }
 
-if (matched) {
-    found.push(tp);
-
-  
+if (!matched) {
+    return;
 }
+
+// Keyingi barcha filtrlar shu yerga ulanadi
+
+found.push(tp);
         });
+      
         searchState.results = found;
         const folderTree = buildFolderTree();
         attachResultsToTree(folderTree, searchState.results);
