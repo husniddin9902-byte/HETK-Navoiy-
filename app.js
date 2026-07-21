@@ -769,6 +769,11 @@ initFilterDropdown(
     cancelFilterBtn.onclick = function () {
         filterMenu.style.display = "none";
     };
+
+  applyFilterBtn.onclick = function () {
+    filterMenu.style.display = "none";
+    refreshSearchResults();
+};
   
    document.addEventListener("click", function (e) {
     if (
