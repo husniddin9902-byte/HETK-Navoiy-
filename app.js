@@ -496,13 +496,13 @@ const searchState = {
 };
 
 const filterState = {
-    balance: "all",
-    responsible: "all",
-    created: "all",
-    updated: "all",
-    comment: "all",
-    dualSupply: "all",
-    power: "all"
+    balance: "none",
+    responsible: "none",
+    created: "none",
+    updated: "none",
+    comment: "none",
+    dual: "none",
+    power: "none"
 };
 
 function resetFilters() {
