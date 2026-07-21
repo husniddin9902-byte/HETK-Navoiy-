@@ -2797,7 +2797,17 @@ if (!matched) {
 }
 
 // Keyingi barcha filtrlar shu yerga ulanadi
-
+          
+// Balans filtri
+if (filterState.balance !== "all") {
+    if (filterState.balance === "etk" && tp.isPrivate) {
+        return;
+    }
+    if (filterState.balance === "private" && !tp.isPrivate) {
+        return;
+    }
+}
+          
 found.push(tp);
         });
       
