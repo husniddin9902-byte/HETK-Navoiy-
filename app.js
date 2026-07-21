@@ -2807,6 +2807,19 @@ if (filterState.balance !== "all") {
         return;
     }
 }
+
+       // Yaratilgan sana filtri
+if (filterState.created !== "all") {
+    if (!tp.createdAt) {
+        return;
+    }
+    const createdDate = new Date(tp.createdAt);
+    const now = new Date();
+    const diffDays = (now - createdDate) / (1000 * 60 * 60 * 24);
+    if (diffDays > Number(filterState.created)) {
+        return;
+    }
+}   
           
 found.push(tp);
         });
