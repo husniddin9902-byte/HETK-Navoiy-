@@ -507,13 +507,13 @@ const filterState = {
 
 function resetFilters() {
 
-    filterState.balance = "all";
-    filterState.responsible = "all";
-    filterState.created = "all";
-    filterState.updated = "all";
-    filterState.comment = "all";
-    filterState.dualSupply = "all";
-    filterState.power = "all";
+    filterState.balance = "none";
+    filterState.responsible = "none";
+    filterState.created = "none";
+    filterState.updated = "none";
+    filterState.comment = "none";
+    filterState.dual = "none";
+    filterState.power = "none";
 }
 
 // Qidiruv inputi
