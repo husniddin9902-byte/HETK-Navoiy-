@@ -2720,10 +2720,7 @@ function refreshSearchResults(){
     const text = searchState.text.trim();
 
  if(text===""){
-    resultsBox.style.display="none";
     resultsBox.innerHTML="";
-    foldersBox.style.display="block";
-    return;
 }
   
     if(searchState.folderId==="root"){
@@ -2797,7 +2794,7 @@ switch (currentSearchType) {
         break;
 }
 
-if (!matched) {
+if (text !== "" && !matched) {
     return;
 }
 
