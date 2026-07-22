@@ -2811,7 +2811,7 @@ if (filterState.balance !== "all") {
 }
 
        // Yaratilgan sana filtri
-if (filterState.created !== "all") {
+if (filterState.created !== "none")) {
     if (!tp.createdAt) {
         return;
     }
