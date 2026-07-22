@@ -2829,6 +2829,20 @@ if (filterState.created !== "none") {
         return;
     }
 }   
+
+// Oxirgi yangilangan filtri
+if (filterState.updated !== "none") {
+    if (!tp.updatedAt) {
+        return;
+    }
+
+    const updatedDate = new Date(tp.updatedAt);
+    const now = new Date();
+    const diffDays = (now - updatedDate) / (1000 * 60 * 60 * 24);
+    if (diffDays > Number(filterState.updated)) {
+        return;
+    }
+}
           
 found.push(tp);
         });
