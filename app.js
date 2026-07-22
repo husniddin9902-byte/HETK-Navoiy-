@@ -2723,7 +2723,8 @@ function refreshSearchResults(){
     filterState.balance !== "none" ||
     filterState.created !== "none" ||
     filterState.updated !== "none" ||
-    filterState.comment !== "none";
+    filterState.comment !== "none" ||
+    filterState.power !== "none";
 
  if (text === "" && !hasFilter) {
     resultsBox.style.display = "none";
