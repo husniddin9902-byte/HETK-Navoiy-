@@ -2718,10 +2718,12 @@ function refreshSearchResults(){
     const resultsBox = document.getElementById("search-results");
     const foldersBox = document.getElementById("folders-section");
     const text = searchState.text.trim();
-    const hasFilter =
+  
+  const hasFilter =
     filterState.balance !== "none" ||
     filterState.created !== "none" ||
-    filterState.updated !== "none";
+    filterState.updated !== "none" ||
+    filterState.comment !== "none";
 
  if (text === "" && !hasFilter) {
     resultsBox.style.display = "none";
