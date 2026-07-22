@@ -2720,7 +2720,8 @@ function refreshSearchResults(){
     const text = searchState.text.trim();
     const hasFilter =
     filterState.balance !== "none" ||
-    filterState.created !== "none";
+    filterState.created !== "none" ||
+    filterState.updated !== "none";
 
  if (text === "" && !hasFilter) {
     resultsBox.style.display = "none";
