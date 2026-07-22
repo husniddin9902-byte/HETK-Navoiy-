@@ -2718,9 +2718,15 @@ function refreshSearchResults(){
     const resultsBox = document.getElementById("search-results");
     const foldersBox = document.getElementById("folders-section");
     const text = searchState.text.trim();
+    const hasFilter =
+    filterState.balance !== "none" ||
+    filterState.created !== "none";
 
- if(text===""){
-    resultsBox.innerHTML="";
+ if (text === "" && !hasFilter) {
+    resultsBox.style.display = "none";
+    resultsBox.innerHTML = "";
+    foldersBox.style.display = "block";
+    return;
 }
   
     if(searchState.folderId==="root"){
