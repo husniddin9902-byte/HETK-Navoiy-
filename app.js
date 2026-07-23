@@ -2724,6 +2724,7 @@ function refreshSearchResults(){
     filterState.created !== "none" ||
     filterState.updated !== "none" ||
     filterState.comment !== "none" ||
+    filterState.dual !== "none" ||
     filterState.power !== "none";
 
  if (text === "" && !hasFilter) {
