@@ -2846,6 +2846,28 @@ if (filterState.updated !== "none") {
         return;
     }
 }
+
+// Quvvat filtri
+if (filterState.power !== "none") {
+    if (!tp.power) {
+        return;
+    }
+    if (filterState.power === "other") {
+        const standartPowers = [
+            "25", "40", "63", "100", "160",
+            "250", "315", "400", "630",
+            "1000", "1250", "1600",
+            "2000", "2500"
+        ];
+        if (standartPowers.includes(String(tp.power))) {
+            return;
+        }
+    } else {
+        if (String(tp.power) !== String(filterState.power)) {
+            return;
+        }
+    }
+}
           
 found.push(tp);
         });
