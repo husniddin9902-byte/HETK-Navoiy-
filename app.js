@@ -2869,6 +2869,19 @@ if (filterState.power !== "none") {
         }
     }
 }
+
+// Ikki tomonlama ta'minlangan filtri
+if (filterState.dual !== "none") {
+    const folderCount = tp.folders
+        ? Object.keys(tp.folders).length
+        : (tp.folderId ? 1 : 0);
+    if (filterState.dual === "yes" && folderCount < 2) {
+        return;
+    }
+    if (filterState.dual === "no" && folderCount !== 1) {
+        return;
+    }
+}
           
 found.push(tp);
         });
