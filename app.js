@@ -505,6 +505,8 @@ const filterState = {
     power: "none"
 };
 
+let appliedFilterState = { ...filterState };
+
 function resetFilters() {
 
     filterState.balance = "none";
