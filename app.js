@@ -772,7 +772,8 @@ initFilterDropdown(
         filterMenu.style.display = "none";
     };
 
-  applyFilterBtn.onclick = function () {
+ applyFilterBtn.onclick = function () {
+    appliedFilterState = { ...filterState };
     filterMenu.style.display = "none";
     refreshSearchResults();
 };
