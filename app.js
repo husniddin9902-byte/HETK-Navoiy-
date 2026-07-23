@@ -837,6 +837,47 @@ initFilterDropdown(
     filterMenu.style.display = "none";
     refreshSearchResults();
 };
+
+clearFilterBtn.onclick = function () {
+    Object.keys(filterState).forEach(key => {
+        filterState[key] = "none";
+    });
+    setFilterDropdown(
+        "balance-option",
+        "none",
+        balanceSelectedText
+    );
+    setFilterDropdown(
+        "responsible-option",
+        "none",
+        responsibleSelectedText
+    );
+    setFilterDropdown(
+        "created-option",
+        "none",
+        createdSelectedText
+    );
+    setFilterDropdown(
+        "updated-option",
+        "none",
+        updatedSelectedText
+    );
+    setFilterDropdown(
+        "comment-option",
+        "none",
+        commentSelectedText
+    );
+    setFilterDropdown(
+        "dual-option",
+        "none",
+        dualSelectedText
+    );
+    setFilterDropdown(
+        "power-option",
+        "none",
+        powerSelectedText
+    );
+};
   
    document.addEventListener("click", function (e) {
     if (
