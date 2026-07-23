@@ -784,8 +784,53 @@ initFilterDropdown(
   
 
     cancelFilterBtn.onclick = function () {
-        filterMenu.style.display = "none";
-    };
+
+    Object.assign(filterState, appliedFilterState);
+
+    setFilterDropdown(
+        "balance-option",
+        filterState.balance,
+        balanceSelectedText
+    );
+
+    setFilterDropdown(
+        "responsible-option",
+        filterState.responsible,
+        responsibleSelectedText
+    );
+
+    setFilterDropdown(
+        "created-option",
+        filterState.created,
+        createdSelectedText
+    );
+
+    setFilterDropdown(
+        "updated-option",
+        filterState.updated,
+        updatedSelectedText
+    );
+
+    setFilterDropdown(
+        "comment-option",
+        filterState.comment,
+        commentSelectedText
+    );
+
+    setFilterDropdown(
+        "dual-option",
+        filterState.dual,
+        dualSelectedText
+    );
+
+    setFilterDropdown(
+        "power-option",
+        filterState.power,
+        powerSelectedText
+    );
+
+    filterMenu.style.display = "none";
+};
 
  applyFilterBtn.onclick = function () {
     appliedFilterState = { ...filterState };
