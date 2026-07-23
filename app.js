@@ -634,6 +634,21 @@ const powerSelected = document.getElementById("power-selected");
 const powerSelectedText = document.getElementById("power-selected-text");
 const powerOptions = document.getElementById("power-options");
 
+function setFilterDropdown(
+    optionClass,
+    value,
+    selectedTextElement
+){
+    document.querySelectorAll("." + optionClass).forEach(option => {
+        option.classList.remove("active");
+        if (option.dataset.value === value) {
+            option.classList.add("active");
+            selectedTextElement.textContent =
+                option.querySelector("span").textContent;
+        }
+    });
+}
+
 function initFilterDropdown(
     optionClass,
     stateKey,
