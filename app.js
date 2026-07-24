@@ -845,7 +845,8 @@ initFilterDropdown(
         powerSelectedText
     );
 
-    filterMenu.style.display = "none";
+    updateFilterCount();
+filterMenu.style.display = "none";
 };
 
 applyFilterBtn.onclick = function () {
