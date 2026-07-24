@@ -598,6 +598,7 @@ const filterMenu = document.getElementById("filter-menu");
 const applyFilterBtn = document.getElementById("apply-filter");
 const cancelFilterBtn = document.getElementById("cancel-filter");
 const clearFilterBtn = document.getElementById("clear-filter");
+const filterCount = document.getElementById("filter-count");
 
 // Balans dropdown
 const balanceSelected = document.getElementById("balance-selected");
