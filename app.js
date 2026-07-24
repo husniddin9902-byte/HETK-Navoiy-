@@ -588,6 +588,7 @@ if (searchState.text !== "") {
             searchTypeMenu.style.display = "none";
         }
     });
+  updateFilterCount();
 }
 
  // ===============================
