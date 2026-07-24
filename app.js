@@ -635,6 +635,21 @@ const powerSelected = document.getElementById("power-selected");
 const powerSelectedText = document.getElementById("power-selected-text");
 const powerOptions = document.getElementById("power-options");
 
+function updateFilterCount() {
+    let count = 0;
+    Object.values(appliedFilterState).forEach(value => {
+        if (value !== "none") {
+            count++;
+        }
+    });
+    if (count === 0) {
+        filterCount.style.display = "none";
+    } else {
+        filterCount.style.display = "flex";
+        filterCount.textContent = count;
+    }
+}
+
 function setFilterDropdown(
     optionClass,
     value,
