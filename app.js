@@ -848,8 +848,9 @@ initFilterDropdown(
     filterMenu.style.display = "none";
 };
 
- applyFilterBtn.onclick = function () {
+applyFilterBtn.onclick = function () {
     appliedFilterState = { ...filterState };
+    updateFilterCount();
     filterMenu.style.display = "none";
     refreshSearchResults();
 };
@@ -893,6 +894,7 @@ clearFilterBtn.onclick = function () {
         "none",
         powerSelectedText
     );
+  updateFilterCount();
 };
   
    document.addEventListener("click", function (e) {
