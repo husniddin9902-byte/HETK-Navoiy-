@@ -2674,20 +2674,6 @@ function isPointInsideFolder(pointFolderId, selectedFolderId){
             return ids;
         }
 
-// ===============================
-// Performance Cache
-// ===============================
-
-// folderId -> { path, color, name }
-let folderPathCache = {};
-
-// folderId -> [tpId, tpId, ...]
-let folderIndex = {};
-
-// tpId -> TP object
-let tpIndex = {};
-
-
 
 // qidiruv tizim funksiyalari
 function buildFolderTree(){
