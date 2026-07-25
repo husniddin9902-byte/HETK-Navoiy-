@@ -26,6 +26,13 @@ let editingFolderId = null;
 let activeMapMarkers = []; // Xaritadagi dinamik markerlarni nazorat qilish uchun massiv
 let isSaving = false;
 
+// ===============================
+// Performance Cache
+// ===============================
+let folderPathCache = {};
+let folderIndex = {};
+let tpIndex = {};
+
 function showSaveLoader(percent,text){
 document
 .getElementById("save-loader")
