@@ -1745,6 +1745,7 @@ if (!isMultiSource) {
                     row.style.background = "transparent";
                 }
                 selectedFoldersInput.value = currentSelected.filter(Boolean).join(',');
+              refreshPrimaryFolderList();
             });
 
             // Matn (Guruh nomi) bosilganda ham checkbox belgilansin
