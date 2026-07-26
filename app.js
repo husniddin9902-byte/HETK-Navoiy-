@@ -2971,6 +2971,8 @@ function refreshSearchResults(){
     database.ref("TPs").once("value",(snapshot)=>{
         const allTPs = snapshot.val() || {};
         const found = [];
+      const addedTPs = new Set();
+      
         const allowedFolderIds = getAllChildFolderIds(searchState.folderId);
         allowedFolderIds.push(searchState.folderId);
         Object.values(allTPs).forEach(tp=>{
@@ -3106,7 +3108,12 @@ if (filterState.dual !== "none") {
     }
 }
           
-found.push(tp);
+const tpId = tp.id || tp.tpId || tp.key;
+
+if (!addedTPs.has(tpId)) {
+    addedTPs.add(tpId);
+    found.push(tp);
+}
         });
       
         searchState.results = found;
