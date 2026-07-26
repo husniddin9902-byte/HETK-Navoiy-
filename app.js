@@ -2530,12 +2530,84 @@ function renderElementsInTree(folderId, childContainer) {
                 
                 // Balans turiga qarab ikonka rangi
                 const iconColor = tp.isPrivate ? "#ff4444" : "#007AFF";
-                
+
+// TP tegishli bo'lgan boshqa papkalarni tayyorlash
+let otherFoldersHtml = "";
+if (tp.folders) {
+    Object.keys(tp.folders).forEach(otherFolderId => {
+        // Hozir ochiq turgan papkani qayta ko'rsatmaymiz
+        if (otherFolderId === folderId) return;
+        const folder = currentFolders[otherFolderId];
+        if (!folder) return;
+        otherFoldersHtml += `
+            <div style="
+                margin-left:22px;
+                margin-top:3px;
+                font-size:12px;
+                color:${folder.color};
+                white-space:nowrap;
+                overflow:hidden;
+                text-overflow:ellipsis;
+            ">
+                ⤷ ${getFolderPath(otherFolderId)}
+            </div>
+        `;
+    });
+}
+              
                 tpRow.innerHTML = `
-                    <i class="fas fa-bolt" style="color: ${iconColor}; margin-right: 8px; font-size:13px;"></i>
-                    <span style="font-size:14px; color:#e0e0e0; flex-grow:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${tp.name || "TP"}</span>
-                    <i class="fas fa-pencil-alt element-edit-pencil-icon" style="color:#88a0b0; font-size:12px; padding:4px; cursor:pointer; opacity:0.6;" onclick="event.stopPropagation(); openEditElement('${tpId}')"></i>
-                `;
+    <div style="
+        display:flex;
+        align-items:center;
+        width:100%;
+    ">
+        <i class="fas fa-bolt"
+           style="
+                color:${iconColor};
+                margin-right:8px;
+                font-size:13px;
+                flex-shrink:0;
+           ">
+        </i>
+
+        <span style="
+            flex:1;
+            min-width:0;
+            font-size:14px;
+            color:#e0e0e0;
+            white-space:nowrap;
+            overflow:hidden;
+            text-overflow:ellipsis;
+        ">
+            ${tp.name || "TP"}
+        </span>
+
+        <i class="fas fa-pencil-alt element-edit-pencil-icon"
+           style="
+                color:#88a0b0;
+                font-size:12px;
+                padding:4px;
+                cursor:pointer;
+                opacity:.6;
+                flex-shrink:0;
+           "
+           onclick="event.stopPropagation(); openEditElement('${tpId}')">
+        </i>
+    </div>
+
+    ${
+        otherFoldersHtml
+            ? `<div style="
+                    margin-top:4px;
+                    display:flex;
+                    flex-direction:column;
+                    gap:2px;
+               ">
+                    ${otherFoldersHtml}
+               </div>`
+            : ""
+    }
+`;
 
                 // Hoverda va bosilganda stil berish
                 tpRow.addEventListener('mouseenter', () => tpRow.style.background = "rgba(255,255,255,0.05)");
