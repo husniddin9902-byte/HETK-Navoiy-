@@ -2875,7 +2875,49 @@ if (renderedTPs.has(tpId)) {
 }
 renderedTPs.add(tpId);
           
-            html += `
+           let otherFoldersHtml = "";
+
+const isMobile = window.innerWidth < 768;
+const otherFoldersIndent = isMobile ? "22px" : "30px";
+const otherFoldersFontSize = isMobile ? "12px" : "13px";
+const otherFoldersGap = isMobile ? "2px" : "3px";
+
+if (tp.folders) {
+    Object.keys(tp.folders).forEach(otherFolderId => {
+
+        // Qidiruv natijasida chiqarilgan papkani takrorlamaymiz
+        if (otherFolderId === node.id) return;
+
+        const folder = currentFolders[otherFolderId];
+        if (!folder) return;
+
+        otherFoldersHtml += `
+<div style="
+    display:flex;
+    align-items:flex-start;
+    gap:6px;
+    margin-top:${otherFoldersGap};
+    margin-left:${otherFoldersIndent};
+    font-size:${otherFoldersFontSize};
+    color:${folder.color};
+    line-height:1.35;
+    max-width:100%;
+">
+    <span style="flex-shrink:0;margin-top:1px;">↳</span>
+
+    <span style="
+        flex:1;
+        min-width:0;
+        overflow-wrap:anywhere;
+        word-break:break-word;
+    ">
+        ${getFolderPath(otherFolderId)}
+    </span>
+</div>`;
+    });
+}
+
+html += `
 <div class="search-item"
      data-id="${tp.id||''}"
      data-folder-id="${node.id}"
@@ -2885,7 +2927,13 @@ renderedTPs.add(tpId);
         margin:2px 0;
         cursor:pointer;
 ">
-⚡ ${tp.name}
+    <div>⚡ ${tp.name}</div>
+
+    ${
+        otherFoldersHtml
+            ? `<div style="margin-top:4px;">${otherFoldersHtml}</div>`
+            : ""
+    }
 </div>`;
         });
         node.children.forEach((child,index)=>{
