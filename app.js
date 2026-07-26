@@ -2540,18 +2540,26 @@ if (tp.folders) {
         const folder = currentFolders[otherFolderId];
         if (!folder) return;
         otherFoldersHtml += `
-            <div style="
-                margin-left:22px;
-                margin-top:3px;
-                font-size:12px;
-                color:${folder.color};
-                white-space:nowrap;
-                overflow:hidden;
-                text-overflow:ellipsis;
-            ">
-                ⤷ ${getFolderPath(otherFolderId)}
-            </div>
-        `;
+    <div style="
+        display:flex;
+        align-items:flex-start;
+        gap:6px;
+        margin-top:3px;
+        font-size:12px;
+        color:${folder.color};
+        line-height:1.35;
+        word-break:break-word;
+    ">
+        <span style="flex-shrink:0;">↳</span>
+
+        <span style="
+            flex:1;
+            min-width:0;
+        ">
+            ${getFolderPath(otherFolderId)}
+        </span>
+    </div>
+`;
     });
 }
               
@@ -2598,15 +2606,12 @@ if (tp.folders) {
     ${
     otherFoldersHtml
         ? `<div style="
-                margin-left:22px;
-                margin-top:3px;
-                display:flex;
-                flex-direction:column;
-                align-items:flex-start;
-                gap:2px;
-                width:calc(100% - 22px);
-                overflow:hidden;
-           ">
+        margin-left:22px;
+        margin-top:4px;
+        display:flex;
+        flex-direction:column;
+        gap:4px;
+">
                 ${otherFoldersHtml}
            </div>`
         : ""
