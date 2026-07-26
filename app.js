@@ -2596,17 +2596,21 @@ if (tp.folders) {
     </div>
 
     ${
-        otherFoldersHtml
-            ? `<div style="
-                    margin-top:4px;
-                    display:flex;
-                    flex-direction:column;
-                    gap:2px;
-               ">
-                    ${otherFoldersHtml}
-               </div>`
-            : ""
-    }
+    otherFoldersHtml
+        ? `<div style="
+                margin-left:22px;
+                margin-top:3px;
+                display:flex;
+                flex-direction:column;
+                align-items:flex-start;
+                gap:2px;
+                width:calc(100% - 22px);
+                overflow:hidden;
+           ">
+                ${otherFoldersHtml}
+           </div>`
+        : ""
+}
 `;
 
                 // Hoverda va bosilganda stil berish
