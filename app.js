@@ -2803,19 +2803,12 @@ function buildFolderTree(){
 
 function attachResultsToTree(tree, results){
     results.forEach(tp=>{
-        let targetFolderId = null;
-      
-        // Avvalo joriy qidiruv papkasini topamiz
-        if(tp.folders){
-            const folderIds = Object.keys(tp.folders);
-            targetFolderId = folderIds.find(id => tree[id]);
-            if(!targetFolderId && folderIds.length){
-                targetFolderId = folderIds[0];
+        const folderIds = Object.keys(tp.folders || {});
+        folderIds.forEach(folderId=>{
+            if(tree[folderId]){
+                tree[folderId].items.push(tp);
             }
-        }
-        if(targetFolderId && tree[targetFolderId]){
-            tree[targetFolderId].items.push(tp);
-        }
+        });
     });
 }
 
