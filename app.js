@@ -1663,10 +1663,29 @@ function renderElementTreeDropdown() {
             const checkbox = row.querySelector('.element-folder-checkbox');
             checkbox.addEventListener('change', function() {
                 let currentSelected = selectedFoldersInput.value ? selectedFoldersInput.value.split(',') : [];
-                if (this.checked) {
-                    if (!currentSelected.includes(this.value)) currentSelected.push(this.value);
-                    row.style.background = "rgba(0,122,255,0.15)";
-                } else {
+                
+              if (this.checked) {
+
+    // Oddiy bir rejimi bo'lsa faqat bitta papka tanlanadi
+    if (!multiSourceToggle.checked) {
+        document
+            .querySelectorAll("#element-parent-folder-tree .element-folder-checkbox")
+            .forEach(cb => {
+                if (cb !== this) {
+                    cb.checked = false;
+                    const r = cb.closest(".tree-node-row");
+                    if (r) {
+                        r.style.background = "transparent";
+                    }
+                }
+            });
+        currentSelected = [];
+    }
+    if (!currentSelected.includes(this.value)) {
+        currentSelected.push(this.value);
+    }
+    row.style.background = "rgba(0,122,255,0.15)";
+} else {
                     currentSelected = currentSelected.filter(v => v !== this.value);
                     row.style.background = "transparent";
                 }
