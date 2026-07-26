@@ -2802,6 +2802,27 @@ tp.responsiblePhone || "";
             folderIds = [tp.folderId];
         }
         document.getElementById('element-selected-folders').value = folderIds.join(',');
+
+const multiSourceToggle =
+    document.getElementById("input-multi-source-toggle");
+
+const sourceModeText =
+    document.getElementById("source-mode-text");
+
+const primaryFolderContainer =
+    document.getElementById("primary-folder-container");
+
+if (folderIds.length > 1) {
+    multiSourceToggle.checked = true;
+    sourceModeText.textContent = "Ko'p manbali";
+    sourceModeText.style.color = "#ff9800";
+    primaryFolderContainer.style.display = "block";
+} else {
+    multiSourceToggle.checked = false;
+    sourceModeText.textContent = "Oddiy bir";
+    sourceModeText.style.color = "#00c853";
+    primaryFolderContainer.style.display = "none";
+}
       
       // Rasm mavjudligini tekshirish 
       if(tp.images && tp.images.length){
