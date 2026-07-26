@@ -1662,6 +1662,7 @@ function renderElementTreeDropdown() {
             // Checkbox o'zgarganda input elementga yozish mantiqi
             const checkbox = row.querySelector('.element-folder-checkbox');
             checkbox.addEventListener('change', function() {
+                alert("CHANGE ISHLADI");
                 let currentSelected = selectedFoldersInput.value ? selectedFoldersInput.value.split(',') : [];
                 
               if (this.checked) {
