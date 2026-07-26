@@ -1662,7 +1662,7 @@ function renderElementTreeDropdown() {
             // Checkbox o'zgarganda input elementga yozish mantiqi
             const checkbox = row.querySelector('.element-folder-checkbox');
             checkbox.addEventListener('change', function() {
-                alert("CHANGE ISHLADI");
+              //  alert("CHANGE ISHLADI");
                 let currentSelected = selectedFoldersInput.value ? selectedFoldersInput.value.split(',') : [];
                 
               if (this.checked) {
@@ -1671,7 +1671,7 @@ function renderElementTreeDropdown() {
     const isMultiSource = document.getElementById("input-multi-source-toggle").checked;
 
 if (!isMultiSource) {
-      alert("Oddiy bir rejimi ishladi");
+     // alert("Oddiy bir rejimi ishladi");
         document
             .querySelectorAll("#element-parent-folder-tree .element-folder-checkbox")
             .forEach(cb => {
