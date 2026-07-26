@@ -2586,6 +2586,7 @@ if (tp.folders) {
            style="
                 color:#88a0b0;
                 font-size:12px;
+                margin-left:12px;
                 padding:4px;
                 cursor:pointer;
                 opacity:.6;
