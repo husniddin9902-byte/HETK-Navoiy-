@@ -2923,12 +2923,13 @@ function buildFolderTree(){
 
 function attachResultsToTree(tree, results){
     results.forEach(tp=>{
-        const folderIds = Object.keys(tp.folders || {});
-        folderIds.forEach(folderId=>{
-            if(tree[folderId]){
-                tree[folderId].items.push(tp);
-            }
-        });
+        const folderId =
+            tp.primaryFolderId ||
+            tp.folderId ||
+            Object.keys(tp.folders || {})[0];
+        if(tree[folderId]){
+            tree[folderId].items.push(tp);
+        }
     });
 }
 
