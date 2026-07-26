@@ -1797,6 +1797,7 @@ if (!isMultiSource) {
 
     // Eng yuqori (Bosh guruh - root) elementlardan daraxtni yopiq holda yaratishni boshlaymiz
     buildNode('root', 0, dropdownContainer);
+  refreshPrimaryFolderList();
 }
 
 // 8. Elementni Firebase Realtime Database'ga Saqlash va Tahrirlash (Many-to-Many tizimda)
