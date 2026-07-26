@@ -1668,6 +1668,7 @@ function renderElementTreeDropdown() {
 
     // Oddiy bir rejimi bo'lsa faqat bitta papka tanlanadi
     if (!multiSourceToggle.checked) {
+      alert("Oddiy bir rejimi ishladi");
         document
             .querySelectorAll("#element-parent-folder-tree .element-folder-checkbox")
             .forEach(cb => {
