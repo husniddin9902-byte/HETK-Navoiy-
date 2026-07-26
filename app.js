@@ -1317,6 +1317,25 @@ if (inputBalanceToggle) {
             togglePrivateFieldsRequired(false);
         }
     });
+
+const multiSourceToggle = document.getElementById("input-multi-source-toggle");
+const sourceModeText = document.getElementById("source-mode-text");
+const primaryFolderContainer = document.getElementById("primary-folder-container");
+
+multiSourceToggle.addEventListener("change", function () {
+
+    if (this.checked) {
+        sourceModeText.textContent = "Ko'p manbali";
+        sourceModeText.style.color = "#ff9800";
+        primaryFolderContainer.style.display = "block";
+    } else {
+        sourceModeText.textContent = "Oddiy bir";
+        sourceModeText.style.color = "#00c853";
+        primaryFolderContainer.style.display = "none";
+    }
+
+});
+  
 }
 
 function updatePowerInput() {
