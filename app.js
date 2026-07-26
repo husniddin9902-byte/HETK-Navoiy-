@@ -3108,7 +3108,6 @@ if (filterState.dual !== "none") {
 }
           
     found.push(tp);
-}
         });
       
         searchState.results = found;
