@@ -926,6 +926,57 @@ outline:none;">
                 <label style="font-size: 13px; color: #88a0b0; margin-left: 4px;">Fider (Guruh) ni biriktirish:</label>
                 <div id="element-parent-folder-tree" class="tree-dropdown-container" style="width:100%; max-height:320px; overflow:auto; background:#001a2c; border-radius:8px; padding:10px; margin-top:5px; border:1px solid rgba(255,255,255,0.1); box-sizing:border-box;"></div>
                 <input type="hidden" id="element-selected-folders" value="">
+
+                <div id="power-source-mode"
+     style="
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        background:rgba(255,255,255,.02);
+        padding:12px;
+        border-radius:8px;
+        margin-top:10px;">
+
+    <span style="
+        font-size:14px;
+        font-weight:bold;
+        color:white;">
+
+        📡 Ta'minot manbai:
+        <span id="source-mode-text"
+              style="color:#00c853;">
+            Oddiy bir
+        </span>
+
+    </span>
+
+    <label class="switch-control"
+           style="
+                position:relative;
+                display:inline-block;
+                width:50px;
+                height:26px;">
+
+        <input
+            type="checkbox"
+            id="input-multi-source-toggle"
+            style="opacity:0;width:0;height:0;">
+
+        <span class="slider-toggle"
+              style="
+                position:absolute;
+                cursor:pointer;
+                top:0;
+                left:0;
+                right:0;
+                bottom:0;
+                background:#ccc;
+                transition:.4s;
+                border-radius:34px;">
+        </span>
+    </label>
+</div>
+                
             </div>
 
             <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); padding: 12px; border-radius: 8px; margin-top: 5px;">
