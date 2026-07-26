@@ -1607,6 +1607,57 @@ function renderElementTreeDropdown() {
 
     dropdownContainer.innerHTML = "";
     const selectedFoldersInput = document.getElementById('element-selected-folders');
+
+function refreshPrimaryFolderList() {
+    const box = document.getElementById("primary-folder-container");
+    if (!box) return;
+    const isMulti =
+        document.getElementById("input-multi-source-toggle").checked;
+    if (!isMulti) {
+        box.innerHTML = "";
+        return;
+    }
+    const selected =
+        selectedFoldersInput.value
+            ? selectedFoldersInput.value.split(",").filter(Boolean)
+            : [];
+    if (selected.length === 0) {
+        box.innerHTML = "";
+        return;
+    }
+    let html = `
+        <div style="margin:10px 0 6px;font-weight:bold;color:#fff;">
+            Asosiy ta'minot manbai
+        </div>
+    `;
+    selected.forEach((id,index)=>{
+        const folder=currentFolders[id];
+        if(!folder) return;
+        html += `
+        <label style="
+            display:flex;
+            align-items:center;
+            gap:8px;
+            margin:6px 0;
+            cursor:pointer;
+            color:white;
+        ">
+            <input
+                type="radio"
+                name="primary-folder"
+                value="${id}"
+                ${index===0 ? "checked":""}
+            >
+            <i class="fas fa-folder"
+               style="color:${folder.color};"></i>
+
+            ${folder.name}
+        </label>
+        `;
+    });
+    box.innerHTML = html;
+}
+  
     // Avvaldan tanlangan fiderlar massivi (Tahrirlash rejimi uchun)
     let selectedArray = selectedFoldersInput.value ? selectedFoldersInput.value.split(',') : [];
 
