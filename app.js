@@ -2814,6 +2814,8 @@ function attachResultsToTree(tree, results){
 
 function renderSearchTree(tree){
     let html = "";
+  const renderedTPs = new Set();
+  
     function renderNode(node, level, treePrefix = "", isLast = true){
         const hasChildren = node.children.some(child =>
             child.items.length || child.children.length
