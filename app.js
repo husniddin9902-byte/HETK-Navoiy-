@@ -2103,10 +2103,14 @@ albumMessageIds.length
             isPrivate: inputBalanceToggle.checked,
           
             // Many-to-Many: fiderlarni obyekt ichida saqlash (qidirish oson bo'lishi uchun)
-            folders: folderIdsArray.reduce((acc, id) => ({ ...acc, [id]: true }), {}),
-          
-            // Eski kodlar buzilmasligi uchun birinchi fiderni standart folderId ga ham yozib qo'yamiz
-            folderId: folderIdsArray[0], 
+           folders: folderIdsArray.reduce((acc, id) => ({ ...acc, [id]: true }), {}),
+
+primaryFolderId:
+document.querySelector('input[name="primary-folder"]:checked')?.value
+|| folderIdsArray[0],
+
+// Eski kodlar buzilmasligi uchun birinchi fiderni standart folderId ga ham yozib qo'yamiz
+folderId: folderIdsArray[0],
             
             // Xususiy fieldlar agar o'chiq bo'lsa bo'sh ketadi
             ownerFirm: inputBalanceToggle.checked ? inputOwnerFirm.value : "",
