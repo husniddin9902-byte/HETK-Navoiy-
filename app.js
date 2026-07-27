@@ -2029,7 +2029,7 @@ const mainCaption =
 `⚡️ HETK Monitoring
 📍 ${inputElementName.value}
 ${inputBalanceToggle.checked ? '🔴 XUSUSIY' : '🔵 ETK'}
-📂 ${folderPath}
+📂 ${folderPath}${dualText}
 📍 Manzil:
 ${inputElementAddress.value || "-"}
 🚗 Navigatsiya:
