@@ -1888,7 +1888,7 @@ ${additionalFolderPaths}`
 const caption =
 `⚡ HETK Monitoring
 
-📍 ${inputElementName.value}    ⚡ Quvvati: ${inputPowerSelect.value === "other"
+📍 ${inputElementName.value}     ⚡ Quvvati: ${inputPowerSelect.value === "other"
 ? inputCustomPower.value
 : inputPowerSelect.value} kVA
 
