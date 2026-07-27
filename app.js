@@ -1857,18 +1857,44 @@ Date.now()
 const updatedDate =
 formatDate(Date.now());
 const updatedBy = "Admin";
-
+      
       const tpTag =
 inputElementName.value.replace(/\s+/g,'');
 
+const primaryFolderId =
+document.querySelector('input[name="primary-folder"]:checked')?.value
+|| folderIdsArray[0];
+
+const primaryFolderPath =
+getFolderPath(primaryFolderId);
+
+const additionalFolderPaths =
+folderIdsArray
+.filter(id => id !== primaryFolderId)
+.map(id => `📂 ${getFolderPath(id)}`)
+.join('\n\n');
+
+const folderSection =
+additionalFolderPaths
+? `📂 Asosiy ta'minot
+
+${primaryFolderPath}
+
+🔀 Qo'shimcha ta'minotlar
+
+${additionalFolderPaths}`
+: `📂 ${primaryFolderPath}`;
+      
 const caption =
 `⚡ HETK Monitoring
 
-📍 ${inputElementName.value}
+📍 ${inputElementName.value}    ⚡ Quvvati: ${inputPowerSelect.value === "other"
+? inputCustomPower.value
+: inputPowerSelect.value} kVA
 
 ${inputBalanceToggle.checked ? '🔴 XUSUSIY' : '🔵 ETK'}
 
-📂 ${folderPath}
+${folderSection}
 
 📍 Manzil:
 ${inputElementAddress.value || "-"}
@@ -1892,11 +1918,6 @@ ${updatedBy}
 👤 Javobgar shaxs:
 ${inputResponsiblePerson.value || "-"}
 
-⚡ Quvvati:
-${inputPowerSelect.value === "other"
-? inputCustomPower.value
-: inputPowerSelect.value} kVA
-
 📱 Javobgar telefon:
 ${inputResponsiblePhone.value || "-"}
 
@@ -1918,7 +1939,7 @@ ${inputMeterNumber.value || "-"}
 🔎 Qidiruv teglari
 
 #${tpTag}
-#${inputBalanceToggle.checked ? 'XUSUSIY' : 'ETK'} `;
+#${inputBalanceToggle.checked ? 'XUSUSIY' : 'ETK'}`;
       
 let albumMessageIds = [];
 let mainTelegramMessageId = null;      
