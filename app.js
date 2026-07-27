@@ -2027,7 +2027,7 @@ let tpPageLink = "";
 
 const mainCaption =
 `⚡️ HETK Monitoring
-📍 ${inputElementName.value}
+📍 ${inputElementName.value}   ⚡ Quvvati: ${inputPowerSelect.value === "other"
 ${inputBalanceToggle.checked ? '🔴 XUSUSIY' : '🔵 ETK'}
 📂 ${folderPath}${dualText}
 📍 Manzil:
