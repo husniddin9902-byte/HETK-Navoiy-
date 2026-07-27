@@ -1861,10 +1861,6 @@ const updatedBy = "Admin";
       const tpTag =
 inputElementName.value.replace(/\s+/g,'');
 
-const primaryFolderId =
-document.querySelector('input[name="primary-folder"]:checked')?.value
-|| folderIdsArray[0];
-
 const primaryFolderPath =
 getFolderPath(primaryFolderId);
 
