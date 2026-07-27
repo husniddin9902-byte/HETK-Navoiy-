@@ -2448,17 +2448,45 @@ confirm(
 "⚠️ DIQQAT!\n\nMa'lumotlar 30 kun davomida arxivda saqlanadi.\n\nTiklash uchun administratorga murojaat qiling!.\n\nElement o'chirilsinmi?"
 )
 ) {
-      
-  const deletedCaption =
-`   ❌ TP O'CHIRILDI
 
-📍 TP:
-${originalElementData.name || "-"}
+  const folderIdsArray =
+originalElementData.folders
+? Object.keys(originalElementData.folders)
+: [originalElementData.folderId];
+
+const primaryFolderId =
+originalElementData.primaryFolderId ||
+originalElementData.folderId ||
+folderIdsArray[0];
+
+const primaryFolderPath =
+getFolderPath(primaryFolderId);
+
+const additionalFolderPaths =
+folderIdsArray
+.filter(id => id !== primaryFolderId)
+.map(id => `📂 ${getFolderPath(id)}`)
+.join("\n\n");
+
+const folderSection =
+additionalFolderPaths
+? `📂 Asosiy ta'minot
+
+${primaryFolderPath}
+
+🔀 Qo'shimcha ta'minotlar
+
+${additionalFolderPaths}`
+: `📂 ${primaryFolderPath}`;
+         
+ const deletedCaption =
+`❌ TP O'CHIRILDI
+
+📍 ${originalElementData.name || "-"}    ⚡ Quvvati: ${originalElementData.power || "-"} kVA
 
 ${originalElementData.isPrivate ? "🔴 XUSUSIY" : "🔵 ETK"}
 
-📂 Papka:
-${getFolderPath(originalElementData.folderId)}
+${folderSection}
 
 📍 Manzil:
 ${originalElementData.address || "-"}
@@ -2476,6 +2504,7 @@ ${originalElementData.responsiblePerson || "-"}
 ${originalElementData.responsiblePhone || "-"}
 
 ${originalElementData.isPrivate ? `
+
 🏢 Korxona:
 ${originalElementData.ownerFirm || "-"}
 
@@ -2505,11 +2534,8 @@ ${originalElementData.updatedAt
 🗑 O'chirilgan:
 ${new Date().toLocaleString("uz-UZ")}
 
-
-
 🆔 Element ID:
-${editingElementId}
-`;
+${editingElementId}`;
     
 const deletedMedia = [];
 for(const img of originalElementData.images || []){
