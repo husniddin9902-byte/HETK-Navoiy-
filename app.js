@@ -1835,8 +1835,13 @@ showToast(
 return;
 }
       
+const primaryFolderId =
+document.querySelector('input[name="primary-folder"]:checked')?.value
+|| folderIdsArray[0];
+
 const folderPath =
-getFolderPath(folderIdsArray[0]);
+getFolderPath(primaryFolderId);
+      
 //const folderPath = selectedFolders;
 
       const createdDate =
