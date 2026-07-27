@@ -1841,6 +1841,11 @@ document.querySelector('input[name="primary-folder"]:checked')?.value
 
 const folderPath =
 getFolderPath(primaryFolderId);
+
+const dualText =
+folderIdsArray.length > 1
+? "\n🔀 Qo'shimcha ta'minot mavjud"
+: "";
       
 //const folderPath = selectedFolders;
 
