@@ -3420,17 +3420,10 @@ const allowedFolderSet = new Set(allowedFolderIds);
             // Element tegishli bo'lgan barcha fiderlar massivi
             let tpFoldersArr = point.folders ? Object.keys(point.folders) : (point.folderId ? [point.folderId] : []);
 
-            // FILTRLASH
-let isVisible = false;
-if (activeFolderId === "root") {
-    isVisible = true;
-} else {
-    isVisible = tpFoldersArr.some(folderId => {
-        return allowedFolderSet.has(folderId);
-    });
+         
+if (!isPointInSelectedFolder(point)) {
+    return;
 }
-
-            if (!isVisible) return;
 
             // 📍 DUBLIKAT NUQTALARNI OLDINI OLISH VA SCADA MILTILLASH MANTIQI
             const coordKey = `${lat.toFixed(6)}_${lng.toFixed(6)}`;
