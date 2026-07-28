@@ -3187,7 +3187,7 @@ function refreshSearchResults(){
  if (text === "" && !hasFilter) {
     resultsBox.style.display = "none";
     resultsBox.innerHTML = "";
-    foldersBox.style.display = "block";
+   showFoldersTab();
     return;
 }
   
