@@ -3394,6 +3394,16 @@ function loadFilteredPoints() {
     activeMapMarkers = [];
 
     database.ref('TPs').once('value', (snapshot) => {
+
+const useSearchResults =
+    searchState.text.trim() !== "" ||
+    filterState.balance !== "none" ||
+    filterState.created !== "none" ||
+    filterState.updated !== "none" ||
+    filterState.comment !== "none" ||
+    filterState.dual !== "none" ||
+    filterState.power !== "none";
+      
         const allPoints = snapshot.val() || {};
         tpListContainer.innerHTML = ""; 
 
