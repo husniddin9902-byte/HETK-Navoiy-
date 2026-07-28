@@ -3736,6 +3736,10 @@ function showMapTab() {
             panelInternalMap.invalidateSize();
         }, 50);
     }
+      // Yangi xarita tizimi
+    if (typeof loadFilteredPoints === "function") {
+        loadFilteredPoints();
+    }
 }
 
 // 1. "Guruhlar" bo'limi bosilganda (Xarita butunlay yo'qoladi, ro'yxat pastgacha ochiladi)
