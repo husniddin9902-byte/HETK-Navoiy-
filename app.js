@@ -3405,6 +3405,11 @@ const useSearchResults =
     filterState.power !== "none";
        
         const allPoints = snapshot.val() || {};
+
+const sourcePoints = useSearchResults
+    ? searchState.results
+    : Object.values(allPoints);
+      
         tpListContainer.innerHTML = ""; 
 
         let bounds = [];
