@@ -3403,7 +3403,7 @@ const useSearchResults =
     filterState.comment !== "none" ||
     filterState.dual !== "none" ||
     filterState.power !== "none";
-      
+       
         const allPoints = snapshot.val() || {};
         tpListContainer.innerHTML = ""; 
 
