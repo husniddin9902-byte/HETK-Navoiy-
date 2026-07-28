@@ -3731,6 +3731,12 @@ function showMapTab() {
 
     if (panelSecFolders) panelSecFolders.style.display = "none";
     if (panelSecItems) panelSecItems.style.display = "block";
+
+const resultsBox = document.getElementById("search-results");
+if (resultsBox) {
+    resultsBox.style.display = "none";
+}
+  
     if (panelInternalMap) {
         setTimeout(() => {
             panelInternalMap.invalidateSize();
