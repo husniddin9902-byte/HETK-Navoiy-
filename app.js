@@ -3184,6 +3184,9 @@ function refreshSearchResults(){
     filterState.dual !== "none" ||
     filterState.power !== "none";
 
+  const isSearching =
+    text !== "" || hasFilter;
+
  if (text === "" && !hasFilter) {
     resultsBox.style.display = "none";
     resultsBox.innerHTML = "";
