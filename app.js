@@ -3232,17 +3232,11 @@ function refreshSearchResults(){
         const allowedFolderIds = getAllChildFolderIds(searchState.folderId);
         allowedFolderIds.push(searchState.folderId);
         Object.values(allTPs).forEach(tp=>{
-           const searchFolderId =
-    tp.primaryFolderId ||
-    tp.folderId ||
-    Object.keys(tp.folders || {})[0];
-
-const inFolder =
-    searchFolderId &&
-    allowedFolderIds.includes(searchFolderId);
-            if(!inFolder) return;
+          
+          if (!isPointInSelectedFolder(tp)) {
+    return;
+}
          
-       
           const q = text.toLowerCase();
 let matched = false;
 switch (currentSearchType) {
