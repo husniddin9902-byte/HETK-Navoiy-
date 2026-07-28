@@ -3426,7 +3426,7 @@ alert(JSON.stringify(allowedFolderIds));
 const allowedFolderSet = new Set(allowedFolderIds);
       
         sourcePoints.forEach(point => {
-            const point = allPoints[key];
+           
             const lat = parseFloat(point.lat);
             const lng = parseFloat(point.lng);
 
