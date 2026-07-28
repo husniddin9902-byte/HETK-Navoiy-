@@ -3378,6 +3378,11 @@ foldersBox.style.display="none";
     </div>
     ${renderSearchTree(folderTree)}
 `;
+
+      if (currentPanelTab === "map") {
+    loadFilteredPoints();
+}
+      
     });
 }
 
