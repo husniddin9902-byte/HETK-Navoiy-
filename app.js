@@ -3425,7 +3425,7 @@ alert(JSON.stringify(allowedFolderIds));
 // Tez tekshirish uchun Set
 const allowedFolderSet = new Set(allowedFolderIds);
       
-        Object.keys(allPoints).forEach(key => {
+        sourcePoints.forEach(point => {
             const point = allPoints[key];
             const lat = parseFloat(point.lat);
             const lng = parseFloat(point.lng);
