@@ -3741,11 +3741,7 @@ function showMapTab() {
 // 1. "Guruhlar" bo'limi bosilganda (Xarita butunlay yo'qoladi, ro'yxat pastgacha ochiladi)
 if (panelTabFolders) {
     panelTabFolders.addEventListener('click', () => {
-        panelTabFolders.classList.add('active');
-        if (panelTabItems) panelTabItems.classList.remove('active');
-        
-        if (panelSecFolders) panelSecFolders.style.display = 'block';
-        if (panelSecItems) panelSecItems.style.display = 'none';
+        showFoldersTab();
     });
 }
 
