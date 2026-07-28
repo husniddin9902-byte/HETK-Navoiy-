@@ -3169,6 +3169,26 @@ function updateSearchHighlight(){
     });
 }
 
+function isPointInSelectedFolder(tp) {
+    if (activeFolderId === "root") {
+        return true;
+    }
+    const allowedFolderIds = getAllChildFolderIds(activeFolderId);
+    allowedFolderIds.push(activeFolderId);
+    const tpFolders = tp.folders
+        ? Object.keys(tp.folders)
+        : (
+            tp.primaryFolderId
+                ? [tp.primaryFolderId]
+                : (
+                    tp.folderId
+                        ? [tp.folderId]
+                        : []
+                )
+        );
+    return tpFolders.some(id => allowedFolderIds.includes(id));
+}
+
 // Natijalarni yangilash
 function refreshSearchResults(){
     searchState.folderId = activeFolderId;
