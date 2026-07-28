@@ -3710,6 +3710,34 @@ const panelTabItems = document.getElementById('tab-items');
 const panelSecFolders = document.getElementById('folders-section');
 const panelSecItems = document.getElementById('items-section');
 
+// ======================================================
+// PANEL TAB BOSHQARUVI (MARKAZIY)
+// ======================================================
+
+let currentPanelTab = "folders";
+function showFoldersTab() {
+    currentPanelTab = "folders";
+    if (panelTabFolders) panelTabFolders.classList.add("active");
+    if (panelTabItems) panelTabItems.classList.remove("active");
+
+    if (panelSecFolders) panelSecFolders.style.display = "block";
+    if (panelSecItems) panelSecItems.style.display = "none";
+}
+
+function showMapTab() {
+    currentPanelTab = "map";
+    if (panelTabItems) panelTabItems.classList.add("active");
+    if (panelTabFolders) panelTabFolders.classList.remove("active");
+
+    if (panelSecFolders) panelSecFolders.style.display = "none";
+    if (panelSecItems) panelSecItems.style.display = "block";
+    if (panelInternalMap) {
+        setTimeout(() => {
+            panelInternalMap.invalidateSize();
+        }, 50);
+    }
+}
+
 // 1. "Guruhlar" bo'limi bosilganda (Xarita butunlay yo'qoladi, ro'yxat pastgacha ochiladi)
 if (panelTabFolders) {
     panelTabFolders.addEventListener('click', () => {
