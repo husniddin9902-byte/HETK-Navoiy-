@@ -3727,11 +3727,26 @@ const panelSecItems = document.getElementById('items-section');
 let currentPanelTab = "folders";
 function showFoldersTab() {
     currentPanelTab = "folders";
+
+  const text = searchState.text.trim();
+
+const hasFilter =
+    filterState.balance !== "none" ||
+    filterState.created !== "none" ||
+    filterState.updated !== "none" ||
+    filterState.comment !== "none" ||
+    filterState.dual !== "none" ||
+    filterState.power !== "none";
+  
     if (panelTabFolders) panelTabFolders.classList.add("active");
     if (panelTabItems) panelTabItems.classList.remove("active");
 
     if (panelSecFolders) panelSecFolders.style.display = "block";
-    if (panelSecItems) panelSecItems.style.display = "none";
+if (panelSecItems) panelSecItems.style.display = "none";
+
+if (text !== "" || hasFilter) {
+    refreshSearchResults();
+}
 }
 
 function showMapTab() {
