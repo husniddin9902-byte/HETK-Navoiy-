@@ -3751,11 +3751,8 @@ var panelInternalMarkers = [];
 
 if (panelTabItems) {
     panelTabItems.addEventListener('click', () => {
-        if (panelTabItems) panelTabItems.classList.add('active');
-        if (panelTabFolders) panelTabFolders.classList.remove('active');
         
-        if (panelSecFolders) panelSecFolders.style.display = 'none';
-        if (panelSecItems) panelSecItems.style.display = 'block';
+      showMapTab();
 
         // Ichki xaritani bir marta yaratib olamiz
         if (!panelInternalMap) {
