@@ -3456,7 +3456,10 @@ foldersBox.style.display="none";
     ${renderSearchTree(folderTree)}
 `;
 
-      if (currentPanelTab === "map") {
+    alert("currentPanelTab = " + currentPanelTab);
+
+if (currentPanelTab === "map") {
+    alert("loadFilteredPoints chaqirildi");
     loadFilteredPoints();
 }
       
