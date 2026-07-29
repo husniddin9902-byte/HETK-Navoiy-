@@ -3515,7 +3515,7 @@ const allowedFolderSet = new Set(allowedFolderIds);
             let tpFoldersArr = point.folders ? Object.keys(point.folders) : (point.folderId ? [point.folderId] : []);
 
          
-if (!isPointInSelectedFolder(point)) {
+if (!useSearchResults && !isPointInSelectedFolder(point)) {
     return;
 }
 
