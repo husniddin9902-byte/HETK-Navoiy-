@@ -3441,6 +3441,9 @@ if (filterState.dual !== "none") {
 window.__lastFilteredPoints = found;
       
         searchState.results = found;
+
+alert("Qidiruv natijasi: " + searchState.results.length);
+      
         const folderTree = buildFolderTree();
         attachResultsToTree(folderTree, searchState.results);
         resultsBox.style.display="block";
@@ -3488,6 +3491,12 @@ const useSearchResults =
 const sourcePoints = useSearchResults
     ? searchState.results
     : Object.values(allPoints);
+
+      alert(
+    "Xarita\n" +
+    "useSearchResults = " + useSearchResults +
+    "\nsourcePoints = " + sourcePoints.length
+);
       
         tpListContainer.innerHTML = ""; 
 
