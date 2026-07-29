@@ -3777,6 +3777,8 @@ const filteredKeys = activeFolderId === 'root'
             
             let bounds = [];
 
+alert("Xaritaga chiqadigan elementlar: " + filteredKeys.length);
+          
             filteredKeys.forEach(key => {
                 const point = allPoints[key];
                 const lat = parseFloat(point.lat);
