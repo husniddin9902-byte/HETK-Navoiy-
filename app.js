@@ -3442,7 +3442,6 @@ window.__lastFilteredPoints = found;
       
         searchState.results = found;
 
-alert("Qidiruv natijasi: " + searchState.results.length);
       
         const folderTree = buildFolderTree();
         attachResultsToTree(folderTree, searchState.results);
@@ -3456,10 +3455,10 @@ foldersBox.style.display="none";
     ${renderSearchTree(folderTree)}
 `;
 
-    alert("currentPanelTab = " + currentPanelTab);
+   
 
 if (currentPanelTab === "map") {
-    alert("loadFilteredPoints chaqirildi");
+    
     loadFilteredPoints();
 }
       
@@ -3494,12 +3493,6 @@ const useSearchResults =
 const sourcePoints = useSearchResults
     ? searchState.results
     : Object.values(allPoints);
-
-      alert(
-    "Xarita\n" +
-    "useSearchResults = " + useSearchResults +
-    "\nsourcePoints = " + sourcePoints.length
-);
       
         tpListContainer.innerHTML = ""; 
 
@@ -3510,7 +3503,6 @@ const sourcePoints = useSearchResults
 
         // Tanlangan guruh va uning pastki fiderlari IDlari ro'yxati
         const allowedFolderIds = activeFolderId === 'root' ? [] : getAllChildFolderIds(activeFolderId);
-alert(JSON.stringify(allowedFolderIds));
 
       
 // Tez tekshirish uchun Set
@@ -3918,11 +3910,6 @@ if (panelTabItems) {
 // MANA SHUNI QO'YING
 
           let filteredKeys;
-
-          alert(
-    "Qidiruv matni = [" + searchState.text + "]\n" +
-    "Natijalar soni = " + searchState.results.length
-);
 
 const useSearchResults =
     searchState.text.trim() !== "" ||
