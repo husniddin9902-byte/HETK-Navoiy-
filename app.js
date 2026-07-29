@@ -3194,7 +3194,7 @@ function isPointInSelectedFolder(tp) {
 function filterVisiblePoints(allTPs) {
     const text = searchState.text.trim().toLowerCase();
   
-    const found = filterVisiblePoints(allTPs);
+   const found = [];
   
     Object.values(allTPs).forEach(tp => {
 
