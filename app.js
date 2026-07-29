@@ -3190,6 +3190,20 @@ function isPointInSelectedFolder(tp) {
 }
 
 // Natijalarni yangilash
+
+function filterVisiblePoints(allTPs) {
+    const text = searchState.text.trim().toLowerCase();
+    const found = [];
+    Object.values(allTPs).forEach(tp => {
+        if (!isPointInSelectedFolder(tp)) {
+            return;
+        }
+        found.push(tp);
+    });
+    return found;
+}
+
+
 function refreshSearchResults(){
     searchState.folderId = activeFolderId;
     const resultsBox = document.getElementById("search-results");
