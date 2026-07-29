@@ -3193,7 +3193,9 @@ function isPointInSelectedFolder(tp) {
 
 function filterVisiblePoints(allTPs) {
     const text = searchState.text.trim().toLowerCase();
-    const found = [];
+  
+    const found = filterVisiblePoints(allTPs);
+  
     Object.values(allTPs).forEach(tp => {
         if (!isPointInSelectedFolder(tp)) {
             return;
@@ -3243,7 +3245,7 @@ function refreshSearchResults(){
         const allTPs = snapshot.val() || {};
         const found = [];
       
-        const allowedFolderIds = getAllChildFolderIds(searchState.folderId);
+       /* const allowedFolderIds = getAllChildFolderIds(searchState.folderId);
         allowedFolderIds.push(searchState.folderId);
         Object.values(allTPs).forEach(tp=>{
           
@@ -3380,6 +3382,7 @@ if (filterState.dual !== "none") {
     found.push(tp);
         });
 
+      */
 window.__lastFilteredPoints = found;
       
         searchState.results = found;
