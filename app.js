@@ -3712,7 +3712,7 @@ document.addEventListener('DOMContentLoaded', () => {
 var panelMap = null;
 var panelMarkersArray = [];
 
-const tabItemsBtn = document.getElementById('tab-items');
+/* const tabItemsBtn = document.getElementById('tab-items');
 
 if (tabItemsBtn) {
     // Sizning kodingizdagi eski click mantiqini butunlay yangilaymiz va boyitamiz
@@ -3818,7 +3818,7 @@ const folderColor = getBranchColor(firstFolderId, activeFolderId);
             }, 300);
         });
     });
-}
+} */
 
 // =========================================================================
 // UNIVERSAL ICHKI XARITA: FAQAT "XARITA" TABI BOSILGANDA ISHLAYDI
