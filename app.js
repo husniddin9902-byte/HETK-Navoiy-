@@ -3379,6 +3379,8 @@ if (filterState.dual !== "none") {
           
     found.push(tp);
         });
+
+window.__lastFilteredPoints = found;
       
         searchState.results = found;
         const folderTree = buildFolderTree();
