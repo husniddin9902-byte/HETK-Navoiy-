@@ -3300,7 +3300,7 @@ function refreshSearchResults(){
         const allTPs = snapshot.val() || {};
         const found = [];
       
-       /* const allowedFolderIds = getAllChildFolderIds(searchState.folderId);
+        const allowedFolderIds = getAllChildFolderIds(searchState.folderId);
         allowedFolderIds.push(searchState.folderId);
         Object.values(allTPs).forEach(tp=>{
           
@@ -3437,7 +3437,7 @@ if (filterState.dual !== "none") {
     found.push(tp);
         });
 
-      */
+    
 window.__lastFilteredPoints = found;
       
         searchState.results = found;
