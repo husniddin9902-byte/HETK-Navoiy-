@@ -3919,6 +3919,11 @@ if (panelTabItems) {
 
           let filteredKeys;
 
+          alert(
+    "Qidiruv matni = [" + searchState.text + "]\n" +
+    "Natijalar soni = " + searchState.results.length
+);
+
 const useSearchResults =
     searchState.text.trim() !== "" ||
     filterState.balance !== "none" ||
