@@ -3197,11 +3197,66 @@ function filterVisiblePoints(allTPs) {
     const found = filterVisiblePoints(allTPs);
   
     Object.values(allTPs).forEach(tp => {
-        if (!isPointInSelectedFolder(tp)) {
-            return;
-        }
-        found.push(tp);
-    });
+
+    if (!isPointInSelectedFolder(tp)) {
+        return;
+    }
+
+    const q = text;
+    let matched = false;
+
+    switch (currentSearchType) {
+        case "name":
+            matched = (tp.name || "").toLowerCase().includes(q);
+            break;
+
+        case "address":
+            matched = (tp.address || "").toLowerCase().includes(q);
+            break;
+
+        case "responsible":
+            matched = (tp.responsiblePerson || "").toLowerCase().includes(q);
+            break;
+
+        case "note":
+            matched = (tp.note || "").toLowerCase().includes(q);
+            break;
+
+        case "company":
+            matched = (tp.ownerFirm || "").toLowerCase().includes(q);
+            break;
+
+        case "phone":
+            matched = (tp.ownerPhone || "").toLowerCase().includes(q);
+            break;
+
+        case "owner":
+            matched = (tp.ownerName || "").toLowerCase().includes(q);
+            break;
+
+        case "meter":
+            matched = (tp.meterNumber || "").toLowerCase().includes(q);
+            break;
+
+        case "all":
+            matched =
+                (tp.name || "").toLowerCase().includes(q) ||
+                (tp.address || "").toLowerCase().includes(q) ||
+                (tp.responsiblePerson || "").toLowerCase().includes(q) ||
+                (tp.note || "").toLowerCase().includes(q) ||
+                (tp.ownerFirm || "").toLowerCase().includes(q) ||
+                (tp.ownerPhone || "").toLowerCase().includes(q) ||
+                (tp.ownerName || "").toLowerCase().includes(q) ||
+                (tp.meterNumber || "").toLowerCase().includes(q);
+            break;
+    }
+
+    if (text !== "" && !matched) {
+        return;
+    }
+
+    found.push(tp);
+});
     return found;
 }
 
