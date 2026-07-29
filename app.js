@@ -3915,9 +3915,27 @@ if (panelTabItems) {
 
 // MANA SHUNI QO'YING
 
-          
-            const keys = Object.keys(allPoints);
-            const filteredKeys = activeFolderId === 'root' ? keys : keys.filter(key => allPoints[key].folderId === activeFolderId);
+          let filteredKeys;
+
+const useSearchResults =
+    searchState.text.trim() !== "" ||
+    filterState.balance !== "none" ||
+    filterState.created !== "none" ||
+    filterState.updated !== "none" ||
+    filterState.comment !== "none" ||
+    filterState.dual !== "none" ||
+    filterState.power !== "none";
+
+if (useSearchResults) {
+    filteredKeys = searchState.results
+        .map(tp => Object.keys(allPoints).find(key => allPoints[key] === tp))
+        .filter(Boolean);
+} else {
+    const keys = Object.keys(allPoints);
+    filteredKeys = activeFolderId === "root"
+        ? keys
+        : keys.filter(key => isPointInSelectedFolder(allPoints[key]));
+}
             
             let bounds = [];
 
