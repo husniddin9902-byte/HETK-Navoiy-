@@ -3921,15 +3921,15 @@ const useSearchResults =
     filterState.power !== "none";
 
 if (useSearchResults) {
-    filteredKeys = Object.keys(allPoints).filter(key => {
-        const point = allPoints[key];
 
-        return searchState.results.some(tp =>
-            tp.lat == point.lat &&
-            tp.lng == point.lng &&
-            tp.address == point.address
-        );
-    });
+    const searchIds = new Set(
+        searchState.results.map(tp => tp.tpId)
+    );
+
+    filteredKeys = Object.keys(allPoints).filter(key =>
+        searchIds.has(allPoints[key].tpId)
+    );
+
 } else {
     const keys = Object.keys(allPoints);
     filteredKeys = activeFolderId === "root"
