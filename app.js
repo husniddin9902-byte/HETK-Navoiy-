@@ -3255,7 +3255,8 @@ function filterVisiblePoints(allTPs) {
         return;
     }
 
-  found.push(tp);
+  found.push(tp); 
+      });
     return found;
 }
 
