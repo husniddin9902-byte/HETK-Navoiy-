@@ -3304,7 +3304,7 @@ function refreshSearchResults(){
       
         const allowedFolderIds = getAllChildFolderIds(searchState.folderId);
         allowedFolderIds.push(searchState.folderId);
-       Object.entries(allTPs).forEach(([id, tp]) => {
+       Object.values(allTPs).forEach(tp => {
           
           if (!isPointInSelectedFolder(tp)) {
     return;
