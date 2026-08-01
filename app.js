@@ -3124,9 +3124,11 @@ align-items:center;
 
 <div class="search-item-actions"
      style="
-display:none;
+display:flex;
 gap:10px;
 font-size:15px;
+opacity:0;
+transition:.2s;
 ">
 
 <i class="far fa-file-alt"
