@@ -3104,7 +3104,13 @@ html += `
         margin:2px 0;
         cursor:pointer;
 ">
-   <div>
+  <div style="
+display:flex;
+justify-content:space-between;
+align-items:center;
+">
+
+<div>
     <i class="fas fa-bolt"
        style="
            color:${tp.isPrivate ? '#ff4444' : '#1e88e5'};
@@ -3112,7 +3118,31 @@ html += `
            font-size:15px;
        ">
     </i>
+
     ${tp.name}
+</div>
+
+<div class="search-item-actions"
+     style="
+display:none;
+gap:10px;
+font-size:15px;
+">
+
+<i class="far fa-file-alt"
+   title="Element kartasi"
+   onclick="event.stopPropagation();openElementCard('${tp.id}')"
+   style="cursor:pointer;">
+</i>
+
+<i class="fas fa-edit"
+   title="Tahrirlash"
+   onclick="event.stopPropagation();openEditElement('${tp.id}')"
+   style="cursor:pointer;">
+</i>
+
+</div>
+
 </div>
 
     ${
