@@ -3177,9 +3177,16 @@ font-size:15px;
         });
     return html;
 }
+let selectedSearchItem = null;
 window.openSearchResult = function(id){
-    console.log("Tanlangan element:", id);
-
+    document.querySelectorAll(".search-item").forEach(item=>{
+        item.classList.remove("selected");
+    });
+    const item = document.querySelector(`.search-item[data-id="${id}"]`);
+    if(item){
+        item.classList.add("selected");
+        selectedSearchItem = id;
+    }
 };
 
 function updateSearchHighlight(){
