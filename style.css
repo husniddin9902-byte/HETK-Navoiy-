@@ -983,3 +983,21 @@ min-width:max-content;
 .filter-option.active .option-check{
     opacity:1;
 }
+
+.search-item{
+    border-radius:8px;
+    transition:0.2s;
+}
+
+.search-item:hover{
+    background:#173854;
+}
+
+.search-item.selected{
+    background:#1b4f72;
+    border-left:4px solid #4FC3F7;
+}
+
+.search-item.selected .search-item-actions{
+    display:flex !important;
+}
