@@ -3924,11 +3924,13 @@ const useSearchResults =
 
 if (useSearchResults) {
 
-    filteredKeys = Object.keys(allPoints).filter(key =>
-        searchState.resultIds.has(
-            allPoints[key].tpId || key
-        )
-    );
+    filteredKeys = Object.keys(allPoints).filter(key => {
+        const point = allPoints[key];
+
+        return searchState.results.some(tp =>
+            (tp.tpId || "") === (point.tpId || "")
+        );
+    });
 
 } else {
     const keys = Object.keys(allPoints);
