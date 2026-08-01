@@ -3890,7 +3890,8 @@ if (panelTabItems) {
     panelTabItems.addEventListener('click', () => {
         
       showMapTab();
-
+   return;
+      
         // Ichki xaritani bir marta yaratib olamiz
         if (!panelInternalMap) {
             panelInternalMap = L.map('panel-map', { zoomControl: true }).setView([40.10, 65.81], 14);
