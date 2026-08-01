@@ -3098,7 +3098,7 @@ html += `
 <div class="search-item"
      data-id="${tp.id||''}"
      data-folder-id="${node.id}"
-     onclick="openSearchResult('${tp.id}')"
+    onclick="openSearchResult(this)"
      style="
         padding-left:${(level+1)*22}px;
         margin:2px 0;
