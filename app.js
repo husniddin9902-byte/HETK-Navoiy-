@@ -4031,3 +4031,93 @@ if (useSearchResults) {
         });
     });
 }
+
+
+// modul 📄
+
+let elementModal = null;
+function createElementModal(){
+    if(document.getElementById("element-modal-overlay")){
+        return;
+    }
+    document.body.insertAdjacentHTML("beforeend",`
+
+<div id="element-modal-overlay"
+style="
+display:none;
+position:fixed;
+inset:0;
+background:rgba(0,0,0,.45);
+z-index:999999;
+">
+
+<div id="element-modal"
+style="
+position:absolute;
+left:50%;
+top:50%;
+transform:translate(-50%,-50%);
+width:850px;
+max-width:95%;
+height:620px;
+background:#0f2235;
+border-radius:14px;
+overflow:hidden;
+">
+
+<div style="
+height:50px;
+display:flex;
+justify-content:flex-end;
+align-items:center;
+padding:0 18px;
+background:#173854;
+">
+
+<span id="close-element-modal"
+style="
+cursor:pointer;
+font-size:24px;
+color:white;
+">✕</span>
+</div>
+
+<div
+style="
+height:calc(100% - 50px);
+display:flex;
+align-items:center;
+justify-content:center;
+color:white;
+font-size:24px;
+">
+
+Element kartasi
+</div>
+</div>
+</div>
+`);
+    document
+        .getElementById("close-element-modal")
+        .onclick = closeElementModal;
+    document
+        .getElementById("element-modal-overlay")
+        .onclick=function(e){
+        if(e.target.id==="element-modal-overlay"){
+            closeElementModal();
+        }
+    };
+}
+
+function showElementModal(){
+    createElementModal();
+    document
+        .getElementById("element-modal-overlay")
+        .style.display="block";
+}
+function closeElementModal(){
+    const modal=document.getElementById("element-modal-overlay");
+    if(modal){
+        modal.style.display="none";
+    }
+}
