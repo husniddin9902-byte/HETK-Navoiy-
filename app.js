@@ -4082,17 +4082,143 @@ color:white;
 ">✕</span>
 </div>
 
-<div
+<div id="element-modal-content"
 style="
 height:calc(100% - 50px);
+display:grid;
+grid-template-columns:260px 1fr;
+background:#0f2235;
+color:white;
+">
+
+<!-- CHAP TOMON -->
+
+<div style="
+border-right:1px solid rgba(255,255,255,.08);
+padding:18px;
+display:flex;
+flex-direction:column;
+">
+
+<div id="element-preview"
+style="
+height:260px;
+border-radius:10px;
+background:#173854;
 display:flex;
 align-items:center;
 justify-content:center;
-color:white;
-font-size:24px;
+font-size:18px;
 ">
 
-Element kartasi
+📷
+<br>
+Rasm mavjud emas
+
+</div>
+
+<div
+style="
+margin-top:15px;
+text-align:center;
+">
+
+<button id="open-images-btn"
+style="
+width:100%;
+height:42px;
+border:none;
+border-radius:8px;
+background:#1e88e5;
+color:white;
+cursor:pointer;
+">
+
+🖼️ Rasmlarni ko'rish
+
+</button>
+
+</div>
+
+</div>
+
+<!-- O'NG TOMON -->
+
+<div style="
+padding:22px;
+overflow:auto;
+">
+
+<h2
+id="detail-name"
+style="margin:0 0 12px 0;">
+Element nomi
+</h2>
+
+<div id="detail-power"
+style="margin-bottom:12px;">
+⚡ Quvvat
+</div>
+
+<div id="detail-folder"
+style="margin-bottom:12px;">
+📂 Papka
+</div>
+
+<div id="detail-address"
+style="margin-bottom:12px;">
+📍 Manzil
+</div>
+
+<button id="navigate-btn"
+style="
+height:42px;
+padding:0 20px;
+border:none;
+border-radius:8px;
+background:#2e7d32;
+color:white;
+cursor:pointer;
+margin-bottom:20px;
+">
+
+🚗 Navigatsiya
+
+</button>
+
+<div id="detail-owner"
+style="margin-bottom:12px;">
+👤 Javobgar
+</div>
+
+<div id="detail-phone"
+style="margin-bottom:12px;">
+📞 Telefon
+</div>
+
+<div id="detail-feeders"
+style="margin-bottom:20px;">
+🔌 Fiderlar
+</div>
+
+<button id="edit-element-btn"
+style="
+width:100%;
+height:46px;
+border:none;
+border-radius:8px;
+background:#ff9800;
+color:white;
+font-size:16px;
+cursor:pointer;
+">
+
+✏️ Tahrirlash
+
+</button>
+
+</div>
+
 </div>
 </div>
 </div>
