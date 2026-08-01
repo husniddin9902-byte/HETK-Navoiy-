@@ -3439,9 +3439,11 @@ if (filterState.dual !== "none") {
 
     
 window.__lastFilteredPoints = found;
-      
-        searchState.results = found;
 
+searchState.results = found;
+searchState.resultIds = new Set(
+    found.map(tp => tp.tpId || tp.id)
+);
       
         const folderTree = buildFolderTree();
         attachResultsToTree(folderTree, searchState.results);
