@@ -3890,7 +3890,7 @@ if (panelTabItems) {
     panelTabItems.addEventListener('click', () => {
         
       showMapTab();
-   return;
+  
       
         // Ichki xaritani bir marta yaratib olamiz
         if (!panelInternalMap) {
