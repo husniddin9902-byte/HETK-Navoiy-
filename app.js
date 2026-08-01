@@ -3925,11 +3925,17 @@ const useSearchResults =
 
 if (useSearchResults) {
 
+    const resultAddresses = new Set(
+        searchState.results.map(tp =>
+            `${tp.lat}|${tp.lng}|${tp.address}`
+        )
+    );
+
     filteredKeys = Object.keys(allPoints).filter(key => {
         const point = allPoints[key];
 
-        return searchState.results.some(tp =>
-            (tp.tpId || "") === (point.tpId || "")
+        return resultAddresses.has(
+            `${point.lat}|${point.lng}|${point.address}`
         );
     });
 
