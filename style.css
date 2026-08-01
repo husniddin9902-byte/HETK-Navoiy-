@@ -1001,3 +1001,12 @@ min-width:max-content;
 .search-item.selected .search-item-actions{
     display:flex !important;
 }
+
+.search-item.selected .search-item-actions{
+    opacity:1 !important;
+}
+
+.search-item-actions i:hover{
+    color:#4FC3F7;
+    transform:scale(1.15);
+}
