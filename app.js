@@ -3104,7 +3104,12 @@ html += `
         margin:2px 0;
         cursor:pointer;
 ">
-    <div>⚡ ${tp.name}</div>
+    <div>
+    <span style="color:${tp.isPrivate ? '#ff4444' : '#ffd700'};">
+        ⚡
+    </span>
+    ${tp.name}
+</div>
 
     ${
         otherFoldersHtml
