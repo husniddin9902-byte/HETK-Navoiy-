@@ -3133,7 +3133,7 @@ transition:.2s;
 
 <i class="far fa-file-alt"
    title="Element kartasi"
-   onclick="event.stopPropagation();openElementCard('${tp.id}')"
+  onclick="event.stopPropagation();showElementModal();"
    style="cursor:pointer;">
 </i>
 
