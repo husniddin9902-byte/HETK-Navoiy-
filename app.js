@@ -3104,10 +3104,14 @@ html += `
         margin:2px 0;
         cursor:pointer;
 ">
-    <div>
-    <span style="color:${tp.isPrivate ? '#ff4444' : '#ffd700'};">
-        ⚡
-    </span>
+   <div>
+    <i class="fas fa-bolt"
+       style="
+           color:${tp.isPrivate ? '#ff4444' : '#1e88e5'};
+           margin-right:6px;
+           font-size:15px;
+       ">
+    </i>
     ${tp.name}
 </div>
 
