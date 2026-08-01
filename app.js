@@ -3924,12 +3924,10 @@ const useSearchResults =
 
 if (useSearchResults) {
 
-    const searchIds = new Set(
-        searchState.results.map(tp => tp.tpId)
-    );
-
     filteredKeys = Object.keys(allPoints).filter(key =>
-        searchIds.has(allPoints[key].tpId)
+        searchState.resultIds.has(
+            allPoints[key].tpId || key
+        )
     );
 
 } else {
