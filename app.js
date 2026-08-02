@@ -3190,11 +3190,7 @@ window.openSearchResult = function(item){
     });
     item.classList.add("selected");
     selectedSearchItem = item;
-    const id = item.dataset.id;
-    currentTP = searchState.results.find(tp =>
-        (tp.tpId || tp.id) === id
-    );
-    alert(JSON.stringify(currentTP));
+    alert(item.dataset.id);
 };
 
 function updateSearchHighlight(){
