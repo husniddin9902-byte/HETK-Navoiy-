@@ -3133,7 +3133,7 @@ transition:.2s;
 
 <i class="far fa-file-alt"
    title="Element kartasi"
- onclick="event.stopPropagation();showElementModal(tp);"
+ onclick="event.stopPropagation();showElementModal();"
    style="cursor:pointer;">
 </i>
 
@@ -4235,9 +4235,9 @@ cursor:pointer;
     };
 }
 
-function showElementModal(tp){
+function showElementModal(){
     createElementModal();
-    window.currentTP = tp;
+
     document
         .getElementById("element-modal-overlay")
         .style.display="block";
