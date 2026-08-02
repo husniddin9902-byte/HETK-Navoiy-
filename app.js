@@ -3180,6 +3180,7 @@ transition:.2s;
     return html;
 }
 let selectedSearchItem = null;
+let currentSelectedId = null;
 window.openSearchResult = function(item){
     document.querySelectorAll(".search-item").forEach(el=>{
         el.classList.remove("selected");
