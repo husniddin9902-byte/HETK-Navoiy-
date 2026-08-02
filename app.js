@@ -4239,7 +4239,8 @@ cursor:pointer;
 
 function showElementModal(){
     createElementModal();
-
+    const tp = searchState.results.find(x => x.id == currentSelectedId);
+    console.log("Tanlangan TP:", tp);
     document
         .getElementById("element-modal-overlay")
         .style.display="block";
