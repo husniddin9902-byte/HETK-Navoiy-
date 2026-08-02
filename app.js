@@ -3484,7 +3484,10 @@ if (filterState.dual !== "none") {
     }
 }
           
-    found.push(tp);
+    found.push({
+    ...tp,
+    id: tp.tpId || tp.id || ""
+});
         });
 
     
