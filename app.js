@@ -3183,15 +3183,14 @@ transition:.2s;
     return html;
 }
 let selectedSearchItem = null;
-let currentSelectedId = null;
+let currentTP = null;
 window.openSearchResult = function(item){
     document.querySelectorAll(".search-item").forEach(el=>{
         el.classList.remove("selected");
     });
     item.classList.add("selected");
     selectedSearchItem = item;
-    currentSelectedId = item.dataset.id;
-  alert(currentSelectedId);
+    currentTP = item.tpData || null;
 };
 
 function updateSearchHighlight(){
