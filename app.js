@@ -3187,6 +3187,7 @@ window.openSearchResult = function(item){
     });
     item.classList.add("selected");
     selectedSearchItem = item;
+    currentSelectedId = item.dataset.id;
 };
 
 function updateSearchHighlight(){
