@@ -4235,8 +4235,9 @@ cursor:pointer;
     };
 }
 
-function showElementModal(){
+function showElementModal(tp){
     createElementModal();
+    window.currentTP = tp;
     document
         .getElementById("element-modal-overlay")
         .style.display="block";
