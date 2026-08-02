@@ -3188,6 +3188,7 @@ window.openSearchResult = function(item){
     item.classList.add("selected");
     selectedSearchItem = item;
     currentSelectedId = item.dataset.id;
+  alert(currentSelectedId);
 };
 
 function updateSearchHighlight(){
