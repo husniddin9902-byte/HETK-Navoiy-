@@ -3246,7 +3246,9 @@ function filterVisiblePoints(allTPs) {
   
    const found = [];
   
-    Object.values(allTPs).forEach(tp => {
+    Object.entries(allTPs).forEach(([firebaseKey, tp]) => {
+    tp.id = firebaseKey;
+
 
     if (!isPointInSelectedFolder(tp)) {
         return;
@@ -3352,8 +3354,9 @@ function refreshSearchResults(){
       
         const allowedFolderIds = getAllChildFolderIds(searchState.folderId);
         allowedFolderIds.push(searchState.folderId);
-       Object.values(allTPs).forEach(tp => {
-          
+      Object.entries(allTPs).forEach(([firebaseKey, tp]) => {
+    tp.id = firebaseKey;
+
           if (!isPointInSelectedFolder(tp)) {
     return;
 }
