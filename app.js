@@ -3511,13 +3511,16 @@ foldersBox.style.display="none";
     ${renderSearchTree(folderTree)}
 `;
 
-   
+   document.querySelectorAll(".search-item").forEach(item => {
+    const id = item.dataset.id;
+    item.tpData = searchState.results.find(tp =>
+        (tp.tpId || tp.id) === id
+    );
+});
 
 if (currentPanelTab === "map") {
-    
     loadFilteredPoints();
-}
-      
+}   
     });
 }
 
