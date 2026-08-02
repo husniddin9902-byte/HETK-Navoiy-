@@ -3045,7 +3045,7 @@ border-left:1px dashed rgba(255,255,255,.25);
 </div>
 `;
         node.items.forEach(tp=>{
-
+alert(JSON.stringify(tp));
           const tpId = tp.id || tp.name;
 if (renderedTPs.has(tpId)) {
     return;
