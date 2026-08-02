@@ -3191,6 +3191,7 @@ window.openSearchResult = function(item){
     item.classList.add("selected");
     selectedSearchItem = item;
     currentTP = item.tpData || null;
+  alert(JSON.stringify(currentTP));
 };
 
 function updateSearchHighlight(){
