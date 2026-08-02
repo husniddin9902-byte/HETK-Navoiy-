@@ -3049,6 +3049,7 @@ if (!tp.id) {
     tp.id = tp.tpId || tp.firebaseKey || "";
 }
           const tpId = tp.id || tp.name;
+          tp.__index = tp;
 if (renderedTPs.has(tpId)) {
     return;
 }
