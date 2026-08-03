@@ -3142,7 +3142,7 @@ transition:.2s;
 
 <i class="fas fa-edit"
    title="Tahrirlash"
-   onclick="event.stopPropagation();openEditElement('${tp.tpId}')"
+   onclick="event.stopPropagation();openEditElement('${tp.tpid}')"
    style="cursor:pointer;">
 </i>
 
