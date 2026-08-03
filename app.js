@@ -3190,7 +3190,6 @@ window.openSearchResult = function(item){
     });
     item.classList.add("selected");
     selectedSearchItem = item;
-    alert(item.dataset.id);
 };
 
 function updateSearchHighlight(){
