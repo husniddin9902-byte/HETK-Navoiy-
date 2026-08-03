@@ -3487,9 +3487,9 @@ if (filterState.dual !== "none") {
     }
 }
           
-    found.push({
+   found.push({
     ...tp,
-    id: tp.tpId || tp.id || ""
+    id: tp.id
 });
         });
 
