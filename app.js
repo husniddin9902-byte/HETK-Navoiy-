@@ -3184,12 +3184,15 @@ transition:.2s;
 }
 let selectedSearchItem = null;
 let currentTP = null;
+
 window.openSearchResult = function(item){
     document.querySelectorAll(".search-item").forEach(el=>{
         el.classList.remove("selected");
     });
     item.classList.add("selected");
     selectedSearchItem = item;
+    const id = item.dataset.id;
+    currentTP = searchState.results.find(tp => tp.id === id) || null;
 };
 
 function updateSearchHighlight(){
