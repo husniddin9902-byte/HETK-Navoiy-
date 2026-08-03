@@ -4248,8 +4248,11 @@ cursor:pointer;
 function showElementModal(){
     createElementModal();
     const tp = searchState.results.find(x => x.id == currentSelectedId);
-  alert(JSON.stringify(tp));
-    console.log("Tanlangan TP:", tp);
+    if(!tp){
+        showToast("Element tanlanmagan!");
+        return;
+    }
+    currentTP = tp;
     document
         .getElementById("element-modal-overlay")
         .style.display="block";
