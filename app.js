@@ -4246,16 +4246,14 @@ cursor:pointer;
 }
 
 function showElementModal(){
-    createElementModal();
-    const tp = searchState.results.find(x => x.id == currentSelectedId);
-    if(!tp){
-        showToast("Element tanlanmagan!");
+    if(!currentTP){
+        showToast("Avval elementni tanlang!");
         return;
     }
-    currentTP = tp;
+    createElementModal();
     document
         .getElementById("element-modal-overlay")
-        .style.display="block";
+        .style.display = "block";
 }
 function closeElementModal(){
     const modal=document.getElementById("element-modal-overlay");
