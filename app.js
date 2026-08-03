@@ -3494,7 +3494,7 @@ if (filterState.dual !== "none") {
 
     
 window.__lastFilteredPoints = found;
-alert(JSON.stringify(found[0]));
+
 searchState.results = found;
 searchState.resultIds = new Set(
     found.map(tp => tp.tpId || tp.id)
