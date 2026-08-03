@@ -3048,7 +3048,7 @@ border-left:1px dashed rgba(255,255,255,.25);
 if (!tp.id) {
     tp.id = tp.tpId || tp.firebaseKey || "";
 }
-          const tpId = tp.id || tp.name;
+          const tpId = tp.id;
           tp.__index = tp;
 if (renderedTPs.has(tpId)) {
     return;
