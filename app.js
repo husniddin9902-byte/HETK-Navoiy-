@@ -3099,7 +3099,7 @@ if (tp.folders) {
 
 html += `
 <div class="search-item"
-     data-id="${tp.tpId || ''}"
+     data-id="${tp.tpid || ''}"
      data-folder-id="${node.id}"
     onclick="openSearchResult(this)"
      style="
