@@ -4251,6 +4251,36 @@ function showElementModal(){
         return;
     }
     createElementModal();
+
+ document.getElementById("detail-name").textContent =
+    currentTP.name || "-";
+
+document.getElementById("detail-power").textContent =
+    "⚡ " + (currentTP.power || "-");
+
+document.getElementById("detail-folder").textContent =
+    "📂 " + (
+        currentFolders[currentTP.primaryFolderId]?.name ||
+        currentFolders[currentTP.folderId]?.name ||
+        "-"
+    );
+
+document.getElementById("detail-address").textContent =
+    "📍 " + (currentTP.address || "-");
+
+document.getElementById("detail-owner").textContent =
+    "👤 " + (currentTP.responsiblePerson || "-");
+
+document.getElementById("detail-phone").textContent =
+    "📞 " + (currentTP.responsiblePhone || "-");
+
+document.getElementById("detail-feeders").textContent =
+    "🔌 " + (
+        currentTP.feeders ||
+        currentTP.feeder ||
+        "-"
+    );
+  
     document
         .getElementById("element-modal-overlay")
         .style.display = "block";
