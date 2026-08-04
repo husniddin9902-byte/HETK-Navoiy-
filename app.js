@@ -4548,6 +4548,10 @@ padding:20px;
     document
         .getElementById("close-image-gallery")
         .onclick = closeImageGallery;
+  
+document.getElementById("gallery-prev").onclick = previousGalleryImage;
+document.getElementById("gallery-next").onclick = nextGalleryImage;
+  
     document
         .getElementById("image-gallery-overlay")
         .onclick = function(e){
