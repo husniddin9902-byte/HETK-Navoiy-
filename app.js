@@ -3136,7 +3136,7 @@ transition:.2s;
 
 <i class="far fa-file-alt"
    title="Element kartasi"
-   onclick="event.stopPropagation();alert('📄 ishladi');showElementModal();"
+   onclick="event.stopPropagation(); showElementModal();"
    style="cursor:pointer;">
 </i>
 
