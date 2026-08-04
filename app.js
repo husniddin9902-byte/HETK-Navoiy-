@@ -4304,9 +4304,7 @@ function showElementModal(){
     );
 
 document.getElementById("detail-title").innerHTML =
-'<span style="color:' +
-(currentTP.isPrivate ? '#ff4444' : '#1e88e5') +
-';margin-right:6px;">⚡</span>' +
+'<span style="color:red;margin-right:6px;">⚡</span>' +
 (currentTP.name || "-");
   
 document.getElementById("detail-folder-path").textContent =
