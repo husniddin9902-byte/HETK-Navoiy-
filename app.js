@@ -4684,10 +4684,12 @@ if (!imageUrl) {
         src="${imageUrl}"
             
             style="
-                max-width:100%;
-                max-height:100%;
-                object-fit:contain;
-                border-radius:10px;
+max-width:100%;
+max-height:100%;
+width:auto;
+height:auto;
+object-fit:contain;
+border-radius:10px;
             ">
     `;
     document
