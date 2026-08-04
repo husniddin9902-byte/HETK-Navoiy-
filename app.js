@@ -4564,7 +4564,11 @@ document.getElementById("gallery-counter").textContent =
             .style.display = "block";
         return;
     }
-    const img = currentTP.images[0];
+    galleryTP = currentTP;
+galleryImages = currentTP.images;
+galleryIndex = 0;
+
+const img = galleryImages[galleryIndex];
   
 const imageUrl = await getTelegramFileUrl(img.fileId);
 if (!imageUrl) {
