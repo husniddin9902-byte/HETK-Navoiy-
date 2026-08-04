@@ -4432,6 +4432,22 @@ background:#0f2235;
 border-radius:12px;
 overflow:hidden;
 ">
+
+<div
+style="
+height:55px;
+background:#173854;
+display:flex;
+align-items:center;
+justify-content:space-between;
+padding:0 18px;
+color:white;
+">
+
+<div id="gallery-counter">
+1 / 1
+</div>
+
 <span
 id="close-image-gallery"
 style="
