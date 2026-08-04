@@ -4167,8 +4167,17 @@ position:relative;
 
 <div id="preview-image"
 style="
+display:flex;
+align-items:center;
+justify-content:center;
+width:100%;
+height:100%;
 text-align:center;
 line-height:1.3;
+font-size:13px;
+color:#d8d8d8;
+padding:6px;
+box-sizing:border-box;
 ">
 📷<br>Rasm mavjud emas
 </div>
