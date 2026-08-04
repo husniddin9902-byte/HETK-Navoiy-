@@ -4405,6 +4405,10 @@ function closeElementModal(){
 }
 
 let imageGalleryModal = null;
+let galleryImages = [];
+let galleryIndex = 0;
+let galleryTP = null;
+
 function createImageGallery(){
     if(document.getElementById("image-gallery-overlay")){
         return;
