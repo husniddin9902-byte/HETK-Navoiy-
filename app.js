@@ -4315,7 +4315,7 @@ function showElementModal(){
         currentFolders[currentTP.folderId]?.name ||
         "-"
     );
-
+alert(JSON.stringify(currentTP));
 document.getElementById("detail-icon").style.color = "#ff0000";
 
 document.getElementById("detail-title-text").textContent =
