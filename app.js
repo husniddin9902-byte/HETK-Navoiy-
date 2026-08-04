@@ -4189,9 +4189,28 @@ padding:22px;
 overflow:auto;
 ">
 
+<div
+id="detail-status"
+style="
+display:inline-block;
+padding:6px 14px;
+border-radius:18px;
+background:#2e7d32;
+color:#fff;
+font-weight:bold;
+margin-bottom:16px;
+">
+
+🟢 A'lo
+
+</div>
+
 <h2
 id="detail-name"
-style="margin:0 0 12px 0;">
+style="
+margin:0 0 14px 0;
+font-size:34px;
+">
 Element nomi
 </h2>
 
