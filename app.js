@@ -4441,26 +4441,68 @@ display:flex;
 align-items:center;
 justify-content:space-between;
 padding:0 18px;
+<div
+style="
+background:#173854;
+padding:14px 18px;
 color:white;
+display:flex;
+justify-content:space-between;
+align-items:flex-start;
 ">
 
-<div id="gallery-counter">
-1 / 1
+<div>
+
+<div
+id="gallery-folder-name"
+style="
+font-size:20px;
+font-weight:bold;
+margin-bottom:6px;
+">
+📂 Papka
 </div>
+
+<div
+id="gallery-element-name"
+style="
+font-size:18px;
+color:#cfe6ff;
+">
+⚡ Element
+</div>
+
+</div>
+
+<div
+style="
+display:flex;
+flex-direction:column;
+align-items:center;
+">
 
 <span
 id="close-image-gallery"
 style="
-position:absolute;
-top:15px;
-right:20px;
 font-size:34px;
-color:white;
 cursor:pointer;
-z-index:10;
+line-height:1;
 ">
 ✕
 </span>
+
+<div
+id="gallery-counter"
+style="
+margin-top:10px;
+font-size:16px;
+color:#cfd8dc;
+">
+1 / 1
+</div>
+
+</div>
+
 </div>
 
 <div id="gallery-image-container"
