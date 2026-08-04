@@ -4162,23 +4162,6 @@ display:flex;
 align-items:center;
 justify-content:center;
 font-size:18px;
-">
-
-📷
-<br>
-Rasm mavjud emas
-
-</div>
-
-<div id="element-preview"
-style="
-height:180px;
-border-radius:10px;
-background:#173854;
-display:flex;
-align-items:center;
-justify-content:center;
-font-size:18px;
 position:relative;
 ">
 
