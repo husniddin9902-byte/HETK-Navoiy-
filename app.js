@@ -4155,7 +4155,7 @@ flex-direction:column;
 
 <div id="element-preview"
 style="
-height:260px;
+height:180px;
 border-radius:10px;
 background:#173854;
 display:flex;
