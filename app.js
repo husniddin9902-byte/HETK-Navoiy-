@@ -4166,6 +4166,8 @@ position:relative;
 ">
 
 <div id="preview-image">
+text-align:center;
+line-height:1.3;
 📷<br>Rasm mavjud emas
 </div>
 
