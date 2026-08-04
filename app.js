@@ -4173,7 +4173,8 @@ position:relative;
 style="
 position:absolute;
 right:8px;
-top:8px;
+bottom:6px;
+top:auto;
 width:24px;
 height:24px;
 border-radius:50%;
