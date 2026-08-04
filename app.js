@@ -4434,52 +4434,38 @@ overflow:hidden;
 ">
 
 <div
+<div
 style="
-height:55px;
 background:#173854;
+padding:12px 18px;
+color:white;
+">
+
+<div
+style="
 display:flex;
 align-items:center;
 justify-content:space-between;
-padding:0 18px;
-<div
-style="
-background:#173854;
-padding:14px 18px;
-color:white;
-display:flex;
-justify-content:space-between;
-align-items:flex-start;
 ">
 
-<div>
-
 <div
-id="gallery-folder-name"
 style="
+display:flex;
+align-items:center;
+gap:20px;
 font-size:20px;
 font-weight:bold;
-margin-bottom:6px;
 ">
+
+<span id="gallery-folder-name">
 📂 Papka
-</div>
+</span>
 
-<div
-id="gallery-element-name"
-style="
-font-size:18px;
-color:#cfe6ff;
-">
+<span id="gallery-element-name">
 ⚡ Element
-</div>
+</span>
 
 </div>
-
-<div
-style="
-display:flex;
-flex-direction:column;
-align-items:center;
-">
 
 <span
 id="close-image-gallery"
@@ -4491,16 +4477,17 @@ line-height:1;
 ✕
 </span>
 
+</div>
+
 <div
 id="gallery-counter"
 style="
-margin-top:10px;
+margin-top:8px;
+text-align:right;
 font-size:16px;
 color:#cfd8dc;
 ">
 1 / 1
-</div>
-
 </div>
 
 </div>
