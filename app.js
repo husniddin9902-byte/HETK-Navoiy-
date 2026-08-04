@@ -4461,6 +4461,8 @@ z-index:10;
 ">
 ✕
 </span>
+</div>
+
 <div id="gallery-image-container"
 style="
 max-width:95%;
