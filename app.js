@@ -4505,17 +4505,6 @@ justify-content:space-between;
 padding:0 15px;
 ">
 
-<div
-id="gallery-prev"
-style="
-font-size:46px;
-color:white;
-cursor:pointer;
-user-select:none;
-padding:20px;
-">
-❮
-</div>
 
 <div
 style="
