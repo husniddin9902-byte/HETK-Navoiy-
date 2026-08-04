@@ -4170,26 +4170,39 @@ Rasm mavjud emas
 
 </div>
 
-<div
+<div id="element-preview"
 style="
-margin-top:15px;
-text-align:center;
+height:180px;
+border-radius:10px;
+background:#173854;
+display:flex;
+align-items:center;
+justify-content:center;
+font-size:18px;
+position:relative;
 ">
 
-<button id="open-images-btn"
+<div id="preview-image">
+📷<br>Rasm mavjud emas
+</div>
+
+<div id="preview-zoom"
 style="
-width:100%;
-height:42px;
-border:none;
-border-radius:8px;
-background:#1e88e5;
-color:white;
+position:absolute;
+right:8px;
+top:8px;
+width:32px;
+height:32px;
+border-radius:50%;
+background:rgba(0,0,0,.55);
+display:flex;
+align-items:center;
+justify-content:center;
 cursor:pointer;
+font-size:18px;
 ">
-
-🖼️ Rasmlarni ko'rish
-
-</button>
+🔍
+</div>
 
 </div>
 
