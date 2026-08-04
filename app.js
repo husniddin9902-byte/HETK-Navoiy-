@@ -4475,15 +4475,11 @@ function closeImageGallery(){
 }
 
 function openImageGallery(){
-    if(
-        !currentTP ||
-        !currentTP.images ||
-        !currentTP.images.length
-    ){
-        showToast("Rasm mavjud emas");
-        return;
-    }
-   alert(JSON.stringify(currentTP.images));
-  // alert(currentTP.images[0].url);
-  // window.open(currentTP.images[0].url, "_blank");
+    createImageGallery();
+    document
+        .getElementById("gallery-image-container")
+        .innerHTML = "Rasm yuklanmoqda...";
+    document
+        .getElementById("image-gallery-overlay")
+        .style.display = "block";
 }
