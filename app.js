@@ -4403,3 +4403,15 @@ function closeElementModal(){
         modal.style.display="none";
     }
 }
+
+function openImageGallery(){
+    if(
+        !currentTP ||
+        !currentTP.images ||
+        !currentTP.images.length
+    ){
+        showToast("Rasm mavjud emas");
+        return;
+    }
+    window.open(currentTP.images[0].url, "_blank");
+}
