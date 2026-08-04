@@ -4578,18 +4578,6 @@ z-index:5;
 
 </div>
 
-<div
-id="gallery-next"
-style="
-font-size:46px;
-color:white;
-cursor:pointer;
-user-select:none;
-padding:20px;
-">
-❯
-</div>
-
 </div>
 </div>
 </div>
