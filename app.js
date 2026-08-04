@@ -4139,7 +4139,7 @@ border-bottom:1px solid rgba(255,255,255,.08);
 style="
 height:calc(100% - 50px);
 display:grid;
-grid-template-columns:145px 1fr;
+grid-template-columns:135px 1fr;
 background:#0f2235;
 color:white;
 ">
