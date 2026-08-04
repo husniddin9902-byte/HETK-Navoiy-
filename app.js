@@ -4372,12 +4372,20 @@ if (
     preview.innerHTML = `
         <img
     src="${currentTP.images[0].url}"
-    style="
+
+style="
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    object-position:50% 25%;
+    border-radius:8px;
+
+    /* style="
         width:100%;
         height:100%;
         object-fit:cover;
         object-position:center;
-        border-radius:8px;
+        border-radius:8px; */
     ">
     `;
 } else {
