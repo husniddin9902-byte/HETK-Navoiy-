@@ -4318,12 +4318,6 @@ document.getElementById("detail-folder-path").textContent =
 document.getElementById("detail-power").textContent =
     "⚡ " + (currentTP.power || "-");
 
-document.getElementById("detail-folder").textContent =
-    "📂 " + (
-        currentFolders[currentTP.primaryFolderId]?.name ||
-        currentFolders[currentTP.folderId]?.name ||
-        "-"
-    );
 
 document.getElementById("detail-address").textContent =
     "📍 " + (currentTP.address || "-");
