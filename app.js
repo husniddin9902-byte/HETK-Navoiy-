@@ -4491,6 +4491,7 @@ function openImageGallery(){
         return;
     }
     const img = currentTP.images[0];
+  alert(JSON.stringify(img));
     container.innerHTML = `
         <img
             src="${img.url}"
