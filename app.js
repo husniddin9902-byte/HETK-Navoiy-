@@ -4182,7 +4182,7 @@ display:flex;
 align-items:center;
 justify-content:center;
 cursor:pointer;
-font-size:18px;
+font-size:13px;
 ">
 🔍
 </div>
