@@ -4536,9 +4536,7 @@ document.getElementById("gallery-folder-name").textContent =
 alert(currentTP.isPrivate);
   
 document.getElementById("gallery-element-name").innerHTML =
-    `<span style="color:${
-        currentTP.isPrivate ? "#ff4444" : "#1e88e5"
-    };">⚡</span> ${currentTP.name || "-"}`;
+    `${currentTP.isPrivate ? "🔴" : "🔵"} ⚡ ${currentTP.name || "-"}`;
 
 document.getElementById("gallery-counter").textContent =
     `1 / ${currentTP.images.length}`;
