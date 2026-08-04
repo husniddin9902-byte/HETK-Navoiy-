@@ -4474,7 +4474,7 @@ function closeImageGallery(){
         .style.display="none";
 }
 
-function openImageGallery(){
+async function openImageGallery(){
     createImageGallery();
     const container =
         document.getElementById("gallery-image-container");
