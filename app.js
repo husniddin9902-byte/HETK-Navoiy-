@@ -4496,15 +4496,51 @@ color:#cfd8dc;
 
 </div>
 
-<div id="gallery-image-container"
+<div
 style="
-max-width:95%;
-max-height:95%;
+flex:1;
+display:flex;
+align-items:center;
+justify-content:space-between;
+padding:0 15px;
+">
+
+<div
+id="gallery-prev"
+style="
+font-size:46px;
+color:white;
+cursor:pointer;
+user-select:none;
+padding:20px;
+">
+❮
+</div>
+
+<div
+id="gallery-image-container"
+style="
+flex:1;
+height:100%;
 display:flex;
 align-items:center;
 justify-content:center;
 ">
 Rasm yuklanmoqda...
+</div>
+
+<div
+id="gallery-next"
+style="
+font-size:46px;
+color:white;
+cursor:pointer;
+user-select:none;
+padding:20px;
+">
+❯
+</div>
+
 </div>
 </div>
 </div>
