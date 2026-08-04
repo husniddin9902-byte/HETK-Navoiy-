@@ -4219,11 +4219,6 @@ style="margin-bottom:12px;">
 ⚡ Quvvat
 </div>
 
-<div id="detail-folder"
-style="margin-bottom:12px;">
-📂 Papka
-</div>
-
 <div id="detail-address"
 style="margin-bottom:12px;">
 📍 Manzil
