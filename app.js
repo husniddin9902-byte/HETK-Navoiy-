@@ -4353,6 +4353,26 @@ document.getElementById("detail-feeders").textContent =
         currentTP.feeder ||
         "-"
     );
+
+ const preview = document.getElementById("preview-image");
+if (
+    currentTP.images &&
+    currentTP.images.length &&
+    currentTP.images[0].url
+) {
+    preview.innerHTML = `
+        <img
+            src="${currentTP.images[0].url}"
+            style="
+                width:100%;
+                height:100%;
+                object-fit:cover;
+                border-radius:10px;
+            ">
+    `;
+} else {
+    preview.innerHTML = "📷<br>Rasm mavjud emas";
+}
   
     document
         .getElementById("element-modal-overlay")
