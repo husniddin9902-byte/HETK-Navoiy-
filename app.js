@@ -4494,7 +4494,8 @@ function openImageGallery(){
   alert(JSON.stringify(img));
     container.innerHTML = `
         <img
-            src="${img.url}"
+        src="https://placehold.co/800x600/png"
+            // src="${img.url}"
             style="
                 max-width:100%;
                 max-height:100%;
