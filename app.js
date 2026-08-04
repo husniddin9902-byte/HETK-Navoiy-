@@ -4148,7 +4148,7 @@ color:white;
 
 <div style="
 border-right:1px solid rgba(255,255,255,.08);
-padding:18px;
+padding:15px;
 display:flex;
 flex-direction:column;
 ">
