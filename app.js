@@ -4491,14 +4491,20 @@ function openImageGallery(){
         return;
     }
     const img = currentTP.images[0];
-window.open(img.url);
-return;
   
-/*  alert(JSON.stringify(img));
+const imageUrl = await getTelegramFileUrl(img.fileId);
+if (!imageUrl) {
+    container.innerHTML = "❌ Rasm yuklanmadi";
+    document
+        .getElementById("image-gallery-overlay")
+        .style.display = "block";
+    return;
+}
+  
     container.innerHTML = `
         <img
-        src="https://placehold.co/800x600/png"
-            // src="${img.url}"
+        src="${imageUrl}"
+            
             style="
                 max-width:100%;
                 max-height:100%;
@@ -4508,5 +4514,5 @@ return;
     `;
     document
         .getElementById("image-gallery-overlay")
-        .style.display = "block";   */
+        .style.display = "block";   
 }
