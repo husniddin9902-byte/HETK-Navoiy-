@@ -4476,9 +4476,31 @@ function closeImageGallery(){
 
 function openImageGallery(){
     createImageGallery();
-    document
-        .getElementById("gallery-image-container")
-        .innerHTML = "Rasm yuklanmoqda...";
+    const container =
+        document.getElementById("gallery-image-container");
+    container.innerHTML = "Rasm yuklanmoqda...";
+    if(
+        !currentTP ||
+        !currentTP.images ||
+        !currentTP.images.length
+    ){
+        container.innerHTML = "📷 Rasm mavjud emas";
+        document
+            .getElementById("image-gallery-overlay")
+            .style.display = "block";
+        return;
+    }
+    const img = currentTP.images[0];
+    container.innerHTML = `
+        <img
+            src="${img.url}"
+            style="
+                max-width:100%;
+                max-height:100%;
+                object-fit:contain;
+                border-radius:10px;
+            ">
+    `;
     document
         .getElementById("image-gallery-overlay")
         .style.display = "block";
