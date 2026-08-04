@@ -4546,7 +4546,7 @@ height:100%;
 display:flex;
 align-items:center;
 justify-content:center;
-padding:6px;
+padding:12px;
 box-sizing:border-box;
 ">
 Rasm yuklanmoqda...
