@@ -4359,7 +4359,7 @@ document.getElementById("detail-phone").textContent =
 document.getElementById("detail-feeders").textContent =
     "🔌 " + (
         currentTP.feeders ||
-        currentTP.feeder ||
+        currentTP.feeder || 
         "-"
     );
 
