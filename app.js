@@ -4427,8 +4427,10 @@ transform:translate(-50%,-50%);
 width:95%;
 height:95%;
 display:flex;
-align-items:center;
-justify-content:center;
+flex-direction:column;
+background:#0f2235;
+border-radius:12px;
+overflow:hidden;
 ">
 <span
 id="close-image-gallery"
