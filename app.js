@@ -4538,6 +4538,20 @@ function closeImageGallery(){
 
 async function openImageGallery(){
     createImageGallery();
+
+document.getElementById("gallery-folder-name").textContent =
+    "📂 " + (
+        currentFolders[currentTP.primaryFolderId]?.name ||
+        currentFolders[currentTP.folderId]?.name ||
+        "-"
+    );
+
+document.getElementById("gallery-element-name").textContent =
+    "⚡ " + (currentTP.name || "-");
+
+document.getElementById("gallery-counter").textContent =
+    `1 / ${currentTP.images.length}`;
+  
     const container =
         document.getElementById("gallery-image-container");
     container.innerHTML = "Rasm yuklanmoqda...";
