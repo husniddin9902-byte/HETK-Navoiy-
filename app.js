@@ -4315,8 +4315,11 @@ function showElementModal(){
         currentFolders[currentTP.folderId]?.name ||
         "-"
     );
-alert(currentTP.isPrivate);
-document.getElementById("detail-icon").style.color = "#ff0000";
+document.getElementById("detail-icon").setAttribute(
+    "style",
+    "color:" + (currentTP.isPrivate ? "#ff4444" : "#1e88e5") +
+    ";margin-right:6px;"
+);
 
 document.getElementById("detail-title-text").textContent =
     currentTP.name || "-";
