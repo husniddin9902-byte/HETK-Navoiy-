@@ -4309,6 +4309,8 @@ document.getElementById("detail-title").innerHTML =
         margin-right:6px;
     ">⚡</span>${currentTP.name || "-"}`;
 
+alert(JSON.stringify(currentTP));
+  
 document.getElementById("detail-folder-path").textContent =
     "📂 " + getFolderPath(
         currentTP.primaryFolderId || currentTP.folderId
