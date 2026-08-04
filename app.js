@@ -4099,7 +4099,8 @@ font-size:18px;
 </span>
 
 <span id="detail-title">
-⚡ Element
+    <span id="detail-icon">⚡</span>
+    <span id="detail-title-text">Element</span>
 </span>
 </div>
 <span
@@ -4303,9 +4304,11 @@ function showElementModal(){
         "-"
     );
 
-document.getElementById("detail-title").innerHTML =
-'<span style="color:red;margin-right:6px;">⚡</span>' +
-(currentTP.name || "-");
+document.getElementById("detail-icon").style.color =
+    currentTP.isPrivate ? "#ff4444" : "#1e88e5";
+
+document.getElementById("detail-title-text").textContent =
+    currentTP.name || "-";
   
 document.getElementById("detail-folder-path").textContent =
     "📂 " + getFolderPath(
