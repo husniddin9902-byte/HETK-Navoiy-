@@ -4165,9 +4165,11 @@ font-size:18px;
 position:relative;
 ">
 
-<div id="preview-image">
+<div id="preview-image"
+style="
 text-align:center;
 line-height:1.3;
+">
 📷<br>Rasm mavjud emas
 </div>
 
