@@ -4404,6 +4404,70 @@ function closeElementModal(){
     }
 }
 
+let imageGalleryModal = null;
+function createImageGallery(){
+    if(document.getElementById("image-gallery-overlay")){
+        return;
+    }
+    document.body.insertAdjacentHTML("beforeend",`
+<div id="image-gallery-overlay"
+style="
+display:none;
+position:fixed;
+inset:0;
+background:rgba(0,0,0,.88);
+z-index:1000000;
+">
+<div
+style="
+position:absolute;
+left:50%;
+top:50%;
+transform:translate(-50%,-50%);
+width:95%;
+height:95%;
+display:flex;
+align-items:center;
+justify-content:center;
+">
+<span
+id="close-image-gallery"
+style="
+position:absolute;
+top:15px;
+right:20px;
+font-size:34px;
+color:white;
+cursor:pointer;
+z-index:10;
+">
+✕
+</span>
+<div id="gallery-image-container"
+style="
+max-width:95%;
+max-height:95%;
+display:flex;
+align-items:center;
+justify-content:center;
+">
+Rasm yuklanmoqda...
+</div>
+</div>
+</div>
+`);
+    document
+        .getElementById("close-image-gallery")
+        .onclick = closeImageGallery;
+    document
+        .getElementById("image-gallery-overlay")
+        .onclick = function(e){
+        if(e.target.id==="image-gallery-overlay"){
+            closeImageGallery();
+        }
+    };
+}
+
 function openImageGallery(){
     if(
         !currentTP ||
