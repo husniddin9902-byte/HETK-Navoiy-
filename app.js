@@ -4494,7 +4494,7 @@ function openImageGallery(){
 window.open(img.url);
 return;
   
-  alert(JSON.stringify(img));
+/*  alert(JSON.stringify(img));
     container.innerHTML = `
         <img
         src="https://placehold.co/800x600/png"
@@ -4508,5 +4508,5 @@ return;
     `;
     document
         .getElementById("image-gallery-overlay")
-        .style.display = "block";
+        .style.display = "block";   */
 }
