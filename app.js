@@ -4491,6 +4491,9 @@ function openImageGallery(){
         return;
     }
     const img = currentTP.images[0];
+window.open(img.url);
+return;
+  
   alert(JSON.stringify(img));
     container.innerHTML = `
         <img
