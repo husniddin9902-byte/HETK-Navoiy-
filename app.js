@@ -4468,6 +4468,12 @@ Rasm yuklanmoqda...
     };
 }
 
+function closeImageGallery(){
+    document
+        .getElementById("image-gallery-overlay")
+        .style.display="none";
+}
+
 function openImageGallery(){
     if(
         !currentTP ||
