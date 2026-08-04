@@ -4413,6 +4413,7 @@ function openImageGallery(){
         showToast("Rasm mavjud emas");
         return;
     }
-    alert(currentTP.images[0].url);
+   alert(JSON.stringify(currentTP.images));
+  // alert(currentTP.images[0].url);
   // window.open(currentTP.images[0].url, "_blank");
 }
