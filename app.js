@@ -4075,21 +4075,47 @@ border-radius:14px;
 overflow:hidden;
 ">
 
-<div style="
-height:50px;
+<div id="element-header"
+style="
+height:60px;
 display:flex;
-justify-content:flex-end;
 align-items:center;
+justify-content:space-between;
 padding:0 18px;
 background:#173854;
+color:#fff;
 ">
 
-<span id="close-element-modal"
+<div
+style="
+display:flex;
+align-items:center;
+gap:18px;
+font-size:18px;
+">
+
+<span id="detail-status">🟢 A'lo</span>
+<span id="detail-short-folder">📂 Papka</span>
+<span id="detail-title">⚡ Element</span>
+</div>
+<span
+id="close-element-modal"
 style="
 cursor:pointer;
 font-size:24px;
 color:white;
 ">✕</span>
+</div>
+<div
+id="detail-folder-path"
+style="
+padding:8px 18px;
+background:#102b42;
+color:#8fb7d8;
+font-size:13px;
+border-bottom:1px solid rgba(255,255,255,.08);
+">
+📂 Papka yo'li
 </div>
 
 <div id="element-modal-content"
