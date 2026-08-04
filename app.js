@@ -4428,14 +4428,14 @@ position:absolute;
 left:50%;
 top:50%;
 transform:translate(-50%,-50%);
-width:min(95vw,1400px);
-height:min(95vh,900px);
+width:min(96vw,1600px);
+height:min(96vh,950px);
 display:flex;
 flex-direction:column;
 background:#0f2235;
 border-radius:12px;
 overflow:hidden;
-">
+"
 
 <div
 style="
