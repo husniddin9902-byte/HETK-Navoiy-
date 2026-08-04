@@ -4533,6 +4533,8 @@ document.getElementById("gallery-folder-name").textContent =
         "-"
     );
 
+alert(currentTP.isPrivate);
+  
 document.getElementById("gallery-element-name").innerHTML =
     `<span style="color:${
         currentTP.isPrivate ? "#ff4444" : "#1e88e5"
