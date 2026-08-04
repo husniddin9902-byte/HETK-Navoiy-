@@ -4175,7 +4175,7 @@ position:absolute;
 right:8px;
 top:8px;
 width:32px;
-height:32px;
+height:32px; 
 border-radius:50%;
 background:rgba(0,0,0,.55);
 display:flex;
