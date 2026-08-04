@@ -4099,8 +4099,20 @@ font-size:18px;
 </span>
 
 <span id="detail-title">
-    <span id="detail-icon">⚡</span>
-    <span id="detail-title-text">Element</span>
+
+<i
+id="detail-icon"
+class="fas fa-bolt"
+style="
+margin-right:6px;
+color:#1e88e5;
+">
+</i>
+
+<span id="detail-title-text">
+Element
+</span>
+
 </span>
 </div>
 <span
