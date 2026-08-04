@@ -4536,7 +4536,12 @@ document.getElementById("gallery-folder-name").textContent =
 alert(currentTP.isPrivate);
   
 document.getElementById("gallery-element-name").innerHTML =
-    `${currentTP.isPrivate ? "🔴" : "🔵"} ⚡ ${currentTP.name || "-"}`;
+    `<i class="fas fa-bolt"
+        style="
+            color:${currentTP.isPrivate ? "#ff4444" : "#1e88e5"};
+            margin-right:6px;
+        ">
+     </i>${currentTP.name || "-"}`;
 
 document.getElementById("gallery-counter").textContent =
     `1 / ${currentTP.images.length}`;
