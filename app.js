@@ -4183,6 +4183,7 @@ box-sizing:border-box;
 </div>
 
 <div id="preview-zoom"
+onclick="openImageGallery()"
 style="
 position:absolute;
 right:8px;
