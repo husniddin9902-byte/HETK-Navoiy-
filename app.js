@@ -4094,9 +4094,13 @@ gap:18px;
 font-size:18px;
 ">
 
-<span id="detail-status">🟢 A'lo</span>
-<span id="detail-short-folder">📂 Papka</span>
-<span id="detail-title">⚡ Element</span>
+<span id="detail-short-folder">
+📂 Papka
+</span>
+
+<span id="detail-title">
+⚡ Element
+</span>
 </div>
 <span
 id="close-element-modal"
