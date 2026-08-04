@@ -4301,6 +4301,22 @@ function showElementModal(){
     }
     createElementModal();
 
+  document.getElementById("detail-short-folder").textContent =
+    "📂 " + (
+        currentFolders[currentTP.primaryFolderId]?.name ||
+        currentFolders[currentTP.folderId]?.name ||
+        "-"
+    );
+
+document.getElementById("detail-title").textContent =
+    "⚡ " + (currentTP.name || "-");
+
+document.getElementById("detail-folder-path").textContent =
+    "📂 " + getFolderPath(
+        currentTP.primaryFolderId || currentTP.folderId
+    );
+  
+  
  document.getElementById("detail-name").textContent =
     currentTP.name || "-";
 
