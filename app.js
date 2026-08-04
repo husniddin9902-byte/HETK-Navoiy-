@@ -4371,15 +4371,14 @@ if (
 ) {
     preview.innerHTML = `
         <img
-            src="${currentTP.images[0].url}"
-            style="
-    max-width:100%;
-    max-height:100%;
-    width:auto;
-    height:auto;
-    object-fit:contain;
-    border-radius:8px;
-">
+    src="${currentTP.images[0].url}"
+    style="
+        width:100%;
+        height:100%;
+        object-fit:cover;
+        object-position:center;
+        border-radius:8px;
+    ">
     `;
 } else {
     preview.innerHTML = "📷<br>Rasm mavjud emas";
