@@ -4304,8 +4304,7 @@ function showElementModal(){
         "-"
     );
 
-document.getElementById("detail-icon").style.color =
-    currentTP.isPrivate ? "#ff4444" : "#1e88e5";
+document.getElementById("detail-icon").style.color = "#ff0000";
 
 document.getElementById("detail-title-text").textContent =
     currentTP.name || "-";
