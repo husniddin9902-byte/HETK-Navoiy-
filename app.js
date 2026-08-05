@@ -4702,6 +4702,11 @@ border-radius:10px;
         .style.display = "block"; 
 
   showGalleryControls();
+
+  document.onmousemove = showGalleryControls;
+  document.ontouchstart = showGalleryControls;
+  document.onclick = showGalleryControls;
+  
 /*   const image = container.querySelector("img");
 image.onload = function () {
     if (window.innerWidth < 900) return;
