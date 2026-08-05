@@ -4613,6 +4613,15 @@ document
 
 }
 
+function closeImageGallery(){
+    document.onmousemove = null;
+    document.ontouchstart = null;
+    document.onclick = null;
+    document
+        .getElementById("image-gallery-overlay")
+        .style.display = "none";
+}
+
 let galleryHideTimer = null;
 
 function showGalleryControls(){
