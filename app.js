@@ -4438,10 +4438,12 @@ overflow:hidden;
 ">
 
 <div
+id="gallery-header"
 style="
 background:#173854;
 padding:12px 18px;
 color:white;
+transition:.3s;
 ">
 
 <div
