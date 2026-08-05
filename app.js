@@ -4682,30 +4682,8 @@ document.getElementById("gallery-counter").textContent =
 galleryImages = currentTP.images;
 galleryIndex = 0;
 
-const img = galleryImages[galleryIndex];
+await loadGalleryImage();
   
-const imageUrl = await getTelegramFileUrl(img.fileId);
-if (!imageUrl) {
-    container.innerHTML = "❌ Rasm yuklanmadi";
-    document
-        .getElementById("image-gallery-overlay")
-        .style.display = "block";
-    return;
-}
-  
-   container.innerHTML = `
-<img
-src="${imageUrl}"
-style="
-display:block;
-max-width:100%;
-max-height:100%;
-width:auto;
-height:auto;
-object-fit:contain;
-border-radius:10px;
-">
-`;
     document
         .getElementById("image-gallery-overlay")
         .style.display = "block"; 
