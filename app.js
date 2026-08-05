@@ -4313,7 +4313,7 @@ cursor:pointer;
     };
 }
 
-function showElementModal(){
+async  function showElementModal(){
     if(!currentTP){
         showToast("Avval elementni tanlang!");
         return;
