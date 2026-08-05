@@ -4711,20 +4711,33 @@ border-radius:10px;
         .style.display = "block"; 
 
   showGalleryControls();
-
   document.onmousemove = showGalleryControls;
   document.ontouchstart = showGalleryControls;
   document.onclick = showGalleryControls;
-  
-/*   const image = container.querySelector("img");
-image.onload = function () {
-    if (window.innerWidth < 900) return;
-    if (image.naturalWidth > image.naturalHeight) {
-        image.style.width = "98%";
-        image.style.height = "auto";
-    } else {
-        image.style.height = "98%";
-        image.style.width = "auto";
+}
+
+async function loadGalleryImage(){
+    const container =
+        document.getElementById("gallery-image-container");
+    const img = galleryImages[galleryIndex];
+    const imageUrl = await getTelegramFileUrl(img.fileId);
+    if(!imageUrl){
+        container.innerHTML = "❌ Rasm yuklanmadi";
+        return;
     }
-}; */
+    container.innerHTML = `
+<img
+src="${imageUrl}"
+style="
+display:block;
+max-width:100%;
+max-height:100%;
+width:auto;
+height:auto;
+object-fit:contain;
+border-radius:10px;
+">
+`;
+    document.getElementById("gallery-counter").textContent =
+        `${galleryIndex+1} / ${galleryImages.length}`;
 }
