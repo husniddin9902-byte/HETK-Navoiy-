@@ -4423,6 +4423,7 @@ background:rgba(0,0,0,.88);
 z-index:1000000;
 ">
 <div
+id="image-gallery-modal"
 style="
 position:absolute;
 left:50%;
