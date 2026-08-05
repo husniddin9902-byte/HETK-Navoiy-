@@ -4608,8 +4608,8 @@ document
 
 };
 
-document.addEventListener("mousemove", showGalleryControls);
-document.addEventListener("touchstart", showGalleryControls);
+// document.addEventListener("mousemove", showGalleryControls);
+// document.addEventListener("touchstart", showGalleryControls);
 
 }
 
