@@ -4677,6 +4677,8 @@ border-radius:10px;
     document
         .getElementById("image-gallery-overlay")
         .style.display = "block"; 
+
+  showGalleryControls();
 /*   const image = container.querySelector("img");
 image.onload = function () {
     if (window.innerWidth < 900) return;
