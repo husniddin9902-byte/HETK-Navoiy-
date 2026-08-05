@@ -4655,17 +4655,19 @@ if (!imageUrl) {
     return;
 }
   
-    container.innerHTML = `
-        <img
-        src="${imageUrl}"
-            
-            style="
-width:100%;
-height:100%;
+   container.innerHTML = `
+<img
+src="${imageUrl}"
+style="
+display:block;
+max-width:100%;
+max-height:100%;
+width:auto;
+height:auto;
 object-fit:contain;
 border-radius:10px;
-            ">
-    `;
+">
+`;
     document
         .getElementById("image-gallery-overlay")
         .style.display = "block";   
