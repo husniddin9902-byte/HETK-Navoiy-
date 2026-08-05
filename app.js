@@ -4741,3 +4741,20 @@ border-radius:10px;
     document.getElementById("gallery-counter").textContent =
         `${galleryIndex+1} / ${galleryImages.length}`;
 }
+
+async function nextGalleryImage(){
+    if(galleryIndex >= galleryImages.length - 1){
+        return;
+    }
+    galleryIndex++;
+    await loadGalleryImage();
+    showGalleryControls();
+}
+async function previousGalleryImage(){
+    if(galleryIndex <= 0){
+        return;
+    }
+    galleryIndex--;
+    await loadGalleryImage();
+    showGalleryControls();
+}
