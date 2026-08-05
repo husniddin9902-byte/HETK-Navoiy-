@@ -4588,34 +4588,33 @@ transition:.3s;
 </div>
 </div>
 `);
-    document
-        .getElementById("close-image-gallery")
-        .onclick = closeImageGallery;
-  
+   document
+    .getElementById("close-image-gallery")
+    .onclick = closeImageGallery;
+
 document.getElementById("gallery-prev").onclick = previousGalleryImage;
 document.getElementById("gallery-next").onclick = nextGalleryImage;
-  
-    document
+
+document
     .getElementById("image-gallery-overlay")
     .onclick = function(e){
+
     showGalleryControls();
+
     if(e.target.id==="image-gallery-overlay"){
         closeImageGallery();
     }
+
 };
+
 document
-    .getElementById("image-gallery-overlay")
+    .getElementById("image-gallery-modal")
     .onmousemove = showGalleryControls;
 
 document
-    .getElementById("image-gallery-overlay")
-    .ontouchstart = showGalleryControls;  
-}
+    .getElementById("image-gallery-modal")
+    .ontouchstart = showGalleryControls;
 
-function closeImageGallery(){
-    document
-        .getElementById("image-gallery-overlay")
-        .style.display="none";
 }
 
 let galleryHideTimer = null;
