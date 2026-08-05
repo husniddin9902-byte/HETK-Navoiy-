@@ -4609,6 +4609,26 @@ function closeImageGallery(){
         .style.display="none";
 }
 
+let galleryHideTimer = null;
+
+function showGalleryControls(){
+    document.getElementById("gallery-header").style.opacity = "1";
+    document.getElementById("gallery-prev").style.opacity = "1";
+    document.getElementById("gallery-next").style.opacity = "1";
+    document.getElementById("gallery-prev").style.pointerEvents = "auto";
+    document.getElementById("gallery-next").style.pointerEvents = "auto";
+    clearTimeout(galleryHideTimer);
+    galleryHideTimer = setTimeout(hideGalleryControls,3000);
+}
+
+function hideGalleryControls(){
+    document.getElementById("gallery-header").style.opacity = "0";
+    document.getElementById("gallery-prev").style.opacity = "0";
+    document.getElementById("gallery-next").style.opacity = "0";
+    document.getElementById("gallery-prev").style.pointerEvents = "none";
+    document.getElementById("gallery-next").style.pointerEvents = "none";
+}
+
 async function openImageGallery(){
     createImageGallery();
 
