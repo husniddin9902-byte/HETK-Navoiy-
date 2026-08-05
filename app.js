@@ -4595,12 +4595,20 @@ document.getElementById("gallery-prev").onclick = previousGalleryImage;
 document.getElementById("gallery-next").onclick = nextGalleryImage;
   
     document
-        .getElementById("image-gallery-overlay")
-        .onclick = function(e){
-        if(e.target.id==="image-gallery-overlay"){
-            closeImageGallery();
-        }
-    };
+    .getElementById("image-gallery-overlay")
+    .onclick = function(e){
+    showGalleryControls();
+    if(e.target.id==="image-gallery-overlay"){
+        closeImageGallery();
+    }
+};
+document
+    .getElementById("image-gallery-overlay")
+    .onmousemove = showGalleryControls;
+
+document
+    .getElementById("image-gallery-overlay")
+    .ontouchstart = showGalleryControls;  
 }
 
 function closeImageGallery(){
