@@ -4644,7 +4644,7 @@ document.getElementById("gallery-counter").textContent =
             .style.display = "block";
         return;
     }
-    galleryTP = currentTP;
+    galleryTP = currentTP; 
 galleryImages = currentTP.images;
 galleryIndex = 0;
 
