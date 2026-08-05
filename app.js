@@ -4608,13 +4608,8 @@ document
 
 };
 
-document
-    .getElementById("image-gallery-modal")
-    .onmousemove = showGalleryControls;
-
-document
-    .getElementById("image-gallery-modal")
-    .ontouchstart = showGalleryControls;
+document.addEventListener("mousemove", showGalleryControls);
+document.addEventListener("touchstart", showGalleryControls);
 
 }
 
