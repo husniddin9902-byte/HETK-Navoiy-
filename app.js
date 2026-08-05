@@ -4370,7 +4370,7 @@ if (
     currentTP.images.length
 ){
     const imageUrl = await getTelegramFileUrl(
-       alert(JSON.stringify(currentTP.images[0]));
+       
       currentTP.images[0].fileId
     );
     if(imageUrl){
