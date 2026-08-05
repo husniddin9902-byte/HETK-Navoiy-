@@ -4201,6 +4201,7 @@ font-size:14px;
 ">
 🔍
 </div>
+</div>
 
  <div
 id="detail-navigation"
@@ -4242,8 +4243,6 @@ display:none;
 <div style="font-weight:bold;">✏️ Oxirgi tahrir</div>
 <div id="detail-updated-date"></div>
 <div id="detail-updated-user"></div>
-</div>
-
 </div>
 
 </div>
