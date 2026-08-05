@@ -4670,5 +4670,16 @@ border-radius:10px;
 `;
     document
         .getElementById("image-gallery-overlay")
-        .style.display = "block";   
+        .style.display = "block"; 
+  const image = container.querySelector("img");
+image.onload = function () {
+    if (window.innerWidth < 900) return;
+    if (image.naturalWidth > image.naturalHeight) {
+        image.style.width = "98%";
+        image.style.height = "auto";
+    } else {
+        image.style.height = "98%";
+        image.style.width = "auto";
+    }
+};
 }
