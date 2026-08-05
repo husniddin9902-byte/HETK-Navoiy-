@@ -4620,6 +4620,7 @@ function closeImageGallery(){
 let galleryHideTimer = null;
 
 function showGalleryControls(){
+   alert("show");
     document.getElementById("gallery-header").style.opacity = "1";
     document.getElementById("gallery-prev").style.opacity = "1";
     document.getElementById("gallery-next").style.opacity = "1";
