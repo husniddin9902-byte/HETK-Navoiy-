@@ -4364,33 +4364,31 @@ document.getElementById("detail-feeders").textContent =
         "-"
     );
 
- const preview = document.getElementById("preview-image");
+const preview = document.getElementById("preview-image");
 if (
     currentTP.images &&
-    currentTP.images.length &&
-    currentTP.images[0].url
-) {
-    preview.innerHTML = `
-        <img
-    src="${currentTP.images[0].url}"
-
+    currentTP.images.length
+){
+    const imageUrl = await getTelegramFileUrl(
+        currentTP.images[0].fileId
+    );
+    if(imageUrl){
+        preview.innerHTML = `
+<img
+src="${imageUrl}"
 style="
-    width:100%;
-    height:100%;
-    object-fit:cover;
-    object-position:50% 25%;
-    border-radius:8px;
-
-    /* style="
-        width:100%;
-        height:100%;
-        object-fit:cover;
-        object-position:center;
-        border-radius:8px; */
-    ">
-    `;
-} else {
-    preview.innerHTML = "📷<br>Rasm mavjud emas";
+width:100%;
+height:100%;
+object-fit:cover;
+object-position:50% 25%;
+border-radius:8px;
+">
+`;
+    }else{
+        preview.innerHTML="📷<br>Rasm mavjud emas";
+    }
+}else{
+    preview.innerHTML="📷<br>Rasm mavjud emas";
 }
   
     document
