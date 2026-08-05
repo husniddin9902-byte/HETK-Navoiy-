@@ -4549,6 +4549,7 @@ align-items:center;
 justify-content:center;
 padding:12px;
 box-sizing:border-box;
+flex:1;
 ">
 Rasm yuklanmoqda...
 </div>
