@@ -4537,6 +4537,7 @@ justify-content:center;
 cursor:pointer;
 user-select:none;
 z-index:5;
+transition:.3s;
 ">
 ❮
 </div>
