@@ -4643,8 +4643,6 @@ document.getElementById("gallery-folder-name").textContent =
         currentFolders[currentTP.folderId]?.name ||
         "-"
     );
-
-alert(currentTP.isPrivate);
   
 document.getElementById("gallery-element-name").innerHTML =
     `<i class="fas fa-bolt"
