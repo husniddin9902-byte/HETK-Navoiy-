@@ -4202,6 +4202,48 @@ font-size:14px;
 🔍
 </div>
 
+ <div
+id="detail-navigation"
+style="
+margin-top:12px;
+padding:10px 12px;
+background:#f5f7fa;
+border-radius:8px;
+cursor:pointer;
+font-weight:600;
+display:none;
+">
+🚗 Navigatsiya
+</div>
+
+<div
+id="detail-created-block"
+style="
+margin-top:10px;
+padding:10px 12px;
+background:#f5f7fa;
+border-radius:8px;
+display:none;
+">
+<div style="font-weight:bold;">🕒 Yaratilgan</div>
+<div id="detail-created-date"></div>
+<div id="detail-created-user"></div>
+</div>
+
+<div
+id="detail-updated-block"
+style="
+margin-top:10px;
+padding:10px 12px;
+background:#f5f7fa;
+border-radius:8px;
+display:none;
+">
+<div style="font-weight:bold;">✏️ Oxirgi tahrir</div>
+<div id="detail-updated-date"></div>
+<div id="detail-updated-user"></div>
+</div>
+
 </div>
 
 </div>
