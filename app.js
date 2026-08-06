@@ -4441,6 +4441,12 @@ border-radius:8px;
 
 
 // tahrirlashlar modulda
+  document.getElementById("detail-created-block").style.display =
+    currentTP.createdAt ? "block" : "none";
+
+document.getElementById("detail-updated-block").style.display =
+    currentTP.updatedAt ? "block" : "none";
+  
 function formatDate(ts){
     if(!ts) return "-";
     const d = new Date(Number(ts));
