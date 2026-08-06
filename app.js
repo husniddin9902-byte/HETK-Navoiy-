@@ -4476,6 +4476,12 @@ document.getElementById("detail-updated-user").textContent =
 currentTP.updatedBy || "-";
  
   const nav = document.getElementById("detail-navigation");
+
+alert(
+"Latitude: " + currentTP.latitude +
+"\nLongitude: " + currentTP.longitude
+);
+  
 if(currentTP.latitude && currentTP.longitude){
     nav.style.display = "block";
     nav.onclick = function(){
