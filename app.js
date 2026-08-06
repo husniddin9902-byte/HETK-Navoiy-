@@ -4473,6 +4473,47 @@ if(currentTP.updatedAt){
 }else{
     document.getElementById("detail-updated-block").style.display="none";
 }
+
+function formatDate(ts){
+    if(!ts) return "-";
+    const d = new Date(Number(ts));
+    const dd = String(d.getDate()).padStart(2,"0");
+    const mm = String(d.getMonth()+1).padStart(2,"0");
+    const yy = d.getFullYear();
+    const hh = String(d.getHours()).padStart(2,"0");
+    const mi = String(d.getMinutes()).padStart(2,"0");
+    return {
+        date:`${dd}.${mm}.${yy}`,
+        time:`${hh}:${mi}`
+    };
+}
+const created = formatDate(currentTP.createdAt);
+const updated = formatDate(currentTP.updatedAt);
+
+document.getElementById("detail-created-date").innerHTML =
+`${created.date}<br>${created.time}`;
+
+document.getElementById("detail-created-user").textContent =
+currentTP.createdBy || "-";
+
+document.getElementById("detail-updated-date").innerHTML =
+`${updated.date}<br>${updated.time}`;
+
+document.getElementById("detail-updated-user").textContent =
+currentTP.updatedBy || "-";
+ 
+  const nav = document.getElementById("detail-navigation");
+if(currentTP.latitude && currentTP.longitude){
+    nav.style.display = "block";
+    nav.onclick = function(){
+        window.open(
+            `https://maps.google.com/?q=${currentTP.latitude},${currentTP.longitude}`,
+            "_blank"
+        );
+    };
+}else{
+    nav.style.display = "none";
+}
   
     document
         .getElementById("element-modal-overlay")
