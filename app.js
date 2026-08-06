@@ -4439,41 +4439,8 @@ border-radius:8px;
     preview.innerHTML="📷<br>Rasm mavjud emas";
 }
 
-// ===== NAVIGATSIYA =====
-  
-if(currentTP.latitude && currentTP.longitude){
-    document.getElementById("detail-navigation").style.display="block";
-    document.getElementById("detail-navigation").onclick=function(){
-        window.open(
-            `https://maps.google.com/?q=${currentTP.latitude},${currentTP.longitude}`,
-            "_blank"
-        );
-    };
-}else{
-    document.getElementById("detail-navigation").style.display="none";
-}
-// ===== YARATILGAN =====
-if(currentTP.createdAt){
-    document.getElementById("detail-created-block").style.display="block";
-    document.getElementById("detail-created-date").textContent =
-        currentTP.createdAt;
-    document.getElementById("detail-created-user").textContent =
-        currentTP.createdBy || "";
-}else{
-    document.getElementById("detail-created-block").style.display="none";
-}
-// ===== OXIRGI TAHRIR =====
-  
-if(currentTP.updatedAt){
-    document.getElementById("detail-updated-block").style.display="block";
-    document.getElementById("detail-updated-date").textContent =
-        currentTP.updatedAt;
-    document.getElementById("detail-updated-user").textContent =
-        currentTP.updatedBy || "";
-}else{
-    document.getElementById("detail-updated-block").style.display="none";
-}
 
+// tahrirlashlar modulda
 function formatDate(ts){
     if(!ts) return "-";
     const d = new Date(Number(ts));
