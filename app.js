@@ -4208,7 +4208,9 @@ id="detail-navigation"
 style="
 margin-top:12px;
 padding:10px 12px;
-background:#f5f7fa;
+background:#1a2f45;
+color:white;
+border:1px solid rgba(255,255,255,.08);
 border-radius:8px;
 cursor:pointer;
 font-weight:600;
@@ -4222,7 +4224,9 @@ id="detail-created-block"
 style="
 margin-top:10px;
 padding:10px 12px;
-background:#f5f7fa;
+background:#1a2f45;
+color:white;
+border:1px solid rgba(255,255,255,.08);
 border-radius:8px;
 display:none;
 ">
@@ -4236,7 +4240,9 @@ id="detail-updated-block"
 style="
 margin-top:10px;
 padding:10px 12px;
-background:#f5f7fa;
+background:#1a2f45;
+color:white;
+border:1px solid rgba(255,255,255,.08);
 border-radius:8px;
 display:none;
 ">
