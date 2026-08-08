@@ -4453,13 +4453,30 @@ document.getElementById("detail-feeders").style.display =
 document.getElementById("detail-feeders").textContent =
     "🔌 " + feeder;
 
+  // ===== XUSUSIY BLOK =====
+const privateBlock =
+    document.getElementById("detail-private-block");
+if(currentTP.isPrivate){
+    privateBlock.style.display = "block";
+    document.getElementById("detail-firm").textContent =
+        "🏢 " + (currentTP.ownerFirm || "-");
+    document.getElementById("detail-firm-owner").textContent =
+        "👤 " + (currentTP.ownerName || "-");
+    document.getElementById("detail-firm-phone").textContent =
+        "☎️ " + (currentTP.ownerPhone || "-");
+    document.getElementById("detail-meter").textContent =
+        "🔢 " + (currentTP.meterNumber || "-");
+}else{
+    privateBlock.style.display = "none";
+}
+
+  
 const preview = document.getElementById("preview-image");
 if (
     currentTP.images &&
     currentTP.images.length
 ){
     const imageUrl = await getTelegramFileUrl(
-       
       currentTP.images[0].fileId
     );
     if(imageUrl){
