@@ -4311,6 +4311,33 @@ style="margin-bottom:20px;">
 🔌 Fiderlar
 </div>
 
+<div
+id="detail-private-block"
+style="
+display:none;
+margin-top:18px;
+padding-top:18px;
+border-top:1px solid rgba(255,255,255,.08);
+">
+
+<div id="detail-firm" style="margin-bottom:12px;">
+🏢 Korxona
+</div>
+
+<div id="detail-firm-owner" style="margin-bottom:12px;">
+👤 Vakili
+</div>
+
+<div id="detail-firm-phone" style="margin-bottom:12px;">
+☎️ Korxona telefoni
+</div>
+
+<div id="detail-meter">
+🔢 Hisoblagich
+</div>
+
+</div>
+
 <button id="edit-element-btn"
 style="
 width:100%;
