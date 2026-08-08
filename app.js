@@ -4365,7 +4365,12 @@ async  function showElementModal(){
         showToast("Avval elementni tanlang!");
         return;
     }
-  alert(JSON.stringify(currentTP,null,2));
+ 
+  let txt = "";
+for(const k in currentTP){
+    txt += k + "\n";
+}
+alert(txt);
   
     createElementModal();
 
