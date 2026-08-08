@@ -4478,6 +4478,33 @@ if(currentTP.isPrivate){
     privateBlock.style.display = "none";
 }
 
+// ===== KORXONA NOMI =====
+document.getElementById("detail-firm").style.display =
+    currentTP.ownerFirm ? "block" : "none";
+
+document.getElementById("detail-firm").textContent =
+    "🏢 " + (currentTP.ownerFirm || "");
+
+// ===== KORXONA VAKILI =====
+document.getElementById("detail-firm-owner").style.display =
+    currentTP.ownerName ? "block" : "none";
+
+document.getElementById("detail-firm-owner").textContent =
+    "👤 " + (currentTP.ownerName || "");
+
+// ===== KORXONA TELEFONI =====
+document.getElementById("detail-firm-phone").style.display =
+    currentTP.ownerPhone ? "block" : "none";
+
+document.getElementById("detail-firm-phone").textContent =
+    "☎️ " + (currentTP.ownerPhone || "");
+
+// ===== HISOBLAGICH =====
+document.getElementById("detail-meter").style.display =
+    currentTP.meterNumber ? "block" : "none";
+
+document.getElementById("detail-meter").textContent =
+    "🔢 " + (currentTP.meterNumber || "");  
   
 const preview = document.getElementById("preview-image");
 if (
