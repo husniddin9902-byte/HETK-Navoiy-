@@ -4366,12 +4366,6 @@ async  function showElementModal(){
         return;
     }
  
-  let txt = "";
-for(const k in currentTP){
-    txt += k + "\n";
-}
-alert(txt);
-  
     createElementModal();
 
   document.getElementById("detail-short-folder").textContent =
@@ -4482,18 +4476,13 @@ document.getElementById("detail-updated-date").innerHTML =
 document.getElementById("detail-updated-user").textContent =
 currentTP.updatedBy || "-";
  
-  const nav = document.getElementById("detail-navigation");
-
-alert(
-"Latitude: " + currentTP.latitude +
-"\nLongitude: " + currentTP.longitude
-);
-  
-if(currentTP.latitude && currentTP.longitude){
+ 
+const nav = document.getElementById("detail-navigation");
+if(currentTP.lat && currentTP.lng){
     nav.style.display = "block";
     nav.onclick = function(){
         window.open(
-            `https://maps.google.com/?q=${currentTP.latitude},${currentTP.longitude}`,
+            `https://maps.google.com/?q=${currentTP.lat},${currentTP.lng}`,
             "_blank"
         );
     };
