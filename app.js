@@ -4320,19 +4320,27 @@ padding-top:18px;
 border-top:1px solid rgba(255,255,255,.08);
 ">
 
-<div id="detail-firm" style="margin-bottom:12px;">
+<div
+id="detail-firm"
+style="margin-bottom:12px;display:none;">
 🏢 Korxona
 </div>
 
-<div id="detail-firm-owner" style="margin-bottom:12px;">
+<div
+id="detail-firm-owner"
+style="margin-bottom:12px;display:none;">
 👤 Vakili
 </div>
 
-<div id="detail-firm-phone" style="margin-bottom:12px;">
+<div
+id="detail-firm-phone"
+style="margin-bottom:12px;display:none;">
 ☎️ Korxona telefoni
 </div>
 
-<div id="detail-meter">
+<div
+id="detail-meter"
+style="display:none;">
 🔢 Hisoblagich
 </div>
 
