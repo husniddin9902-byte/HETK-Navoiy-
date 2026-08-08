@@ -4396,21 +4396,50 @@ document.getElementById("detail-power").textContent =
     "⚡ " + (currentTP.power || "-");
 
 
+// ===== HOLATI =====
+document.getElementById("detail-status").style.display =
+    currentTP.status ? "block" : "none";
+
+document.getElementById("detail-status").textContent =
+    "🟢 " + (currentTP.status || "");
+
+// ===== QUVVAT =====
+document.getElementById("detail-power").style.display =
+    currentTP.power ? "block" : "none";
+
+document.getElementById("detail-power").textContent =
+    "⚡ " + currentTP.power;
+
+// ===== MANZIL =====
+document.getElementById("detail-address").style.display =
+    currentTP.address ? "block" : "none";
+
 document.getElementById("detail-address").textContent =
-    "📍 " + (currentTP.address || "-");
+    "📍 " + currentTP.address;
+
+// ===== JAVOBGAR =====
+document.getElementById("detail-owner").style.display =
+    currentTP.responsiblePerson ? "block" : "none";
 
 document.getElementById("detail-owner").textContent =
-    "👤 " + (currentTP.responsiblePerson || "-");
+    "👤 " + currentTP.responsiblePerson;
+
+// ===== TELEFON =====
+document.getElementById("detail-phone").style.display =
+    currentTP.responsiblePhone ? "block" : "none";
 
 document.getElementById("detail-phone").textContent =
-    "📞 " + (currentTP.responsiblePhone || "-");
+    "📞 " + currentTP.responsiblePhone;
+
+// ===== FIDER =====
+const feeder =
+    currentTP.feeders || currentTP.feeder || "";
+
+document.getElementById("detail-feeders").style.display =
+    feeder ? "block" : "none";
 
 document.getElementById("detail-feeders").textContent =
-    "🔌 " + (
-        currentTP.feeders ||
-        currentTP.feeder || 
-        "-"
-    );
+    "🔌 " + feeder;
 
 const preview = document.getElementById("preview-image");
 if (
