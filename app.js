@@ -4295,21 +4295,6 @@ style="margin-bottom:12px;">
 📍 Manzil
 </div>
 
-<button id="navigate-btn"
-style="
-height:42px;
-padding:0 20px;
-border:none;
-border-radius:8px;
-background:#2e7d32;
-color:white;
-cursor:pointer;
-margin-bottom:20px;
-">
-
-🚗 Navigatsiya
-
-</button>
 
 <div id="detail-owner"
 style="margin-bottom:12px;">
