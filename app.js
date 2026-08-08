@@ -4365,6 +4365,7 @@ async  function showElementModal(){
         showToast("Avval elementni tanlang!");
         return;
     }
+  alert(JSON.stringify(currentTP,null,2));
   
     createElementModal();
 
