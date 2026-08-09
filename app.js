@@ -4511,6 +4511,9 @@ const otherFolders =
     (currentTP.folders || []).filter(
         id => id !== currentTP.primaryFolderId
     );
+
+  alert(JSON.stringify(currentTP.folders, null, 2));
+  
 if(otherFolders.length){
     otherFeedersBlock.style.display = "block";
     otherFolders.forEach(folderId=>{
