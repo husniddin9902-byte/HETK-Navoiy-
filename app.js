@@ -4306,9 +4306,23 @@ style="margin-bottom:12px;">
 📞 Telefon
 </div>
 
-<div id="detail-feeders"
-style="margin-bottom:20px;">
-🔌 Fiderlar
+<div
+id="detail-other-feeders"
+style="
+display:none;
+margin-top:18px;
+margin-bottom:18px;
+padding-top:14px;
+border-top:1px solid rgba(255,255,255,.08);
+">
+<div
+style="
+font-weight:bold;
+margin-bottom:10px;
+">
+🔌 Boshqa manbalari
+</div>
+<div id="detail-other-feeders-list"></div>
 </div>
 
 <div
