@@ -4276,15 +4276,6 @@ margin-bottom:16px;
 
 </div>
 
-<h2
-id="detail-name"
-style="
-margin:0 0 14px 0;
-font-size:34px;
-">
-Element nomi
-</h2>
-
 <div id="detail-power"
 style="margin-bottom:12px;">
 ⚡ Quvvat
