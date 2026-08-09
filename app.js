@@ -4385,9 +4385,21 @@ async  function showElementModal(){
         showToast("Avval elementni tanlang!");
         return;
     }
- 
     createElementModal();
 
+alert(JSON.stringify({
+    status: currentTP.status,
+    power: currentTP.power,
+    address: currentTP.address,
+    note: currentTP.note,
+    lat: currentTP.lat,
+    lng: currentTP.lng,
+    feeder: currentTP.feeder,
+    feeders: currentTP.feeders,
+    responsiblePerson: currentTP.responsiblePerson,
+    responsiblePhone: currentTP.responsiblePhone
+}, null, 2));
+  
   document.getElementById("detail-short-folder").textContent =
     "📂 " + (
         currentFolders[currentTP.primaryFolderId]?.name ||
