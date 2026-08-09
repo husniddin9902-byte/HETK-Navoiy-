@@ -4514,16 +4514,15 @@ const otherFolders =
 if(otherFolders.length){
     otherFeedersBlock.style.display = "block";
     otherFolders.forEach(folderId=>{
-        const folder = currentFolders.find(
-            f=>f.id===folderId
-        );
-        if(!folder) return;
-        const div = document.createElement("div");
-        div.style.marginBottom = "10px";
-        div.innerHTML =
-            "📂 " + getFolderPath(folder.id);
-        otherFeedersList.appendChild(div);
-    });
+    const folder = currentFolders[folderId];
+    if(!folder) return;
+    const div = document.createElement("div");
+    div.style.marginBottom = "10px";
+    div.innerHTML =
+        "📂 " + getFolderPath(folderId);
+    otherFeedersList.appendChild(div);
+});
+   
 }else{
     otherFeedersBlock.style.display = "none";
 }
