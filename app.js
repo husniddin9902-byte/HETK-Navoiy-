@@ -4543,7 +4543,7 @@ border-radius:8px;
     }else{
         preview.innerHTML="📷<br>Rasm mavjud emas";
     }
-}else{
+}else{ 
     preview.innerHTML="📷<br>Rasm mavjud emas";
 }
 
