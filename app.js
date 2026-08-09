@@ -4501,6 +4501,33 @@ if(feeder){
         "🔌 " + feeder;
 }
 
+// ===== BOSHQA MANBALARI =====
+const otherFeedersBlock =
+    document.getElementById("detail-other-feeders");
+const otherFeedersList =
+    document.getElementById("detail-other-feeders-list");
+otherFeedersList.innerHTML = "";
+const otherFolders =
+    (currentTP.folders || []).filter(
+        id => id !== currentTP.primaryFolderId
+    );
+if(otherFolders.length){
+    otherFeedersBlock.style.display = "block";
+    otherFolders.forEach(folderId=>{
+        const folder = currentFolders.find(
+            f=>f.id===folderId
+        );
+        if(!folder) return;
+        const div = document.createElement("div");
+        div.style.marginBottom = "10px";
+        div.innerHTML =
+            "📂 " + getFolderPath(folder.id);
+        otherFeedersList.appendChild(div);
+    });
+}else{
+    otherFeedersBlock.style.display = "none";
+}
+  
   // ===== XUSUSIY BLOK =====
 const privateBlock =
     document.getElementById("detail-private-block");
