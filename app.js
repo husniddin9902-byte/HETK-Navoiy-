@@ -4400,8 +4400,6 @@ async  function showElementModal(){
         return;
     }
     createElementModal();
-
-alert(JSON.stringify(currentTP, null, 2));
   
   document.getElementById("detail-short-folder").textContent =
     "📂 " + (
