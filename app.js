@@ -4490,6 +4490,7 @@ if(feeder){
         "🔌 " + feeder;
 }
 
+  /*
 // ===== BOSHQA MANBALARI =====
 const otherFeedersBlock =
     document.getElementById("detail-other-feeders");
@@ -4517,7 +4518,7 @@ if(otherFolders.length){
    
 }else{
     otherFeedersBlock.style.display = "none";
-}
+}  */
   
   // ===== XUSUSIY BLOK =====
 const privateBlock =
