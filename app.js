@@ -4488,7 +4488,7 @@ if(feeder){
         "🔌 " + feeder;
 }
 
-  /*
+ 
 // ===== BOSHQA MANBALARI =====
 const otherFeedersBlock =
     document.getElementById("detail-other-feeders");
@@ -4500,8 +4500,7 @@ const otherFolders =
         id => id !== currentTP.primaryFolderId
     );
 
-  alert(JSON.stringify(currentTP.folders, null, 2));
-  
+
 if(otherFolders.length){
     otherFeedersBlock.style.display = "block";
     otherFolders.forEach(folderId=>{
@@ -4516,7 +4515,7 @@ if(otherFolders.length){
    
 }else{
     otherFeedersBlock.style.display = "none";
-}  */
+}  
   
   // ===== XUSUSIY BLOK =====
 const privateBlock =
