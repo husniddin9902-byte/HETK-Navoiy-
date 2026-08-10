@@ -4295,10 +4295,12 @@ const otherFeedersBlock =
 const otherFeedersList =
     document.getElementById("detail-other-feeders-list");
 otherFeedersList.innerHTML = "";
-const otherFolders =
-    (currentTP.folders || []).filter(
-        id => id !== currentTP.primaryFolderId
-    );
+
+  const otherFolders =
+    currentTP.folders
+        ? Object.keys(currentTP.folders)
+              .filter(id => id != currentTP.primaryFolderId)
+        : [];
 
 
 if(otherFolders.length){
