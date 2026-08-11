@@ -4061,33 +4061,37 @@ overflow:auto;
 ">
 
 <div
+style="
+display:flex;
+align-items:center;
+gap:20px;
+margin-bottom:18px;
+">
+
+<div
 id="detail-status"
 style="
-display:inline-block;
+display:none;
 padding:6px 14px;
 border-radius:18px;
 background:#2e7d32;
 color:#fff;
 font-weight:bold;
-margin-bottom:16px;
 ">
-
 🟢 A'lo
-
 </div>
 
-<h2
-id="detail-name"
+<div
+id="detail-power"
 style="
-margin:0 0 14px 0;
-font-size:34px;
+display:none;
+font-size:26px;
+font-weight:bold;
+color:#ffd54f;
 ">
-Element nomi
-</h2>
+⚡ 160
+</div>
 
-<div id="detail-power"
-style="margin-bottom:12px;">
-⚡ Quvvat
 </div>
 
 <div id="detail-address"
