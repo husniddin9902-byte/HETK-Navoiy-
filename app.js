@@ -4235,7 +4235,7 @@ document.getElementById("detail-power").textContent =
 
 // ===== HOLATI =====
 document.getElementById("detail-status").style.display =
-    currentTP.status ? "block" : "none";
+    currentTP.status ? "inline-block" : "none";
 
 if(currentTP.status){
     document.getElementById("detail-status").textContent =
@@ -4244,7 +4244,7 @@ if(currentTP.status){
 
 // ===== QUVVAT =====
 document.getElementById("detail-power").style.display =
-    currentTP.power ? "block" : "none";
+    currentTP.power ? "inline-block" : "none";
 
 if(currentTP.power){
     document.getElementById("detail-power").textContent =
