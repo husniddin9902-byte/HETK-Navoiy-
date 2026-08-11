@@ -4222,8 +4222,8 @@ document.getElementById("detail-folder-path").textContent =
     );
   
   
- document.getElementById("detail-name").textContent =
-    currentTP.name || "-";
+// document.getElementById("detail-name").textContent =
+ //   currentTP.name || "-";
 
 document.getElementById("detail-power").textContent =
     "⚡ " + (currentTP.power || "-");
