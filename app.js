@@ -4274,20 +4274,6 @@ if(currentTP.responsiblePhone){
         "📞 " + currentTP.responsiblePhone;
 }
 
-// ===== FIDER =====
-const feeder =
-    currentTP.feeders ||
-    currentTP.feeder ||
-    "";
-
-document.getElementById("detail-feeders").style.display =
-    feeder ? "block" : "none";
-
-if(feeder){
-    document.getElementById("detail-feeders").textContent =
-        "🔌 " + feeder;
-}
-
  
 // ===== BOSHQA MANBALARI =====
 const otherFeedersBlock =
