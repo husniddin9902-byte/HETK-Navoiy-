@@ -2024,6 +2024,12 @@ inputResponsiblePerson.value,
 
 responsiblePhone:
 inputResponsiblePhone.value,
+
+          status:
+document.querySelector(
+'input[name="input-status"]:checked'
+)?.value || "excellent",
+          
             note: inputElementNote.value,
           images: [...existingImages, ...uploadedTelegramImages],
           mainImageIndex: mainImageIndex,
