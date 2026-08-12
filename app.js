@@ -4240,14 +4240,23 @@ document.getElementById("detail-power").textContent =
 
 
 // ===== HOLATI =====
-document.getElementById("detail-status").style.display =
-    currentTP.status ? "inline-block" : "none";
-
+const statusElement =
+    document.getElementById("detail-status");
+statusElement.style.display =
+    currentTP.status ? "block" : "none";
 if(currentTP.status){
-    document.getElementById("detail-status").textContent =
-        "🟢 " + currentTP.status;
+    let statusIcon = "🟢";
+    if(currentTP.status === "satisfactory"){
+        statusIcon = "🟡";
+    }
+    if(currentTP.status === "emergency"){
+        statusIcon = "🔴";
+    }
+    statusElement.textContent =
+        "Holati " + statusIcon;
 }
 
+  
 // ===== QUVVAT =====
 document.getElementById("detail-power").style.display =
     currentTP.power ? "inline-block" : "none";
