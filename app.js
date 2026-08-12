@@ -672,6 +672,15 @@ powerSelected.onclick = function (e) {
             ? "none"
             : "block";
 };
+
+  statusSelected.onclick = function (e) {
+e.stopPropagation();
+statusOptions.style.display =
+statusOptions.style.display === "block"
+? "none"
+: "block";
+};
+  
   
   initFilterDropdown(
     "balance-option",
