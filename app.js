@@ -550,6 +550,15 @@ const powerSelected = document.getElementById("power-selected");
 const powerSelectedText = document.getElementById("power-selected-text");
 const powerOptions = document.getElementById("power-options");
 
+// Texnik holati dropdown
+const statusSelected =
+document.getElementById("status-selected");
+const statusSelectedText =
+document.getElementById("status-selected-text");
+const statusOptions =
+document.getElementById("status-options");
+
+
 function updateFilterCount() {
     let count = 0;
     Object.values(appliedFilterState).forEach(value => {
