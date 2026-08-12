@@ -2767,6 +2767,14 @@ inputResponsiblePhone.value =
 tp.responsiblePhone || "";
         inputElementNote.value = tp.note || "";
 
+// Texnik holatini yuklash
+const status =
+    tp.status || "excellent";
+
+document.querySelector(
+    'input[name="input-status"][value="' + status + '"]'
+).checked = true;
+      
         // Many-to-Many fiderlar ro'yxatini yuklash
         let folderIds = [];
         if (tp.folders) {
