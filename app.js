@@ -730,7 +730,13 @@ initFilterDropdown(
     powerSelectedText,
     powerOptions
 );
-  
+
+ initFilterDropdown(
+"status-option",
+"status",
+statusSelectedText,
+statusOptions
+);
 
     cancelFilterBtn.onclick = function () {
 
