@@ -651,6 +651,64 @@ cursor:pointer;
 </div>
 </div>
 
+ // texnik holati
+            <label>Texnik holati</label>
+
+<div id="status-dropdown"
+     style="position:relative;margin:8px 0 14px 0;">
+
+    <div id="status-selected"
+         style="
+            background:#001a2c;
+            border:1px solid rgba(255,255,255,.15);
+            border-radius:8px;
+            padding:10px 12px;
+            cursor:pointer;
+            display:flex;
+            justify-content:space-between;
+            align-items:center;">
+
+        <span id="status-selected-text">
+            Filtr tanlanmagan
+        </span>
+        <i class="fas fa-chevron-down"></i>
+    </div>
+    <div id="status-options"
+         style="
+            display:none;
+            margin-top:6px;
+            background:#001a2c;
+            border:1px solid rgba(255,255,255,.15);
+            border-radius:8px;
+            overflow:hidden;">
+
+        <div class="status-option filter-option active"
+             data-value="none">
+            <span>Filtr tanlanmagan</span>
+            <i class="fas fa-check option-check"></i>
+        </div>
+
+        <div class="status-option filter-option"
+             data-value="excellent">
+            <span>🟢 A'lo</span>
+            <i class="fas fa-check option-check"></i>
+        </div>
+
+        <div class="status-option filter-option"
+             data-value="satisfactory">
+            <span>🟡 Qoniqarli</span>
+            <i class="fas fa-check option-check"></i>
+        </div>
+
+        <div class="status-option filter-option"
+             data-value="emergency">
+            <span>🔴 Avariya holatida</span>
+            <i class="fas fa-check option-check"></i>
+        </div>
+    </div>
+</div>
+            
+            
       <div id="filter-footer"
      style="
         border-top:1px solid rgba(255,255,255,.12);
