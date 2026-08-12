@@ -4074,25 +4074,33 @@ padding:22px;
 overflow:auto;
 ">
 
+<div style="margin-bottom:18px;">
+
+<div
+style="
+font-size:13px;
+color:#88a0b0;
+margin-bottom:6px;
+">
+Texnik holati
+</div>
+
 <div
 style="
 display:flex;
+justify-content:space-between;
 align-items:center;
-gap:20px;
-margin-bottom:18px;
 ">
 
 <div
 id="detail-status"
 style="
 display:none;
-padding:6px 14px;
-border-radius:18px;
-background:#2e7d32;
-color:#fff;
+font-size:18px;
 font-weight:bold;
+color:#fff;
 ">
-🟢 A'lo
+Holati 🟢
 </div>
 
 <div
@@ -4104,6 +4112,8 @@ font-weight:bold;
 color:#ffd54f;
 ">
 ⚡ 160
+</div>
+
 </div>
 
 </div>
