@@ -842,6 +842,13 @@ clearFilterBtn.onclick = function () {
         "none",
         powerSelectedText
     );
+
+  setFilterDropdown(
+    "status-option",
+    "none",
+    statusSelectedText
+);
+  
   updateFilterCount();
 };
   
