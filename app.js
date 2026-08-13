@@ -849,7 +849,7 @@ clearFilterBtn.onclick = function () {
         commentOptions.style.display = "none";
         dualOptions.style.display = "none";
         powerOptions.style.display = "none";
-      
+      statusOptions.style.display = "none";
       filterMenu.style.display = "none";
     }
 });
