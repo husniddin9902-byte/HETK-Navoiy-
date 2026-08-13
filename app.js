@@ -785,6 +785,13 @@ statusOptions
         powerSelectedText
     );
 
+      setFilterDropdown(
+    "status-option",
+    filterState.status,
+    statusSelectedText
+);
+      
+
     updateFilterCount();
 filterMenu.style.display = "none";
 };
