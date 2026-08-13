@@ -417,6 +417,7 @@ const filterState = {
     comment: "none",
     dual: "none",
     power: "none"
+    status: "none"
 };
 
 let appliedFilterState = { ...filterState };
