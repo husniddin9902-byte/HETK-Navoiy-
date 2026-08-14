@@ -3437,6 +3437,20 @@ if (filterState.power !== "none") {
     }
 }
 
+// Texnik holati filtri
+if (filterState.status !== "none") {
+
+    const statusMap = {
+        excellent: "A'lo",
+        satisfactory: "Qoniqarli",
+        emergency: "Avariya holatida"
+    };
+
+    if ((tp.status || "") !== statusMap[filterState.status]) {
+        return;
+    }
+}
+        
 // Ikki tomonlama ta'minlangan filtri
 if (filterState.dual !== "none") {
     const folderCount = tp.folders
