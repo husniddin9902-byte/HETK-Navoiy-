@@ -591,6 +591,19 @@ function setFilterDropdown(
     });
 }
 
+// filtir menyusi birini ochsa ikkinchisini yopish uchun.
+function closeAllFilterDropdowns() {
+    balanceOptions.style.display = "none";
+    responsibleOptions.style.display = "none";
+    updatedOptions.style.display = "none";
+    createdOptions.style.display = "none";
+    commentOptions.style.display = "none";
+    dualOptions.style.display = "none";
+    powerOptions.style.display = "none";
+    statusOptions.style.display = "none";
+
+}
+
 function initFilterDropdown(
     optionClass,
     stateKey,
