@@ -3282,13 +3282,14 @@ function refreshSearchResults(){
     const foldersBox = document.getElementById("folders-section");
     const text = searchState.text.trim();
   
-  const hasFilter =
+ const hasFilter =
     filterState.balance !== "none" ||
     filterState.created !== "none" ||
     filterState.updated !== "none" ||
     filterState.comment !== "none" ||
     filterState.dual !== "none" ||
-    filterState.power !== "none";
+    filterState.power !== "none" ||
+    filterState.status !== "none";
 
   const isSearching =
     text !== "" || hasFilter;
@@ -3755,7 +3756,8 @@ const hasFilter =
     filterState.updated !== "none" ||
     filterState.comment !== "none" ||
     filterState.dual !== "none" ||
-    filterState.power !== "none";
+    filterState.power !== "none" ||
+    filterState.status !== "none";
   
     if (panelTabFolders) panelTabFolders.classList.add("active");
     if (panelTabItems) panelTabItems.classList.remove("active");
