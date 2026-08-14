@@ -431,6 +431,7 @@ function resetFilters() {
     filterState.comment = "none";
     filterState.dual = "none";
     filterState.power = "none";
+    filterState.status = "none";
 }
 
 // Qidiruv inputi
