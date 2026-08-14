@@ -664,36 +664,36 @@ if (filterBtn && filterMenu) {
     createdOptions.style.display = isOpen ? "none" : "block";
 };
 
-  commentSelected.onclick = function (e) {
+ commentSelected.onclick = function (e) {
     e.stopPropagation();
-    commentOptions.style.display =
-        commentOptions.style.display === "block"
-            ? "none"
-            : "block";
+
+    const isOpen = commentOptions.style.display === "block";
+    closeAllFilterDropdowns();
+    commentOptions.style.display = isOpen ? "none" : "block";
 };
 
 dualSelected.onclick = function (e) {
     e.stopPropagation();
-    dualOptions.style.display =
-        dualOptions.style.display === "block"
-            ? "none"
-            : "block";
+
+    const isOpen = dualOptions.style.display === "block";
+    closeAllFilterDropdowns();
+    dualOptions.style.display = isOpen ? "none" : "block";
 };
   
 powerSelected.onclick = function (e) {
     e.stopPropagation();
-    powerOptions.style.display =
-        powerOptions.style.display === "block"
-            ? "none"
-            : "block";
+
+    const isOpen = powerOptions.style.display === "block";
+    closeAllFilterDropdowns();
+    powerOptions.style.display = isOpen ? "none" : "block";
 };
 
   statusSelected.onclick = function (e) {
-e.stopPropagation();
-statusOptions.style.display =
-statusOptions.style.display === "block"
-? "none"
-: "block";
+    e.stopPropagation();
+
+    const isOpen = statusOptions.style.display === "block";
+    closeAllFilterDropdowns();
+    statusOptions.style.display = isOpen ? "none" : "block";
 };
   
   
