@@ -3438,15 +3438,9 @@ if (filterState.power !== "none") {
 }
 
 // Texnik holati filtri
+// Texnik holati filtri
 if (filterState.status !== "none") {
-
-    const statusMap = {
-        excellent: "A'lo",
-        satisfactory: "Qoniqarli",
-        emergency: "Avariya holatida"
-    };
-
-    if ((tp.status || "") !== statusMap[filterState.status]) {
+    if ((tp.status || "") !== filterState.status) {
         return;
     }
 }
