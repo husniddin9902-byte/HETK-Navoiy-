@@ -359,6 +359,27 @@ margin-right:10px;
 ${selectedMahallas.some(x => x.name === m.name) ? "●" : "○"}
 </span>
 <b>${m.name}</b>
+
+${selectedMahallas.some(x =>
+    x.name === m.name && x.isPrimary
+)
+?
+`<span
+onclick="event.stopPropagation();setPrimaryMahalla('${m.name}')"
+style="
+margin-left:10px;
+color:#00d4ff;
+font-size:12px;
+font-weight:bold;
+cursor:pointer;
+">
+📍 Manzil
+</span>`
+:
+""
+}
+
+
 </div>
 <div
 style="
