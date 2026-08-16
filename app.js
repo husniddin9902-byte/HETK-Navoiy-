@@ -341,6 +341,7 @@ function renderMahallaList(){
         container.innerHTML += `
 <div
 class="mahalla-item"
+onclick="toggleMahalla(${index})"
 style="
 display:flex;
 justify-content:space-between;
@@ -355,7 +356,7 @@ style="
 font-size:18px;
 margin-right:10px;
 ">
-○
+${selectedMahallas.includes(m.name) ? "●" : "○"}
 </span>
 <b>${m.name}</b>
 </div>
@@ -377,6 +378,7 @@ ${m.distance} km
 `;
     });
 }
+
 
 // Biriktirilganlarni chiqarish
 function renderSelectedMahallas(){
