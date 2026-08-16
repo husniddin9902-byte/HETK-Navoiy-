@@ -384,15 +384,24 @@ ${m.distance} km
 function renderSelectedMahallas(){
 }
 function toggleMahalla(index){
-    const name = foundMahallas[index].name;
-    if(selectedMahallas.includes(name)){
-        selectedMahallas =
-            selectedMahallas.filter(x=>x!==name);
+    const mahalla = foundMahallas[index];
+    const existingIndex =
+        selectedMahallas.findIndex(
+            x => x.name === mahalla.name
+        );
+    if(existingIndex >= 0){
+        // Olib tashlash
+        selectedMahallas.splice(existingIndex,1);
     }else{
-        selectedMahallas.push(name);
+        // Qo'shish
+        selectedMahallas.push({
+            name: mahalla.name,
+            distance: mahalla.distance,
+            isPrimary:false
+        });
     }
     renderMahallaList();
-     renderSelectedMahallas();
+    renderSelectedMahallas();
 }
 
 
