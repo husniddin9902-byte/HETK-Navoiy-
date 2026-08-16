@@ -476,6 +476,7 @@ function setPrimaryMahalla(name){
         item.isPrimary = true;
     }
     renderMahallaList();
+   renderSelectedMahallas();
 }
 
 // Yagona va to'g'rilangan selectFolder funksiyasi
