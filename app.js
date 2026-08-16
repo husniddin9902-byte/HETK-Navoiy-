@@ -425,6 +425,17 @@ function toggleMahalla(index){
     renderSelectedMahallas();
 }
 
+function setPrimaryMahalla(name){
+    selectedMahallas.forEach(x=>{
+        x.isPrimary = false;
+    });
+    const item =
+        selectedMahallas.find(x=>x.name===name);
+    if(item){
+        item.isPrimary = true;
+    }
+    renderMahallaList();
+}
 
 // Yagona va to'g'rilangan selectFolder funksiyasi
 window.selectFolder = function(id) {
