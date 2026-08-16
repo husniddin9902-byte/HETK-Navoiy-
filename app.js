@@ -412,34 +412,35 @@ function renderSelectedMahallas(){
     selectedMahallas.forEach(item=>{
         container.innerHTML += `
 <div
+onclick="setPrimaryMahalla('${item.name}')"
 style="
 display:flex;
 justify-content:space-between;
 align-items:center;
-padding:8px 12px;
-margin-bottom:8px;
+padding:12px;
+margin-bottom:10px;
 background:#001a2c;
-border-radius:8px;
+border-radius:10px;
+cursor:pointer;
+transition:.2s;
 ">
-
 <div>
 🏘 ${item.name}
-
 </div>
 <div>
-
-${item.isPrimary
+${
+item.isPrimary
 ?
 '<span style="color:#00bfff;font-weight:bold;">📍 Manzil</span>'
 :
 ''
 }
-
 </div>
 </div>
 `;
     });
 }
+
 
 function toggleMahalla(index){
     const mahalla = foundMahallas[index];
