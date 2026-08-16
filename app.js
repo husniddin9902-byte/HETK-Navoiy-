@@ -356,7 +356,7 @@ style="
 font-size:18px;
 margin-right:10px;
 ">
-${selectedMahallas.includes(m.name) ? "●" : "○"}
+${selectedMahallas.some(x => x.name === m.name) ? "●" : "○"}
 </span>
 <b>${m.name}</b>
 </div>
