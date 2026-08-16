@@ -452,11 +452,11 @@ function toggleMahalla(index){
         selectedMahallas.splice(existingIndex,1);
     }else{
         // Qo'shish
-        selectedMahallas.push({
-            name: mahalla.name,
-            distance: mahalla.distance,
-            isPrimary:false
-        });
+       selectedMahallas.push({
+    name:mahalla.name,
+    distance:mahalla.distance,
+    isPrimary:selectedMahallas.length===0
+});
     }
     renderMahallaList();
     renderSelectedMahallas();
