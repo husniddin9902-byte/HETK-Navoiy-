@@ -464,17 +464,19 @@ function toggleMahalla(index){
 }
 
 function setPrimaryMahalla(name){
-    selectedMahallas.forEach(x=>{
-        x.isPrimary = false;
+    selectedMahallas.forEach(item=>{
+        item.isPrimary = false;
     });
-    const item =
-        selectedMahallas.find(x=>x.name===name);
-    if(item){
-        item.isPrimary = true;
+    const current =
+        selectedMahallas.find(
+            x=>x.name===name
+        );
+    if(current){
+        current.isPrimary = true;
     }
-    renderMahallaList();
-   renderSelectedMahallas();
+    renderSelectedMahallas();
 }
+
 
 // Yagona va to'g'rilangan selectFolder funksiyasi
 window.selectFolder = function(id) {
