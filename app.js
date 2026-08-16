@@ -318,6 +318,64 @@ let primaryMahalla = null;
 
 // Mahallalarni ekranga chiqarish
 function renderMahallaList(){
+    const container =
+        document.getElementById("mahalla-found-items");
+    container.innerHTML = "";
+
+    // TEST MA'LUMOTLARI
+    foundMahallas = [
+        {
+            name:"Paxtakor",
+            distance:1.2
+        },
+        {
+            name:"Galabek",
+            distance:4.9
+        },
+        {
+            name:"Mustaqillik",
+            distance:8.9
+        }
+    ];
+    foundMahallas.forEach((m,index)=>{
+        container.innerHTML += `
+<div
+class="mahalla-item"
+style="
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:10px 0;
+border-bottom:1px solid rgba(255,255,255,.05);
+cursor:pointer;
+">
+<div>
+<span
+style="
+font-size:18px;
+margin-right:10px;
+">
+○
+</span>
+<b>${m.name}</b>
+</div>
+<div
+style="
+display:flex;
+align-items:center;
+gap:15px;
+">
+<span
+style="
+color:#88a0b0;
+font-size:13px;
+">
+${m.distance} km
+</span>
+</div>
+</div>
+`;
+    });
 }
 
 // Biriktirilganlarni chiqarish
