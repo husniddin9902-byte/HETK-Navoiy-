@@ -424,11 +424,7 @@ border-radius:8px;
 
 <div>
 🏘 ${item.name}
-${item.isPrimary
-?
-'<span style="margin-left:8px;color:#00bfff;">📍</span>'
-:
-''}
+
 </div>
 <div>
 
