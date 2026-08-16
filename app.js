@@ -403,7 +403,48 @@ ${m.distance} km
 
 // Biriktirilganlarni chiqarish
 function renderSelectedMahallas(){
+    const container =
+        document.getElementById("mahalla-selected-items");
+    if(!container){
+        return;
+    }
+    container.innerHTML = "";
+    selectedMahallas.forEach(item=>{
+        container.innerHTML += `
+<div
+style="
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:8px 12px;
+margin-bottom:8px;
+background:#001a2c;
+border-radius:8px;
+">
+
+<div>
+🏘 ${item.name}
+${item.isPrimary
+?
+'<span style="margin-left:8px;color:#00bfff;">📍</span>'
+:
+''}
+</div>
+<div
+style="
+color:#ff5555;
+cursor:pointer;
+font-size:18px;
+font-weight:bold;
+"
+onclick="removeMahalla('${item.name}')">
+✖
+</div>
+</div>
+`;
+    });
 }
+
 function toggleMahalla(index){
     const mahalla = foundMahallas[index];
     const existingIndex =
