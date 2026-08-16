@@ -384,8 +384,8 @@ cursor:pointer;
 <div
 style="
 display:flex;
-align-items:center;
-gap:15px;
+flex-direction:column;
+gap:8px;
 ">
 <span
 style="
