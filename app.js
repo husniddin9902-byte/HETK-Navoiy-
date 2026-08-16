@@ -392,6 +392,7 @@ function toggleMahalla(index){
         selectedMahallas.push(name);
     }
     renderMahallaList();
+     renderSelectedMahallas();
 }
 
 
