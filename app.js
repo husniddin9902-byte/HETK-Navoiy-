@@ -1232,6 +1232,17 @@ const imageStatusText = document.getElementById('image-status-text');
 const removeImageBtn = document.getElementById('remove-image-btn');
 const deleteElementBtn = document.getElementById('delete-element-btn');
 
+// Mahalla biriktirish uchun
+const btnOpenMahallaPanel =
+document.getElementById("btn-open-mahalla-panel");
+const mahallaPanel =
+document.getElementById("mahalla-panel");
+const closeMahallaPanel =
+document.getElementById("close-mahalla-panel");
+const cancelMahallaPanel =
+document.getElementById("cancel-mahalla-panel");
+
+
 // 3. "Save Location" tugmasi bosilganda formani ochish mantiqi (Plus knopka shartmas!)
 document.querySelector('.save-btn').addEventListener('click', function() {
     // Joriy paneldagi textlardan koordinatalarni ajratib olamiz
