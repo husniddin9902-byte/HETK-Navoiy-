@@ -383,6 +383,16 @@ ${m.distance} km
 // Biriktirilganlarni chiqarish
 function renderSelectedMahallas(){
 }
+function toggleMahalla(index){
+    const name = foundMahallas[index].name;
+    if(selectedMahallas.includes(name)){
+        selectedMahallas =
+            selectedMahallas.filter(x=>x!==name);
+    }else{
+        selectedMahallas.push(name);
+    }
+    renderMahallaList();
+}
 
 
 // Yagona va to'g'rilangan selectFolder funksiyasi
