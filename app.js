@@ -430,15 +430,15 @@ ${item.isPrimary
 :
 ''}
 </div>
-<div
-style="
-color:#ff5555;
-cursor:pointer;
-font-size:18px;
-font-weight:bold;
-"
-onclick="removeMahalla('${item.name}')">
-✖
+<div>
+
+${item.isPrimary
+?
+'<span style="color:#00bfff;font-weight:bold;">📍 Manzil</span>'
+:
+''
+}
+
 </div>
 </div>
 `;
