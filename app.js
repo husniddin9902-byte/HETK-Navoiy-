@@ -360,24 +360,18 @@ ${selectedMahallas.some(x => x.name === m.name) ? "●" : "○"}
 </span>
 <b>${m.name}</b>
 
-${selectedMahallas.some(x =>
-    x.name === m.name && x.isPrimary
-)
-?
-`<span
-onclick="event.stopPropagation();setPrimaryMahalla('${m.name}')"
+<div>
+<span
 style="
-margin-left:10px;
-color:#00d4ff;
-font-size:12px;
-font-weight:bold;
-cursor:pointer;
+font-size:18px;
+margin-right:10px;
 ">
-📍 Manzil
-</span>`
-:
-""
-}
+${selectedMahallas.some(x => x.name === m.name) ? "●" : "○"}
+</span>
+
+<b>${m.name}</b>
+
+</div>
 
 
 </div>
