@@ -308,6 +308,23 @@ function renderTree(parentId, container) {
     });
 }
 
+
+//====================================================
+// MAHALLA MODULI
+//====================================================
+let foundMahallas = [];
+let selectedMahallas = [];
+let primaryMahalla = null;
+
+// Mahallalarni ekranga chiqarish
+function renderMahallaList(){
+}
+
+// Biriktirilganlarni chiqarish
+function renderSelectedMahallas(){
+}
+
+
 // Yagona va to'g'rilangan selectFolder funksiyasi
 window.selectFolder = function(id) {
     activeFolderId = id;
