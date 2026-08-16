@@ -4373,6 +4373,7 @@ cursor:pointer;
 
  // Mahalla panelini ochish
 btnOpenMahallaPanel.onclick = function () {
+    renderMahallaList();
     mahallaPanel.classList.remove("hidden");
 };
 
