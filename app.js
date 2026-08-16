@@ -4296,6 +4296,21 @@ cursor:pointer;
     };
 }
 
+ // Mahalla panelini ochish
+btnOpenMahallaPanel.onclick = function () {
+    mahallaPanel.classList.remove("hidden");
+};
+
+// X tugmasi
+closeMahallaPanel.onclick = function () {
+    mahallaPanel.classList.add("hidden");
+};
+
+// Bekor qilish
+cancelMahallaPanel.onclick = function () {
+    mahallaPanel.classList.add("hidden");
+};
+
 async  function showElementModal(){
     if(!currentTP){
         showToast("Avval elementni tanlang!");
