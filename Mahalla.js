@@ -1,4 +1,4 @@
-
+// "Bismillahir Rohmanir Rohim" — "Mehribon va Rahmli Alloh nomi bilan boshlayman" 
 // =========================
 // MAHALLA MODULI
 // =========================
