@@ -2245,6 +2245,7 @@ document.querySelector(
 )?.value || "excellent",
           
             note: inputElementNote.value,
+          mahallaLinks: selectedMahallas,
           images: [...existingImages, ...uploadedTelegramImages],
           mainImageIndex: mainImageIndex,
           
