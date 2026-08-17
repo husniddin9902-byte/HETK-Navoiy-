@@ -360,20 +360,6 @@ ${selectedMahallas.some(x => x.name === m.name) ? "●" : "○"}
 </span>
 <b>${m.name}</b>
 
-<div>
-<span
-style="
-font-size:18px;
-margin-right:10px;
-">
-${selectedMahallas.some(x => x.name === m.name) ? "●" : "○"}
-</span>
-
-<b>${m.name}</b>
-
-</div>
-
-
 </div>
 <div
 style="
