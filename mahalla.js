@@ -33,3 +33,6 @@ async function loadMahallasFromInternet(lat,lng){
     }
 }
 
+async function loadNearbyMahallasFromOverpass(lat,lng){
+
+}
