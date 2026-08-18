@@ -4448,9 +4448,9 @@ cursor:pointer;
 }
 
  // Mahalla panelini ochish
-btnOpenMahallaPanel.onclick = function () {
-    renderMahallaList();
+btnOpenMahallaPanel.onclick = async function () {
     mahallaPanel.classList.remove("hidden");
+    await loadNearbyMahallas();
 };
 
 // X tugmasi
