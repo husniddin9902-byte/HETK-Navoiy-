@@ -33,8 +33,3 @@ async function loadMahallasFromInternet(lat,lng){
     }
 }
 
-async function loadMahallasFromInternet(lat, lng){
-
-    console.log("Internetdan mahalla qidirilmoqda...");
-
-}
