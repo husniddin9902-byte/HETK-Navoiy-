@@ -55,6 +55,16 @@ relation
 
 out center;
 `;
+
+   const response = await fetch(
+    "https://overpass.kumi.systems/api/interpreter",
+    {
+        method:"POST",
+        body:query
+    }
+);
+const data = await response.json();
+console.log("OVERPASS:", data); 
 }
 
 function calculateDistance(lat1,lng1,lat2,lng2){
