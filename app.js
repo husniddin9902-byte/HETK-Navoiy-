@@ -312,7 +312,6 @@ function renderTree(parentId, container) {
 //====================================================
 // MAHALLA MODULI
 //====================================================
-let foundMahallas = [];
 let selectedMahallas = [];
 let primaryMahalla = null;
 
