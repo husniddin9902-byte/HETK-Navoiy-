@@ -34,6 +34,27 @@ async function loadMahallasFromInternet(lat,lng){
 }
 
 async function loadNearbyMahallasFromOverpass(lat,lng){
+    const query = `
+[out:json][timeout:20];
+
+(
+
+node
+["place"]
+(around:${MAHALLA_RADIUS},${lat},${lng});
+
+way
+["place"]
+(around:${MAHALLA_RADIUS},${lat},${lng});
+
+relation
+["place"]
+(around:${MAHALLA_RADIUS},${lat},${lng});
+
+);
+
+out center;
+`;
 }
 
 function calculateDistance(lat1,lng1,lat2,lng2){
