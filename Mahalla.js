@@ -19,3 +19,17 @@ async function loadNearbyMahallas(){
     }
     await loadMahallasFromInternet(lat,lng);
 }
+
+
+async function loadMahallasFromInternet(lat,lng){
+    try{
+        const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=uz`
+        );
+        const data = await response.json();
+        console.log(data);
+    }catch(err){
+        console.error(err);
+        showToast("Internet orqali mahalla topilmadi");
+    }
+}
