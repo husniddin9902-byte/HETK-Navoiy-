@@ -4450,7 +4450,10 @@ cursor:pointer;
  // Mahalla panelini ochish
 btnOpenMahallaPanel.onclick = async function () {
     mahallaPanel.classList.remove("hidden");
-    await loadNearbyMahallas();
+    await loadNearbyMahallas(
+        Number(inputLatitude.value),
+        Number(inputLongitude.value)
+    );
 };
 
 // X tugmasi
