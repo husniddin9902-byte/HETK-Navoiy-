@@ -35,38 +35,31 @@ async function loadMahallasFromInternet(lat,lng){
 }
 
 async function loadNearbyMahallasFromOverpass(lat,lng){
-    const query = `
+    try{
+        const query = `
 [out:json][timeout:20];
-
 (
-
-node
-["place"]
-(around:${MAHALLA_RADIUS},${lat},${lng});
-
-way
-["place"]
-(around:${MAHALLA_RADIUS},${lat},${lng});
-
-relation
-["place"]
-(around:${MAHALLA_RADIUS},${lat},${lng});
-
+node["place"](around:${MAHALLA_RADIUS},${lat},${lng});
+way["place"](around:${MAHALLA_RADIUS},${lat},${lng});
+relation["place"](around:${MAHALLA_RADIUS},${lat},${lng});
 );
-
 out center;
 `;
-
-   const response = await fetch(
-    "https://overpass.kumi.systems/api/interpreter",
-    {
-        method:"POST",
-        body:query
+        const response = await fetch(
+            "https://overpass.kumi.systems/api/interpreter",
+            {
+                method:"POST",
+                body:query
+            }
+        );
+        const data = await response.json();
+        console.log("OVERPASS:", data);
+    }catch(err){
+        console.error("OVERPASS ERROR:", err);
+        alert(err);
     }
-);
-const data = await response.json();
-console.log("OVERPASS:", data); 
 }
+
 
 function calculateDistance(lat1,lng1,lat2,lng2){
 
