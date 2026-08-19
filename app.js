@@ -4443,6 +4443,13 @@ btnOpenMahallaPanel.onclick = async function () {
     );
 };
 
+btnSaveMahallaPanel.onclick = function(){
+
+    // Mahalla panelini yopish
+    mahallaPanel.classList.add("hidden");
+
+};
+
 // X tugmasi
 closeMahallaPanel.onclick = function () {
     mahallaPanel.classList.add("hidden");
