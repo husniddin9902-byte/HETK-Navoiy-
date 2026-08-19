@@ -321,21 +321,7 @@ function renderMahallaList(){
         document.getElementById("mahalla-found-items");
     container.innerHTML = "";
 
-    // TEST MA'LUMOTLARI
-    foundMahallas = [
-        {
-            name:"Paxtakor",
-            distance:1.2
-        },
-        {
-            name:"Galabek",
-            distance:4.9
-        },
-        {
-            name:"Mustaqillik",
-            distance:8.9
-        }
-    ];
+   
     foundMahallas.forEach((m,index)=>{
         container.innerHTML += `
 <div
