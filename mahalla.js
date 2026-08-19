@@ -19,9 +19,8 @@ async function loadNearbyMahallas(lat, lng){
     
     console.log("Koordinata:", lat, lng);
     await loadMahallasFromInternet(lat, lng);
-     
     await loadNearbyMahallasFromOverpass(lat, lng);
-     
+    await loadMahallasFromNearbyTP(lat, lng); 
 }
 
 
