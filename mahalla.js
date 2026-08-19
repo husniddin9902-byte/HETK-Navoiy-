@@ -86,7 +86,7 @@ await database.ref("TPs").once("value");
 const allPoints =
 snapshot.val() || {};
 
-console.log(allPoints); 
+alert(Object.keys(allPoints).length);
 }
 
 function calculateDistance(lat1,lng1,lat2,lng2){
