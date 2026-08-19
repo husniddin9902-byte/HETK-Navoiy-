@@ -2232,6 +2232,8 @@ document.querySelector(
           
             note: inputElementNote.value,
           mahallaLinks: selectedMahallas,
+          primaryMahalla:
+selectedMahallas.find(x => x.isPrimary)?.name || "",
           images: [...existingImages, ...uploadedTelegramImages],
           mainImageIndex: mainImageIndex,
           
