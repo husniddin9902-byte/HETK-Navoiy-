@@ -1376,7 +1376,8 @@ const closeMahallaPanel =
 document.getElementById("close-mahalla-panel");
 const cancelMahallaPanel =
 document.getElementById("cancel-mahalla-panel");
-
+const btnSaveMahallaPanel =
+document.getElementById("save-mahalla-panel");
 
 // 3. "Save Location" tugmasi bosilganda formani ochish mantiqi (Plus knopka shartmas!)
 document.querySelector('.save-btn').addEventListener('click', function() {
