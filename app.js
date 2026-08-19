@@ -2267,7 +2267,7 @@ originalElementData?.createdAt ||
 Date.now(),
           updatedAt: Date.now(), updatedBy: updatedBy,
         };
-alert(JSON.stringify(selectedMahallas));
+
       
 let needTelegramRepost = false;
      if(editingElementId && originalElementData){ 
