@@ -79,6 +79,8 @@ out center;
     }
 }
 
+async function loadMahallasFromNearbyTP(lat,lng){
+}
 
 function calculateDistance(lat1,lng1,lat2,lng2){
 
