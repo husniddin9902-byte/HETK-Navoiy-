@@ -10,18 +10,18 @@ const MAHALLA_RADIUS = 10000; // Internet qidiruvi (10 km)
 const TP_RADIUS = 5000; // TP larni tekshirish (5 km)
 
 async function loadNearbyMahallas(lat, lng){
-     alert("1");
+    
     foundMahallas = [];
     if(!lat || !lng){
         showToast("Koordinata topilmadi");
         return;
     }
-     alert("2");
+    
     console.log("Koordinata:", lat, lng);
     await loadMahallasFromInternet(lat, lng);
-     alert("3");
+     
     await loadNearbyMahallasFromOverpass(lat, lng);
-     alert("4");
+     
 }
 
 
