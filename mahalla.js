@@ -80,6 +80,13 @@ out center;
 }
 
 async function loadMahallasFromNearbyTP(lat,lng){
+   const snapshot =
+await database.ref("TPs").once("value");
+
+const allPoints =
+snapshot.val() || {};
+
+console.log(allPoints); 
 }
 
 function calculateDistance(lat1,lng1,lat2,lng2){
