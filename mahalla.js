@@ -32,6 +32,22 @@ async function loadMahallasFromInternet(lat,lng){
         );
         const data = await response.json();
         console.log(data);
+
+         const address = data.address || {};
+const mahallaName =
+    address.neighbourhood ||
+    address.suburb ||
+    address.quarter ||
+    address.village ||
+    address.hamlet ||
+    null;
+if(mahallaName){
+    foundMahallas.push({
+        name: mahallaName,
+        distance: 0
+    });
+}
+         
     }catch(err){
         console.error(err);
         showToast("Internet orqali mahalla topilmadi");
