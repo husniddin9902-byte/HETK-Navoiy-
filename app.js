@@ -2971,6 +2971,11 @@ inputResponsiblePhone.value =
 tp.responsiblePhone || "";
         inputElementNote.value = tp.note || "";
 
+// Mahallalarni yuklash
+selectedMahallas = JSON.parse(
+    JSON.stringify(tp.mahallaLinks || [])
+);
+      
 // Texnik holatini yuklash
 const status =
     tp.status || "excellent";
