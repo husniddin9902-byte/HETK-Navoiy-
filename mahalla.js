@@ -104,7 +104,18 @@ Object.values(allPoints).forEach(point => {
         nearbyPoints.push(point);
     }
 });
-alert(nearbyPoints.length);
+    
+const uniqueMahallas = [];
+nearbyPoints.forEach(point => {
+    if(
+        point.primaryMahalla &&
+        !uniqueMahallas.includes(point.primaryMahalla)
+    ){
+        uniqueMahallas.push(point.primaryMahalla);
+    }
+});
+alert(JSON.stringify(uniqueMahallas));
+
 }
 
 function calculateDistance(lat1,lng1,lat2,lng2){
