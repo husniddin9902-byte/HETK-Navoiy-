@@ -4448,6 +4448,8 @@ btnOpenMahallaPanel.onclick = async function () {
         Number(inputLatitude.value),
         Number(inputLongitude.value)
     );
+    renderMahallaList();
+    renderSelectedMahallas();
 };
 
 btnSaveMahallaPanel.onclick = function(){
