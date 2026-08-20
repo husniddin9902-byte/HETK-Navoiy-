@@ -86,7 +86,25 @@ await database.ref("TPs").once("value");
 const allPoints =
 snapshot.val() || {};
 
-alert(Object.keys(allPoints).length);
+const nearbyPoints = [];
+Object.values(allPoints).forEach(point => {
+    const tpLat = Number(point.lat);
+    const tpLng = Number(point.lng);
+    if(isNaN(tpLat) || isNaN(tpLng)){
+        return;
+    }
+    const distance =
+        calculateDistance(
+            lat,
+            lng,
+            tpLat,
+            tpLng
+        );
+    if(distance <= TP_RADIUS){
+        nearbyPoints.push(point);
+    }
+});
+alert(nearbyPoints.length);
 }
 
 function calculateDistance(lat1,lng1,lat2,lng2){
