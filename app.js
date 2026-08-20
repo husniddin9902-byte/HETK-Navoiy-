@@ -4457,7 +4457,21 @@ btnOpenMahallaPanel.onclick = async function () {
 };
 
 btnSaveMahallaPanel.onclick = function(){
-
+const primary =
+    selectedMahallas.find(x => x.isPrimary);
+if(primary){
+    const currentAddress =
+        inputElementAddress.value.trim();
+    if(
+        !currentAddress
+            .toLowerCase()
+            .includes(primary.name.toLowerCase())
+    ){
+        inputElementAddress.value =
+            primary.name + ", " + currentAddress;
+    }
+}
+  
     // Mahalla panelini yopish
     mahallaPanel.classList.add("hidden");
 
