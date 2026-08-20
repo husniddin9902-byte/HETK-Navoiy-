@@ -4463,6 +4463,30 @@ btnSaveMahallaPanel.onclick = function(){
 
 };
 
+btnAddManualMahalla.onclick = function(){
+    const name =
+        manualMahallaInput.value.trim();
+    if(!name){
+        showToast("Mahalla nomini kiriting!");
+        return;
+    }
+    if(
+        selectedMahallas.some(
+            x => x.name.toLowerCase() === name.toLowerCase()
+        )
+    ){
+        showToast("Bu mahalla allaqachon qo'shilgan!");
+        return;
+    }
+    selectedMahallas.push({
+        name: name,
+        isPrimary: selectedMahallas.length === 0
+    });
+    manualMahallaInput.value = "";
+    renderSelectedMahallas();
+    renderMahallaList();
+};
+
 // X tugmasi
 closeMahallaPanel.onclick = function () {
     mahallaPanel.classList.add("hidden");
