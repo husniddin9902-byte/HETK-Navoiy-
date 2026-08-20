@@ -114,7 +114,11 @@ nearbyPoints.forEach(point => {
         uniqueMahallas.push(point.primaryMahalla);
     }
 });
-alert(JSON.stringify(uniqueMahallas));
+alert(
+    nearbyPoints
+        .map(x => x.primaryMahalla)
+        .join("\n")
+);
 
 }
 
