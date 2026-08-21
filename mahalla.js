@@ -101,7 +101,10 @@ Object.values(allPoints).forEach(point => {
             tpLng
         );
     if(distance <= TP_RADIUS){
-        nearbyPoints.push(point);
+        nearbyPoints.push({
+    point: point,
+    distance: distance
+});
     }
 });
     
