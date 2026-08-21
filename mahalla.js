@@ -108,15 +108,20 @@ Object.values(allPoints).forEach(point => {
     }
 });
     
-const uniqueMahallas = [];
-nearbyPoints.forEach(point => {
+const uniqueMahallas = {};
+nearbyPoints.forEach(item => {
+    const mahalla =
+        item.point.primaryMahalla;
+    if(!mahalla) return;
     if(
-        point.primaryMahalla &&
-        !uniqueMahallas.includes(point.primaryMahalla)
+        !uniqueMahallas[mahalla] ||
+        item.distance < uniqueMahallas[mahalla]
     ){
-        uniqueMahallas.push(point.primaryMahalla);
+        uniqueMahallas[mahalla] =
+            item.distance;
     }
 });
+    
     
 uniqueMahallas.forEach(name => {
     if(
