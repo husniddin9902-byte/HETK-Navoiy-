@@ -4459,17 +4459,18 @@ btnOpenMahallaPanel.onclick = async function () {
 btnSaveMahallaPanel.onclick = function(){
 const primary =
     selectedMahallas.find(x => x.isPrimary);
-if(primary){
-    const currentAddress =
-        inputElementAddress.value.trim();
-    if(
-        !currentAddress
-            .toLowerCase()
-            .includes(primary.name.toLowerCase())
-    ){
-        inputElementAddress.value =
-            primary.name + ", " + currentAddress;
-    }
+const currentAddress =
+    inputElementAddress.value.trim();
+if(
+    primary &&
+    (
+        !currentAddress ||
+        currentAddress.toLowerCase().includes("failed") ||
+        currentAddress.toLowerCase().includes("unknown") ||
+        currentAddress.toLowerCase().includes("not found")
+    )
+){
+    inputElementAddress.value = primary.name;
 }
   
     // Mahalla panelini yopish
