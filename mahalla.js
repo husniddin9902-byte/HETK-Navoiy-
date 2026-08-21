@@ -114,12 +114,20 @@ nearbyPoints.forEach(point => {
         uniqueMahallas.push(point.primaryMahalla);
     }
 });
-alert(
-    nearbyPoints
-        .map(x => x.primaryMahalla)
-        .join("\n")
-);
-
+    
+uniqueMahallas.forEach(name => {
+    if(
+        !foundMahallas.some(
+            x => x.name === name
+        )
+    ){
+        foundMahallas.push({
+            name: name,
+            distance: null
+        });
+    }
+});
+renderMahallaList();
 }
 
 function calculateDistance(lat1,lng1,lat2,lng2){
