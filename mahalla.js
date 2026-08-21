@@ -72,6 +72,13 @@ out center;
             }
         );
         const data = await response.json();
+
+        alert(
+    data.elements
+        .map(x => x.tags?.name + " | " + x.tags?.place)
+        .join("\n")
+);
+        
         console.log("OVERPASS:", data);
     }catch(err){
         console.error("OVERPASS ERROR:", err);
