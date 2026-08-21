@@ -122,8 +122,7 @@ nearbyPoints.forEach(item => {
     }
 });
     
-    
-uniqueMahallas.forEach(name => {
+Object.entries(uniqueMahallas).forEach(([name,distance]) => {
     if(
         !foundMahallas.some(
             x => x.name === name
@@ -131,7 +130,8 @@ uniqueMahallas.forEach(name => {
     ){
         foundMahallas.push({
             name: name,
-            distance: null
+            distance:
+                Number((distance/1000).toFixed(1))
         });
     }
 });
