@@ -3023,6 +3023,7 @@ tp.responsiblePhone || "";
 selectedMahallas = JSON.parse(
     JSON.stringify(tp.mahallaLinks || [])
 );
+      renderSelectedMahallas();
       
 // Texnik holatini yuklash
 const status =
