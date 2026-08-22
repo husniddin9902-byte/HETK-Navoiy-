@@ -3073,6 +3073,24 @@ mainImageIndex =
 tp.mainImageIndex || 0;
     
 renderMultiImagePreview();
+
+// Telegram rasmlarini previewga yuklash
+const previewImages =
+document.querySelectorAll(
+"#multi-image-preview .multi-image-box img"
+);
+existingImages.forEach(async (img,index)=>{
+    if(!img.fileId) return;
+    const url =
+    await getTelegramFileUrl(img.fileId);
+    if(
+        url &&
+        previewImages[index]
+    ){
+        previewImages[index].src = url;
+    }
+});
+        
 imageStatusText.innerText =
 `${tp.images.length} ta rasm`;
 imageStatusText.style.color = "#34C759";
