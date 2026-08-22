@@ -32,7 +32,7 @@ async function loadMahallasFromInternet(lat,lng){
         const data = await response.json();
         console.log(data);
 
-         const address = data.address || {};
+    /*     const address = data.address || {};
 const mahallaName =
     address.neighbourhood ||
     address.suburb ||
@@ -45,7 +45,7 @@ if(mahallaName){
         name: mahallaName,
         distance: 0
     });
-}
+}  */
          
     }catch(err){
         console.error(err);
