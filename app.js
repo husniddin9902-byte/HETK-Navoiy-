@@ -2751,6 +2751,18 @@ function resetElementForm() {
 uploadedTelegramImages=[];
 
 document.getElementById('multi-image-preview').innerHTML='';
+
+// ===== Mahalla modulini tozalash =====
+foundMahallas = [];
+selectedMahallas = [];
+const manualInput =
+document.getElementById("manual-mahalla-input");
+if(manualInput){
+    manualInput.value = "";
+}
+renderMahallaList();
+renderSelectedMahallas();
+  
 }
 
 
