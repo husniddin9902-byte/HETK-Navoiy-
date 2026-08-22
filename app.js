@@ -2978,7 +2978,7 @@ if (tp.folders) {
 }
 
 // 2. Elementni tahrirlash uchun oynani ochish funksiyasi (✏️ Bosilganda hamma ma'lumot yuklanadi)
-  window.openEditElement = async function(tpId) {
+ window.openEditElement = function(tpId) {
     database.ref('TPs/' + tpId).once('value', (snapshot) => {
         const tp = snapshot.val();
         if (!tp) return;
@@ -3068,12 +3068,6 @@ if (folderIds.length > 1) {
       // Rasm mavjudligini tekshirish 
       if(tp.images && tp.images.length){
 existingImages = tp.images || [];
-
-for (const img of existingImages) {
-    if (!img.url && img.fileId) {
-        img.url = await getTelegramFileUrl(img.fileId);
-    }
-}
         
 mainImageIndex =
 tp.mainImageIndex || 0;
