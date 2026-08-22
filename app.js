@@ -404,6 +404,38 @@ item.isPrimary
 </div>
 `;
     });
+
+  const preview =
+document.getElementById(
+    "selected-mahallas-preview"
+);
+const previewList =
+document.getElementById(
+    "selected-mahallas-preview-list"
+);
+if(preview && previewList){
+    previewList.innerHTML = "";
+    if(selectedMahallas.length){
+        preview.style.display = "block";
+        selectedMahallas.forEach(item=>{
+            previewList.innerHTML += `
+<div style="
+display:flex;
+justify-content:space-between;
+margin-bottom:6px;
+">
+<span>🏘 ${item.name}</span>
+<span>
+${item.isPrimary ? "📍" : ""}
+</span>
+</div>
+`;
+        });
+    }else{
+        preview.style.display = "none";
+    }
+}
+  
 }
 
 
