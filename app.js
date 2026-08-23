@@ -3618,7 +3618,7 @@ function refreshSearchResults(){
     return;
 }
          
-          const q = text.toLowerCase();
+         const q = normalizeSearch(text);
 let matched = false;
 switch (currentSearchType) {
     case "name":
