@@ -3468,9 +3468,9 @@ function filterVisiblePoints(allTPs) {
     let matched = false;
 
     switch (currentSearchType) {
-        case "name":
-            matched = (tp.name || "").toLowerCase().includes(q);
-            break;
+       case "name":
+    matched = normalizeSearch(tp.name || "").includes(q);
+    break;
 
         case "address":
             matched = (tp.address || "").toLowerCase().includes(q);
