@@ -3714,8 +3714,8 @@ searchState.resultIds = new Set(
       
         const folderTree = buildFolderTree();
         attachResultsToTree(folderTree, searchState.results);
-        resultsBox.style.display="block";
-foldersBox.style.display="none";
+        resultsBox.style.display="none";
+        foldersBox.style.display="block";
       
       resultsBox.innerHTML = `
     <div class="search-info">
