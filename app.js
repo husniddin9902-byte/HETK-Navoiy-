@@ -3522,6 +3522,51 @@ function filterVisiblePoints(allTPs) {
     return found;
 }
 
+function normalizeSearch(text) {
+
+    return (text || "")
+        .toLowerCase()
+
+        // Kirill -> Lotin
+        .replace(/қ/g, "q")
+        .replace(/ғ/g, "g")
+        .replace(/ҳ/g, "h")
+        .replace(/ў/g, "o")
+        .replace(/ё/g, "yo")
+        .replace(/ю/g, "yu")
+        .replace(/я/g, "ya")
+        .replace(/ч/g, "ch")
+        .replace(/ш/g, "sh")
+        .replace(/ж/g, "j")
+        .replace(/ц/g, "s")
+
+        .replace(/а/g, "a")
+        .replace(/б/g, "b")
+        .replace(/в/g, "v")
+        .replace(/г/g, "g")
+        .replace(/д/g, "d")
+        .replace(/е/g, "e")
+        .replace(/з/g, "z")
+        .replace(/и/g, "i")
+        .replace(/й/g, "y")
+        .replace(/к/g, "k")
+        .replace(/л/g, "l")
+        .replace(/м/g, "m")
+        .replace(/н/g, "n")
+        .replace(/о/g, "o")
+        .replace(/п/g, "p")
+        .replace(/р/g, "r")
+        .replace(/с/g, "s")
+        .replace(/т/g, "t")
+        .replace(/у/g, "u")
+        .replace(/ф/g, "f")
+        .replace(/х/g, "x")
+        .replace(/ы/g, "i")
+        .replace(/э/g, "e")
+
+        // TP
+        .replace(/тп/g, "tp");
+}
 
 function refreshSearchResults(){
     searchState.folderId = activeFolderId;
