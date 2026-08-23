@@ -3536,13 +3536,6 @@ function refreshSearchResults(){
  if (text === "" && !hasFilter) {
     resultsBox.style.display = "none";
     resultsBox.innerHTML = "";
-
-   const treeRoot = document.getElementById("tree-root");
-
-if (treeRoot) {
-    renderTree("root", treeRoot);
-}
-   
    showFoldersTab();
     return;
 }
@@ -3721,8 +3714,8 @@ searchState.resultIds = new Set(
       
         const folderTree = buildFolderTree();
         attachResultsToTree(folderTree, searchState.results);
-        resultsBox.style.display="none";
-        foldersBox.style.display="block";
+        resultsBox.style.display="block";
+foldersBox.style.display="none";
       
       resultsBox.innerHTML = `
     <div class="search-info">
@@ -3731,15 +3724,6 @@ searchState.resultIds = new Set(
     ${renderSearchTree(folderTree)}
 `;
 
-     const treeRoot = document.getElementById("tree-root");
-if (treeRoot) {
-    treeRoot.innerHTML = `
-        <div class="search-info">
-            🔑 ${getSearchTypeName()} • Topildi: ${found.length} ta element
-        </div>
-        ${renderSearchTree(folderTree)}
-    `;
-} 
 
 if (currentPanelTab === "map") {
     loadFilteredPoints();
