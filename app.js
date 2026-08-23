@@ -3536,6 +3536,12 @@ function refreshSearchResults(){
  if (text === "" && !hasFilter) {
     resultsBox.style.display = "none";
     resultsBox.innerHTML = "";
+
+   const treeRoot = document.getElementById("tree-root");
+if (treeRoot) {
+    renderFolderTree();
+}
+   
    showFoldersTab();
     return;
 }
