@@ -3536,6 +3536,7 @@ function refreshSearchResults(){
  if (text === "" && !hasFilter) {
     resultsBox.style.display = "none";
     resultsBox.innerHTML = "";
+   updateSearchLayout();
    showFoldersTab();
     return;
 }
