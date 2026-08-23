@@ -602,12 +602,17 @@ function resetFilters() {
 }
 
 // Qidiruv inputi
+let searchTimer = null;
 if (elementSearchInput) {
     elementSearchInput.addEventListener("input", function () {
         searchState.text = this.value.trim();
-        refreshSearchResults();
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => {
+            refreshSearchResults();
+        }, 120);
     });
 }
+
 
 // 🔑 Qidiruv turi kodi
    const searchTypeBtn = document.getElementById("search-type-btn");
