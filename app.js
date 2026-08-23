@@ -3473,43 +3473,43 @@ function filterVisiblePoints(allTPs) {
     break;
 
         case "address":
-            matched = (tp.address || "").toLowerCase().includes(q);
+            matched = normalizeSearch(tp.address || "").includes(q);
             break;
 
         case "responsible":
-            matched = (tp.responsiblePerson || "").toLowerCase().includes(q);
+            matched = normalizeSearch(tp.responsible || "").includes(q);
             break;
 
         case "note":
-            matched = (tp.note || "").toLowerCase().includes(q);
+            matched = normalizeSearch(tp.note || "").includes(q);
             break;
 
         case "company":
-            matched = (tp.ownerFirm || "").toLowerCase().includes(q);
+            matched = normalizeSearch(tp.company || "").includes(q);
             break;
 
         case "phone":
-            matched = (tp.ownerPhone || "").toLowerCase().includes(q);
+            matched = normalizeSearch(tp.company || "").includes(q);
             break;
 
         case "owner":
-            matched = (tp.ownerName || "").toLowerCase().includes(q);
+            matched = normalizeSearch(tp.company || "").includes(q);
             break;
 
         case "meter":
-            matched = (tp.meterNumber || "").toLowerCase().includes(q);
+            matched = normalizeSearch(tp.meter || "").includes(q);
             break;
 
         case "all":
             matched =
-                (tp.name || "").toLowerCase().includes(q) ||
-                (tp.address || "").toLowerCase().includes(q) ||
-                (tp.responsiblePerson || "").toLowerCase().includes(q) ||
-                (tp.note || "").toLowerCase().includes(q) ||
-                (tp.ownerFirm || "").toLowerCase().includes(q) ||
-                (tp.ownerPhone || "").toLowerCase().includes(q) ||
-                (tp.ownerName || "").toLowerCase().includes(q) ||
-                (tp.meterNumber || "").toLowerCase().includes(q);
+normalizeSearch(tp.name || "").includes(q) ||
+normalizeSearch(tp.address || "").includes(q) ||
+normalizeSearch(tp.responsiblePerson || "").includes(q) ||
+normalizeSearch(tp.note || "").includes(q) ||
+normalizeSearch(tp.ownerFirm || "").includes(q) ||
+normalizeSearch(tp.ownerPhone || "").includes(q) ||
+normalizeSearch(tp.ownerName || "").includes(q) ||
+normalizeSearch(tp.meterNumber || "").includes(q);
             break;
     }
 
