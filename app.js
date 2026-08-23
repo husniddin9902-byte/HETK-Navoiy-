@@ -5163,3 +5163,16 @@ async function previousGalleryImage(){
     await loadGalleryImage();
     showGalleryControls();
 }
+
+
+function updateSearchLayout() {
+    const resultsBox = document.getElementById("search-results");
+    const foldersBox = document.getElementById("folders-section");
+    if (!resultsBox || !foldersBox) return;
+    if (resultsBox.style.display === "none") {
+        foldersBox.style.height = "100%";
+        return;
+    }
+    const h = resultsBox.offsetHeight;
+    foldersBox.style.height = `calc(100% - ${h}px)`;
+}
