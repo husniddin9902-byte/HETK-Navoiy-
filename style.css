@@ -378,7 +378,8 @@ body {
 }
 
 .tab-content.active{
-    display:block;
+    display:flex;
+    flex-direction:column;
 }
 
 /* Qidiruv maydoni */
@@ -983,30 +984,35 @@ min-width:max-content;
 .filter-option.active .option-check{
     opacity:1;
 }
-
 .search-item{
     border-radius:8px;
     transition:0.2s;
 }
-
 .search-item:hover{
     background:#173854;
 }
-
 .search-item.selected{
     background:#1b4f72;
     border-left:4px solid #4FC3F7;
 }
-
 .search-item.selected .search-item-actions{
     display:flex !important;
 }
-
 .search-item.selected .search-item-actions{
     opacity:1 !important;
 }
-
 .search-item-actions i:hover{
     color:#4FC3F7;
     transform:scale(1.15);
+}
+#folders-section{
+    min-height:0;
+}
+#tree-root{
+    flex:1;
+    min-height:0;
+    overflow-y:auto;
+}
+#open-add-folder{
+    flex-shrink:0;
 }
