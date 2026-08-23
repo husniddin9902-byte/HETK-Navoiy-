@@ -3724,6 +3724,15 @@ foldersBox.style.display="none";
     ${renderSearchTree(folderTree)}
 `;
 
+     const treeRoot = document.getElementById("tree-root");
+if (treeRoot) {
+    treeRoot.innerHTML = `
+        <div class="search-info">
+            🔑 ${getSearchTypeName()} • Topildi: ${found.length} ta element
+        </div>
+        ${renderSearchTree(folderTree)}
+    `;
+} 
 
 if (currentPanelTab === "map") {
     loadFilteredPoints();
