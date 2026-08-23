@@ -3538,8 +3538,9 @@ function refreshSearchResults(){
     resultsBox.innerHTML = "";
 
    const treeRoot = document.getElementById("tree-root");
+
 if (treeRoot) {
-    renderFolderTree();
+    renderTree("root", treeRoot);
 }
    
    showFoldersTab();
