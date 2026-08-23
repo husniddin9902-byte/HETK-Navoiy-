@@ -3724,6 +3724,7 @@ foldersBox.style.display="none";
     ${renderSearchTree(folderTree)}
 `;
 
+      updateSearchLayout();
 
 if (currentPanelTab === "map") {
     loadFilteredPoints();
