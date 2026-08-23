@@ -1,172 +1,1012 @@
 // "Bismillahir Rohmanir Rohim" — "Mehribon va Rahmli Alloh nomi bilan boshlayman" 
-// =========================
-// MAHALLA MODULI
-// =========================
+/* =========================================================================
+   1. ASOSIY PANEL VA NAVIGATSIYA STILLARI
+   ========================================================================= */
+body {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #001220;
+    overflow: hidden;
+}
 
-let foundMahallas = [];
+.bottom-panel {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: #003250; /* Rasmdagi to'q ko'k */
+    color: white;
+    z-index: 1000;
+    transition: all 0.4s ease-in-out;
+    border-top-left-radius: 25px;
+    border-top-right-radius: 25px;
+    box-shadow: 0 -5px 15px rgba(0,0,0,0.3);
+}
 
-const MAHALLA_RADIUS = 10000; // Internet qidiruvi (10 km)
+/* Panel yopilishi (Faqat ma'lumotlar yo'qoladi, tugmalar qoladi) */
+.bottom-panel.minimized .info-content {
+    height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    opacity: 0;
+    pointer-events: none;
+}
 
-const TP_RADIUS = 5000; // TP larni tekshirish (5 km)
+/* Strelka tugmasi */
+.toggle-container {
+    display: flex;
+    justify-content: center;
+    margin-top: -22px;
+    cursor: pointer;
+}
 
-async function loadNearbyMahallas(lat, lng){
-    
-    foundMahallas = [];
-    if(!lat || !lng){
-        showToast("Koordinata topilmadi");
-        return;
-    }
-    
-    console.log("Koordinata:", lat, lng);
-    await loadMahallasFromInternet(lat, lng);
-    await loadNearbyMahallasFromOverpass(lat, lng);
-    await loadMahallasFromNearbyTP(lat, lng); 
+.toggle-circle {
+    background: #003250;
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 -3px 10px rgba(0,0,0,0.2);
+}
+
+/* Ma'lumotlar bloki (Latitude, Longitude, Address) */
+.info-content {
+    position: relative; /* Copy tugmasini o'ngga surish uchun shart */
+    padding: 10px 20px;
+    height: 185px; 
+    overflow: hidden;
+    transition: all 0.4s ease-in-out;
+    box-sizing: border-box;
+}
+
+/* COPY TUGMASI (O'ng tomonda alohida blok) */
+.copy-box {
+    position: absolute;
+    right: 20px;
+    top: 40px; /* Koordinatalar qarshisida turishi uchun */
+    text-align: center;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 10px;
+    border-radius: 12px;
+    width: 55px;
+    transition: background 0.3s;
+}
+
+.copy-box:active { background: rgba(255, 255, 255, 0.3); }
+.copy-box i { font-size: 22px; margin-bottom: 4px; }
+.copy-box span { font-size: 10px; display: block; }
+
+/* Ma'lumotlar qatorlari */
+.data-row {
+    display: flex;
+    margin-bottom: 10px;
+    font-size: 14px;
+    padding-right: 80px; /* Matn Copy tugmasining ustiga chiqib ketmasligi uchun */
+}
+
+.label { width: 85px; color: #adadad; flex-shrink: 0; }
+.value { flex: 1; word-break: break-all; }
+
+.accuracy-text {
+    font-size: 13px;
+    opacity: 0.8;
+    margin-bottom: 15px;
+    text-align: left;
+}
+
+/* Pastki Tugmalar (Save/Share) */
+.action-buttons {
+    display: flex;
+    gap: 12px;
+    padding: 10px 20px 25px 20px;
+}
+
+.main-btn {
+    flex: 1;
+    padding: 14px;
+    border: none;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.15); /* Shaffofroq */
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.main-btn:active {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* Save va Share uchun maxsus tuslar */
+.save-btn {
+    background: #007AFF !important;
+}
+.save-btn:active {
+    background: #0056b3 !important;
+}
+.share-btn {
+    background: #34C759 !important;
+}
+.share-btn:active {
+    background: #248A3D !important;
+}
+
+/* =========================================================================
+   2. XARITA VA FOYDALANUVCHI GEOLOKATSIYA NUQTASI STILLARI
+   ========================================================================= */
+.map-overlay-btn {
+    position: absolute;
+    right: 20px;
+    bottom: 250px; /* Panel yopilganda ham tugmaning tepasida turishi uchun */
+    z-index: 1001;
+    background: white;
+    border: none;
+    width: 45px;
+    height: 45px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: #333;
+    cursor: pointer;
+}
+
+.map-overlay-btn:active {
+    background: #f0f0f0;
+}
+
+#toggle-icon { transition: transform 0.4s; }
+
+.user-location-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.user-dot {
+    width: 12px;
+    height: 12px;
+    background-color: #007AFF;
+    border: 2px solid white;
+    border-radius: 50%;
+    z-index: 2;
+    box-shadow: 0 0 5px rgba(0,0,0,0.5);
+}
+
+.user-acc-circle {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    background-color: rgba(0, 122, 255, 0.2); /* Shaffof ko'k zona */
+    border: 1px solid rgba(0, 122, 255, 0.4);
+    border-radius: 50%;
+    z-index: 1;
+}
+
+.header-panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 60px; /* Balandlikni qat'iy belgilaymiz */
+    background: #003049; 
+    display: flex; 
+    align-items: center; 
+    justify-content: space-between; 
+    padding: 0 15px;
+    z-index: 2000;
+    color: white;
+    box-sizing: border-box; 
+}
+
+.header-title {
+    font-size: 18px;
+    font-weight: 500;
+}
+
+.header-left i, .header-right i {
+    font-size: 22px;
+    cursor: pointer;
+    padding: 5px;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 15px; 
+}
+
+.map-type-preview {
+    width: 35px;
+    height: 35px;
+    border-radius: 4px;
+    border: 2px solid white;
+    background: url('https://mt1.google.com/vt/lyrs=s&x=0&y=0&z=0'); /* Satellite kichik rasmi */
+    background-size: cover;
+    cursor: pointer;
+}
+
+#map {
+    position: absolute;
+    top: 60px; /* Menyudan keyin boshlanishi uchun */
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: calc(100vh - 60px) !important; 
+    height: calc(100dvh - 60px) !important; /* Dynamic mobile viewport uchun sug'urta */
+    z-index: 1;
+}
+
+/* =========================================================================
+   3. LEAFLET POPUP VA MARKER STILLARI
+   ========================================================================= */
+.marker-delete-popup {
+    background: white;
+    padding: 8px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    color: #ff4444;
+    border: 2px solid #eee;
+    text-align: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    white-space: nowrap;
+    font-size: 14px;
+}
+
+.marker-delete-popup:hover {
+    background: #f8f8f8;
+}
+
+.custom-popup .leaflet-popup-content-wrapper {
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+}
+
+.custom-popup .leaflet-popup-tip-container {
+    display: none !important;
+}
+
+.custom-tp-marker {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* =========================================================================
+   4. MODAL OYNA VA TAB (BO'LIMLAR) CONTROLLARI
+   ========================================================================= */
+.list-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 5000;
+    display: none; 
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(5px);
+}
+
+.list-content {
+    background: #002135; 
+    color: white;
+    width: 90%;
+    max-height: 80%;
+    border-radius: 20px;
+    padding: 20px;
+    overflow-y: auto;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-sizing: border-box;
+}
+
+ .list-content.full-screen {
+    width: 100% !important;
+    height: 100% !important;
+    max-height: 100vh !important;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+    display: flex;
+    flex-direction: column;
+    overflow:hidden;
+    padding: 0px !important; /* Ichki 20px paddingni butunlay yo'qotamiz, shunda tepadagi qism chetga taqalib ingichkalashadi */
+ }
+
+
+.list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 38px !important;
+    margin-bottom: 5px !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0 16px !important;
+    flex-shrink: 0;
+}
+
+.list-header h3 {
+    font-size: 15px !important;
+    margin: 0 !important;
 }
 
 
-async function loadMahallasFromInternet(lat,lng){
-    try{
-        const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=uz`
-        );
-        const data = await response.json();
-        console.log(data);
-
-    /*     const address = data.address || {};
-const mahallaName =
-    address.neighbourhood ||
-    address.suburb ||
-    address.quarter ||
-    address.village ||
-    address.hamlet ||
-    null;
-if(mahallaName){
-    foundMahallas.push({
-        name: mahallaName,
-        distance: 0
-    });
-}  */
-         
-    }catch(err){
-        console.error(err);
-        showToast("Internet orqali mahalla topilmadi");
-    }
+.tab-control {
+    display: flex;
+    margin: 8px 16px 4px 16px; 
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 4px;
+    flex-shrink: 0;
 }
 
-async function loadNearbyMahallasFromOverpass(lat,lng){
-    try{
-        const query = `
-[out:json][timeout:20];
-(
-node["place"](around:${MAHALLA_RADIUS},${lat},${lng});
-way["place"](around:${MAHALLA_RADIUS},${lat},${lng});
-relation["place"](around:${MAHALLA_RADIUS},${lat},${lng});
-);
-out center;
-`;
-        const response = await fetch(
-            "https://overpass.kumi.systems/api/interpreter",
-            {
-                method:"POST",
-                body:query
-            }
-        );
-        const data = await response.json();
-
-        alert(
-    data.elements
-        .map(x => x.tags?.name + " | " + x.tags?.place)
-        .join("\n")
-);
-        
-        console.log("OVERPASS:", data);
-    }catch(err){
-        console.error("OVERPASS ERROR:", err);
-        
-    }
+.tab-btn {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    background: none;
+    color: #ccc;
+    font-weight: bold;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.2s;
 }
 
-async function loadMahallasFromNearbyTP(lat,lng){
-   const snapshot =
-await database.ref("TPs").once("value");
-
-const allPoints =
-snapshot.val() || {};
-
-const nearbyPoints = [];
-Object.values(allPoints).forEach(point => {
-    const tpLat = Number(point.lat);
-    const tpLng = Number(point.lng);
-    if(isNaN(tpLat) || isNaN(tpLng)){
-        return;
-    }
-    const distance =
-        calculateDistance(
-            lat,
-            lng,
-            tpLat,
-            tpLng
-        );
-    if(distance <= TP_RADIUS){
-        nearbyPoints.push({
-    point: point,
-    distance: distance
-});
-    }
-});
-    
-const uniqueMahallas = {};
-nearbyPoints.forEach(item => {
-    const mahalla =
-        item.point.primaryMahalla;
-    if(!mahalla) return;
-    if(
-        !uniqueMahallas[mahalla] ||
-        item.distance < uniqueMahallas[mahalla]
-    ){
-        uniqueMahallas[mahalla] =
-            item.distance;
-    }
-});
-    
-Object.entries(uniqueMahallas).forEach(([name,distance]) => {
-    if(
-        !foundMahallas.some(
-            x => x.name === name
-        )
-    ){
-        foundMahallas.push({
-            name: name,
-            distance:
-                Number((distance/1000).toFixed(1))
-        });
-    }
-});
-renderMahallaList();
+.tab-btn.active {
+    background: #007AFF;
+    color: white;
 }
 
-function calculateDistance(lat1,lng1,lat2,lng2){
+.tab-content{
+    display:none;
+    padding:15px;
+    overflow-y:auto;
 
-    const R = 6371000;
-
-    const dLat =
-        (lat2-lat1)*Math.PI/180;
-
-    const dLng =
-        (lng2-lng1)*Math.PI/180;
-
-    const a =
-        Math.sin(dLat/2)*
-        Math.sin(dLat/2)+
-        Math.cos(lat1*Math.PI/180)*
-        Math.cos(lat2*Math.PI/180)*
-        Math.sin(dLng/2)*
-        Math.sin(dLng/2);
-
-    return R*2*Math.atan2(
-        Math.sqrt(a),
-        Math.sqrt(1-a)
-    );
-
+    flex:1;
+    min-height:0;
+    height:100%;
+    box-sizing:border-box;
 }
- 
+
+.tab-content.active{
+    display:block;
+}
+
+/* Qidiruv maydoni */
+.search-input-field input::placeholder {
+    color: #5c7588;
+}
+
+.search-input-field input:focus {
+    border-color: #007AFF !important;
+    box-shadow: 0 0 8px rgba(0, 122, 255, 0.3);
+}
+
+/* TP Ro'yxati elementlari */
+.tp-list-container {
+    height: 100%;
+    overflow-y: auto;
+}
+
+.tp-item {
+    background: rgba(255, 255, 255, 0.05);
+    margin-bottom: 10px;
+    padding: 12px;
+    border-radius: 10px;
+    border-left: 4px solid #007AFF;
+    transition: background 0.2s;
+}
+
+.tp-item:active {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+/* =========================================================================
+   5. ASOSIY PANELDAGI ASIL IERARXIK DARAXT STILLARI
+   ========================================================================= */
+.folder-tree {
+    margin: 10px 0;
+}
+
+.folder-item {
+    margin: 5px 0;
+    font-size: 16px;
+}
+
+.folder-children {
+    margin-left: 8px !important; 
+    border-left: 1px dashed rgba(255, 255, 255, 0.1); 
+    padding-left: 4px !important;
+}
+
+.folder-header {
+    padding: 6px 8px !important; /* Mobil teginish uchun biroz kattartirildi */
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: 0.2s;
+    box-sizing: border-box;
+}
+
+.folder-header.active-folder {
+    background: rgba(0, 122, 255, 0.15);
+}
+
+.folder-header i {
+    margin: 0 6px !important;
+    font-size: 14px;
+}
+
+/* Aktiv qalamcha - tahrirlash */
+.edit-icon {
+    display: none; 
+    margin-left: auto; 
+    color: #007AFF;
+    padding: 5px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.active-folder .edit-icon {
+    display: inline-block;
+}
+
+/* =========================================================================
+   6. BOTTOM SHEET VA MULTI-CHOOSE IERARXIK DROPDOWN
+   ========================================================================= */
+.bottom-sheet-folder {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: #002135;
+    color: white;
+    border-radius: 25px 25px 0 0;
+    z-index: 6000;
+    padding: 20px;
+    box-shadow: 0 -5px 25px rgba(0,0,0,0.6);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-sizing: border-box;
+}
+
+.bottom-sheet-folder.hidden {
+    transform: translateY(100%);
+}
+
+.sheet-handle {
+    width: 40px;
+    height: 5px;
+    background: #555;
+    border-radius: 10px;
+    margin: 0 auto 15px;
+}
+
+.hue-slider {
+    width: 100%;
+    height: 12px;
+    border-radius: 10px;
+    appearance: none;
+    background: linear-gradient(to right, red, yellow, lime, cyan, blue, magenta, red);
+    outline: none;
+    margin: 15px 0;
+}
+
+.hue-slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    background: white;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 5px rgba(0,0,0,0.5);
+}
+
+.add-main-btn {
+    width: 100%;
+    padding: 12px;
+    background: #007AFF;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    margin-top: 15px;
+    font-weight: bold;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+/* --- ESKI SELECTLARNI YASHIRISH --- */
+#parent-folder-select, 
+#edit-parent-folder-select {
+    display: none !important; 
+}
+
+/* --- TAHRIRLASH/QO'SHISH OYNASIDAGI DARAXTSIMON DROPDOWN CONTAINER --- */
+.tree-dropdown-container {
+    width: 100%;
+    max-height: 210px;
+    overflow-y: auto;
+    background: #001a2c !important; 
+    border-radius: 8px;
+    padding: 8px;
+    margin: 10px 0;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-sizing: border-box;
+}
+
+/* Daraxt ichidagi har bir satr */
+.tree-dropdown-container div {
+    display: flex;
+    align-items: center;
+    padding: 7px 9px;
+    cursor: pointer;
+    color: white;
+    font-size: 14px;
+    border-radius: 6px;
+    margin-top: 2px;
+    transition: background 0.2s ease;
+    user-select: none;
+}
+
+.tree-dropdown-container div:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+/* Tanlangan elementning ko'k fon bilan ajralishi */
+.tree-dropdown-container .selected-tree-node,
+.tree-dropdown-container div[style*="background: rgb(0, 122, 255)"],
+.tree-dropdown-container div[style*="background: #007AFF"] {
+    background: #007AFF !important;
+    font-weight: bold;
+    color: white !important;
+}
+
+/* Ichki guruh ochuvchi/yopuvchi dynamic plus-minus belgisi */
+.dropdown-toggle-icon, .tree-toggle-icon {
+    width: 22px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #88a0b0;
+    font-weight: bold;
+    font-size: 16px;
+    margin-right: 6px;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.dropdown-toggle-icon:hover, .tree-toggle-icon:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+}
+
+/* ALL GLOBAL SCROLLBARS FOR CLEAN DARK LOOK */
+.tree-dropdown-container::-webkit-scrollbar,
+.list-content::-webkit-scrollbar,
+.tab-content::-webkit-scrollbar,
+.tp-list-container::-webkit-scrollbar {
+    width: 6px;
+}
+.tree-dropdown-container::-webkit-scrollbar-track,
+.list-content::-webkit-scrollbar-track,
+.tab-content::-webkit-scrollbar-track,
+.tp-list-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+.tree-dropdown-container::-webkit-scrollbar-thumb,
+.list-content::-webkit-scrollbar-thumb,
+.tab-content::-webkit-scrollbar-thumb,
+.tp-list-container::-webkit-scrollbar-thumb {
+    background: #003a61;
+    border-radius: 10px;
+}
+
+/* TOAST MESSAGE ANIMATION */
+.toast-message {
+    animation: toastFadeIn 0.3s ease forwards;
+}
+@keyframes toastFadeIn {
+    from { opacity: 0; transform: translate(-50%, 20px); }
+    to { opacity: 1; transform: translate(-50%, 0); }
+   }
+
+/* =========================================================================
+   ⚡ YANGI: ELEMENT (TP) KIRITISH VA TAHRIRLASH PANELINING MAXSUS STILLARI
+   ========================================================================= */
+
+/* Rasm yuklash bloki (Kamera ikonkalari uchun) */
+.image-upload-box label {
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.image-upload-box label:active {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-color: #007AFF !important;
+}
+
+/* Rasm ustidagi o'chirish (X) tugmasi animatsiyasi */
+#remove-image-btn {
+    box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+    transition: transform 0.2s;
+}
+#remove-image-btn:active {
+    transform: scale(0.85);
+}
+
+/* 🎛️ iOS USLUBIDAGI CHIROYLI TUMBLER (SWITCH) STILLARI */
+.switch-control {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 26px;
+    flex-shrink: 0;
+}
+
+.switch-control input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider-toggle {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(255, 255, 255, 0.15);
+    transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 34px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.slider-toggle:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+/* Tumbler yoqilgandagi holat (Ko'k rangga silliq o'tish) */
+.switch-control input:checked + .slider-toggle {
+    background-color: #007AFF;
+}
+
+.switch-control input:checked + .slider-toggle:before {
+    transform: translateX(24px);
+}
+
+/* 👤 XUSUSIY BLOK OCHILGANDA SILLIQ EFFEKT */
+#private-owner-info-block {
+    transition: all 0.3s ease-in-out;
+    max-height: 500px;
+    opacity: 1;
+    overflow: hidden;
+}
+
+#private-owner-info-block.hidden {
+    display: none !important;
+    max-height: 0;
+    opacity: 0;
+}
+
+/* Formaning ichki inputlari va tekstarealari fokusi */
+#element-main-form input:focus, 
+#element-main-form textarea:focus {
+    border-color: #007AFF !important;
+    background: #00223a !important;
+    outline: none;
+}
+
+/* Formalar uchun umumiy scrollbar - form ichi baland bo'lsa oynadan chiqib ketmasligi uchun */
+#element-main-form::-webkit-scrollbar {
+    width: 4px;
+}
+#element-main-form::-webkit-scrollbar-thumb {
+    background: #004c80;
+    border-radius: 10px;
+}
+
+/* Global yashirish klassi */
+.hidden {
+    display: none !important;
+}
+
+/* 🔄 MAP MARKERLARI UCHUN MILTILLASH (BLINKING) ANIMATSIYASI */
+/* Ikki fiderga ulangan TP ona papkada ochilganda shu klass orqali dynamic miltillaydi */
+.blinking-marker-icon {
+    animation: markerBlink 2s infinite steps(1, end);
+}
+
+@keyframes markerBlink {
+    0%, 100% {
+        filter: drop-shadow(0 0 6px var(--fider-color-1, #007AFF)) hue-rotate(0deg);
+    }
+    50% {
+        /* JS orqali ikkinchi fiderning rangiga mos o'zgarishi mantiqi kiritiladi */
+        filter: drop-shadow(0 0 6px var(--fider-color-2, #34C759)) saturate(2);
+    }
+       }
+
+.multi-image-remove{
+  position:absolute;
+  top:2px;
+  right:2px;
+  width:18px;
+  height:18px;
+  border:none;
+  border-radius:50%;
+  background:red;
+  color:white;
+  font-size:11px;
+  cursor:pointer;
+  z-index:999;
+}
+
+.existing-image-remove{
+  position:absolute;
+  top:2px;
+  right:2px;
+  width:18px;
+  height:18px;
+  border:none;
+  border-radius:50%;
+  background:red;
+  color:white;
+  font-size:11px;
+  cursor:pointer;
+  z-index:999;
+}
+
+/* Multi image preview */
+
+#multi-image-preview{
+display:flex;
+flex-wrap:wrap;
+gap:8px;
+max-width:220px;
+}
+
+.multi-image-box{
+position:relative;
+width:70px;
+height:70px;
+flex:0 0 70px;
+overflow:hidden;
+border-radius:10px;
+border:2px solid rgba(255,255,255,0.1);
+}
+
+.multi-image-box img{
+width:100%;
+height:100%;
+object-fit:cover;
+display:block;
+}
+
+#save-loader{
+    position:fixed;
+    inset:0;
+    background:rgba(15,23,42,.88);
+    backdrop-filter:blur(6px);
+    z-index:999999;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+
+#save-loader.hidden{
+    display:none;
+}
+
+.save-loader-card{
+    width:320px;
+    max-width:90%;
+    background:#111827;
+    border-radius:20px;
+    padding:24px;
+    text-align:center;
+    color:#fff;
+    box-shadow:0 0 30px rgba(0,0,0,.35);
+}
+
+.save-loader-logo{
+    font-size:42px;
+    margin-bottom:10px;
+}
+
+.progress-bar{
+    width:100%;
+    height:12px;
+    background:#374151;
+    border-radius:999px;
+    overflow:hidden;
+    margin-top:15px;
+}
+
+#save-progress-fill{
+    width:0%;
+    height:100%;
+    background:#3b82f6;
+    transition:.3s;
+}
+
+#save-progress-percent{
+    margin-top:10px;
+    font-weight:700;
+}
+
+.multi-image-box{
+position:relative;
+width:90px;
+height:90px;
+border-radius:10px;
+overflow:hidden;
+}
+
+.set-main-image{
+position:absolute;
+top:4px;
+left:4px;
+width:28px;
+height:28px;
+border:none;
+border-radius:50%;
+background:rgba(0,0,0,.7);
+color:#ffd700;
+font-size:16px;
+cursor:pointer;
+z-index:10;
+}
+
+.main-image-badge{
+position:absolute;
+bottom:4px;
+left:4px;
+right:4px;
+background:#ffd700;
+color:#000;
+font-size:10px;
+font-weight:bold;
+padding:2px;
+border-radius:4px;
+text-align:center;
+z-index:10;
+}
+
+#preview-map-modal{
+position:fixed;
+left:0;
+top:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,.65);
+display:flex;
+justify-content:center;
+align-items:center;
+z-index:99999;
+}
+#preview-map-modal.hidden{
+display:none;
+}
+#preview-map-window{
+width:92%;
+height:82%;
+background:#001a2c;
+border-radius:12px;
+overflow:hidden;
+display:flex;
+flex-direction:column;
+}
+#preview-map-header{
+padding:14px;
+color:white;
+font-weight:bold;
+background:#002d4d;
+}
+#preview-map{
+flex:1;
+}
+#preview-map-footer{
+display:flex;
+gap:10px;
+padding:12px;
+background:#002d4d;
+}
+#preview-map-footer button{
+flex:1;
+height:42px;
+border:none;
+border-radius:8px;
+font-weight:bold;
+cursor:pointer;
+}
+#preview-map-cancel{
+background:#666;
+color:white;
+}
+#preview-map-save{
+background:#0078ff;
+color:white;
+}
+
+.tree-dropdown-container{
+overflow-x:auto;
+overflow-y:auto;
+}
+.tree-child-container{
+min-width:max-content;
+}
+
+/* ===== Filtr dropdownlari ===== */
+
+.filter-option{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px 12px;
+    cursor:pointer;
+    transition:.2s;
+}
+.filter-option:hover{
+    background:rgba(255,255,255,.08);
+}
+.filter-option.active{
+    background:#007AFF;
+    color:#fff;
+}
+.filter-option.active span{
+    color:#fff;
+}
+.filter-option.active .option-check{
+    color:#fff;
+}
+.filter-option .option-check{
+    opacity:0;
+}
+.filter-option.active .option-check{
+    opacity:1;
+}
+
+.search-item{
+    border-radius:8px;
+    transition:0.2s;
+}
+
+.search-item:hover{
+    background:#173854;
+}
+
+.search-item.selected{
+    background:#1b4f72;
+    border-left:4px solid #4FC3F7;
+}
+
+.search-item.selected .search-item-actions{
+    display:flex !important;
+}
+
+.search-item.selected .search-item-actions{
+    opacity:1 !important;
+}
+
+.search-item-actions i:hover{
+    color:#4FC3F7;
+    transform:scale(1.15);
+}
