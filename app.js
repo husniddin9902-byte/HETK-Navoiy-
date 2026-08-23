@@ -1303,6 +1303,9 @@ document.getElementById("show-on-map-btn");
 const returnElementBtn =
 document.getElementById("return-element-btn");
 
+// Qidiruv so'rovlarini boshqarish
+let searchRequestId = 0;
+
 if(showOnMapBtn){
 showOnMapBtn.addEventListener("click",function(e){
 
