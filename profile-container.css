@@ -1,0 +1,34 @@
+.profile{
+    display:flex;
+    flex-direction:column;
+    width:100%;
+    height:100%;
+    background:#f5f7fb;
+}
+
+.profile-header{
+    height:55px;
+    background:#ffffff;
+    border-bottom:1px solid #ddd;
+}
+
+.profile-top{
+    height:120px;
+    background:#ffffff;
+    border-bottom:1px solid #ddd;
+}
+
+.profile-menu{
+    display:flex;
+    justify-content:space-around;
+    align-items:center;
+    height:60px;
+    background:#ffffff;
+    border-bottom:1px solid #ddd;
+}
+
+.profile-content{
+    flex:1;
+    background:#f5f7fb;
+    overflow:auto;
+}
