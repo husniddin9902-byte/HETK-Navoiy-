@@ -240,6 +240,14 @@ if (menuBtn) menuBtn.addEventListener('click', () => {
 
 if(closeList) closeList.addEventListener('click', () => { listModal.style.display = 'none'; });
 
+const closeProfile = document.getElementById("close-profile");
+if(closeProfile){
+    closeProfile.addEventListener("click", () => {
+        document.getElementById("profile-container").style.display = "none";
+    });
+}
+
+
 if(openAddBtn) openAddBtn.addEventListener('click', () => { 
     addFolderPanel.classList.remove('hidden'); 
     updateParentSelect('parent-folder-select'); 
