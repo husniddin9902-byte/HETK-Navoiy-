@@ -997,7 +997,7 @@ min-width:max-content;
 }
 .search-item.selected .search-item-actions{
     display:flex !important;
-}
+} 
 .search-item.selected .search-item-actions{
     opacity:1 !important;
 }
