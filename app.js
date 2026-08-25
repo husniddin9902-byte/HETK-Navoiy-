@@ -232,7 +232,11 @@ const cancelFolder = document.getElementById('cancel-folder');
 const hueSlider = document.getElementById('color-slider');
 
 // 2 va 3-rasmlar mosligi: Har ikkala tugma ham boshqaruv panelini ochadi
-if(listBtn) listBtn.addEventListener('click', () => { listModal.style.display = 'flex'; loadFolders(); });
+if(menuBtn){
+    menuBtn.addEventListener("click", () => {
+        openProfile();
+    });
+}
 
 if (menuBtn) menuBtn.addEventListener('click', () => {
     document.getElementById("profile-container").style.display = "flex";
