@@ -987,7 +987,7 @@ min-width:max-content;
 .search-item{
     border-radius:8px;
     transition:0.2s;
-}
+} 
 
 .search-item:hover{
     background:#173854;
