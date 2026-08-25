@@ -16,7 +16,7 @@
     }
             
 </style> 
-    <link rel="stylesheet" href="profile-container.css?v=1.0">
+    <link rel="stylesheet" href="profile-container.css?v=2.0">
 </head>
 <body>
 
@@ -1188,47 +1188,179 @@ margin-bottom:8px;
         </form>
     </div>
 
-<div id="profile-container" class="list-modal" style="display:none;">
-    
-    <div class="list-content full-screen">
-        <div class="list-header">
-            <h3>Profil</h3>
-            <button id="close-profile"
-                style="background:none;border:none;color:white;font-size:24px;">×</button>
-        </div>
-        <div class="profile-body">
-            <div class="profile">
-    <div class="profile-top">
-        <div class="profile-photo">
-            <div class="photo-circle">
-                👤
+<!-- PROFIL MODULI: profile-container.txt bilan bir xil markup -->
+<div id="profile-container" class="hetk-profile-modal" style="display:none;" aria-hidden="true">
+    <section class="hetk-profile-shell" aria-label="Profil">
+        <header class="hetk-profile-header">
+            <button id="profile-close" class="hetk-profile-header-btn" type="button" aria-label="Profilni yopish">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <h2>Profil</h2>
+            <div class="hetk-profile-more-wrap">
+                <button id="profile-more" class="hetk-profile-header-btn" type="button" aria-label="Qo'shimcha menyu" aria-expanded="false">
+                    <i class="fas fa-ellipsis-v"></i>
+                </button>
+                <div id="profile-more-menu" class="hetk-profile-more-menu" hidden>
+                    <button type="button" id="profile-more-close">Profilni yopish</button>
+                </div>
             </div>
-            <button class="photo-view">🔍</button>
+        </header>
+
+        <div class="hetk-profile-scroll">
+            <section class="hetk-profile-summary">
+                <div class="hetk-profile-avatar-wrap">
+                    <div class="hetk-profile-avatar" aria-label="Profil rasmi">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <button class="hetk-profile-photo-view" type="button" aria-label="Profil rasmini ko'rish">
+                        <i class="fas fa-search-plus"></i>
+                    </button>
+                </div>
+
+                <div class="hetk-profile-identity">
+                    <h1 id="profile-name">F.I.Sh</h1>
+                    <div id="profile-position" class="hetk-profile-muted">Lavozimi</div>
+                    <div id="profile-region" class="hetk-profile-muted">Hududi</div>
+                    <div class="hetk-profile-status"><span></span> Faol</div>
+                </div>
+
+                <button id="profile-training" class="hetk-profile-training" type="button">
+                    <i class="fas fa-graduation-cap"></i>
+                    <span>O'quv markazi</span>
+                </button>
+            </section>
+
+            <nav class="hetk-profile-tabs" role="tablist" aria-label="Profil bo'limlari">
+                <button class="hetk-profile-tab active" type="button" data-profile-tab="employees" role="tab" aria-selected="true">
+                    <i class="fas fa-users"></i>
+                    <span>Hodimlar</span>
+                </button>
+                <button class="hetk-profile-tab" type="button" data-profile-tab="messages" role="tab" aria-selected="false">
+                    <span class="hetk-profile-tab-icon">
+                        <i class="fas fa-comment-dots"></i>
+                        <b class="hetk-profile-badge">3</b>
+                    </span>
+                    <span>Xabarlar</span>
+                </button>
+                <button class="hetk-profile-tab" type="button" data-profile-tab="files" role="tab" aria-selected="false">
+                    <i class="fas fa-folder"></i>
+                    <span>Fayllar</span>
+                </button>
+                <button class="hetk-profile-tab" type="button" data-profile-tab="personal" role="tab" aria-selected="false">
+                    <i class="fas fa-id-card"></i>
+                    <span>Shaxsiy ma'lumotlar</span>
+                </button>
+            </nav>
+
+            <main id="profile-content" class="hetk-profile-content">
+                <section class="hetk-profile-pane active" data-profile-pane="employees">
+                    <div class="hetk-profile-employees-layout">
+                        <aside class="hetk-profile-tree-panel">
+                            <div class="hetk-profile-panel-title">
+                                <span>Hodimlar tuzilmasi</span>
+                                <i class="fas fa-sitemap"></i>
+                            </div>
+
+                            <div class="hetk-profile-tree">
+                                <div class="hetk-profile-tree-node">
+                                    <button class="hetk-profile-tree-row profile-tree-toggle" type="button" aria-expanded="true">
+                                        <i class="fas fa-chevron-down tree-arrow"></i>
+                                        <i class="fas fa-globe-asia tree-icon"></i>
+                                        <span>O'zbekiston</span>
+                                    </button>
+                                    <div class="hetk-profile-tree-children">
+                                        <div class="hetk-profile-tree-node">
+                                            <button class="hetk-profile-tree-row profile-tree-toggle" type="button" aria-expanded="true">
+                                                <i class="fas fa-chevron-down tree-arrow"></i>
+                                                <i class="fas fa-map-marked-alt tree-icon"></i>
+                                                <span>Navoiy viloyati</span>
+                                            </button>
+                                            <div class="hetk-profile-tree-children">
+                                                <div class="hetk-profile-tree-node">
+                                                    <button class="hetk-profile-tree-row profile-tree-toggle" type="button" aria-expanded="true">
+                                                        <i class="fas fa-chevron-down tree-arrow"></i>
+                                                        <i class="fas fa-building tree-icon"></i>
+                                                        <span>Xatirchi tumani</span>
+                                                    </button>
+                                                    <div class="hetk-profile-tree-children">
+                                                        <button class="hetk-profile-tree-row profile-employee-row" type="button" data-role="Tuman admini" data-region="Xatirchi tumani">
+                                                            <span class="hetk-profile-online-dot"></span><i class="fas fa-user-shield tree-icon"></i><span>Tuman admini</span>
+                                                        </button>
+                                                        <button class="hetk-profile-tree-row profile-employee-row" type="button" data-role="Master" data-region="Xatirchi tumani">
+                                                            <span class="hetk-profile-online-dot"></span><i class="fas fa-user-cog tree-icon"></i><span>Master</span>
+                                                        </button>
+                                                        <button class="hetk-profile-tree-row profile-employee-row" type="button" data-role="Operator" data-region="Xatirchi tumani">
+                                                            <span class="hetk-profile-online-dot"></span><i class="fas fa-headset tree-icon"></i><span>Operator</span>
+                                                        </button>
+                                                        <button class="hetk-profile-tree-row profile-employee-row" type="button" data-role="Muhandis" data-region="Xatirchi tumani">
+                                                            <span class="hetk-profile-online-dot"></span><i class="fas fa-user-tie tree-icon"></i><span>Muhandis</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <button class="hetk-profile-tree-row profile-employee-row" type="button" data-role="Tuman" data-region="Navbahor tumani">
+                                                    <span class="hetk-profile-online-dot"></span><i class="fas fa-building tree-icon"></i><span>Navbahor tumani</span>
+                                                </button>
+                                                <button class="hetk-profile-tree-row profile-employee-row" type="button" data-role="Shahar" data-region="Zarafshon shahri">
+                                                    <span class="hetk-profile-online-dot"></span><i class="fas fa-city tree-icon"></i><span>Zarafshon shahri</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </aside>
+
+                        <section class="hetk-profile-detail-panel">
+                            <div class="hetk-profile-detail-head">
+                                <div class="hetk-profile-detail-avatar"><i class="fas fa-user"></i></div>
+                                <div>
+                                    <h3 id="profile-detail-name">Xodim ma'lumoti</h3>
+                                    <p id="profile-detail-role">Lavozimni tanlang</p>
+                                    <span id="profile-detail-region">Hudud</span>
+                                </div>
+                            </div>
+                            <div class="hetk-profile-detail-status"><span></span> Tizimda faol</div>
+                            <div class="hetk-profile-detail-note">
+                                Hodimlar bo'limi tayyor. Keyingi bosqichda ma'lumotlar bazasiga ulanadi.
+                            </div>
+                        </section>
+                    </div>
+                </section>
+
+                <section class="hetk-profile-pane" data-profile-pane="messages" hidden>
+                    <div class="hetk-profile-placeholder">
+                        <i class="fas fa-comment-dots"></i>
+                        <h3>Xabarlar</h3>
+                        <p>3 ta yangi xabar mavjud.</p>
+                    </div>
+                </section>
+
+                <section class="hetk-profile-pane" data-profile-pane="files" hidden>
+                    <div class="hetk-profile-placeholder">
+                        <i class="fas fa-folder-open"></i>
+                        <h3>Fayllar</h3>
+                        <p>Profilga tegishli fayllar shu bo'limda ko'rsatiladi.</p>
+                    </div>
+                </section>
+
+                <section class="hetk-profile-pane" data-profile-pane="personal" hidden>
+                    <div class="hetk-profile-personal-card">
+                        <h3>Shaxsiy ma'lumotlar</h3>
+                        <div class="hetk-profile-personal-grid">
+                            <div><span>F.I.Sh</span><b>—</b></div>
+                            <div><span>Lavozimi</span><b>—</b></div>
+                            <div><span>Telefon</span><b>—</b></div>
+                            <div><span>Email</span><b>—</b></div>
+                            <div><span>Hududi</span><b>—</b></div>
+                            <div><span>Tizimga kirgan vaqti</span><b>—</b></div>
+                        </div>
+                    </div>
+                </section>
+            </main>
         </div>
-        <div class="profile-info">
-            <h2>F.I.Sh</h2>
-            <div>Lavozimi</div>
-            <div>Hududi</div>
-            <div class="status">🟢 Faol</div>
-        </div>
-        <button class="training-btn">
-            📚 O'quv markazi
-        </button>
-    </div>
-    <div class="profile-menu">
-        <button>👥 Hodimlar</button>
-        <button>💬 Xabarlar</button>
-        <button>📁 Fayllar</button>
-        <button>👤 Shaxsiy ma'lumotlar</button>
-    </div>
-    <div class="profile-content">
-        Profil moduli tayyorlanmoqda...
-    </div>
+    </section>
 </div>
-        </div>
-    </div>
-</div>
-    
+
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
@@ -1409,7 +1541,7 @@ gap:8px;
 
     
     <script src="app.js?v=1.3"></script>
-    <script src="profile-container.js?v=1.0"></script>
+    <script src="profile-container.js?v=2.0"></script>
     <script src="mahalla.js?v=1.1"></script>
 </body>
                          </html>
