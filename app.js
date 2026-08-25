@@ -234,18 +234,9 @@ const hueSlider = document.getElementById('color-slider');
 // 2 va 3-rasmlar mosligi: Har ikkala tugma ham boshqaruv panelini ochadi
 if(listBtn) listBtn.addEventListener('click', () => { listModal.style.display = 'flex'; loadFolders(); });
 
-if (menuBtn) menuBtn.addEventListener('click', () => {
-    document.getElementById("profile-container").style.display = "flex";
-});
+// Profil oynasini ochish/yopish profile-container.js ichida boshqariladi.
 
 if(closeList) closeList.addEventListener('click', () => { listModal.style.display = 'none'; });
-
-const closeProfile = document.getElementById("close-profile");
-if(closeProfile){
-    closeProfile.addEventListener("click", () => {
-        document.getElementById("profile-container").style.display = "none";
-    });
-}
 
 
 if(openAddBtn) openAddBtn.addEventListener('click', () => { 
