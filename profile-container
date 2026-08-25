@@ -1,19 +1,89 @@
-<!DOCTYPE html>
-<div class="profile">
+<div class="profile-page">
 
-    <div class="profile-header">
-
-    </div>
-
+    <!-- Yuqori qism -->
     <div class="profile-top">
 
+        <div class="profile-left">
+
+            <div class="profile-photo-box">
+
+                <div class="profile-photo">
+                    👤
+                </div>
+
+                <button class="photo-zoom">
+                    🔍
+                </button>
+
+            </div>
+
+            <div class="profile-info">
+
+                <h2 id="profile-name">
+                    F.I.Sh
+                </h2>
+
+                <div class="profile-position">
+                    Lavozimi
+                </div>
+
+                <div class="profile-region">
+                    Hududi
+                </div>
+
+                <div class="profile-status">
+                    🟢 Faol
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="profile-right">
+
+            <button class="training-button">
+                📚 O'quv markazi
+            </button>
+
+        </div>
+
     </div>
+
+    <!-- O'rta menyu -->
 
     <div class="profile-menu">
 
+        <button id="profile-employees">
+            👥
+            <span>Hodimlar</span>
+        </button>
+
+        <button id="profile-messages">
+            💬
+            <span>Xabarlar</span>
+        </button>
+
+        <button id="profile-files">
+            📁
+            <span>Fayllar</span>
+        </button>
+
+        <button id="profile-user">
+            👤
+            <span>Shaxsiy ma'lumotlar</span>
+        </button>
+
     </div>
 
-    <div class="profile-content">
+    <!-- Pastki ish maydoni -->
+
+    <div id="profile-content">
+
+        <div class="empty-page">
+
+            Profil moduli tayyorlanmoqda...
+
+        </div>
 
     </div>
 
