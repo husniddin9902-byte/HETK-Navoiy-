@@ -5211,7 +5211,7 @@ async function nextGalleryImage(){
     }
     galleryIndex++;
     await loadGalleryImage();
-    showGalleryControls();
+    showGalleryControls(); 
 }
 async function previousGalleryImage(){
     if(galleryIndex <= 0){
