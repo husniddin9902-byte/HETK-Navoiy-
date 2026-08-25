@@ -1196,36 +1196,66 @@ margin-bottom:8px;
             <button id="close-profile"
                 style="background:none;border:none;color:white;font-size:24px;">×</button>
         </div>
-        <div class="profile-body">
-            <div class="profile">
+        
+        <div class="profile-page">
+    <!-- Yuqori qism -->
     <div class="profile-top">
-        <div class="profile-photo">
-            <div class="photo-circle">
-                👤
+        <div class="profile-left">
+            <div class="profile-photo-box">
+                <div class="profile-photo">
+                    👤
+                </div>
+                <button class="photo-zoom">
+                    🔍
+                </button>
             </div>
-            <button class="photo-view">🔍</button>
+            <div class="profile-info">
+                <h2 id="profile-name">
+                    F.I.Sh
+                </h2>
+                <div class="profile-position">
+                    Lavozimi
+                </div>
+                <div class="profile-region">
+                    Hududi
+                </div>
+                <div class="profile-status">
+                    🟢 Faol
+                </div>
+            </div>
         </div>
-        <div class="profile-info">
-            <h2>F.I.Sh</h2>
-            <div>Lavozimi</div>
-            <div>Hududi</div>
-            <div class="status">🟢 Faol</div>
+        <div class="profile-right">
+            <button class="training-button">
+                📚 O'quv markazi
+            </button>
         </div>
-        <button class="training-btn">
-            📚 O'quv markazi
+    </div>
+    <!-- O'rta menyu -->
+    <div class="profile-menu">
+        <button id="profile-employees">
+            👥
+            <span>Hodimlar</span>
+        </button>
+        <button id="profile-messages">
+            💬
+            <span>Xabarlar</span>
+        </button>
+        <button id="profile-files">
+            📁
+            <span>Fayllar</span>
+        </button>
+        <button id="profile-user">
+            👤
+            <span>Shaxsiy ma'lumotlar</span>
         </button>
     </div>
-    <div class="profile-menu">
-        <button>👥 Hodimlar</button>
-        <button>💬 Xabarlar</button>
-        <button>📁 Fayllar</button>
-        <button>👤 Shaxsiy ma'lumotlar</button>
-    </div>
-    <div class="profile-content">
-        Profil moduli tayyorlanmoqda...
+    <!-- Pastki ish maydoni -->
+    <div id="profile-content">
+        <div class="empty-page">
+            Profil moduli tayyorlanmoqda...
+        </div>
     </div>
 </div>
-        </div>
     </div>
 </div>
     
