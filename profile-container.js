@@ -1,4 +1,4 @@
-(function(){ 
+(function(){
     'use strict';
 
     function getModal(){
@@ -45,6 +45,17 @@
         if(!modal || !menuBtn){
             console.error('Profil: #profile-container yoki #menu-btn topilmadi.');
             return;
+        }
+
+        // Ishonchli fallback: boshqa kodlar bo'lsa ham menyu bosilishi profilni ochadi.
+        if(document.documentElement.dataset.profileCaptureBound !== '1'){
+            document.documentElement.dataset.profileCaptureBound = '1';
+            document.addEventListener('click', function(event){
+                const trigger = event.target && event.target.closest ? event.target.closest('#menu-btn') : null;
+                if(trigger){
+                    setProfileOpen(true);
+                }
+            }, true);
         }
 
         if(menuBtn.dataset.profileBound === '1') return;
