@@ -12,7 +12,7 @@
 .hetk-profile-modal{
     position:fixed;
     inset:0;
-    z-index:12000;
+    z-index:1000000 !important;
     display:none;
     align-items:stretch;
     justify-content:center;
