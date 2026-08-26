@@ -4,17 +4,17 @@
   const ROLE_DEFS = {
     super_admin: {
       label: 'Bosh administrator', level: 100,
-      createRoles: ['director','chief_engineer','tb_engineer','pto_engineer','chief_dispatcher','master','adli_kard_engineer','dispatcher','employee'],
+      createRoles: ['director','chief_engineer','tb_engineer','pto_engineer','chief_dispatcher','master','adli_kard_engineer','dispatcher','electrician','employee'],
       canCreateUsers: true, canDeactivateUsers: true, canManagePermissions: true, canManageFolders: true
     },
     director: {
       label: 'Direktor', level: 90,
-      createRoles: ['chief_engineer','tb_engineer','pto_engineer','chief_dispatcher','master','adli_kard_engineer','dispatcher','employee'],
+      createRoles: ['chief_engineer','tb_engineer','pto_engineer','chief_dispatcher','master','adli_kard_engineer','dispatcher','electrician','employee'],
       canCreateUsers: true, canDeactivateUsers: true, canManagePermissions: true, canManageFolders: true
     },
     chief_engineer: {
       label: 'Bosh / Asosiy muhandis', level: 85,
-      createRoles: ['tb_engineer','pto_engineer','chief_dispatcher','master','adli_kard_engineer','dispatcher','employee'],
+      createRoles: ['tb_engineer','pto_engineer','chief_dispatcher','master','adli_kard_engineer','dispatcher','electrician','employee'],
       canCreateUsers: true, canDeactivateUsers: true, canManagePermissions: true, canManageFolders: true
     },
     tb_engineer: {
@@ -32,7 +32,7 @@
     },
     master: {
       label: 'Usta / Master', level: 55,
-      createRoles: ['employee'],
+      createRoles: ['electrician'],
       canCreateUsers: true, canDeactivateUsers: true, canManagePermissions: true, canManageFolders: false
     },
     adli_kard_engineer: {
@@ -41,6 +41,10 @@
     },
     dispatcher: {
       label: 'Dispetcher', level: 30,
+      createRoles: [], canCreateUsers: false, canDeactivateUsers: false, canManagePermissions: false, canManageFolders: false
+    },
+    electrician: {
+      label: 'Elektromontyor', level: 25,
       createRoles: [], canCreateUsers: false, canDeactivateUsers: false, canManagePermissions: false, canManageFolders: false
     },
     employee: {
@@ -59,6 +63,10 @@
   let selectedTeamUid = null;
   let usersTeamRef = null;
   let foldersTeamRef = null;
+  let workZonesTeamRef = null;
+  let teamWorkZonesCache = {};
+  let editorFolderLimitRoots = null;
+  let editorFolderLocked = false;
   let userEditorMode = 'create';
   let editingTeamUid = null;
   let currentUserLiveRef = null;
@@ -308,8 +316,41 @@
   }
 
   function getRoleLabel(account){
+    if(!account) return 'Hodim';
+    if(account.role === 'master' && account.workZoneName) return account.workZoneName + ' Masteri';
+    if(account.role === 'electrician' && account.workZoneName) return account.workZoneName + ' Elektromontyori';
     if(account.roleLabel) return account.roleLabel;
     return ROLE_DEFS[account.role] ? ROLE_DEFS[account.role].label : (account.role || 'Hodim');
+  }
+
+  function normalizeWorkZoneName(value){
+    let name=String(value || '').trim().replace(/\s+/g,' ');
+    if(!name) return '';
+    if(!/\bU\s*\/\s*J$/i.test(name)) name += ' U/J';
+    return name.replace(/\s*U\s*\/\s*J$/i,' U/J');
+  }
+
+  function workZoneRoots(zone){
+    return Object.keys((zone && zone.folders) || {}).filter(id => zone.folders[id]);
+  }
+
+  function workZoneAccessibleIds(zone){
+    const set=new Set();
+    workZoneRoots(zone).forEach(id => {
+      if(!teamFoldersCache[id]) return;
+      set.add(id);
+      getChildrenFolderIds(id,teamFoldersCache).forEach(child => set.add(child));
+    });
+    return Array.from(set);
+  }
+
+  function canCurrentUserUseWorkZone(zone){
+    if(!currentAccount || !zone || zone.active===false) return false;
+    if(currentAccount.rootAccess || currentAccount.role==='super_admin') return true;
+    if(currentAccount.workZoneId && currentAccount.workZoneId === zone.id) return true;
+    const mine=new Set(getAccessibleFolderIds(currentAccount,teamFoldersCache));
+    const roots=workZoneRoots(zone);
+    return roots.length ? roots.every(id => mine.has(id)) : false;
   }
 
   function applyAvatar(container, photoData){
@@ -585,6 +626,25 @@
               <div class="hetk-user-field hetk-create-password"><label>Vaqtinchalik parol *</label><input id="hetk-user-password" type="password" placeholder="Kamida 6 ta belgi"></div>
               <div class="hetk-user-field hetk-create-password"><label>Parolni takrorlang *</label><input id="hetk-user-password2" type="password" placeholder="Parolni qayta kiriting"></div>
             </div>
+            <div id="hetk-user-workzone-section" class="hetk-user-workzone-section" hidden>
+              <div class="hetk-user-folder-title">
+                <div>
+                  <h4><i class="fas fa-hard-hat"></i> Ustalik joyi (U/J)</h4>
+                  <p id="hetk-user-workzone-help">Master va elektromontyor doim bitta U/J ga bog‘lanadi.</p>
+                </div>
+              </div>
+              <div class="hetk-workzone-grid">
+                <div class="hetk-user-field">
+                  <label>U/J ni tanlang *</label>
+                  <select id="hetk-user-workzone-select"></select>
+                </div>
+                <div id="hetk-user-workzone-new-wrap" class="hetk-user-field" hidden>
+                  <label>Yangi U/J nomi *</label>
+                  <input id="hetk-user-workzone-new-name" placeholder="Masalan: Zarafshon U/J">
+                </div>
+              </div>
+              <div id="hetk-user-workzone-current" class="hetk-workzone-current"></div>
+            </div>
             <div class="hetk-user-folder-section">
               <div class="hetk-user-folder-title"><div><h4><i class="fas fa-folder-tree"></i> Papka / hudud ruxsati</h4><p>Tanlangan papka va uning ichidagi barcha pastki papkalar ko‘rinadi.</p></div><span id="hetk-selected-folder-count">0 ta tanlangan</span></div>
               <div id="hetk-user-folder-tree" class="hetk-user-folder-tree"></div>
@@ -599,8 +659,10 @@
 
     if(usersTeamRef) usersTeamRef.off('value');
     if(foldersTeamRef) foldersTeamRef.off('value');
+    if(workZonesTeamRef) workZonesTeamRef.off('value');
     usersTeamRef=databaseRef.ref('users');
     foldersTeamRef=databaseRef.ref('Folders');
+    workZonesTeamRef=databaseRef.ref('WorkZones');
     usersTeamRef.on('value', snap => {
       teamUsersCache=snap.val() || {};
       if(selectedTeamUid && !teamUsersCache[selectedTeamUid]) selectedTeamUid=null;
@@ -613,11 +675,22 @@
       if(selectedTeamUid) renderTeamDetail(selectedTeamUid);
       if(!byId('hetk-user-editor').hidden) renderUserFolderPicker(getEditorSelectedFolders());
     });
+    workZonesTeamRef.on('value', snap => {
+      teamWorkZonesCache=snap.val() || {};
+      Object.keys(teamWorkZonesCache).forEach(id => { if(teamWorkZonesCache[id]) teamWorkZonesCache[id].id=id; });
+      renderTeamList();
+      if(selectedTeamUid) renderTeamDetail(selectedTeamUid);
+      if(!byId('hetk-user-editor').hidden) refreshWorkZoneEditor();
+    });
     const search=byId('hetk-team-search');
     if(search) search.addEventListener('input', renderTeamList);
     const add=byId('hetk-add-user');
     if(add) add.addEventListener('click', openCreateUserEditor);
     document.querySelectorAll('[data-close-user-editor]').forEach(el => el.addEventListener('click', closeUserEditor));
+    const roleSelect=byId('hetk-user-role');
+    if(roleSelect) roleSelect.addEventListener('change', () => refreshWorkZoneEditor());
+    const zoneSelect=byId('hetk-user-workzone-select');
+    if(zoneSelect) zoneSelect.addEventListener('change', () => handleWorkZoneSelectionChange());
     const save=byId('hetk-user-save');
     if(save) save.addEventListener('click', saveUserEditor);
   }
@@ -680,6 +753,7 @@
       <div class="hetk-team-detail-grid">
         <div><span>Telefon</span><b>${escapeHtml(u.phone || '—')}</b></div>
         <div><span>Hudud</span><b>${escapeHtml(u.region || '—')}</b></div>
+        ${(u.role==='master' || u.role==='electrician') ? `<div><span>Ustalik joyi</span><b>${escapeHtml(u.workZoneName || 'Biriktirilmagan')}</b></div>` : ''}
         <div><span>Yaratgan</span><b>${escapeHtml(u.createdByName || '—')}</b></div>
         <div><span>Oxirgi kirish</span><b>${u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString() : '—'}</b></div>
       </div>
@@ -709,8 +783,98 @@
     select.disabled=!allowRoleEdit;
   }
 
+  function getSelectedWorkZoneId(){
+    const el=byId('hetk-user-workzone-select');
+    return el ? el.value : '';
+  }
+
+  function getWorkZoneById(id){
+    const z=teamWorkZonesCache[id];
+    return z ? Object.assign({id},z) : null;
+  }
+
+  function canCreateNewWorkZoneForRole(role){
+    return role==='master' && !!currentAccount && ['super_admin','director','chief_engineer'].includes(currentAccount.role);
+  }
+
+  function getAvailableWorkZones(){
+    return Object.keys(teamWorkZonesCache).map(id => Object.assign({id},teamWorkZonesCache[id] || {}))
+      .filter(z => z.active!==false && canCurrentUserUseWorkZone(z))
+      .sort((a,b) => String(a.name||'').localeCompare(String(b.name||'')));
+  }
+
+  function refreshWorkZoneEditor(preferredId){
+    const section=byId('hetk-user-workzone-section');
+    const roleEl=byId('hetk-user-role');
+    const select=byId('hetk-user-workzone-select');
+    const newWrap=byId('hetk-user-workzone-new-wrap');
+    const help=byId('hetk-user-workzone-help');
+    const currentBox=byId('hetk-user-workzone-current');
+    if(!section || !roleEl || !select) return;
+    const role=roleEl.value;
+    const needsZone=role==='master' || role==='electrician';
+    section.hidden=!needsZone;
+    if(!needsZone){
+      editorFolderLimitRoots=null;editorFolderLocked=false;
+      if(newWrap) newWrap.hidden=true;
+      renderUserFolderPicker(getEditorSelectedFolders());
+      return;
+    }
+    const editing=editingTeamUid ? Object.assign({uid:editingTeamUid},teamUsersCache[editingTeamUid] || {}) : null;
+    const editingCanCore = !editing || canManageTarget(editing,'edit');
+    const fixedByMaster=currentAccount && currentAccount.role==='master' && role==='electrician';
+    const available=getAvailableWorkZones();
+    let selected=preferredId || (editing && editing.workZoneId) || (fixedByMaster ? currentAccount.workZoneId : '') || select.value || '';
+    const opts=['<option value="">U/J ni tanlang</option>'];
+    available.forEach(z => opts.push(`<option value="${escapeAttr(z.id)}">${escapeHtml(z.name || 'Nomsiz U/J')}</option>`));
+    if(canCreateNewWorkZoneForRole(role)) opts.push('<option value="__new__">+ Yangi U/J yaratish</option>');
+    select.innerHTML=opts.join('');
+    if(selected && (selected==='__new__' || available.some(z=>z.id===selected))) select.value=selected;
+    else if(fixedByMaster && currentAccount.workZoneId) select.value=currentAccount.workZoneId;
+    select.disabled=fixedByMaster || !editingCanCore;
+    if(help){
+      if(role==='master') help.textContent='U/J doimiy hudud nomi. Master almashsa TP larni emas, faqat shu U/J ning masterini almashtirasiz.';
+      else help.textContent='Elektromontyor o‘z U/J siga bog‘lanadi. Element kiritganda U/J ni o‘zgartira olmaydi.';
+    }
+    handleWorkZoneSelectionChange(true);
+    if(currentBox && fixedByMaster && !currentAccount.workZoneId) currentBox.innerHTML='<span class="warn">Sizga hali U/J biriktirilmagan. Bosh admin avval Master profilingizga U/J biriktirsin.</span>';
+  }
+
+  function handleWorkZoneSelectionChange(skipNameReset){
+    const roleEl=byId('hetk-user-role');
+    const select=byId('hetk-user-workzone-select');
+    const newWrap=byId('hetk-user-workzone-new-wrap');
+    const newName=byId('hetk-user-workzone-new-name');
+    const currentBox=byId('hetk-user-workzone-current');
+    if(!roleEl || !select) return;
+    const role=roleEl.value;
+    const id=select.value;
+    if(newWrap) newWrap.hidden=id!=='__new__';
+    if(id!=='__new__' && newName && !skipNameReset) newName.value='';
+    const zone=id && id!=='__new__' ? getWorkZoneById(id) : null;
+    if(zone){
+      const roots=workZoneRoots(zone);
+      editorFolderLimitRoots=roots.length ? roots : null;
+      editorFolderLocked=role==='master' && roots.length>0;
+      if(currentBox){
+        const master=zone.currentMasterUid && teamUsersCache[zone.currentMasterUid];
+        currentBox.innerHTML=`<span><i class="fas fa-map-marker-alt"></i> ${escapeHtml(zone.name || 'U/J')}</span>${master ? `<small>Hozirgi master: <b>${escapeHtml(master.fullName || 'Nomsiz')}</b></small>` : '<small>Hozirgi master biriktirilmagan</small>'}`;
+      }
+      const selected=(role==='master' && roots.length) ? roots : getEditorSelectedFolders().filter(x => workZoneAccessibleIds(zone).includes(x));
+      renderUserFolderPicker(selected.length ? selected : roots);
+    }else{
+      editorFolderLimitRoots=null;
+      editorFolderLocked=false;
+      if(currentBox) currentBox.innerHTML=id==='__new__' ? '<small>Yangi U/J tanlangan papka/hududlar asosida yaratiladi.</small>' : '';
+      renderUserFolderPicker(getEditorSelectedFolders());
+    }
+  }
+
   function getAssignableRootIds(){
     if(!currentAccount) return [];
+    if(editorFolderLimitRoots && editorFolderLimitRoots.length){
+      return normalizeSelectedFolderRoots(editorFolderLimitRoots,teamFoldersCache);
+    }
     if(currentAccount.rootAccess){
       return Object.keys(teamFoldersCache).filter(id => teamFoldersCache[id] && teamFoldersCache[id].parentId === 'root');
     }
@@ -721,7 +885,12 @@
     const box=byId('hetk-user-folder-tree');
     if(!box) return;
     const selected=new Set(normalizeSelectedFolderRoots(selectedIds || [],teamFoldersCache));
-    const accessible=new Set(getAccessibleFolderIds(currentAccount,teamFoldersCache));
+    let accessible=new Set(getAccessibleFolderIds(currentAccount,teamFoldersCache));
+    if(editorFolderLimitRoots && editorFolderLimitRoots.length){
+      const limited=new Set();
+      editorFolderLimitRoots.forEach(id=>{ if(teamFoldersCache[id]){ limited.add(id); getChildrenFolderIds(id,teamFoldersCache).forEach(c=>limited.add(c)); } });
+      accessible=new Set(Array.from(accessible).filter(id=>limited.has(id)));
+    }
     const roots=getAssignableRootIds();
     if(!roots.length){
       box.innerHTML='<div class="hetk-folder-picker-empty">Sizga biriktirilgan papka topilmadi.</div>';
@@ -734,7 +903,7 @@
       const children=Object.keys(teamFoldersCache).filter(cid => teamFoldersCache[cid] && teamFoldersCache[cid].parentId===id && accessible.has(cid));
       return `<div class="hetk-folder-pick-node">
         <label class="hetk-folder-pick-row" style="--folder-level:${level}">
-          <input class="hetk-folder-pick-check" type="checkbox" value="${escapeAttr(id)}" ${selected.has(id)?'checked':''}>
+          <input class="hetk-folder-pick-check" type="checkbox" value="${escapeAttr(id)}" ${selected.has(id)?'checked':''} ${editorFolderLocked?'disabled':''}>
           <i class="fas fa-folder" style="color:${escapeAttr(f.color || '#1687ff')}"></i>
           <span>${escapeHtml(f.name || 'Papka')}</span>
           ${children.length ? '<small>'+children.length+' ta ichki</small>' : ''}
@@ -795,8 +964,10 @@
     byId('hetk-user-login').value='';byId('hetk-user-login').readOnly=false;
     byId('hetk-user-password').value='';byId('hetk-user-password2').value='';
     document.querySelectorAll('.hetk-create-password').forEach(x => x.style.display='');
+    editorFolderLimitRoots=null;editorFolderLocked=false;
     fillRoleOptions(getCreatableRoles()[0],true);
     renderUserFolderPicker([]);
+    refreshWorkZoneEditor();
     editorMessage('','');
     byId('hetk-user-editor').hidden=false;
     document.body.classList.add('hetk-user-editor-open');
@@ -815,8 +986,10 @@
     byId('hetk-user-phone').value=u.phone || '';byId('hetk-user-phone').readOnly=!canEditCore;
     byId('hetk-user-login').value=u.login || '';byId('hetk-user-login').readOnly=true;
     document.querySelectorAll('.hetk-create-password').forEach(x => x.style.display='none');
+    editorFolderLimitRoots=null;editorFolderLocked=false;
     fillRoleOptions(u.role,canManageTarget(u,'role'));
     renderUserFolderPicker(accountFolderRoots(u));
+    refreshWorkZoneEditor(u.workZoneId || '');
     editorMessage('','');
     byId('hetk-user-editor').hidden=false;
     document.body.classList.add('hetk-user-editor-open');
@@ -826,6 +999,7 @@
     const el=byId('hetk-user-editor');
     if(el) el.hidden=true;
     document.body.classList.remove('hetk-user-editor-open');
+    editorFolderLimitRoots=null;editorFolderLocked=false;
     editorMessage('','');
   }
 
@@ -848,36 +1022,97 @@
     const phone=String(byId('hetk-user-phone').value||'').trim();
     const login=normalizeLogin(byId('hetk-user-login').value);
     const role=byId('hetk-user-role').value;
-    const selectedRoots=normalizeSelectedFolderRoots(getEditorSelectedFolders(),teamFoldersCache);
+    let selectedRoots=normalizeSelectedFolderRoots(getEditorSelectedFolders(),teamFoldersCache);
     if(fullName.length<3) return editorMessage('error','F.I.Sh ni to‘liq kiriting.');
     if(userEditorMode==='create' && login.length<3) return editorMessage('error','Login kamida 3 ta belgidan iborat bo‘lsin.');
     if(!ROLE_DEFS[role]) return editorMessage('error','Lavozimni tanlang.');
+    if(userEditorMode==='create' && !getCreatableRoles().includes(role)) return editorMessage('error','Bu lavozimni yaratishga ruxsatingiz yo‘q.');
+
+    const needsZone=role==='master' || role==='electrician';
+    let zoneChoice=needsZone ? getSelectedWorkZoneId() : '';
+    let zone=null, zoneName='', newZoneName='';
+    if(needsZone){
+      if(!zoneChoice) return editorMessage('error','Ustalik joyini (U/J) tanlang.');
+      if(zoneChoice==='__new__'){
+        if(!canCreateNewWorkZoneForRole(role)) return editorMessage('error','Yangi U/J yaratishga ruxsatingiz yo‘q.');
+        newZoneName=normalizeWorkZoneName(byId('hetk-user-workzone-new-name').value);
+        if(newZoneName.length<4) return editorMessage('error','U/J nomini kiriting. Masalan: Zarafshon U/J');
+        zoneName=newZoneName;
+      }else{
+        zone=getWorkZoneById(zoneChoice);
+        if(!zone || !canCurrentUserUseWorkZone(zone)) return editorMessage('error','Bu U/J sizning ruxsatingiz doirasida emas.');
+        zoneName=zone.name || 'U/J';
+        const zoneRoots=workZoneRoots(zone);
+        if(role==='master' && zoneRoots.length) selectedRoots=normalizeSelectedFolderRoots(zoneRoots,teamFoldersCache);
+        if(role==='electrician'){
+          const allowed=new Set(workZoneAccessibleIds(zone));
+          if(selectedRoots.some(id=>!allowed.has(id))) return editorMessage('error','Elektromontyorga faqat o‘z U/J hududi ichidan papka berish mumkin.');
+          if(!selectedRoots.length && zoneRoots.length) selectedRoots=normalizeSelectedFolderRoots(zoneRoots,teamFoldersCache);
+        }
+      }
+    }
+
     const myAccessible=new Set(getAccessibleFolderIds(currentAccount,teamFoldersCache));
     if(!selectedRoots.length) return editorMessage('error','Kamida bitta papka / hududni tanlang.');
     if(selectedRoots.some(id => !myAccessible.has(id))) return editorMessage('error','Sizga ruxsat berilmagan papkani biriktirib bo‘lmaydi.');
-    if(userEditorMode==='create' && !getCreatableRoles().includes(role)) return editorMessage('error','Bu lavozimni yaratishga ruxsatingiz yo‘q.');
     const foldersObj={}; selectedRoots.forEach(id => foldersObj[id]=true);
     const def=roleDef(role);
     const patch={
-      fullName,phone,role,roleLabel:def.label,level:def.level,region:buildRegionFromRoots(selectedRoots),rootAccess:false,folders:foldersObj,
+      fullName,phone,role,roleLabel:def.label,level:def.level,
+      region:needsZone ? zoneName : buildRegionFromRoots(selectedRoots),
+      rootAccess:false,folders:foldersObj,
       permissions:defaultPermissionsForRole(role),updatedAt:Date.now(),updatedBy:currentAccount.uid
     };
+    if(needsZone){ patch.workZoneId=zoneChoice==='__new__' ? '' : zoneChoice; patch.workZoneName=zoneName; }
+    else { patch.workZoneId=null;patch.workZoneName=null; }
+
+    const confirmMasterReplacement=(z,targetUid) => {
+      if(role!=='master' || !z || !z.currentMasterUid || z.currentMasterUid===targetUid) return true;
+      const old=teamUsersCache[z.currentMasterUid];
+      const oldName=old && old.fullName ? old.fullName : 'avvalgi master';
+      return confirm(`${z.name || 'U/J'} da hozir ${oldName} master.\n\nYangi master biriktirilsa avvalgi master bloklanadi. Davom etasizmi?`);
+    };
+
     setBusy(btn,true,userEditorMode==='create'?'Yaratilmoqda...':'Saqlanmoqda...');
     try{
       if(userEditorMode==='create'){
         const pass1=byId('hetk-user-password').value, pass2=byId('hetk-user-password2').value;
         if(pass1.length<6) throw new Error('Parol kamida 6 ta belgidan iborat bo‘lsin.');
         if(pass1!==pass2) throw new Error('Parollar bir xil emas.');
+        if(role==='master' && zone && !confirmMasterReplacement(zone,'')) throw new Error('Master almashtirish bekor qilindi.');
         const sec=secondaryAuth();
         let cred=null;
         try{
           cred=await sec.createUserWithEmailAndPassword(loginToEmail(login),pass1);
           const uid=cred.user.uid;
           const now=Date.now();
+          let finalZoneId=patch.workZoneId;
+          const updates={};
+          if(role==='master' && zoneChoice==='__new__'){
+            finalZoneId=databaseRef.ref('WorkZones').push().key;
+            updates['WorkZones/'+finalZoneId]={
+              name:newZoneName,active:true,folders:foldersObj,currentMasterUid:uid,
+              createdAt:now,createdBy:currentAccount.uid,updatedAt:now,updatedBy:currentAccount.uid
+            };
+          }else if(role==='master' && zone){
+            finalZoneId=zone.id;
+            updates['WorkZones/'+zone.id+'/currentMasterUid']=uid;
+            updates['WorkZones/'+zone.id+'/updatedAt']=now;
+            updates['WorkZones/'+zone.id+'/updatedBy']=currentAccount.uid;
+            if(!workZoneRoots(zone).length) updates['WorkZones/'+zone.id+'/folders']=foldersObj;
+            if(zone.currentMasterUid && zone.currentMasterUid!==uid){
+              updates['users/'+zone.currentMasterUid+'/active']=false;
+              updates['users/'+zone.currentMasterUid+'/replacedAt']=now;
+              updates['users/'+zone.currentMasterUid+'/replacedBy']=currentAccount.uid;
+            }
+          }
           const account=Object.assign({},patch,{
-            uid,login,active:true,createdAt:now,createdBy:currentAccount.uid,createdByName:currentAccount.fullName || currentAccount.login || 'Admin',lastLoginAt:0,photoData:''
+            uid,login,active:true,createdAt:now,createdBy:currentAccount.uid,
+            createdByName:currentAccount.fullName || currentAccount.login || 'Admin',lastLoginAt:0,photoData:''
           });
-          await databaseRef.ref('users/'+uid).set(account);
+          if(needsZone){account.workZoneId=finalZoneId;account.workZoneName=zoneName;account.region=zoneName;}
+          updates['users/'+uid]=account;
+          await databaseRef.ref().update(updates);
           try{ await cred.user.updateProfile({displayName:fullName}); }catch(_e){}
           await sec.signOut();
           selectedTeamUid=uid;
@@ -901,8 +1136,57 @@
           patch.roleLabel=target.roleLabel || roleDef(target.role).label;
           patch.level=target.level || roleDef(target.role).level;
           patch.permissions=target.permissions || defaultPermissionsForRole(target.role);
+          patch.workZoneId=target.workZoneId || null;
+          patch.workZoneName=target.workZoneName || null;
+          patch.region=target.region || buildRegionFromRoots(selectedRoots);
         }
-        await databaseRef.ref('users/'+editingTeamUid).update(patch);
+        const updates={};
+        let finalZoneId=patch.workZoneId;
+        const oldZone=target.workZoneId ? getWorkZoneById(target.workZoneId) : null;
+        if(canManageTarget(target,'edit') && needsZone){
+          if(role==='master' && zone && !confirmMasterReplacement(zone,target.uid)) throw new Error('Master almashtirish bekor qilindi.');
+          if(role==='master' && zoneChoice==='__new__'){
+            finalZoneId=databaseRef.ref('WorkZones').push().key;
+            updates['WorkZones/'+finalZoneId]={name:newZoneName,active:true,folders:foldersObj,currentMasterUid:target.uid,createdAt:Date.now(),createdBy:currentAccount.uid,updatedAt:Date.now(),updatedBy:currentAccount.uid};
+          }else{
+            finalZoneId=zoneChoice;
+            if(role==='master' && zone){
+              updates['WorkZones/'+zone.id+'/currentMasterUid']=target.uid;
+              updates['WorkZones/'+zone.id+'/updatedAt']=Date.now();
+              updates['WorkZones/'+zone.id+'/updatedBy']=currentAccount.uid;
+              if(!workZoneRoots(zone).length) updates['WorkZones/'+zone.id+'/folders']=foldersObj;
+              if(zone.currentMasterUid && zone.currentMasterUid!==target.uid){
+                updates['users/'+zone.currentMasterUid+'/active']=false;
+                updates['users/'+zone.currentMasterUid+'/replacedAt']=Date.now();
+                updates['users/'+zone.currentMasterUid+'/replacedBy']=currentAccount.uid;
+              }
+            }
+          }
+          patch.workZoneId=finalZoneId;patch.workZoneName=zoneName;patch.region=zoneName;
+        }
+        if(canManageTarget(target,'edit') && oldZone && target.role==='master' && (role!=='master' || finalZoneId!==target.workZoneId) && oldZone.currentMasterUid===target.uid){
+          updates['WorkZones/'+oldZone.id+'/currentMasterUid']=null;
+          updates['WorkZones/'+oldZone.id+'/updatedAt']=Date.now();
+        }
+        // Stage 2 da Master yaratgan eski "Hodim"larni bir marta Elektromontyorga o'tkazamiz.
+        if(canManageTarget(target,'edit') && role==='master' && finalZoneId){
+          Object.keys(teamUsersCache).forEach(childUid=>{
+            const child=teamUsersCache[childUid] || {};
+            if(child.role==='employee' && child.createdBy===target.uid && !child.workZoneId){
+              updates['users/'+childUid+'/role']='electrician';
+              updates['users/'+childUid+'/roleLabel']=ROLE_DEFS.electrician.label;
+              updates['users/'+childUid+'/level']=ROLE_DEFS.electrician.level;
+              updates['users/'+childUid+'/permissions']=defaultPermissionsForRole('electrician');
+              updates['users/'+childUid+'/workZoneId']=finalZoneId;
+              updates['users/'+childUid+'/workZoneName']=zoneName;
+              updates['users/'+childUid+'/region']=zoneName;
+              updates['users/'+childUid+'/updatedAt']=Date.now();
+              updates['users/'+childUid+'/updatedBy']=currentAccount.uid;
+            }
+          });
+        }
+        updates['users/'+editingTeamUid]=patch;
+        await databaseRef.ref().update(updates);
         closeUserEditor();
       }
     }catch(e){
@@ -919,7 +1203,19 @@
     const next=u.active===false;
     const text=next ? 'Ushbu foydalanuvchini qayta faollashtirasizmi?' : 'Ushbu foydalanuvchini o‘chirish/bloklashni tasdiqlaysizmi? Login saqlanadi, lekin tizimga kira olmaydi.';
     if(!confirm(text)) return;
-    await databaseRef.ref('users/'+uid).update({active:next,updatedAt:Date.now(),updatedBy:currentAccount.uid});
+    const updates={};
+    updates['users/'+uid+'/active']=next;
+    updates['users/'+uid+'/updatedAt']=Date.now();
+    updates['users/'+uid+'/updatedBy']=currentAccount.uid;
+    if(!next && u.role==='master' && u.workZoneId){
+      const zone=getWorkZoneById(u.workZoneId);
+      if(zone && zone.currentMasterUid===uid){
+        updates['WorkZones/'+u.workZoneId+'/currentMasterUid']=null;
+        updates['WorkZones/'+u.workZoneId+'/updatedAt']=Date.now();
+        updates['WorkZones/'+u.workZoneId+'/updatedBy']=currentAccount.uid;
+      }
+    }
+    await databaseRef.ref().update(updates);
   }
 
   function installLogoutButton(){
@@ -1038,11 +1334,17 @@
         return;
       }
       if(currentUserLiveRef) currentUserLiveRef.off('value');
-      currentUserLiveRef=databaseRef.ref('users/' + user.uid + '/active');
+      currentUserLiveRef=databaseRef.ref('users/' + user.uid);
       currentUserLiveRef.on('value', async snap => {
-        if(snap.val() === false && auth.currentUser && auth.currentUser.uid === user.uid){
-          await auth.signOut();
+        const live=snap.val();
+        if(!live || live.active === false){
+          if(auth.currentUser && auth.currentUser.uid === user.uid) await auth.signOut();
+          return;
         }
+        currentAccount=Object.assign({uid:user.uid},live);
+        window.HETKAuth.currentUser=currentAccount;
+        populateProfile(currentAccount);
+        document.dispatchEvent(new CustomEvent('hetk-auth-user-updated',{detail:{user:currentAccount}}));
       });
       await databaseRef.ref('users/' + user.uid).update({lastLoginAt:Date.now()});
       populateProfile(currentAccount);
@@ -1092,6 +1394,9 @@
     currentUser:null,
     roles:ROLE_DEFS,
     getRoleLabel(role){return ROLE_DEFS[role] ? ROLE_DEFS[role].label : role;},
+    getAccountRoleLabel(account){return getRoleLabel(account);},
+    getWorkZones(){return teamWorkZonesCache;},
+    canManageElementWorkZones(){return !!(this.currentUser && ['super_admin','director','chief_engineer'].includes(this.currentUser.role));},
     canCreateRole(targetRole){
       const me=this.currentUser;
       return !!(me && (roleDef(me.role).createRoles || []).includes(targetRole));
