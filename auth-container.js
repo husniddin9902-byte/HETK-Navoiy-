@@ -70,6 +70,8 @@
   let userEditorMode = 'create';
   let editingTeamUid = null;
   let currentUserLiveRef = null;
+  let teamTreeExpanded = new Set(['__root__']);
+  let teamTreeAutoInitialized = false;
 
   function byId(id){ return document.getElementById(id); }
 
@@ -368,7 +370,11 @@
     const regionEl = byId('profile-region');
     if(nameEl) nameEl.textContent = account.fullName || 'F.I.Sh';
     if(posEl) posEl.textContent = getRoleLabel(account);
-    if(regionEl) regionEl.textContent = account.region || 'Hudud biriktirilmagan';
+    if(regionEl){
+      const zoneRole = account.role === 'master' || account.role === 'electrician';
+      regionEl.textContent = zoneRole ? '' : (account.region || 'Hudud biriktirilmagan');
+      regionEl.style.display = zoneRole ? 'none' : '';
+    }
     const avatar = document.querySelector('.hetk-profile-avatar');
     applyAvatar(avatar, account.photoData);
     renderPersonalEditor(account);
@@ -388,7 +394,7 @@
             <label class="hetk-account-photo-btn" for="hetk-account-photo-input" title="Rasmni almashtirish"><i class="fas fa-camera"></i></label>
             <input id="hetk-account-photo-input" type="file" accept="image/*" hidden>
           </div>
-          <div><h3>${escapeHtml(account.fullName || 'F.I.Sh')}</h3><p>${escapeHtml(roleLabel)} · ${escapeHtml(account.region || 'Hudud biriktirilmagan')}</p></div>
+          <div><h3>${escapeHtml(account.fullName || 'F.I.Sh')}</h3><p>${escapeHtml(roleLabel)}${(account.role==='master'||account.role==='electrician') ? '' : ' · '+escapeHtml(account.region || 'Hudud biriktirilmagan')}</p></div>
         </div>
         <div class="hetk-account-body">
           <div class="hetk-account-grid">
@@ -396,7 +402,7 @@
             <div class="hetk-account-field"><label>Telefon</label><input id="hetk-edit-phone" value="${escapeAttr(account.phone || '')}" placeholder="+998 ..."></div>
             <div class="hetk-account-field"><label>Login</label><input value="${escapeAttr(account.login || '')}" readonly></div>
             <div class="hetk-account-field"><label>Lavozim</label><input value="${escapeAttr(roleLabel)}" readonly></div>
-            <div class="hetk-account-field"><label>Hudud</label><input value="${escapeAttr(account.region || '')}" readonly></div>
+            ${(account.role==='master'||account.role==='electrician') ? `<div class="hetk-account-field"><label>Ustalik joyi</label><input value="${escapeAttr(account.workZoneName || account.region || '')}" readonly></div>` : `<div class="hetk-account-field"><label>Hudud</label><input value="${escapeAttr(account.region || '')}" readonly></div>`}
             <div class="hetk-account-field"><label>Holati</label><input value="${account.active === false ? 'Nofaol' : 'Faol'}" readonly></div>
           </div>
           <div class="hetk-account-actions"><button id="hetk-save-profile" class="hetk-account-btn primary" type="button"><i class="fas fa-save"></i> Saqlash</button></div>
@@ -699,7 +705,9 @@
     const q=String((byId('hetk-team-search') && byId('hetk-team-search').value) || '').trim().toLowerCase();
     return Object.keys(teamUsersCache).map(uid => Object.assign({uid},teamUsersCache[uid] || {})).filter(canViewTarget).filter(u => {
       if(!q) return true;
-      return [u.fullName,u.login,getRoleLabel(u),u.region].join(' ').toLowerCase().includes(q);
+      const roots=accountFolderRoots(u);
+      const paths=roots.map(id=>folderPath(id)).join(' ');
+      return [u.fullName,u.login,getRoleLabel(u),u.region,u.workZoneName,paths].join(' ').toLowerCase().includes(q);
     }).sort((a,b) => {
       if(a.uid === currentAccount.uid) return -1;
       if(b.uid === currentAccount.uid) return 1;
@@ -707,26 +715,147 @@
     });
   }
 
+  function folderChainIds(folderId){
+    const chain=[];
+    let cur=folderId,guard=0;
+    while(cur && cur!=='root' && teamFoldersCache[cur] && guard<100){
+      chain.unshift(cur);
+      cur=teamFoldersCache[cur].parentId;
+      guard++;
+    }
+    return chain;
+  }
+
+  function commonFolderForIds(ids){
+    const chains=(ids||[]).filter(id=>teamFoldersCache[id]).map(folderChainIds);
+    if(!chains.length) return '__root__';
+    let common='__root__';
+    const min=Math.min(...chains.map(c=>c.length));
+    for(let i=0;i<min;i++){
+      const id=chains[0][i];
+      if(chains.every(c=>c[i]===id)) common=id;
+      else break;
+    }
+    return common;
+  }
+
+  function teamUserPlacementFolder(u){
+    if(u.rootAccess) return '__root__';
+    let roots=[];
+    if(u.workZoneId && teamWorkZonesCache[u.workZoneId]) roots=workZoneRoots(teamWorkZonesCache[u.workZoneId]);
+    if(!roots.length) roots=accountFolderRoots(u);
+    return commonFolderForIds(roots);
+  }
+
+  function buildTeamTree(users){
+    const nodes={__root__:{id:'__root__',name:'Tashkilot',type:'root',parent:null,children:new Set(),users:[],count:0}};
+    function ensureFolder(id){
+      if(!id || id==='__root__') return nodes.__root__;
+      if(nodes[id]) return nodes[id];
+      const f=teamFoldersCache[id];
+      if(!f) return nodes.__root__;
+      const parentId=(f.parentId && f.parentId!=='root' && teamFoldersCache[f.parentId]) ? f.parentId : '__root__';
+      const parent=ensureFolder(parentId);
+      nodes[id]={id,name:f.name||'Papka',type:'folder',parent:parent.id,children:new Set(),users:[],count:0};
+      parent.children.add(id);
+      return nodes[id];
+    }
+    users.forEach(u=>{
+      let parent=ensureFolder(teamUserPlacementFolder(u));
+      if(u.workZoneName){
+        const zkey='__zone__'+String(u.workZoneId || u.workZoneName).replace(/[^a-zA-Z0-9_-]/g,'_');
+        if(!nodes[zkey]){
+          nodes[zkey]={id:zkey,name:u.workZoneName,type:'zone',parent:parent.id,children:new Set(),users:[],count:0};
+          parent.children.add(zkey);
+        }
+        parent=nodes[zkey];
+      }
+      parent.users.push(u);
+    });
+    function countNode(id){
+      const n=nodes[id];
+      if(!n) return 0;
+      let c=n.users.length;
+      Array.from(n.children).forEach(ch=>{c+=countNode(ch);});
+      n.count=c;
+      return c;
+    }
+    countNode('__root__');
+    return nodes;
+  }
+
+  function teamTreeIcon(node){
+    if(node.type==='zone') return 'fa-hard-hat';
+    if(node.type==='root') return 'fa-sitemap';
+    const f=teamFoldersCache[node.id] || {};
+    const name=String(f.name||node.name||'').toLowerCase();
+    if(name.includes('respubl') || name.includes("o'zbekiston") || name.includes('ozbekiston')) return 'fa-globe-asia';
+    if(name.includes('viloyat') || name.includes('hf')) return 'fa-map-marked-alt';
+    if(name.includes('tuman') || name.includes('tet')) return 'fa-building';
+    if(name.includes('shahar')) return 'fa-city';
+    return 'fa-folder';
+  }
+
+  function renderTeamUserRow(u,depth){
+    const selected=selectedTeamUid===u.uid ? ' selected' : '';
+    return `<button class="hetk-team-user hetk-team-tree-user${selected}" style="--team-depth:${depth}" type="button" data-team-uid="${escapeAttr(u.uid)}">
+      <span class="hetk-team-user-avatar">${u.photoData ? `<img src="${escapeAttr(u.photoData)}" alt="">` : '<i class="fas fa-user"></i>'}</span>
+      <span class="hetk-team-user-main"><b>${escapeHtml(u.fullName || 'Nomsiz hodim')}</b><small>${escapeHtml(getRoleLabel(u))}</small><em>${escapeHtml(u.login || '')}</em></span>
+      <span class="hetk-team-user-state ${u.active===false?'off':'on'}">${u.active===false?'Nofaol':'Faol'}</span>
+    </button>`;
+  }
+
+  function renderTeamTreeNode(nodes,id,depth,searching){
+    const node=nodes[id];
+    if(!node || !node.count) return '';
+    const children=Array.from(node.children).filter(cid=>nodes[cid] && nodes[cid].count).sort((a,b)=>String(nodes[a].name||'').localeCompare(String(nodes[b].name||'')));
+    const users=node.users.slice().sort((a,b)=>Number(b.level||0)-Number(a.level||0) || String(a.fullName||'').localeCompare(String(b.fullName||'')));
+    const expanded=searching || teamTreeExpanded.has(id);
+    const hasChildren=children.length || users.length;
+    let html='';
+    if(id!=='__root__'){
+      html+=`<button type="button" class="hetk-team-tree-node ${node.type}" data-team-tree-toggle="${escapeAttr(id)}" style="--team-depth:${depth}">
+        <i class="fas ${hasChildren ? (expanded?'fa-chevron-down':'fa-chevron-right') : 'fa-minus'} hetk-team-tree-arrow"></i>
+        <i class="fas ${teamTreeIcon(node)} hetk-team-tree-icon"></i>
+        <span>${escapeHtml(node.name)}</span><b>${node.count}</b>
+      </button>`;
+    }
+    if(id==='__root__' || expanded){
+      const childDepth=id==='__root__'?0:depth+1;
+      html+=users.map(u=>renderTeamUserRow(u,childDepth)).join('');
+      html+=children.map(ch=>renderTeamTreeNode(nodes,ch,childDepth,searching)).join('');
+    }
+    return html;
+  }
+
   function renderTeamList(){
     const box=byId('hetk-team-list');
     if(!box) return;
     const users=getVisibleUsers();
     const count=byId('hetk-team-count');
-    if(count) count.textContent=users.length + ' ta foydalanuvchi';
+    const q=String((byId('hetk-team-search') && byId('hetk-team-search').value) || '').trim();
+    if(count) count.textContent=users.length + ' ta foydalanuvchi' + (q ? ' topildi' : '');
     if(!users.length){
       box.innerHTML='<div class="hetk-team-no-users">Hozircha ko‘rinadigan hodimlar yo‘q.</div>';
       return;
     }
-    box.innerHTML=users.map(u => {
-      const roots=accountFolderRoots(u);
-      const scope=u.rootAccess ? "Barcha hududlar" : (roots.length===1 ? (folderPath(roots[0]) || u.region || 'Hudud') : (roots.length ? roots.length+' ta hudud' : (u.region || 'Hudud biriktirilmagan')));
-      const selected=selectedTeamUid===u.uid ? ' selected' : '';
-      return `<button class="hetk-team-user${selected}" type="button" data-team-uid="${escapeAttr(u.uid)}">
-        <span class="hetk-team-user-avatar">${u.photoData ? `<img src="${escapeAttr(u.photoData)}" alt="">` : '<i class="fas fa-user"></i>'}</span>
-        <span class="hetk-team-user-main"><b>${escapeHtml(u.fullName || 'Nomsiz hodim')}</b><small>${escapeHtml(getRoleLabel(u))}</small><em><i class="fas fa-folder"></i> ${escapeHtml(scope)}</em></span>
-        <span class="hetk-team-user-state ${u.active===false?'off':'on'}">${u.active===false?'Nofaol':'Faol'}</span>
-      </button>`;
-    }).join('');
+    const nodes=buildTeamTree(users);
+    if(!teamTreeAutoInitialized && !q){
+      teamTreeExpanded.add('__root__');
+      if(users.length<=100){
+        Object.keys(nodes).forEach(id=>teamTreeExpanded.add(id));
+      }else if(currentAccount){
+        let id=teamUserPlacementFolder(currentAccount);
+        if(id && id!=='__root__') folderChainIds(id).forEach(x=>teamTreeExpanded.add(x));
+      }
+      teamTreeAutoInitialized=true;
+    }
+    box.innerHTML=renderTeamTreeNode(nodes,'__root__',0,!!q);
+    box.querySelectorAll('[data-team-tree-toggle]').forEach(btn=>btn.addEventListener('click',()=>{
+      const id=btn.dataset.teamTreeToggle;
+      if(teamTreeExpanded.has(id)) teamTreeExpanded.delete(id); else teamTreeExpanded.add(id);
+      renderTeamList();
+    }));
     box.querySelectorAll('[data-team-uid]').forEach(btn => btn.addEventListener('click', () => {
       selectedTeamUid=btn.dataset.teamUid;
       renderTeamList();
@@ -752,19 +881,21 @@
       <div class="hetk-team-detail-section"><h4>Ruxsat etilgan hududlar</h4><div class="hetk-scope-chips">${chips}</div></div>
       <div class="hetk-team-detail-grid">
         <div><span>Telefon</span><b>${escapeHtml(u.phone || '—')}</b></div>
-        <div><span>Hudud</span><b>${escapeHtml(u.region || '—')}</b></div>
-        ${(u.role==='master' || u.role==='electrician') ? `<div><span>Ustalik joyi</span><b>${escapeHtml(u.workZoneName || 'Biriktirilmagan')}</b></div>` : ''}
+        ${(u.role==='master' || u.role==='electrician') ? `<div><span>Ustalik joyi</span><b>${escapeHtml(u.workZoneName || u.region || 'Biriktirilmagan')}</b></div>` : `<div><span>Hudud</span><b>${escapeHtml(u.region || '—')}</b></div>`}
         <div><span>Yaratgan</span><b>${escapeHtml(u.createdByName || '—')}</b></div>
         <div><span>Oxirgi kirish</span><b>${u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString() : '—'}</b></div>
       </div>
       ${(canEdit || canDeactivate) ? `<div class="hetk-team-detail-actions">
         ${canEdit ? '<button type="button" id="hetk-edit-team-user" class="primary"><i class="fas fa-user-shield"></i> Lavozim / papka ruxsatlari</button>' : ''}
-        ${canDeactivate ? `<button type="button" id="hetk-toggle-team-user" class="${u.active===false?'restore':'danger'}"><i class="fas ${u.active===false?'fa-user-check':'fa-user-slash'}"></i> ${u.active===false?'Qayta faollashtirish':'O‘chirish / bloklash'}</button>` : ''}
+        ${canDeactivate ? `<button type="button" id="hetk-toggle-team-user" class="${u.active===false?'restore':'danger'}"><i class="fas ${u.active===false?'fa-user-check':'fa-user-slash'}"></i> ${u.active===false?'Qayta faollashtirish':'Bloklash'}</button>` : ''}
+        ${(canDeactivate && u.active===false) ? '<button type="button" id="hetk-delete-team-user" class="permanent"><i class="fas fa-trash-alt"></i> Butunlay o‘chirish</button>' : ''}
       </div>` : '<div class="hetk-team-readonly"><i class="fas fa-lock"></i> Bu foydalanuvchini boshqarish huquqi yo‘q.</div>'}`;
     const edit=byId('hetk-edit-team-user');
     if(edit) edit.addEventListener('click', () => openEditUserEditor(uid));
     const toggle=byId('hetk-toggle-team-user');
     if(toggle) toggle.addEventListener('click', () => toggleUserActive(uid));
+    const del=byId('hetk-delete-team-user');
+    if(del) del.addEventListener('click', () => deleteUserPermanently(uid));
   }
 
   function editorMessage(type,text){
@@ -1201,7 +1332,7 @@
     const u=Object.assign({uid},raw);
     if(!canManageTarget(u,'deactivate')) return;
     const next=u.active===false;
-    const text=next ? 'Ushbu foydalanuvchini qayta faollashtirasizmi?' : 'Ushbu foydalanuvchini o‘chirish/bloklashni tasdiqlaysizmi? Login saqlanadi, lekin tizimga kira olmaydi.';
+    const text=next ? 'Ushbu foydalanuvchini qayta faollashtirasizmi?' : 'Ushbu foydalanuvchini bloklaysizmi? Login saqlanadi, lekin tizimga kira olmaydi. Keyin xohlasangiz qayta faollashtirish yoki butunlay o‘chirish mumkin.';
     if(!confirm(text)) return;
     const updates={};
     updates['users/'+uid+'/active']=next;
@@ -1216,6 +1347,44 @@
       }
     }
     await databaseRef.ref().update(updates);
+  }
+
+  async function deleteUserPermanently(uid){
+    const raw=teamUsersCache[uid];
+    if(!raw) return;
+    const u=Object.assign({uid},raw);
+    if(!canManageTarget(u,'deactivate')) return;
+    if(u.active!==false){
+      alert('Butunlay o‘chirishdan oldin foydalanuvchini bloklang.');
+      return;
+    }
+    const name=u.fullName || u.login || 'Foydalanuvchi';
+    if(!confirm(`${name} tizim ro‘yxatidan butunlay o‘chiriladi.
+
+Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
+    const now=Date.now();
+    const updates={};
+    updates['DeletedUsers/'+uid]={
+      uid,login:u.login||'',fullName:u.fullName||'',phone:u.phone||'',role:u.role||'',roleLabel:u.roleLabel||'',
+      workZoneId:u.workZoneId||'',workZoneName:u.workZoneName||'',region:u.region||'',deletedAt:now,
+      deletedBy:currentAccount.uid,deletedByName:currentAccount.fullName||currentAccount.login||'Admin'
+    };
+    updates['users/'+uid]=null;
+    Object.keys(teamWorkZonesCache || {}).forEach(zoneId=>{
+      const z=teamWorkZonesCache[zoneId];
+      if(z && z.currentMasterUid===uid){
+        updates['WorkZones/'+zoneId+'/currentMasterUid']=null;
+        updates['WorkZones/'+zoneId+'/updatedAt']=now;
+        updates['WorkZones/'+zoneId+'/updatedBy']=currentAccount.uid;
+      }
+    });
+    await databaseRef.ref().update(updates);
+    if(selectedTeamUid===uid){
+      selectedTeamUid=null;
+      const box=byId('hetk-team-detail');
+      if(box) box.innerHTML='<div class="hetk-team-empty"><i class="fas fa-user-times"></i><h4>Foydalanuvchi o‘chirildi</h4><p>Ro‘yxatdan boshqa hodimni tanlang.</p></div>';
+    }
+    alert('Foydalanuvchi tizim ro‘yxatidan o‘chirildi.');
   }
 
   function installLogoutButton(){
