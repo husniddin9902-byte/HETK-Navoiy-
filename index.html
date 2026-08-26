@@ -17,7 +17,7 @@
             
 </style> 
     <link rel="stylesheet" href="profile-container.css?v=3.0">
-    <link rel="stylesheet" href="auth-container.css?v=2.0">
+    <link rel="stylesheet" href="auth-container.css?v=3.0">
 </head>
 <body>
 
@@ -192,7 +192,7 @@ cursor:pointer;
 
     <label><input type="radio" name="searchType" value="name" checked> Nomi</label><br><br>
     <label><input type="radio" name="searchType" value="address"> Manzil</label><br><br>
-    <label><input type="radio" name="searchType" value="responsible"> Javobgar shaxs</label><br><br>
+    <label><input type="radio" name="searchType" value="responsible"> Ustalik joyi (U/J)</label><br><br>
     <label><input type="radio" name="searchType" value="note"> Izoh</label>
     <hr style="border-color:rgba(255,255,255,.12);margin:12px 0;">
     <div style="font-size:13px;color:#9ecfff;margin-bottom:8px;">
@@ -312,7 +312,7 @@ cursor:pointer;
 </div>
 
             
-            <label>Mas'ul shaxs</label>
+            <label>Ustalik joyi (U/J)</label>
 <div id="responsible-dropdown"
      style="position:relative;margin:8px 0 14px 0;">
     <div id="responsible-selected"
@@ -1069,26 +1069,14 @@ margin-bottom:8px;
 
             <div>
 
-                <div>
-    <label style="font-size: 13px; color: #88a0b0; margin-left: 4px;">
-        👤 Javobgar shaxs F.I.Sh.:
+                <div id="input-workzone-section">
+    <label style="font-size:13px;color:#88a0b0;margin-left:4px;">
+        🛠 Biriktirilgan ustalik joyi (U/J) *
     </label>
-    <input
-    type="text"
-    id="input-responsible-person"
-    placeholder="Masalan: Husniddin Juraqulov"
-    style="width:100%; padding:12px; margin-top:5px; border-radius:8px; background:#001a2c; color:white; border:1px solid rgba(255,255,255,0.05); outline:none;">
-</div>
-
-<div>
-    <label style="font-size: 13px; color: #88a0b0; margin-left: 4px;">
-        📱 Javobgar telefon:
-    </label>
-    <input
-    type="tel"
-    id="input-responsible-phone"
-    placeholder="+998"
-    style="width:100%; padding:12px; margin-top:5px; border-radius:8px; background:#001a2c; color:white; border:1px solid rgba(255,255,255,0.05); outline:none;">
+    <div id="input-workzone-picker" class="hetk-element-uj-box">
+        <div class="hetk-element-uj-warning">U/J ma’lumotlari yuklanmoqda...</div>
+    </div>
+    <input type="hidden" id="input-workzone-ids" value="">
 </div>
 
             <div>
@@ -1543,9 +1531,9 @@ gap:8px;
 </div>
 
     
-    <script src="app.js?v=2.0"></script>
+    <script src="app.js?v=3.0"></script>
     <script src="profile-container.js?v=3.0"></script>
-    <script src="auth-container.js?v=2.0"></script>
+    <script src="auth-container.js?v=3.0"></script>
     <script src="mahalla.js?v=1.1"></script>
 </body>
                          </html>
