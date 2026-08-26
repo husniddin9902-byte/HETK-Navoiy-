@@ -1561,7 +1561,7 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
 
   window.HETKAuth = {
     currentUser:null,
-    roles:ROLE_DEFS,
+    roles:ROLE_DEFS, 
     getRoleLabel(role){return ROLE_DEFS[role] ? ROLE_DEFS[role].label : role;},
     getAccountRoleLabel(account){return getRoleLabel(account);},
     getWorkZones(){return teamWorkZonesCache;},
