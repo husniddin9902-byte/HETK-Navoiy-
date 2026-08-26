@@ -203,6 +203,7 @@ document.querySelector('.save-btn').addEventListener('click', function() {
     const addr = document.getElementById('address').innerText;
     
     if (activeFolderId === 'root') return showToast("Avval papka tanlang!");
+    if (!hetkCanAccessFolder(activeFolderId)) return showToast("Bu papkaga ma'lumot saqlash ruxsati yo'q.");
 
     database.ref('TPs/' + Date.now()).set({
         lat: currentLat,
@@ -240,6 +241,7 @@ if(closeList) closeList.addEventListener('click', () => { listModal.style.displa
 
 
 if(openAddBtn) openAddBtn.addEventListener('click', () => { 
+    if(!hetkHasPermission('manageFolders')) return showToast("Sizda papka yaratish ruxsati yo'q.");
     addFolderPanel.classList.remove('hidden'); 
     updateParentSelect('parent-folder-select'); 
 });
@@ -256,8 +258,11 @@ if(hueSlider) {
 const saveFolderBtn = document.getElementById('save-folder');
 if(saveFolderBtn) {
     saveFolderBtn.addEventListener('click', () => {
+        if(!hetkHasPermission('manageFolders')) return showToast("Sizda papka yaratish ruxsati yo'q.");
         const name = document.getElementById('new-group-name').value;
         const parentId = document.getElementById('parent-folder-select').value;
+        if(parentId === 'root' && !hetkHasRootAccess()) return showToast("Siz faqat o'zingizga biriktirilgan hudud ichida papka yarata olasiz.");
+        if(parentId !== 'root' && !hetkCanAccessFolder(parentId)) return showToast("Bu papkaga ruxsatingiz yo'q.");
         const hue = hueSlider ? hueSlider.value : 0;
         const color = `hsl(${hue}, 100%, 50%)`;
 
@@ -290,7 +295,7 @@ function loadFolders() {
 
 function renderTree(parentId, container) {
     container.innerHTML = "";
-    const children = Object.keys(currentFolders).filter(id => currentFolders[id].parentId === parentId);
+    const children = Object.keys(currentFolders).filter(id => currentFolders[id].parentId === parentId && hetkCanSeeFolder(id));
     
     children.forEach(id => {
         const folder = currentFolders[id];
@@ -302,7 +307,7 @@ function renderTree(parentId, container) {
                 <span class="toggle-btn" style="width: 20px; text-align: center; font-size: 16px; display: inline-block;" onclick="event.stopPropagation(); toggleFolderView('${id}')">+</span>
                 <i class="fas fa-folder" style="color: ${folder.color}; margin-right: 5px;"></i>
                 <span style="flex-grow: 1; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline-block;">${folder.name}</span>
-                <i class="fas fa-edit edit-icon" style="cursor: pointer;" onclick="event.stopPropagation(); openEditFolder('${id}', '${folder.name}', ${folder.hue || 0})"></i>
+                <i class="fas fa-edit edit-icon" style="cursor: pointer; display:${hetkHasPermission('manageFolders') && hetkCanAccessFolder(id) ? 'inline-block' : 'none'};" onclick="event.stopPropagation(); openEditFolder('${id}', '${folder.name}', ${folder.hue || 0})"></i>
             </div>
             <div id="children-${id}" class="folder-children" style="display: none;"></div>
         `;
@@ -480,6 +485,7 @@ function setPrimaryMahalla(name){
 
 // Yagona va to'g'rilangan selectFolder funksiyasi
 window.selectFolder = function(id) {
+    if(id !== 'root' && !hetkCanSeeFolder(id)) return showToast("Bu papkaga ruxsatingiz yo'q.");
     activeFolderId = id;
     
     document.querySelectorAll('.folder-header').forEach(el => {
@@ -513,9 +519,9 @@ window.toggleFolderView = function(id) {
 function updateParentSelect(selectId, excludeId = null) {
     const select = document.getElementById(selectId);
     if(!select) return;
-    select.innerHTML = '<option value="root">Asosiy (Bosh guruh)</option>';
+    select.innerHTML = hetkHasRootAccess() ? '<option value="root">Asosiy (Bosh guruh)</option>' : '';
     Object.keys(currentFolders).forEach(id => {
-        if (id !== excludeId) {
+        if (id !== excludeId && hetkCanAccessFolder(id)) {
             const option = document.createElement('option');
             option.value = id;
             option.innerText = currentFolders[id].name;
@@ -1070,6 +1076,7 @@ if(editColorSlider) {
 }
 
 window.openEditFolder = function(id, name, hue) {
+    if(!hetkHasPermission('manageFolders') || !hetkCanAccessFolder(id)) return showToast("Bu papkani tahrirlash ruxsati yo'q.");
     editingFolderId = id;
     document.getElementById('edit-group-name').value = name;
     if(editColorSlider) {
@@ -1087,6 +1094,7 @@ window.openEditFolder = function(id, name, hue) {
 };
 
 document.getElementById('delete-folder-btn').addEventListener('click', () => {
+    if(!hetkHasPermission('manageFolders') || !hetkCanAccessFolder(editingFolderId)) return showToast("Bu papkani o'chirish ruxsati yo'q.");
     if (confirm("Ushbu guruhni o'chirmoqchimisiz? Ichidagi barcha ma'lumotlar o'chib ketishi mumkin!")) {
         database.ref('Folders/' + editingFolderId).remove().then(() => {
             showToast("Guruh o'chirildi");
@@ -1098,8 +1106,11 @@ document.getElementById('delete-folder-btn').addEventListener('click', () => {
 
 // 489-qatordan boshlab faylning eng oxirigacha bo'lgan qism:
 document.getElementById('update-folder-btn').addEventListener('click', () => {
+    if(!hetkHasPermission('manageFolders') || !hetkCanAccessFolder(editingFolderId)) return showToast("Bu papkani tahrirlash ruxsati yo'q.");
     const newName = document.getElementById('edit-group-name').value;
     const newParentId = document.getElementById('edit-parent-folder-select').value;
+    if(newParentId === 'root' && !hetkHasRootAccess()) return showToast("Papka faqat sizga ruxsat etilgan hudud ichida bo'lishi kerak.");
+    if(newParentId !== 'root' && !hetkCanAccessFolder(newParentId)) return showToast("Bu ota papkaga ruxsatingiz yo'q.");
     const newHue = editColorSlider ? editColorSlider.value : 0;
 
     if (newName.trim() === "") return alert("Nomini kiriting");
@@ -1146,17 +1157,17 @@ function buildTreeInDiv(treeContainerId, nativeSelectId, excludeId = null) {
         nativeSelect.value = 'root';
         refreshTreeDropdownSelection(container, 'root');
     });
-    container.appendChild(rootRow);
+    if(hetkHasRootAccess()) container.appendChild(rootRow);
 
     // 2. To'g'ri ierarxik rekursiya funksiyasi
     function appendChildrenNodes(parentId, level, targetBox) {
-        const children = Object.keys(currentFolders).filter(id => currentFolders[id].parentId === parentId);
+        const children = Object.keys(currentFolders).filter(id => currentFolders[id].parentId === parentId && hetkCanSeeFolder(id));
         
         children.forEach(id => {
             if (excludeId && id === excludeId) return; // O'zini o'ziga ichki guruh qilishni cheklash
 
             const folder = currentFolders[id];
-            const hasSubFolders = Object.keys(currentFolders).some(childId => currentFolders[childId].parentId === id);
+            const hasSubFolders = Object.keys(currentFolders).some(childId => currentFolders[childId].parentId === id && hetkCanSeeFolder(childId));
             
             const rowWrapper = document.createElement('div');
             rowWrapper.style.margin = "2px 0";
@@ -1182,7 +1193,9 @@ function buildTreeInDiv(treeContainerId, nativeSelectId, excludeId = null) {
             rowWrapper.appendChild(row);
 
             // Guruh tanlanishi mantiqi
+            if(!hetkCanAccessFolder(id)) row.style.opacity = '0.55';
             row.addEventListener('click', () => {
+                if(!hetkCanAccessFolder(id)) return;
                 nativeSelect.value = id;
                 refreshTreeDropdownSelection(container, id);
             });
@@ -1818,12 +1831,12 @@ function refreshPrimaryFolderList() {
     let selectedArray = selectedFoldersInput.value ? selectedFoldersInput.value.split(',') : [];
 
     function buildNode(parentId, level, targetBox) {
-        const folders = Object.keys(currentFolders).filter(id => currentFolders[id].parentId === parentId);
+        const folders = Object.keys(currentFolders).filter(id => currentFolders[id].parentId === parentId && hetkCanSeeFolder(id));
         
         folders.forEach(id => {
             const folder = currentFolders[id];
             const isChecked = selectedArray.includes(id) ? "checked" : "";
-            const hasSubFolders = Object.keys(currentFolders).some(childId => currentFolders[childId].parentId === id);
+            const hasSubFolders = Object.keys(currentFolders).some(childId => currentFolders[childId].parentId === id && hetkCanSeeFolder(childId));
             
             // Har bir element va uning bolalari uchun umumiy wrapper quti
             const nodeWrapper = document.createElement('div');
@@ -1861,7 +1874,7 @@ function refreshPrimaryFolderList() {
 
             row.innerHTML = `
                 ${toggleSign}
-                <input type="checkbox" value="${id}" ${isChecked} class="element-folder-checkbox" style="width:18px; height:18px; cursor:pointer; margin: 0; flex-shrink: 0;">
+                <input type="checkbox" value="${id}" ${isChecked} ${hetkCanAccessFolder(id) ? '' : 'disabled'} class="element-folder-checkbox" style="width:18px; height:18px; cursor:pointer; margin: 0; flex-shrink: 0;">
                 <i class="fas fa-folder" style="color: ${folder.color}; font-size:15px; flex-shrink: 0;"></i>
                 <span style="font-size:14px; color:white; cursor:pointer; user-select:none; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex-grow: 1;">${folder.name}</span>
             `;
@@ -1906,6 +1919,7 @@ if (!isMultiSource) {
 
             // Matn (Guruh nomi) bosilganda ham checkbox belgilansin
             row.querySelector('span').addEventListener('click', () => {
+                if(checkbox.disabled) return;
                 checkbox.checked = !checkbox.checked;
                 checkbox.dispatchEvent(new Event('change'));
             });
@@ -2819,7 +2833,7 @@ renderSelectedMahallas();
 // Guruhlar bo'limida har bir fiderning ostiga unga biriktirilgan TPlarni ketma-ket joylashtiramiz.
 function renderTree(parentId, container) {
     container.innerHTML = "";
-    const children = Object.keys(currentFolders).filter(id => currentFolders[id].parentId === parentId);
+    const children = Object.keys(currentFolders).filter(id => currentFolders[id].parentId === parentId && hetkCanSeeFolder(id));
     
     children.forEach(id => {
         const folder = currentFolders[id];
@@ -2831,7 +2845,7 @@ function renderTree(parentId, container) {
                 <span class="toggle-btn" style="width: 20px; text-align: center; font-size: 16px; display: inline-block;" onclick="event.stopPropagation(); toggleFolderView('${id}')">+</span>
                 <i class="fas fa-folder" style="color: ${folder.color}; margin-right: 5px;"></i>
                 <span style="flex-grow: 1; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline-block;">${folder.name}</span>
-                <i class="fas fa-edit edit-icon" style="cursor: pointer;" onclick="event.stopPropagation(); openEditFolder('${id}', '${folder.name}', ${folder.hue || 0})"></i>
+                <i class="fas fa-edit edit-icon" style="cursor: pointer; display:${hetkHasPermission('manageFolders') && hetkCanAccessFolder(id) ? 'inline-block' : 'none'};" onclick="event.stopPropagation(); openEditFolder('${id}', '${folder.name}', ${folder.hue || 0})"></i>
             </div>
             <div id="children-${id}" class="folder-children" style="display: none; padding-left: 15px;"></div>
         `;
@@ -2848,6 +2862,7 @@ function renderTree(parentId, container) {
 
 // Guruhlar ichida TPlarni chiroyli ketma-ketlikda qalamcha (✏️) bilan chizish funksiyasi
 function renderElementsInTree(folderId, childContainer) {
+    if(!hetkCanAccessFolder(folderId)) return;
     database.ref('TPs').once('value', (snapshot) => {
         const allPoints = snapshot.val() || {};
         Object.keys(allPoints).forEach(tpId => {
@@ -3160,10 +3175,70 @@ function isPointInsideFolder(pointFolderId, selectedFolderId){
         }
 
 
+
+// =====================================================
+// HETK FOYDALANUVCHI / PAPKA RUXSATLARI (STAGE 2)
+// =====================================================
+function hetkHasPermission(name){
+    return !!(window.HETKAuth && window.HETKAuth.currentUser && window.HETKAuth.hasPermission && window.HETKAuth.hasPermission(name));
+}
+
+function hetkHasRootAccess(){
+    return !!(window.HETKAuth && window.HETKAuth.currentUser && window.HETKAuth.currentUser.rootAccess);
+}
+
+function hetkCanAccessFolder(folderId){
+    if(!window.HETKAuth || !window.HETKAuth.currentUser || !window.HETKAuth.canAccessFolder) return false;
+    return !!window.HETKAuth.canAccessFolder(folderId,currentFolders);
+}
+
+function hetkCanSeeFolder(folderId){
+    if(!window.HETKAuth || !window.HETKAuth.currentUser || !window.HETKAuth.canSeeFolder) return false;
+    return !!window.HETKAuth.canSeeFolder(folderId,currentFolders);
+}
+
+function hetkPointAllowedByUser(tp){
+    if(!window.HETKAuth || !window.HETKAuth.currentUser) return false;
+    const me=window.HETKAuth.currentUser;
+    if(me.rootAccess) return true;
+    const allowed=new Set(window.HETKAuth.getAccessibleFolderIds ? window.HETKAuth.getAccessibleFolderIds(currentFolders) : []);
+    const tpFolders=tp && tp.folders
+        ? Object.keys(tp.folders)
+        : (tp && tp.primaryFolderId ? [tp.primaryFolderId] : (tp && tp.folderId ? [tp.folderId] : []));
+    return tpFolders.some(id => allowed.has(id));
+}
+
+function applyHETKAccessControls(){
+    const canManageFolders=hetkHasPermission('manageFolders');
+    const addBtn=document.getElementById('open-add-folder');
+    if(addBtn) addBtn.style.display=canManageFolders ? '' : 'none';
+    const deleteBtn=document.getElementById('delete-folder-btn');
+    const updateBtn=document.getElementById('update-folder-btn');
+    if(deleteBtn) deleteBtn.style.display=canManageFolders ? '' : 'none';
+    if(updateBtn) updateBtn.style.display=canManageFolders ? '' : 'none';
+}
+
+document.addEventListener('hetk-auth-ready', function(){
+    applyHETKAccessControls();
+    const treeRoot=document.getElementById('tree-root');
+    if(treeRoot && typeof renderTree==='function') renderTree('root',treeRoot);
+    if(typeof renderElementTreeDropdown==='function') renderElementTreeDropdown();
+    if(typeof loadFilteredPoints==='function') loadFilteredPoints();
+    if(typeof refreshSearchResults==='function') refreshSearchResults();
+});
+
+document.addEventListener('hetk-auth-cleared', function(){
+    const treeRoot=document.getElementById('tree-root');
+    if(treeRoot) treeRoot.innerHTML='';
+    activeMapMarkers.forEach(m => { try{map.removeLayer(m);}catch(e){} });
+    activeMapMarkers=[];
+});
+
 // qidiruv tizim funksiyalari
 function buildFolderTree(){
     const tree = {};
     Object.keys(currentFolders).forEach(folderId=>{
+        if(!hetkCanSeeFolder(folderId)) return;
         const folder = currentFolders[folderId];
         tree[folderId]={
             id:folderId,
@@ -3433,6 +3508,7 @@ function updateSearchHighlight(){
 }
 
 function isPointInSelectedFolder(tp) {
+    if (!hetkPointAllowedByUser(tp)) return false;
     if (activeFolderId === "root") {
         return true;
     }
@@ -3843,6 +3919,9 @@ const allowedFolderSet = new Set(allowedFolderIds);
             let tpFoldersArr = point.folders ? Object.keys(point.folders) : (point.folderId ? [point.folderId] : []);
 
          
+if (!hetkPointAllowedByUser(point)) {
+    return;
+}
 if (!useSearchResults && !isPointInSelectedFolder(point)) {
     return;
 }
@@ -4149,7 +4228,7 @@ if (useSearchResults) {
 
     filteredKeys = Object.keys(allPoints).filter(key => {
         const point = allPoints[key];
-
+        if(!hetkPointAllowedByUser(point)) return false;
         return resultAddresses.has(
             `${point.lat}|${point.lng}|${point.address}`
         );
@@ -4157,9 +4236,11 @@ if (useSearchResults) {
 
 } else {
     const keys = Object.keys(allPoints);
-    filteredKeys = activeFolderId === "root"
-        ? keys
-        : keys.filter(key => isPointInSelectedFolder(allPoints[key]));
+    filteredKeys = keys.filter(key => {
+        const point=allPoints[key];
+        if(!hetkPointAllowedByUser(point)) return false;
+        return activeFolderId === "root" ? true : isPointInSelectedFolder(point);
+    });
 }
             
             let bounds = [];
