@@ -634,7 +634,7 @@ function getSearchTypeName() {
     switch (currentSearchType) {
         case "name": return "Nomi";
         case "address": return "Manzil";
-        case "responsible": return "Javobgar shaxs";
+        case "responsible": return "Ustalik joyi (U/J)";
         case "note": return "Izohi ";
         case "company": return "Korxona (F/X) nomi ";
         case "phone": return "Egasining telefoni";
@@ -1400,10 +1400,9 @@ const inputCustomPower =
 document.getElementById("input-custom-power");
 
 //const inputElementPhone = document.getElementById('input-element-phone');
-const inputResponsiblePerson =
-document.getElementById('input-responsible-person');
-const inputResponsiblePhone =
-document.getElementById('input-responsible-phone');
+const inputWorkZonePicker = document.getElementById('input-workzone-picker');
+const inputWorkZoneIds = document.getElementById('input-workzone-ids');
+let elementWorkZonesCache = {};
 const inputElementNote = document.getElementById('input-element-note');
 const inputBalanceToggle = document.getElementById('input-balance-toggle');
 const balanceStatusText = document.getElementById('balance-status-text');
@@ -1453,6 +1452,7 @@ document.querySelector('.save-btn').addEventListener('click', function() {
     // Formani tozalab yangi kiritish rejimiga o'tkazamiz
     resetElementForm();
     editingElementId = null;
+    renderElementWorkZonePicker([]);
     document.getElementById('element-panel-title').innerText = "Добавить местоположение";
     deleteElementBtn.classList.add('hidden');
 
@@ -1970,6 +1970,159 @@ if (!isMultiSource) {
   refreshPrimaryFolderList();
 }
 
+
+// ===== U/J (USTALIK JOYI) VA AUDIT TIZIMI =====
+function hetkEscapeHtml(value){
+    return String(value == null ? '' : value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function hetkCurrentAccount(){
+    return (window.HETKAuth && window.HETKAuth.currentUser) ? window.HETKAuth.currentUser : null;
+}
+
+function hetkAccountRoleLabel(account){
+    if(!account) return 'Foydalanuvchi';
+    if(window.HETKAuth && window.HETKAuth.getAccountRoleLabel) return window.HETKAuth.getAccountRoleLabel(account);
+    if(account.role === 'master' && account.workZoneName) return account.workZoneName + ' Masteri';
+    if(account.role === 'electrician' && account.workZoneName) return account.workZoneName + ' Elektromontyori';
+    return account.roleLabel || account.role || 'Foydalanuvchi';
+}
+
+function hetkAuditActor(){
+    const me=hetkCurrentAccount();
+    if(!me) return {uid:'',name:'Noma’lum foydalanuvchi',role:'Foydalanuvchi',display:'Noma’lum foydalanuvchi'};
+    const name=me.fullName || me.login || 'Foydalanuvchi';
+    const role=hetkAccountRoleLabel(me);
+    return {uid:me.uid || '',name,role,display:name + ' — ' + role};
+}
+
+async function loadElementWorkZones(force){
+    if(!force && Object.keys(elementWorkZonesCache).length) return elementWorkZonesCache;
+    const snap=await database.ref('WorkZones').once('value');
+    elementWorkZonesCache=snap.val() || {};
+    Object.keys(elementWorkZonesCache).forEach(id => {
+        if(elementWorkZonesCache[id]) elementWorkZonesCache[id].id=id;
+    });
+    return elementWorkZonesCache;
+}
+
+function hetkGetTPWorkZoneIds(tp){
+    if(!tp) return [];
+    if(tp.workZones) return Object.keys(tp.workZones).filter(id => tp.workZones[id]);
+    if(tp.primaryWorkZoneId) return [tp.primaryWorkZoneId];
+    if(tp.workZoneId) return [tp.workZoneId];
+    return [];
+}
+
+function hetkWorkZoneName(id,tp){
+    const zone=elementWorkZonesCache[id];
+    if(zone && zone.name) return zone.name;
+    if(tp && tp.workZoneNames && tp.workZoneNames[id]) return tp.workZoneNames[id];
+    if(tp && (tp.primaryWorkZoneId===id || tp.workZoneId===id) && tp.workZoneName) return tp.workZoneName;
+    return 'Noma’lum U/J';
+}
+
+function hetkGetTPWorkZoneNames(tp){
+    const ids=hetkGetTPWorkZoneIds(tp);
+    if(ids.length) return ids.map(id => hetkWorkZoneName(id,tp));
+    if(tp && tp.responsiblePerson) return [tp.responsiblePerson]; // eski ma'lumotlar uchun fallback
+    return [];
+}
+
+function hetkCanManageElementWorkZones(){
+    const me=hetkCurrentAccount();
+    return !!(me && ['super_admin','director','chief_engineer'].includes(me.role));
+}
+
+function hetkZoneAllowedForCurrentUser(zone){
+    const me=hetkCurrentAccount();
+    if(!me || !zone || zone.active===false) return false;
+    if(me.rootAccess || me.role==='super_admin') return true;
+    if(me.workZoneId && me.workZoneId===zone.id) return true;
+    const roots=Object.keys(zone.folders || {}).filter(id => zone.folders[id]);
+    if(!roots.length) return false;
+    return roots.every(id => hetkCanAccessFolder(id));
+}
+
+function hetkSetWorkZoneIds(ids){
+    if(!inputWorkZoneIds) return;
+    inputWorkZoneIds.value=Array.from(new Set((ids || []).filter(Boolean))).join(',');
+}
+
+function hetkGetWorkZoneIdsFromForm(){
+    if(!inputWorkZoneIds) return [];
+    return String(inputWorkZoneIds.value || '').split(',').map(x=>x.trim()).filter(Boolean);
+}
+
+async function renderElementWorkZonePicker(selectedIds){
+    if(!inputWorkZonePicker || !inputWorkZoneIds) return;
+    await loadElementWorkZones(true);
+    const me=hetkCurrentAccount();
+    let selected=Array.from(new Set((selectedIds || []).filter(Boolean)));
+    const existing=editingElementId && originalElementData ? hetkGetTPWorkZoneIds(originalElementData) : [];
+
+    if(!me){
+        hetkSetWorkZoneIds([]);
+        inputWorkZonePicker.innerHTML='<div class="hetk-element-uj-warning">Foydalanuvchi aniqlanmadi.</div>';
+        return;
+    }
+
+    if(!hetkCanManageElementWorkZones()){
+        if(!me.workZoneId){
+            hetkSetWorkZoneIds([]);
+            inputWorkZonePicker.innerHTML='<div class="hetk-element-uj-warning">Profilingizga U/J biriktirilmagan. Administrator avval U/J biriktirishi kerak.</div>';
+            return;
+        }
+        if(editingElementId && existing.length && !existing.includes(me.workZoneId)){
+            hetkSetWorkZoneIds(existing);
+            inputWorkZonePicker.innerHTML='<div class="hetk-element-uj-warning">Bu element boshqa U/J ga biriktirilgan. Siz U/J biriktirishini o‘zgartira olmaysiz.</div>';
+            return;
+        }
+        // Master/elektromontyor tahrir qilganda admin biriktirgan qo'shimcha U/J larni saqlab qolamiz.
+        selected=existing.length ? existing : [me.workZoneId];
+        if(!selected.includes(me.workZoneId)) selected.unshift(me.workZoneId);
+        hetkSetWorkZoneIds(selected);
+        const ownName=(elementWorkZonesCache[me.workZoneId] && elementWorkZonesCache[me.workZoneId].name) || me.workZoneName || 'U/J';
+        const extras=selected.filter(id=>id!==me.workZoneId).map(id=>hetkWorkZoneName(id,originalElementData));
+        inputWorkZonePicker.innerHTML=`
+          <div class="hetk-element-uj-locked"><i class="fas fa-lock"></i><span>${hetkEscapeHtml(ownName)}</span></div>
+          ${extras.length ? `<div class="hetk-element-uj-help">Admin biriktirgan qo‘shimcha U/J: ${extras.map(hetkEscapeHtml).join(', ')}</div>` : ''}
+          <div class="hetk-element-uj-help">Siz o‘z U/Jingizni o‘zgartira olmaysiz.</div>`;
+        return;
+    }
+
+    const zones=Object.keys(elementWorkZonesCache)
+        .map(id=>Object.assign({id},elementWorkZonesCache[id] || {}))
+        .filter(z=>hetkZoneAllowedForCurrentUser(z))
+        .sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')));
+    if(!selected.length && editingElementId) selected=existing;
+    hetkSetWorkZoneIds(selected);
+    if(!zones.length){
+        inputWorkZonePicker.innerHTML='<div class="hetk-element-uj-warning">Hali U/J yaratilmagan. Avval Profil → Hodimlar bo‘limida Master yaratib U/J yarating.</div>';
+        return;
+    }
+    inputWorkZonePicker.innerHTML=`
+      <div class="hetk-element-uj-title"><span>Bir yoki bir nechta U/J tanlash mumkin</span><span>${selected.length} ta</span></div>
+      <div class="hetk-element-uj-list">
+        ${zones.map(z=>`<label class="hetk-element-uj-option"><input type="checkbox" class="hetk-element-uj-check" value="${hetkEscapeHtml(z.id)}" ${selected.includes(z.id)?'checked':''}><span>${hetkEscapeHtml(z.name || 'Nomsiz U/J')}</span></label>`).join('')}
+      </div>
+      <div class="hetk-element-uj-help">Direktor va Bosh/Asosiy muhandis elementni boshqa U/J ga o‘tkazishi yoki bir nechta U/J ga biriktirishi mumkin.</div>`;
+    inputWorkZonePicker.querySelectorAll('.hetk-element-uj-check').forEach(cb=>cb.addEventListener('change',()=>{
+        const ids=Array.from(inputWorkZonePicker.querySelectorAll('.hetk-element-uj-check:checked')).map(x=>x.value);
+        hetkSetWorkZoneIds(ids);
+        const count=inputWorkZonePicker.querySelector('.hetk-element-uj-title span:last-child');
+        if(count) count.textContent=ids.length+' ta';
+    }));
+}
+
+function hetkAuditText(tp,prefix){
+    const name=tp && tp[prefix+'ByName'];
+    const role=tp && tp[prefix+'ByRole'];
+    if(name && role) return name+' — '+role;
+    if(name) return name;
+    return (tp && tp[prefix+'By']) || '-';
+}
+
 // 8. Elementni Firebase Realtime Database'ga Saqlash va Tahrirlash (Many-to-Many tizimda)
 if (elementMainForm) {
     elementMainForm.addEventListener('submit', async function(e) {
@@ -1994,6 +2147,30 @@ return showToast(
 }
 
         const folderIdsArray = selectedFolders.split(',').filter(Boolean);
+
+        await loadElementWorkZones();
+        let workZoneIdsArray = hetkGetWorkZoneIdsFromForm();
+        const meForZone = hetkCurrentAccount();
+        const existingWorkZoneIds = editingElementId && originalElementData ? hetkGetTPWorkZoneIds(originalElementData) : [];
+        if(!hetkCanManageElementWorkZones()){
+            if(!meForZone || !meForZone.workZoneId){
+                hideSaveLoader();isSaving=false;
+                return showToast("Profilingizga U/J biriktirilmagan!");
+            }
+            if(editingElementId && existingWorkZoneIds.length && !existingWorkZoneIds.includes(meForZone.workZoneId)){
+                hideSaveLoader();isSaving=false;
+                return showToast("Bu element boshqa U/J ga biriktirilgan. Siz U/J ni o‘zgartira olmaysiz!");
+            }
+            workZoneIdsArray = existingWorkZoneIds.length ? existingWorkZoneIds : [meForZone.workZoneId];
+            if(!workZoneIdsArray.includes(meForZone.workZoneId)) workZoneIdsArray.unshift(meForZone.workZoneId);
+        }
+        workZoneIdsArray = Array.from(new Set(workZoneIdsArray.filter(id => elementWorkZonesCache[id])));
+        if(!workZoneIdsArray.length){
+            hideSaveLoader();isSaving=false;
+            return showToast("Kamida bitta U/J biriktirish majburiy!");
+        }
+        const workZoneNamesArray = workZoneIdsArray.map(id => hetkWorkZoneName(id,originalElementData));
+        const workZoneNamesText = workZoneNamesArray.join(", ");
 
 uploadedTelegramImages=[];
 if(selectedFiles.length > 10){
@@ -2026,7 +2203,8 @@ Date.now()
 );
 const updatedDate =
 formatDate(Date.now());
-const updatedBy = "Admin";
+const auditActor = hetkAuditActor();
+const updatedBy = auditActor.display;
       
       const tpTag =
 inputElementName.value.replace(/\s+/g,'');
@@ -2081,11 +2259,8 @@ ${updatedDate}
 👤 Tahrirlagan:
 ${updatedBy}
 
-👤 Javobgar shaxs:
-${inputResponsiblePerson.value || "-"}
-
-📱 Javobgar telefon:
-${inputResponsiblePhone.value || "-"}
+🛠 Biriktirilgan U/J:
+${workZoneNamesText || "-"}
 
 ${inputBalanceToggle.checked ? `
 
@@ -2220,6 +2395,7 @@ const mainCaption =
                                            
 ${inputBalanceToggle.checked ? '🔴 XUSUSIY' : '🔵 ETK'}
 📂 ${folderPath}${dualText}
+🛠 U/J: ${workZoneNamesText || "-"}
 📍 Manzil:
 ${inputElementAddress.value || "-"}
 🚗 Navigatsiya:
@@ -2229,7 +2405,7 @@ ${createdDate}
 ✏️ Oxirgi tahrir:
 ${updatedDate}
 👤 Tahrirlagan shaxs:
-Admin
+${updatedBy}
 🔎 Qidiruv teglari
 
 #${tpTag}
@@ -2282,11 +2458,14 @@ inputPowerSelect.value === "other"
 ? Number(inputCustomPower.value)
 : Number(inputPowerSelect.value),
           
-           responsiblePerson:
-inputResponsiblePerson.value,
-
-responsiblePhone:
-inputResponsiblePhone.value,
+           // Endi shaxs emas, doimiy U/J ga bog'lanadi
+           workZones: workZoneIdsArray.reduce((acc,id)=>{acc[id]=true;return acc;},{}),
+           primaryWorkZoneId: workZoneIdsArray[0],
+           workZoneId: workZoneIdsArray[0],
+           workZoneName: workZoneNamesArray[0] || "",
+           workZoneNames: workZoneIdsArray.reduce((acc,id)=>{acc[id]=hetkWorkZoneName(id,originalElementData);return acc;},{}),
+           responsiblePerson: null,
+           responsiblePhone: null,
 
           status:
 document.querySelector(
@@ -2330,7 +2509,15 @@ folderId: folderIdsArray[0],
           createdAt:
 originalElementData?.createdAt ||
 Date.now(),
-          updatedAt: Date.now(), updatedBy: updatedBy,
+          createdBy: originalElementData?.createdBy || auditActor.display,
+          createdByUid: originalElementData?.createdByUid || auditActor.uid,
+          createdByName: originalElementData?.createdByName || auditActor.name,
+          createdByRole: originalElementData?.createdByRole || auditActor.role,
+          updatedAt: Date.now(),
+          updatedBy: updatedBy,
+          updatedByUid: auditActor.uid,
+          updatedByName: auditActor.name,
+          updatedByRole: auditActor.role,
         };
 
       
@@ -2347,8 +2534,7 @@ originalElementData.mainImageIndex !== elementData.mainImageIndex ||
 
 originalElementData.isPrivate !== elementData.isPrivate ||
 
-originalElementData.responsiblePerson !== elementData.responsiblePerson ||
-originalElementData.responsiblePhone !== elementData.responsiblePhone ||
+JSON.stringify(hetkGetTPWorkZoneIds(originalElementData).slice().sort()) !== JSON.stringify(workZoneIdsArray.slice().sort()) ||
 
 originalElementData.ownerFirm !== elementData.ownerFirm ||
 originalElementData.ownerName !== elementData.ownerName ||
@@ -2377,8 +2563,7 @@ originalElementData.lng !== elementData.lng ||
 
 originalElementData.isPrivate !== elementData.isPrivate ||
 
-originalElementData.responsiblePerson !== elementData.responsiblePerson ||
-originalElementData.responsiblePhone !== elementData.responsiblePhone ||
+JSON.stringify(hetkGetTPWorkZoneIds(originalElementData).slice().sort()) !== JSON.stringify(workZoneIdsArray.slice().sort()) ||
 
 originalElementData.ownerFirm !== elementData.ownerFirm ||
 originalElementData.ownerName !== elementData.ownerName ||
@@ -2677,11 +2862,8 @@ ${originalElementData.lat || "-"}
 📌 Uzunlik:
 ${originalElementData.lng || "-"}
 
-👨‍🔧 Mas'ul shaxs:
-${originalElementData.responsiblePerson || "-"}
-
-📱 Mas'ul telefon:
-${originalElementData.responsiblePhone || "-"}
+🛠 Biriktirilgan U/J:
+${hetkGetTPWorkZoneNames(originalElementData).join(", ") || "-"}
 
 ${originalElementData.isPrivate ? `
 
@@ -2805,6 +2987,8 @@ function resetElementForm() {
     balanceStatusText.style.color = "#007AFF";
     privateOwnerInfoBlock.classList.add('hidden');
     document.getElementById('element-selected-folders').value = "";
+    hetkSetWorkZoneIds([]);
+    if(inputWorkZonePicker) inputWorkZonePicker.innerHTML='<div class="hetk-element-uj-warning">U/J ma’lumotlari yuklanmoqda...</div>';
   selectedFiles=[];
   existingImages=[];
 uploadedTelegramImages=[];
@@ -3008,6 +3192,12 @@ if (tp.folders) {
     database.ref('TPs/' + tpId).once('value', (snapshot) => {
         const tp = snapshot.val();
         if (!tp) return;
+        const editMe=hetkCurrentAccount();
+        const tpZoneIds=hetkGetTPWorkZoneIds(tp);
+        if(editMe && !hetkCanManageElementWorkZones() && editMe.workZoneId && tpZoneIds.length && !tpZoneIds.includes(editMe.workZoneId)){
+            showToast("Bu element boshqa U/J ga biriktirilgan. Tahrirlashga ruxsat yo‘q!");
+            return;
+        }
    originalElementData = JSON.parse(JSON.stringify(tp));
       
         resetElementForm();
@@ -3040,11 +3230,7 @@ if (standardPowers.includes(Number(tp.power))) {
     inputCustomPower.value = "";
 }
       
-       inputResponsiblePerson.value =
-tp.responsiblePerson || "";
-
-inputResponsiblePhone.value =
-tp.responsiblePhone || "";
+       renderElementWorkZonePicker(hetkGetTPWorkZoneIds(tp));
         inputElementNote.value = tp.note || "";
 
 // Mahallalarni yuklash
@@ -3583,7 +3769,7 @@ function filterVisiblePoints(allTPs) {
             matched =
 normalizeSearch(tp.name || "").includes(q) ||
 normalizeSearch(tp.address || "").includes(q) ||
-normalizeSearch(tp.responsiblePerson || "").includes(q) ||
+normalizeSearch(hetkGetTPWorkZoneNames(tp).join(" ") || tp.responsiblePerson || "").includes(q) ||
 normalizeSearch(tp.note || "").includes(q) ||
 normalizeSearch(tp.ownerFirm || "").includes(q) ||
 normalizeSearch(tp.ownerPhone || "").includes(q) ||
@@ -3709,7 +3895,7 @@ switch (currentSearchType) {
         break;
 
     case "responsible":
-        matched = (tp.responsiblePerson || "").toLowerCase().includes(q);
+        matched = hetkGetTPWorkZoneNames(tp).join(" ").toLowerCase().includes(q) || (tp.responsiblePerson || "").toLowerCase().includes(q);
         break;
 
     case "note":
@@ -3736,6 +3922,7 @@ switch (currentSearchType) {
         matched =
             (tp.name || "").toLowerCase().includes(q) ||
             (tp.address || "").toLowerCase().includes(q) ||
+            hetkGetTPWorkZoneNames(tp).join(" ").toLowerCase().includes(q) ||
             (tp.responsiblePerson || "").toLowerCase().includes(q) ||
             (tp.note || "").toLowerCase().includes(q) ||
             (tp.ownerFirm || "").toLowerCase().includes(q) ||
@@ -4554,12 +4741,12 @@ style="margin-bottom:12px;">
 
 <div id="detail-owner"
 style="margin-bottom:12px;">
-👤 Javobgar
+🛠 Biriktirilgan U/J
 </div>
 
 <div id="detail-phone"
 style="margin-bottom:12px;">
-📞 Telefon
+U/J ni bosing — hozirgi master ko‘rinadi
 </div>
 
 <div
@@ -4717,6 +4904,42 @@ cancelMahallaPanel.onclick = function () {
     mahallaPanel.classList.add("hidden");
 };
 
+async function hetkShowCurrentMaster(workZoneId, target){
+    if(!target) return;
+    await loadElementWorkZones(true);
+    const zone=elementWorkZonesCache[workZoneId];
+    if(!zone){
+        target.innerHTML='<div class="hetk-element-uj-warning">U/J ma’lumoti topilmadi.</div>';
+        return;
+    }
+    if(!zone.currentMasterUid){
+        target.innerHTML=`<div class="hetk-detail-master-card"><div class="hetk-detail-master-avatar"><i class="fas fa-user-slash"></i></div><div class="hetk-detail-master-info"><b>${hetkEscapeHtml(zone.name || 'U/J')}</b><span>Hozirgi master biriktirilmagan</span></div></div>`;
+        return;
+    }
+    try{
+        const snap=await database.ref('users/'+zone.currentMasterUid).once('value');
+        const master=snap.val();
+        if(!master){
+            target.innerHTML='<div class="hetk-element-uj-warning">Master profili topilmadi.</div>';
+            return;
+        }
+        const role=hetkAccountRoleLabel(Object.assign({uid:zone.currentMasterUid},master));
+        const avatar=master.photoData ? `<img src="${hetkEscapeHtml(master.photoData)}" alt="">` : '<i class="fas fa-user"></i>';
+        target.innerHTML=`
+          <div class="hetk-detail-master-card">
+            <div class="hetk-detail-master-avatar">${avatar}</div>
+            <div class="hetk-detail-master-info">
+              <b>${hetkEscapeHtml(master.fullName || 'Nomsiz master')}</b>
+              <span>${hetkEscapeHtml(role)}</span>
+              <span>📞 ${hetkEscapeHtml(master.phone || 'Telefon kiritilmagan')}</span>
+            </div>
+            <div class="hetk-detail-master-status">${master.active===false?'Nofaol':'● Faol'}</div>
+          </div>`;
+    }catch(e){
+        target.innerHTML='<div class="hetk-element-uj-warning">Master ma’lumotini yuklab bo‘lmadi.</div>';
+    }
+}
+
 async  function showElementModal(){
     if(!currentTP){
         showToast("Avval elementni tanlang!");
@@ -4788,22 +5011,32 @@ if(currentTP.address){
         "📍 " + currentTP.address;
 }
 
-// ===== JAVOBGAR =====
-document.getElementById("detail-owner").style.display =
-    currentTP.responsiblePerson ? "block" : "none";
-
-if(currentTP.responsiblePerson){
-    document.getElementById("detail-owner").textContent =
-        "👤 " + currentTP.responsiblePerson;
-}
-
-// ===== TELEFON =====
-document.getElementById("detail-phone").style.display =
-    currentTP.responsiblePhone ? "block" : "none";
-
-if(currentTP.responsiblePhone){
-    document.getElementById("detail-phone").textContent =
-        "📞 " + currentTP.responsiblePhone;
+// ===== BIRIKTIRILGAN U/J VA HOZIRGI MASTER =====
+await loadElementWorkZones(true);
+const detailOwner = document.getElementById("detail-owner");
+const detailMaster = document.getElementById("detail-phone");
+const currentWorkZoneIds = hetkGetTPWorkZoneIds(currentTP);
+if(currentWorkZoneIds.length){
+    detailOwner.style.display="block";
+    detailMaster.style.display="block";
+    detailOwner.innerHTML = `
+      <div class="hetk-detail-uj-title">🛠 Biriktirilgan ustalik joyi</div>
+      <div class="hetk-detail-uj-buttons">
+        ${currentWorkZoneIds.map(id=>`<button type="button" class="hetk-detail-uj-btn" data-uj-id="${hetkEscapeHtml(id)}">${hetkEscapeHtml(hetkWorkZoneName(id,currentTP))}</button>`).join('')}
+      </div>`;
+    detailMaster.innerHTML='<div class="hetk-element-uj-help">U/J nomini bosing — shu U/J ning hozirgi masteri ko‘rinadi.</div>';
+    detailOwner.querySelectorAll('[data-uj-id]').forEach(btn=>btn.addEventListener('click', async ()=>{
+        await hetkShowCurrentMaster(btn.dataset.ujId,detailMaster);
+    }));
+}else if(currentTP.responsiblePerson || currentTP.responsiblePhone){
+    // Eski elementlar uchun vaqtinchalik moslik
+    detailOwner.style.display="block";
+    detailMaster.style.display="block";
+    detailOwner.textContent="👤 " + (currentTP.responsiblePerson || "Eski javobgar");
+    detailMaster.textContent="📞 " + (currentTP.responsiblePhone || "-");
+}else{
+    detailOwner.style.display="none";
+    detailMaster.style.display="none";
 }
 
  
@@ -4937,13 +5170,13 @@ document.getElementById("detail-created-date").innerHTML =
 `${created.date}<br>${created.time}`;
 
 document.getElementById("detail-created-user").textContent =
-currentTP.createdBy || "-";
+hetkAuditText(currentTP,"created");
 
 document.getElementById("detail-updated-date").innerHTML =
 `${updated.date}<br>${updated.time}`;
 
 document.getElementById("detail-updated-user").textContent =
-currentTP.updatedBy || "-";
+hetkAuditText(currentTP,"updated");
  
  
 const nav = document.getElementById("detail-navigation");
