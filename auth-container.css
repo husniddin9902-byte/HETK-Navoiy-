@@ -167,3 +167,43 @@
 @media(max-width:720px){
   .hetk-team-wrap{padding:12px 11px 20px}.hetk-team-toolbar{align-items:stretch;flex-direction:column}.hetk-team-add{width:100%;justify-content:center}.hetk-team-layout{grid-template-columns:1fr}.hetk-team-list-card,.hetk-team-detail-card{min-height:0}.hetk-team-list{max-height:360px}.hetk-team-detail-head{grid-template-columns:52px minmax(0,1fr);}.hetk-detail-status{grid-column:1/-1;padding-left:64px}.hetk-team-detail-grid{grid-template-columns:1fr 1fr}.hetk-team-detail-actions{flex-direction:column}.hetk-team-detail-actions button{width:100%}.hetk-user-editor-sheet{width:100%;max-height:94vh;border-radius:17px 17px 0 0}.hetk-user-editor-body{padding:12px}.hetk-user-form-grid{grid-template-columns:1fr;padding:12px}.hetk-user-folder-title{align-items:flex-start}.hetk-user-editor-foot{padding-bottom:max(12px,env(safe-area-inset-bottom));}.hetk-user-editor-foot button{flex:1;padding:0 10px}.hetk-folder-pick-row{padding-left:calc(5px + var(--folder-level)*13px)}
 }
+
+/* ===== U/J (ustalik joyi) ===== */
+.hetk-user-workzone-section{
+  margin-top:16px;padding:16px;border:1px solid #d7e4ef;border-radius:14px;background:#f8fbfe;
+}
+.hetk-user-workzone-section[hidden]{display:none!important;}
+.hetk-workzone-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;}
+.hetk-workzone-current{margin-top:10px;padding:10px 12px;border-radius:10px;background:#edf6ff;color:#294a67;font-size:13px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;}
+.hetk-workzone-current:empty{display:none;}
+.hetk-workzone-current small{color:#6e8192;}
+.hetk-workzone-current .warn{color:#b34b35;font-weight:700;}
+.hetk-folder-pick-check:disabled + i,.hetk-folder-pick-check:disabled ~ span{opacity:.75;}
+
+/* Element formasidagi U/J tanlash */
+.hetk-element-uj-box{margin-top:8px;padding:12px;border-radius:10px;background:#001a2c;border:1px solid rgba(255,255,255,.08);}
+.hetk-element-uj-title{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#c9d8e4;font-size:13px;margin-bottom:9px;}
+.hetk-element-uj-help{font-size:11px;color:#7790a3;line-height:1.45;margin-top:8px;}
+.hetk-element-uj-list{display:flex;flex-direction:column;gap:7px;}
+.hetk-element-uj-option{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:8px;background:rgba(255,255,255,.04);color:#e8f3fb;border:1px solid rgba(255,255,255,.06);cursor:pointer;}
+.hetk-element-uj-option input{accent-color:#1687ff;}
+.hetk-element-uj-locked{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:9px;background:rgba(22,135,255,.13);border:1px solid rgba(22,135,255,.28);color:#dcefff;font-weight:700;}
+.hetk-element-uj-locked i{color:#52a9ff;}
+.hetk-element-uj-warning{padding:10px 12px;border-radius:9px;background:rgba(255,80,70,.12);border:1px solid rgba(255,80,70,.25);color:#ffb5ad;font-size:12px;line-height:1.45;}
+
+/* Element ma'lumotidagi U/J va master kartasi */
+.hetk-detail-uj-title{font-size:12px;color:#91a8ba;margin-bottom:8px;}
+.hetk-detail-uj-buttons{display:flex;gap:7px;flex-wrap:wrap;}
+.hetk-detail-uj-btn{border:1px solid rgba(80,170,255,.35);background:rgba(30,136,229,.14);color:#d9eeff;border-radius:999px;padding:8px 11px;cursor:pointer;font-size:13px;}
+.hetk-detail-uj-btn:hover{background:rgba(30,136,229,.25);}
+.hetk-detail-master-card{margin-top:10px;padding:11px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:11px;}
+.hetk-detail-master-avatar{width:44px;height:44px;border-radius:50%;background:#dce9f5;color:#5c7891;display:flex;align-items:center;justify-content:center;overflow:hidden;flex:0 0 auto;}
+.hetk-detail-master-avatar img{width:100%;height:100%;object-fit:cover;}
+.hetk-detail-master-info{min-width:0;flex:1;}
+.hetk-detail-master-info b{display:block;color:white;margin-bottom:3px;}
+.hetk-detail-master-info span{display:block;color:#91a8ba;font-size:12px;line-height:1.5;}
+.hetk-detail-master-status{font-size:11px;color:#42d27a;font-weight:700;white-space:nowrap;}
+
+@media(max-width:700px){
+  .hetk-workzone-grid{grid-template-columns:1fr;}
+}
