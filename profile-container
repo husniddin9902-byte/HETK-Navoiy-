@@ -1,11 +1,7 @@
 <div id="profile-container" class="hetk-profile-modal" style="display:none;" aria-hidden="true">
     <section class="hetk-profile-shell" aria-label="Profil">
         <header class="hetk-profile-header">
-            <button id="profile-close" class="hetk-profile-header-btn" type="button" aria-label="Profilni yopish">
-                <i class="fas fa-arrow-left"></i>
-            </button>
-            <h2>Profil</h2>
-            <div class="hetk-profile-more-wrap">
+            <div class="hetk-profile-more-wrap hetk-profile-more-wrap-left">
                 <button id="profile-more" class="hetk-profile-header-btn" type="button" aria-label="Qo'shimcha menyu" aria-expanded="false">
                     <i class="fas fa-ellipsis-v"></i>
                 </button>
@@ -13,6 +9,10 @@
                     <button type="button" id="profile-more-close">Profilni yopish</button>
                 </div>
             </div>
+            <h2>Profil</h2>
+            <button id="profile-close" class="hetk-profile-header-btn" type="button" aria-label="Profilni yopish">
+                <i class="fas fa-arrow-right"></i>
+            </button>
         </header>
 
         <div class="hetk-profile-scroll">
