@@ -2123,6 +2123,17 @@ function hetkAuditText(tp,prefix){
     return (tp && tp[prefix+'By']) || '-';
 }
 
+function hetkShortPersonName(name){
+    const clean=String(name || '').trim().replace(/\s+/g,' ');
+    if(!clean) return '-';
+    const parts=clean.split(' ');
+    if(parts.length===1) return parts[0].length>14 ? parts[0].slice(0,13)+'…' : parts[0];
+    const surname=parts[0];
+    const first=parts[1] || '';
+    const initial=first ? first.charAt(0).toUpperCase()+"'" : '';
+    return (surname+' '+initial).trim();
+}
+
 // 8. Elementni Firebase Realtime Database'ga Saqlash va Tahrirlash (Many-to-Many tizimda)
 if (elementMainForm) {
     elementMainForm.addEventListener('submit', async function(e) {
@@ -4904,39 +4915,107 @@ cancelMahallaPanel.onclick = function () {
     mahallaPanel.classList.add("hidden");
 };
 
+function hetkEnsurePersonPopup(){
+    let overlay=document.getElementById('hetk-person-profile-overlay');
+    if(overlay) return overlay;
+    document.body.insertAdjacentHTML('beforeend',`
+      <div id="hetk-person-profile-overlay" class="hetk-person-profile-overlay" style="display:none;">
+        <div class="hetk-person-profile-backdrop"></div>
+        <div class="hetk-person-profile-card" role="dialog" aria-modal="true">
+          <button type="button" id="hetk-person-profile-close" class="hetk-person-profile-close" aria-label="Yopish"><i class="fas fa-times"></i></button>
+          <div id="hetk-person-profile-content" class="hetk-person-profile-content"></div>
+        </div>
+      </div>`);
+    overlay=document.getElementById('hetk-person-profile-overlay');
+    const close=()=>hetkClosePersonPopup();
+    document.getElementById('hetk-person-profile-close').onclick=close;
+    overlay.querySelector('.hetk-person-profile-backdrop').onclick=close;
+    return overlay;
+}
+
+function hetkClosePersonPopup(){
+    const overlay=document.getElementById('hetk-person-profile-overlay');
+    if(overlay) overlay.style.display='none';
+}
+
+async function hetkShowPersonProfile(uid, fallback){
+    const overlay=hetkEnsurePersonPopup();
+    const content=document.getElementById('hetk-person-profile-content');
+    overlay.style.display='flex';
+    content.innerHTML='<div class="hetk-person-profile-loading"><i class="fas fa-spinner fa-spin"></i> Profil yuklanmoqda...</div>';
+    let person=null,deleted=false;
+    try{
+        if(uid){
+            let snap=await database.ref('users/'+uid).once('value');
+            person=snap.val();
+            if(!person){
+                snap=await database.ref('DeletedUsers/'+uid).once('value');
+                person=snap.val();
+                deleted=!!person;
+            }
+        }
+    }catch(_e){}
+    person=Object.assign({},fallback||{},person||{});
+    if(!person.fullName && !person.name){
+        content.innerHTML='<div class="hetk-person-profile-loading">Foydalanuvchi profili topilmadi.</div>';
+        return;
+    }
+    const fullName=person.fullName || person.name || 'Nomsiz foydalanuvchi';
+    const role=person.role ? hetkAccountRoleLabel(person) : (person.roleLabel || person.fallbackRole || 'Foydalanuvchi');
+    const avatar=person.photoData ? `<img src="${hetkEscapeHtml(person.photoData)}" alt="">` : '<i class="fas fa-user"></i>';
+    const zone=person.workZoneName || '';
+    const status=deleted ? 'O‘chirilgan' : (person.active===false ? 'Nofaol' : 'Faol');
+    content.innerHTML=`
+      <div class="hetk-person-profile-avatar">${avatar}</div>
+      <div class="hetk-person-profile-name">${hetkEscapeHtml(fullName)}</div>
+      <div class="hetk-person-profile-role">${hetkEscapeHtml(role)}</div>
+      ${zone && !String(role).includes(zone) ? `<div class="hetk-person-profile-zone"><i class="fas fa-hard-hat"></i> ${hetkEscapeHtml(zone)}</div>` : ''}
+      <div class="hetk-person-profile-info">
+        <div><span>Telefon</span><b>${hetkEscapeHtml(person.phone || 'Kiritilmagan')}</b></div>
+        <div><span>Holati</span><b class="${deleted||person.active===false?'off':'on'}">${hetkEscapeHtml(status)}</b></div>
+      </div>`;
+}
+
 async function hetkShowCurrentMaster(workZoneId, target){
-    if(!target) return;
     await loadElementWorkZones(true);
     const zone=elementWorkZonesCache[workZoneId];
     if(!zone){
-        target.innerHTML='<div class="hetk-element-uj-warning">U/J ma’lumoti topilmadi.</div>';
+        if(target) target.innerHTML='<div class="hetk-element-uj-warning">U/J ma’lumoti topilmadi.</div>';
         return;
     }
     if(!zone.currentMasterUid){
-        target.innerHTML=`<div class="hetk-detail-master-card"><div class="hetk-detail-master-avatar"><i class="fas fa-user-slash"></i></div><div class="hetk-detail-master-info"><b>${hetkEscapeHtml(zone.name || 'U/J')}</b><span>Hozirgi master biriktirilmagan</span></div></div>`;
+        hetkShowPersonProfile('',{fullName:'Master biriktirilmagan',roleLabel:zone.name || 'U/J',active:false});
         return;
     }
     try{
         const snap=await database.ref('users/'+zone.currentMasterUid).once('value');
         const master=snap.val();
         if(!master){
-            target.innerHTML='<div class="hetk-element-uj-warning">Master profili topilmadi.</div>';
+            if(target) target.innerHTML='<div class="hetk-element-uj-warning">Master profili topilmadi.</div>';
             return;
         }
-        const role=hetkAccountRoleLabel(Object.assign({uid:zone.currentMasterUid},master));
-        const avatar=master.photoData ? `<img src="${hetkEscapeHtml(master.photoData)}" alt="">` : '<i class="fas fa-user"></i>';
-        target.innerHTML=`
-          <div class="hetk-detail-master-card">
-            <div class="hetk-detail-master-avatar">${avatar}</div>
-            <div class="hetk-detail-master-info">
-              <b>${hetkEscapeHtml(master.fullName || 'Nomsiz master')}</b>
-              <span>${hetkEscapeHtml(role)}</span>
-              <span>📞 ${hetkEscapeHtml(master.phone || 'Telefon kiritilmagan')}</span>
-            </div>
-            <div class="hetk-detail-master-status">${master.active===false?'Nofaol':'● Faol'}</div>
-          </div>`;
+        await hetkShowPersonProfile(zone.currentMasterUid,master);
     }catch(e){
-        target.innerHTML='<div class="hetk-element-uj-warning">Master ma’lumotini yuklab bo‘lmadi.</div>';
+        if(target) target.innerHTML='<div class="hetk-element-uj-warning">Master ma’lumotini yuklab bo‘lmadi.</div>';
+    }
+}
+
+function hetkRenderAuditPerson(tp,prefix,element){
+    if(!element) return;
+    const fullName=(tp && tp[prefix+'ByName']) || (tp && tp[prefix+'By']) || '-';
+    const uid=(tp && tp[prefix+'ByUid']) || '';
+    const role=(tp && tp[prefix+'ByRole']) || '';
+    const shortName=hetkShortPersonName(fullName);
+    if(uid){
+        element.innerHTML=`<button type="button" class="hetk-audit-person-link" title="${hetkEscapeHtml(fullName)}" data-audit-uid="${hetkEscapeHtml(uid)}">${hetkEscapeHtml(shortName)}</button>`;
+        const btn=element.querySelector('[data-audit-uid]');
+        if(btn) btn.onclick=(e)=>{
+            e.stopPropagation();
+            hetkShowPersonProfile(uid,{fullName:fullName,fallbackRole:role,roleLabel:role});
+        };
+    }else{
+        element.textContent=shortName;
+        element.title=fullName;
     }
 }
 
@@ -5169,14 +5248,12 @@ const updated = formatDate(currentTP.updatedAt);
 document.getElementById("detail-created-date").innerHTML =
 `${created.date}<br>${created.time}`;
 
-document.getElementById("detail-created-user").textContent =
-hetkAuditText(currentTP,"created");
+hetkRenderAuditPerson(currentTP,"created",document.getElementById("detail-created-user"));
 
 document.getElementById("detail-updated-date").innerHTML =
 `${updated.date}<br>${updated.time}`;
 
-document.getElementById("detail-updated-user").textContent =
-hetkAuditText(currentTP,"updated");
+hetkRenderAuditPerson(currentTP,"updated",document.getElementById("detail-updated-user"));
  
  
 const nav = document.getElementById("detail-navigation");
@@ -5201,6 +5278,7 @@ function closeElementModal(){
     if(modal){
         modal.style.display="none";
     }
+    hetkClosePersonPopup();
 }
 
 let imageGalleryModal = null;
