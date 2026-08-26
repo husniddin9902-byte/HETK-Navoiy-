@@ -60,6 +60,10 @@
 }
 
 .hetk-profile-more-wrap{position:relative;}
+.hetk-profile-more-wrap-left .hetk-profile-more-menu{
+    left:8px;
+    right:auto;
+}
 .hetk-profile-more-menu{
     position:absolute;
     top:50px;
