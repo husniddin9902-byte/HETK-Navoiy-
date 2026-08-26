@@ -1,0 +1,126 @@
+:root{
+  --auth-navy:#001a2c;
+  --auth-navy2:#002b49;
+  --auth-blue:#1687ff;
+  --auth-bg:#eef3f8;
+  --auth-line:#dce6ef;
+  --auth-text:#15283a;
+  --auth-muted:#72879b;
+  --auth-green:#21b66f;
+  --auth-danger:#e54949;
+}
+
+#hetk-auth-overlay{
+  position:fixed;
+  inset:0;
+  z-index:2100000;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+  background:
+    radial-gradient(circle at 20% 10%, rgba(22,135,255,.22), transparent 32%),
+    radial-gradient(circle at 85% 85%, rgba(31,184,111,.14), transparent 30%),
+    linear-gradient(145deg,#00111e,#00233b 55%,#001a2c);
+  font-family:Arial,Helvetica,sans-serif;
+}
+#hetk-auth-overlay[hidden]{display:none!important;}
+.hetk-auth-card{
+  width:min(430px,100%);
+  background:#fff;
+  border-radius:20px;
+  box-shadow:0 28px 80px rgba(0,0,0,.38);
+  overflow:hidden;
+}
+.hetk-auth-brand{
+  padding:28px 28px 22px;
+  color:#fff;
+  text-align:center;
+  background:linear-gradient(135deg,var(--auth-navy),var(--auth-navy2));
+}
+.hetk-auth-logo{
+  width:62px;height:62px;margin:0 auto 12px;border-radius:18px;
+  display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,#1687ff,#4bb5ff);
+  box-shadow:0 12px 28px rgba(22,135,255,.32);
+  font-size:29px;
+}
+.hetk-auth-brand h1{font-size:23px;margin:0 0 5px;font-weight:800;}
+.hetk-auth-brand p{font-size:13px;margin:0;color:#c7d8e7;}
+.hetk-auth-body{padding:24px 26px 27px;}
+.hetk-auth-title{font-size:19px;font-weight:800;color:var(--auth-text);margin:0 0 5px;}
+.hetk-auth-subtitle{font-size:13px;color:var(--auth-muted);line-height:1.45;margin:0 0 20px;}
+.hetk-auth-field{margin-bottom:14px;}
+.hetk-auth-field label{display:block;font-size:12px;font-weight:700;color:#52697e;margin-bottom:7px;}
+.hetk-auth-input-wrap{position:relative;}
+.hetk-auth-input{
+  width:100%;height:48px;box-sizing:border-box;border:1px solid #d6e1eb;border-radius:11px;
+  background:#f8fbfd;color:var(--auth-text);padding:0 45px 0 13px;font-size:15px;outline:none;
+  transition:border-color .18s,box-shadow .18s,background .18s;
+}
+.hetk-auth-input:focus{border-color:var(--auth-blue);box-shadow:0 0 0 3px rgba(22,135,255,.12);background:#fff;}
+.hetk-auth-pass-toggle{position:absolute;right:4px;top:4px;width:40px;height:40px;border:0;background:transparent;color:#70869a;cursor:pointer;font-size:16px;}
+.hetk-auth-primary{
+  width:100%;min-height:48px;border:0;border-radius:11px;background:linear-gradient(135deg,#087df5,#2296ff);
+  color:#fff;font-weight:800;font-size:15px;cursor:pointer;box-shadow:0 8px 20px rgba(22,135,255,.22);
+}
+.hetk-auth-primary:disabled{opacity:.58;cursor:not-allowed;box-shadow:none;}
+.hetk-auth-secondary{
+  width:100%;min-height:44px;border:1px solid #d8e3ed;border-radius:11px;background:#fff;color:#29445b;
+  font-weight:700;font-size:14px;cursor:pointer;
+}
+.hetk-auth-sep{height:1px;background:#e6edf3;margin:18px 0;}
+.hetk-auth-message{display:none;margin:0 0 14px;padding:10px 12px;border-radius:9px;font-size:12px;line-height:1.45;}
+.hetk-auth-message.show{display:block;}
+.hetk-auth-message.error{background:#fff0f0;color:#b82f2f;border:1px solid #ffd1d1;}
+.hetk-auth-message.info{background:#eef7ff;color:#21669c;border:1px solid #cee7fb;}
+.hetk-auth-message.success{background:#edfbf4;color:#1c7b4d;border:1px solid #c7eedb;}
+.hetk-auth-setup{display:none;}
+.hetk-auth-card.setup-mode .hetk-auth-login{display:none;}
+.hetk-auth-card.setup-mode .hetk-auth-setup{display:block;}
+.hetk-auth-back{border:0;background:transparent;color:#147fe9;font-weight:700;cursor:pointer;padding:0;margin:0 0 14px;font-size:13px;}
+.hetk-auth-hint{margin-top:14px;font-size:11px;color:#8597a8;text-align:center;line-height:1.45;}
+
+/* Personal profile editor */
+.hetk-account-card{
+  max-width:920px;margin:0 auto;background:#fff;border:1px solid var(--auth-line);border-radius:14px;
+  box-shadow:0 3px 14px rgba(20,52,78,.06);overflow:hidden;
+}
+.hetk-account-head{padding:18px 20px;background:linear-gradient(135deg,#001a2c,#00385f);color:#fff;display:flex;align-items:center;gap:14px;}
+.hetk-account-photo{width:72px;height:72px;border-radius:50%;position:relative;flex:0 0 72px;background:#dce9f5;border:3px solid rgba(255,255,255,.9);overflow:visible;}
+.hetk-account-photo img{width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;}
+.hetk-account-photo-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#66829a;font-size:29px;border-radius:50%;overflow:hidden;}
+.hetk-account-photo-btn{position:absolute;right:-4px;bottom:-4px;width:30px;height:30px;border-radius:50%;border:2px solid #fff;background:#1687ff;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.hetk-account-head h3{margin:0 0 4px;font-size:19px;}
+.hetk-account-head p{margin:0;color:#c9d9e7;font-size:13px;}
+.hetk-account-body{padding:20px;}
+.hetk-account-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;}
+.hetk-account-field label{display:block;font-size:12px;font-weight:700;color:#64798d;margin-bottom:6px;}
+.hetk-account-field input{width:100%;height:44px;box-sizing:border-box;border:1px solid #dbe5ed;border-radius:9px;padding:0 12px;font-size:14px;color:#21394e;background:#fbfdff;outline:none;}
+.hetk-account-field input:focus{border-color:#1687ff;box-shadow:0 0 0 3px rgba(22,135,255,.10);}
+.hetk-account-field input[readonly]{background:#f0f4f7;color:#6f8395;}
+.hetk-account-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:16px;padding-top:16px;border-top:1px solid #e6edf3;}
+.hetk-account-btn{min-height:42px;border-radius:9px;padding:0 17px;font-weight:800;border:0;cursor:pointer;}
+.hetk-account-btn.primary{background:#1687ff;color:#fff;}
+.hetk-account-btn.light{background:#edf4fa;color:#29475f;}
+.hetk-account-password{margin-top:16px;border-top:1px solid #e6edf3;padding-top:18px;}
+.hetk-account-password h4{margin:0 0 13px;font-size:15px;color:#263c50;}
+.hetk-account-status{min-height:18px;margin-top:10px;font-size:12px;color:#62788c;}
+.hetk-account-status.error{color:#c43838;}.hetk-account-status.success{color:#198a53;}
+
+#hetk-profile-logout{
+  width:100%;border:0;background:#fff3f3;color:#c33f3f;padding:10px 12px;text-align:left;border-radius:7px;
+  cursor:pointer;font-weight:700;margin-top:4px;
+}
+
+@media(max-width:720px){
+  #hetk-auth-overlay{padding:14px;align-items:center;}
+  .hetk-auth-card{border-radius:17px;}
+  .hetk-auth-brand{padding:22px 20px 18px;}
+  .hetk-auth-body{padding:20px 18px 22px;}
+  .hetk-account-grid{grid-template-columns:1fr;}
+  .hetk-account-head{padding:15px;}
+  .hetk-account-body{padding:15px;}
+  .hetk-account-actions{flex-direction:column-reverse;}
+  .hetk-account-btn{width:100%;}
+}
