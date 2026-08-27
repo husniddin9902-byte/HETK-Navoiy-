@@ -93,6 +93,7 @@
     if(code === 'auth/invalid-login-credentials' || code === 'auth/wrong-password' || code === 'auth/user-not-found' || code === 'auth/invalid-credential') return 'Login yoki parol noto‘g‘ri.';
     if(code === 'auth/weak-password') return 'Parol kamida 6 ta belgidan iborat bo‘lsin.';
     if(code === 'auth/email-already-in-use') return 'Bu login avval yaratilgan.';
+    if(code === 'auth/invalid-email') return 'Login formatida xato bor. Faqat lotin harflari, raqam, nuqta, _ yoki - ishlating.';
     if(code === 'auth/too-many-requests') return 'Urinishlar ko‘payib ketdi. Birozdan keyin qayta urinib ko‘ring.';
     if(code === 'auth/requires-recent-login') return 'Parolni almashtirish uchun qayta kirish kerak.';
     return (error && error.message) ? error.message : 'Noma’lum xatolik yuz berdi.';
@@ -400,7 +401,8 @@
           <div class="hetk-account-grid">
             <div class="hetk-account-field"><label>F.I.Sh</label><input id="hetk-edit-name" value="${escapeAttr(account.fullName || '')}"></div>
             <div class="hetk-account-field"><label>Telefon</label><input id="hetk-edit-phone" value="${escapeAttr(account.phone || '')}" placeholder="+998 ..."></div>
-            <div class="hetk-account-field"><label>Login</label><input value="${escapeAttr(account.login || '')}" readonly></div>
+            <div class="hetk-account-field"><label>Login</label><input id="hetk-edit-login" value="${escapeAttr(account.login || '')}" autocomplete="username" placeholder="Masalan: tojiev1"></div>
+            <div class="hetk-account-field"><label>Loginni o‘zgartirish uchun hozirgi parol</label><input id="hetk-login-current-password" type="password" autocomplete="current-password" placeholder="Login o‘zgarmasa shart emas"></div>
             <div class="hetk-account-field"><label>Lavozim</label><input value="${escapeAttr(roleLabel)}" readonly></div>
             ${(account.role==='master'||account.role==='electrician') ? `<div class="hetk-account-field"><label>Ustalik joyi</label><input value="${escapeAttr(account.workZoneName || account.region || '')}" readonly></div>` : `<div class="hetk-account-field"><label>Hudud</label><input value="${escapeAttr(account.region || '')}" readonly></div>`}
             <div class="hetk-account-field"><label>Holati</label><input value="${account.active === false ? 'Nofaol' : 'Faol'}" readonly></div>
@@ -413,6 +415,7 @@
             <div class="hetk-account-grid">
               <div class="hetk-account-field"><label>Hozirgi parol</label><input id="hetk-current-password" type="password" autocomplete="current-password"></div>
               <div class="hetk-account-field"><label>Yangi parol</label><input id="hetk-new-password" type="password" autocomplete="new-password" placeholder="Kamida 6 ta belgi"></div>
+              <div class="hetk-account-field"><label>Yangi parolni takrorlang</label><input id="hetk-new-password2" type="password" autocomplete="new-password" placeholder="Yangi parolni yana kiriting"></div>
             </div>
             <div class="hetk-account-actions"><button id="hetk-change-password" class="hetk-account-btn light" type="button"><i class="fas fa-lock"></i> Parolni yangilash</button></div>
             <div class="hetk-account-status" id="hetk-password-status"></div>
@@ -1405,18 +1408,42 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
     if(!currentAccount || !auth.currentUser) return;
     const name = String(byId('hetk-edit-name').value || '').trim();
     const phone = String(byId('hetk-edit-phone').value || '').trim();
+    const oldLogin = normalizeLogin(currentAccount.login || '');
+    const newLogin = normalizeLogin(byId('hetk-edit-login').value || '');
+    const loginPassword = String(byId('hetk-login-current-password').value || '');
     const status = byId('hetk-profile-save-status');
     if(name.length < 3){ status.className='hetk-account-status error'; status.textContent='F.I.Sh ni to‘liq kiriting.'; return; }
+    if(newLogin.length < 3){ status.className='hetk-account-status error'; status.textContent='Login kamida 3 ta belgidan iborat bo‘lsin.'; return; }
+    const loginChanged = newLogin !== oldLogin;
+    if(loginChanged && !loginPassword){ status.className='hetk-account-status error'; status.textContent='Loginni o‘zgartirish uchun hozirgi parolingizni kiriting.'; return; }
     const btn = byId('hetk-save-profile');
     setBusy(btn,true,'Saqlanmoqda...');
+    let authEmailChanged = false;
     try{
-      const patch = {fullName:name,phone,updatedAt:Date.now()};
-      await databaseRef.ref('users/' + auth.currentUser.uid).update(patch);
+      if(loginChanged){
+        const credential = firebase.auth.EmailAuthProvider.credential(loginToEmail(oldLogin), loginPassword);
+        await auth.currentUser.reauthenticateWithCredential(credential);
+        await auth.currentUser.updateEmail(loginToEmail(newLogin));
+        authEmailChanged = true;
+      }
+      const patch = {fullName:name,phone,login:newLogin,updatedAt:Date.now()};
+      try{
+        await databaseRef.ref('users/' + auth.currentUser.uid).update(patch);
+      }catch(dbError){
+        if(authEmailChanged){
+          try{ await auth.currentUser.updateEmail(loginToEmail(oldLogin)); }catch(_rollbackError){}
+        }
+        throw dbError;
+      }
       await auth.currentUser.updateProfile({displayName:name});
       currentAccount = Object.assign({},currentAccount,patch);
       populateProfile(currentAccount);
       const newStatus = byId('hetk-profile-save-status');
-      if(newStatus){newStatus.className='hetk-account-status success';newStatus.textContent='Ma’lumotlar saqlandi.';}
+      if(newStatus){
+        newStatus.className='hetk-account-status success';
+        newStatus.textContent=loginChanged ? 'Ma’lumotlar va login saqlandi. Keyingi kirishda yangi loginni ishlating.' : 'Ma’lumotlar saqlandi.';
+      }
+      const pwd=byId('hetk-login-current-password'); if(pwd) pwd.value='';
     }catch(e){
       status.className='hetk-account-status error'; status.textContent=friendlyAuthError(e);
     }finally{ setBusy(btn,false); }
@@ -1469,16 +1496,21 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
     if(!auth.currentUser || !currentAccount) return;
     const currentPassword=byId('hetk-current-password').value;
     const newPassword=byId('hetk-new-password').value;
+    const newPassword2=byId('hetk-new-password2').value;
     const status=byId('hetk-password-status');
     const btn=byId('hetk-change-password');
-    if(!currentPassword){status.className='hetk-account-status error';status.textContent='Hozirgi parolni kiriting.';return;}
+    if(!currentPassword){status.className='hetk-account-status error';status.textContent='Avval hozirgi parolingizni kiriting.';return;}
     if(newPassword.length<6){status.className='hetk-account-status error';status.textContent='Yangi parol kamida 6 ta belgidan iborat bo‘lsin.';return;}
+    if(newPassword!==newPassword2){status.className='hetk-account-status error';status.textContent='Yangi parollar bir xil emas.';return;}
+    if(currentPassword===newPassword){status.className='hetk-account-status error';status.textContent='Yangi parol eski paroldan farq qilishi kerak.';return;}
     setBusy(btn,true,'Yangilanmoqda...');
     try{
       const credential=firebase.auth.EmailAuthProvider.credential(loginToEmail(currentAccount.login),currentPassword);
       await auth.currentUser.reauthenticateWithCredential(credential);
       await auth.currentUser.updatePassword(newPassword);
-      byId('hetk-current-password').value='';byId('hetk-new-password').value='';
+      byId('hetk-current-password').value='';
+      byId('hetk-new-password').value='';
+      byId('hetk-new-password2').value='';
       status.className='hetk-account-status success';status.textContent='Parol muvaffaqiyatli almashtirildi.';
     }catch(e){status.className='hetk-account-status error';status.textContent=friendlyAuthError(e);}
     finally{setBusy(btn,false);}
@@ -1561,7 +1593,7 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
 
   window.HETKAuth = {
     currentUser:null,
-    roles:ROLE_DEFS, 
+    roles:ROLE_DEFS,
     getRoleLabel(role){return ROLE_DEFS[role] ? ROLE_DEFS[role].label : role;},
     getAccountRoleLabel(account){return getRoleLabel(account);},
     getWorkZones(){return teamWorkZonesCache;},
