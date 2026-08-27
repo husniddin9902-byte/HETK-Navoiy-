@@ -84,7 +84,77 @@
   }
 
   function loginToEmail(login){
+    // Eski foydalanuvchilar bilan moslik uchun qoldirilgan legacy email.
     return normalizeLogin(login) + '@hetk.local';
+  }
+
+  function loginIndexKey(login){
+    const value = normalizeLogin(login);
+    try{
+      return btoa(value).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/g,'');
+    }catch(_e){
+      return value.replace(/\./g,'_dot_');
+    }
+  }
+
+  function makeInternalAuthEmail(){
+    const rnd = Math.random().toString(36).slice(2,10);
+    return `u${Date.now().toString(36)}${rnd}@hetk-app.com`;
+  }
+
+  async function resolveAuthEmail(login){
+    const normalized = normalizeLogin(login);
+    if(!normalized) return '';
+    try{
+      const idxSnap = await databaseRef.ref('loginIndex/' + loginIndexKey(normalized)).once('value');
+      const idx = idxSnap.val();
+      if(idx && idx.authEmail) return String(idx.authEmail);
+
+      // Eski bazani avtomatik ko‘chirish uchun users ichidan login bo‘yicha qidiramiz.
+      const usersSnap = await databaseRef.ref('users').orderByChild('login').equalTo(normalized).once('value');
+      let foundEmail = '';
+      usersSnap.forEach(child => {
+        if(foundEmail) return;
+        const account = child.val() || {};
+        if(account.authEmail) foundEmail = String(account.authEmail);
+      });
+      if(foundEmail) return foundEmail;
+    }catch(_e){}
+    return loginToEmail(normalized);
+  }
+
+  async function loginAlreadyExists(login, excludeUid){
+    const normalized = normalizeLogin(login);
+    if(!normalized) return false;
+    try{
+      const idxSnap = await databaseRef.ref('loginIndex/' + loginIndexKey(normalized)).once('value');
+      const idx = idxSnap.val();
+      if(idx && idx.uid && idx.uid !== excludeUid) return true;
+    }catch(_e){}
+    try{
+      const usersSnap = await databaseRef.ref('users').orderByChild('login').equalTo(normalized).once('value');
+      let exists = false;
+      usersSnap.forEach(child => { if(child.key !== excludeUid) exists = true; });
+      return exists;
+    }catch(_e){ return false; }
+  }
+
+  async function ensureLoginIndex(account, user){
+    if(!account || !user || !account.login) return account;
+    const authEmail = String(user.email || account.authEmail || loginToEmail(account.login));
+    const key = loginIndexKey(account.login);
+    const updates = {};
+    updates['users/' + user.uid + '/authEmail'] = authEmail;
+    updates['loginIndex/' + key] = {
+      uid:user.uid,
+      login:normalizeLogin(account.login),
+      authEmail,
+      active:account.active !== false,
+      updatedAt:Date.now()
+    };
+    await databaseRef.ref().update(updates);
+    account.authEmail = authEmail;
+    return account;
   }
 
   function friendlyAuthError(error){
@@ -245,7 +315,8 @@
     if(!password) return setMessage('error','Parolni kiriting.');
     setBusy(btn,true,'Kirilmoqda...');
     try{
-      await auth.signInWithEmailAndPassword(loginToEmail(login), password);
+      const authEmail = await resolveAuthEmail(login);
+      await auth.signInWithEmailAndPassword(authEmail, password);
     }catch(e){
       setMessage('error',friendlyAuthError(e));
     }finally{
@@ -273,12 +344,15 @@
         usersExist = true;
         throw new Error('Bosh administrator avval yaratilgan.');
       }
-      const cred = await auth.createUserWithEmailAndPassword(loginToEmail(login), pass1);
+      if(await loginAlreadyExists(login,'')) throw new Error('Bu login avval yaratilgan.');
+      const internalEmail = makeInternalAuthEmail();
+      const cred = await auth.createUserWithEmailAndPassword(internalEmail, pass1);
       const uid = cred.user.uid;
       const now = Date.now();
       const account = {
         uid,
         login,
+        authEmail: internalEmail,
         fullName,
         role: 'super_admin',
         roleLabel: ROLE_DEFS.super_admin.label,
@@ -295,7 +369,10 @@
         photoData: '',
         permissions: defaultPermissionsForRole('super_admin')
       };
-      await databaseRef.ref('users/' + uid).set(account);
+      const firstUpdates = {};
+      firstUpdates['users/' + uid] = account;
+      firstUpdates['loginIndex/' + loginIndexKey(login)] = {uid,login,authEmail:internalEmail,active:true,updatedAt:now};
+      await databaseRef.ref().update(firstUpdates);
       await cred.user.updateProfile({displayName: fullName});
       usersExist = true;
       currentAccount = account;
@@ -1214,10 +1291,12 @@
         if(pass1.length<6) throw new Error('Parol kamida 6 ta belgidan iborat bo‘lsin.');
         if(pass1!==pass2) throw new Error('Parollar bir xil emas.');
         if(role==='master' && zone && !confirmMasterReplacement(zone,'')) throw new Error('Master almashtirish bekor qilindi.');
+        if(await loginAlreadyExists(login,'')) throw new Error('Bu login avval mavjud. Boshqa login kiriting.');
         const sec=secondaryAuth();
         let cred=null;
         try{
-          cred=await sec.createUserWithEmailAndPassword(loginToEmail(login),pass1);
+          const internalEmail = makeInternalAuthEmail();
+          cred=await sec.createUserWithEmailAndPassword(internalEmail,pass1);
           const uid=cred.user.uid;
           const now=Date.now();
           let finalZoneId=patch.workZoneId;
@@ -1241,11 +1320,12 @@
             }
           }
           const account=Object.assign({},patch,{
-            uid,login,active:true,createdAt:now,createdBy:currentAccount.uid,
+            uid,login,authEmail:internalEmail,active:true,createdAt:now,createdBy:currentAccount.uid,
             createdByName:currentAccount.fullName || currentAccount.login || 'Admin',lastLoginAt:0,photoData:''
           });
           if(needsZone){account.workZoneId=finalZoneId;account.workZoneName=zoneName;account.region=zoneName;}
           updates['users/'+uid]=account;
+          updates['loginIndex/'+loginIndexKey(login)]={uid,login,authEmail:internalEmail,active:true,updatedAt:now};
           await databaseRef.ref().update(updates);
           try{ await cred.user.updateProfile({displayName:fullName}); }catch(_e){}
           await sec.signOut();
@@ -1341,6 +1421,7 @@
     updates['users/'+uid+'/active']=next;
     updates['users/'+uid+'/updatedAt']=Date.now();
     updates['users/'+uid+'/updatedBy']=currentAccount.uid;
+    if(u.login) updates['loginIndex/'+loginIndexKey(u.login)+'/active']=next;
     if(!next && u.role==='master' && u.workZoneId){
       const zone=getWorkZoneById(u.workZoneId);
       if(zone && zone.currentMasterUid===uid){
@@ -1373,6 +1454,7 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
       deletedBy:currentAccount.uid,deletedByName:currentAccount.fullName||currentAccount.login||'Admin'
     };
     updates['users/'+uid]=null;
+    if(u.login) updates['loginIndex/'+loginIndexKey(u.login)]=null;
     Object.keys(teamWorkZonesCache || {}).forEach(zoneId=>{
       const z=teamWorkZonesCache[zoneId];
       if(z && z.currentMasterUid===uid){
@@ -1418,34 +1500,40 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
     if(loginChanged && !loginPassword){ status.className='hetk-account-status error'; status.textContent='Loginni o‘zgartirish uchun hozirgi parolingizni kiriting.'; return; }
     const btn = byId('hetk-save-profile');
     setBusy(btn,true,'Saqlanmoqda...');
-    let authEmailChanged = false;
     try{
+      const authEmail = String(auth.currentUser.email || currentAccount.authEmail || '');
+      if(!authEmail) throw new Error('Ichki autentifikatsiya emaili topilmadi. Qayta kirib ko‘ring.');
+
       if(loginChanged){
-        const credential = firebase.auth.EmailAuthProvider.credential(loginToEmail(oldLogin), loginPassword);
+        if(await loginAlreadyExists(newLogin, auth.currentUser.uid)) throw new Error('Bu login boshqa foydalanuvchida mavjud.');
+        const credential = firebase.auth.EmailAuthProvider.credential(authEmail, loginPassword);
         await auth.currentUser.reauthenticateWithCredential(credential);
-        await auth.currentUser.updateEmail(loginToEmail(newLogin));
-        authEmailChanged = true;
       }
-      const patch = {fullName:name,phone,login:newLogin,updatedAt:Date.now()};
-      try{
-        await databaseRef.ref('users/' + auth.currentUser.uid).update(patch);
-      }catch(dbError){
-        if(authEmailChanged){
-          try{ await auth.currentUser.updateEmail(loginToEmail(oldLogin)); }catch(_rollbackError){}
-        }
-        throw dbError;
-      }
+
+      const now = Date.now();
+      const patch = {fullName:name,phone,login:newLogin,authEmail,updatedAt:now};
+      const updates = {};
+      updates['users/' + auth.currentUser.uid + '/fullName'] = name;
+      updates['users/' + auth.currentUser.uid + '/phone'] = phone;
+      updates['users/' + auth.currentUser.uid + '/login'] = newLogin;
+      updates['users/' + auth.currentUser.uid + '/authEmail'] = authEmail;
+      updates['users/' + auth.currentUser.uid + '/updatedAt'] = now;
+      updates['loginIndex/' + loginIndexKey(newLogin)] = {uid:auth.currentUser.uid,login:newLogin,authEmail,active:currentAccount.active!==false,updatedAt:now};
+      if(loginChanged && oldLogin) updates['loginIndex/' + loginIndexKey(oldLogin)] = null;
+      await databaseRef.ref().update(updates);
+
       await auth.currentUser.updateProfile({displayName:name});
       currentAccount = Object.assign({},currentAccount,patch);
       populateProfile(currentAccount);
       const newStatus = byId('hetk-profile-save-status');
       if(newStatus){
         newStatus.className='hetk-account-status success';
-        newStatus.textContent=loginChanged ? 'Ma’lumotlar va login saqlandi. Keyingi kirishda yangi loginni ishlating.' : 'Ma’lumotlar saqlandi.';
+        newStatus.textContent=loginChanged ? 'Login va ma’lumotlar saqlandi. Keyingi kirishda yangi loginni ishlating.' : 'Ma’lumotlar saqlandi.';
       }
       const pwd=byId('hetk-login-current-password'); if(pwd) pwd.value='';
     }catch(e){
-      status.className='hetk-account-status error'; status.textContent=friendlyAuthError(e);
+      const liveStatus=byId('hetk-profile-save-status') || status;
+      liveStatus.className='hetk-account-status error'; liveStatus.textContent=friendlyAuthError(e);
     }finally{ setBusy(btn,false); }
   }
 
@@ -1505,7 +1593,7 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
     if(currentPassword===newPassword){status.className='hetk-account-status error';status.textContent='Yangi parol eski paroldan farq qilishi kerak.';return;}
     setBusy(btn,true,'Yangilanmoqda...');
     try{
-      const credential=firebase.auth.EmailAuthProvider.credential(loginToEmail(currentAccount.login),currentPassword);
+      const credential=firebase.auth.EmailAuthProvider.credential(String(auth.currentUser.email || currentAccount.authEmail || loginToEmail(currentAccount.login)),currentPassword);
       await auth.currentUser.reauthenticateWithCredential(credential);
       await auth.currentUser.updatePassword(newPassword);
       byId('hetk-current-password').value='';
@@ -1528,6 +1616,7 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
         setMessage('error','Bu login uchun foydalanuvchi profili topilmadi. Administratorga murojaat qiling.');
         return;
       }
+      currentAccount = await ensureLoginIndex(currentAccount, user);
       if(currentAccount.active === false){
         await auth.signOut();
         setOverlayVisible(true);
