@@ -196,23 +196,9 @@ function showToast(message) {
     setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 500); }, 2000);
 }
 
-// 7. Saqlash va Nusxa olish
-document.querySelector('.save-btn').addEventListener('click', function() {
-    const currentLat = document.getElementById('latitude').innerText;
-    const currentLng = document.getElementById('longitude').innerText;
-    const addr = document.getElementById('address').innerText;
-    
-    if (activeFolderId === 'root') return showToast("Avval papka tanlang!");
-    if (!hetkCanAccessFolder(activeFolderId)) return showToast("Bu papkaga ma'lumot saqlash ruxsati yo'q.");
-
-    database.ref('TPs/' + Date.now()).set({
-        lat: currentLat,
-        lng: currentLng,
-        address: addr,
-        folderId: activeFolderId,
-        time: new Date().toLocaleString()
-    }).then(() => { showToast("Guruhga saqlandi!"); });
-});
+// 7. Nusxa olish
+// Eslatma: elementni Firebase'ga saqlash faqat elementMainForm submit ichida bajariladi.
+// Eski .save-btn orqali yarim TP yozadigan handler olib tashlandi.
 
 function copyCoords() {
     const lat = document.getElementById('latitude').innerText;
@@ -2605,20 +2591,26 @@ database.ref('TPs').push();
 const tpId = newRef.key;
        elementData.tpId = tpId;
          
-newRef.set(elementData).then(() => {
-        showSaveLoader(100,"Yakunlanmoqda...");
-        setTimeout(()=>{
-            hideSaveLoader();
-            isSaving = false;
-            showToast("Yangi element muvaffaqiyatli saqlandi!");
-            elementManagePanel.classList.add('hidden');
-            resetToUserLocation();
+try {
+    await newRef.set(elementData);
+    showSaveLoader(100,"Yakunlanmoqda...");
+    setTimeout(()=>{
+        hideSaveLoader();
+        isSaving = false;
+        showToast("Yangi element muvaffaqiyatli saqlandi!");
+        elementManagePanel.classList.add('hidden');
+        resetToUserLocation();
 
-            if(document.getElementById('tab-items').classList.contains('active')){
-                loadFilteredPoints();
-            }
-        },500);
-    });
+        if(document.getElementById('tab-items').classList.contains('active')){
+            loadFilteredPoints();
+        }
+    },500);
+} catch (firebaseSaveError) {
+    console.error('FIREBASE CREATE ERROR:', firebaseSaveError);
+    hideSaveLoader();
+    isSaving = false;
+    showToast('Firebase saqlash xatosi: ' + (firebaseSaveError.message || firebaseSaveError.code || 'Noma’lum xato'));
+}
 } else {
          
    // Mavjud elementni yangilash holati
@@ -2793,7 +2785,8 @@ rebuildResult
 
 }
          
-    database.ref('TPs/' + editingElementId).update(elementData).then(() => {
+    try {
+        await database.ref('TPs/' + editingElementId).update(elementData);
         showSaveLoader(100,"Yakunlanmoqda...");
         setTimeout(()=>{
             hideSaveLoader();
@@ -2808,7 +2801,12 @@ rebuildResult
                 loadFilteredPoints();
             }
         },500);
-    });
+    } catch (firebaseSaveError) {
+        console.error('FIREBASE UPDATE ERROR:', firebaseSaveError);
+        hideSaveLoader();
+        isSaving = false;
+        showToast('Firebase saqlash xatosi: ' + (firebaseSaveError.message || firebaseSaveError.code || 'Noma’lum xato'));
+    }
 
 }
     });
