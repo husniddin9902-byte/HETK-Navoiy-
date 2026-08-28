@@ -1,4 +1,4 @@
-// "Bismillahir Rohmanir Rohim" — "Mehribon va Rahmli Alloh nomi bilan boshlayman" 
+// "Bismillahir Rohmanir Rohim" � "Mehribon va Rahmli Alloh nomi bilan boshlayman" 
 // 1. Firebase Sozlamalari 
 const firebaseConfig = {
   apiKey: "AIzaSyBFOoT_ZhvE1tT1Qglh5GjPPhs8ZsyRWoc",
@@ -132,7 +132,7 @@ map.on('contextmenu', function(e) {
     selectedMarker = L.marker(e.latlng).addTo(map);
     
     var deleteBtn = `<div class="marker-delete-popup" onclick="resetToUserLocation()">
-                        Удалить это местоположение?
+                        ������� ��� ��������������?
                      </div>`;
     
     selectedMarker.bindPopup(deleteBtn, {
@@ -204,8 +204,8 @@ function copyCoords() {
     const lat = document.getElementById('latitude').innerText;
     const lng = document.getElementById('longitude').innerText;
     const address = document.getElementById('address').innerText;
-    const fullText = `Широта: ${lat}\nДолгота: ${lng}\nАдрес: ${address}\nGoogle Maps: http://maps.google.com/?q=${lat},${lng}`;
-    navigator.clipboard.writeText(fullText).then(() => { showToast("Ma’lumot nusxalandi"); });
+    const fullText = `������: ${lat}\n�������: ${lng}\n�����: ${address}\nGoogle Maps: http://maps.google.com/?q=${lat},${lng}`;
+    navigator.clipboard.writeText(fullText).then(() => { showToast("Ma�lumot nusxalandi"); });
 }
 
 // PAPKALAR VA IERARXIYA MANTIQI
@@ -335,7 +335,7 @@ style="
 font-size:18px;
 margin-right:10px;
 ">
-${selectedMahallas.some(x => x.name === m.name) ? "●" : "○"}
+${selectedMahallas.some(x => x.name === m.name) ? "?" : "0"}
 </span>
 <b>${m.name}</b>
 
@@ -384,13 +384,13 @@ cursor:pointer;
 transition:.2s;
 ">
 <div>
-🏘 ${item.name}
+?? ${item.name}
 </div>
 <div>
 ${
 item.isPrimary
 ?
-'<span style="color:#00bfff;font-weight:bold;">📍 Manzil</span>'
+'<span style="color:#00bfff;font-weight:bold;">?? Manzil</span>'
 :
 ''
 }
@@ -418,9 +418,9 @@ display:flex;
 justify-content:space-between;
 margin-bottom:6px;
 ">
-<span>🏘 ${item.name}</span>
+<span>?? ${item.name}</span>
 <span>
-${item.isPrimary ? "📍" : ""}
+${item.isPrimary ? "??" : ""}
 </span>
 </div>
 `;
@@ -609,7 +609,7 @@ if (elementSearchInput) {
 }
 
 
-// 🔑 Qidiruv turi kodi
+// ?? Qidiruv turi kodi
    const searchTypeBtn = document.getElementById("search-type-btn");
 const searchTypeMenu = document.getElementById("search-type-menu");
 const applySearchType = document.getElementById("apply-search-type");
@@ -1133,7 +1133,7 @@ function buildTreeInDiv(treeContainerId, nativeSelectId, excludeId = null) {
     // 1. Asosiy (Bosh guruh) variantini yaratish
     const rootRow = document.createElement('div');
     rootRow.style.cssText = "display:flex; align-items:center; padding:8px; cursor:pointer; color:white; font-size:14px; border-radius:6px;";
-    rootRow.innerHTML = `<span style="width:20px; text-align:center; color:#88a0b0; font-weight:bold; margin-right:5px;">•</span><i class="fas fa-home" style="color:#88a0b0; margin-right:8px;"></i> Asosiy (Bosh guruh)`;
+    rootRow.innerHTML = `<span style="width:20px; text-align:center; color:#88a0b0; font-weight:bold; margin-right:5px;">�</span><i class="fas fa-home" style="color:#88a0b0; margin-right:8px;"></i> Asosiy (Bosh guruh)`;
     
     if (nativeSelect.value === 'root' || !nativeSelect.value) {
         rootRow.style.background = "#007AFF";
@@ -1163,8 +1163,8 @@ function buildTreeInDiv(treeContainerId, nativeSelectId, excludeId = null) {
             row.style.cssText = `display:flex; align-items:center; padding:8px; cursor:pointer; color:white; font-size:14px; border-radius:6px;`;
             row.style.paddingLeft = `${(level + 1) * 16}px`;
 
-            // Farzandi bor guruhlarga dynamic [+] aks holda nuqta [•]
-            const prefixIcon = hasSubFolders ? `<span class="dropdown-toggle-icon" style="width:20px; text-align:center; color:#88a0b0; font-weight:bold; margin-right:5px; cursor:pointer; background:rgba(255,255,255,0.05); border-radius:4px;">+</span>` : `<span style="width:20px; text-align:center; color:#557080; margin-right:5px;">•</span>`;
+            // Farzandi bor guruhlarga dynamic [+] aks holda nuqta [�]
+            const prefixIcon = hasSubFolders ? `<span class="dropdown-toggle-icon" style="width:20px; text-align:center; color:#88a0b0; font-weight:bold; margin-right:5px; cursor:pointer; background:rgba(255,255,255,0.05); border-radius:4px;">+</span>` : `<span style="width:20px; text-align:center; color:#557080; margin-right:5px;">�</span>`;
 
             row.innerHTML = `
                 ${prefixIcon}
@@ -1240,25 +1240,62 @@ function refreshTreeDropdownSelection(container, selectedId) {
     }
 }
 
-// 1. Telegram Bot Sozlamalari (Orqa fonda 0 xarajat va bepul limit bilan rasmlarni saqlash uchun)
-const TELEGRAM_BOT_TOKEN = "8992286638:AAFPqW8OuFnBe-u6WZqqxiL1h3nhlIz48Qg"; // Bot tokeningizni shu yerga yozasiz
-const TELEGRAM_CHAT_ID = "-1003934340914"; // Maxfiy kanal yoki guruh IDsini yozasiz
-const TELEGRAM_ARCHIVE_CHAT_ID = "-1003885366930";
-const TELEGRAM_DELETED_CHAT_ID = "-1004441090522";
+// 1. Telegram xavfsiz ulanishi — bot tokeni va kanal IDlari frontendda saqlanmaydi.
+// Telegram bilan barcha aloqa Cloudflare Worker orqali amalga oshadi.
+const TELEGRAM_WORKER_URL = "https://hetk-telegram.husniddin-99-02.workers.dev";
+
+// Bu qiymatlar kanal ID emas — faqat Worker ichidagi xavfsiz kanal nomlari.
+const TELEGRAM_CHAT_ID = "main";
+const TELEGRAM_ARCHIVE_CHAT_ID = "archive";
+const TELEGRAM_DELETED_CHAT_ID = "deleted";
+
+async function hetkTelegramIdToken(){
+    if(!window.firebase || typeof firebase.auth !== "function") {
+        throw new Error("Firebase Authentication yuklanmagan");
+    }
+    const user = firebase.auth().currentUser;
+    if(!user) {
+        throw new Error("Telegram amali uchun tizimga qayta kiring");
+    }
+    return await user.getIdToken();
+}
+
+async function hetkTelegramWorkerFetch(path, options = {}){
+    const token = await hetkTelegramIdToken();
+    const headers = new Headers(options.headers || {});
+    headers.set("Authorization", `Bearer ${token}`);
+
+    const response = await fetch(`${TELEGRAM_WORKER_URL}${path}`, {
+        ...options,
+        headers
+    });
+
+    if(response.status === 401){
+        throw new Error("Telegram Worker: avtorizatsiya muddati tugagan. Tizimga qayta kiring.");
+    }
+    return response;
+}
+
+async function hetkTelegramApi(method, channel, options = {}){
+    return await hetkTelegramWorkerFetch(
+        `/telegram/${encodeURIComponent(method)}?channel=${encodeURIComponent(channel)}`,
+        options
+    );
+}
 
 async function deleteTelegramMessages(messageIds){
 if(!messageIds || !messageIds.length) return;
 for(const messageId of messageIds){
 try{
-await fetch(
-`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/deleteMessage`,
+await hetkTelegramApi(
+"deleteMessage",
+TELEGRAM_ARCHIVE_CHAT_ID,
 {
 method:"POST",
 headers:{
 "Content-Type":"application/json"
 },
 body:JSON.stringify({
-chat_id: TELEGRAM_ARCHIVE_CHAT_ID,
 message_id: messageId
 })
 }
@@ -1272,16 +1309,26 @@ err
 }
 }
 
+const hetkTelegramBlobUrlCache = new Map();
+
 async function getTelegramFileUrl(fileId){
 try{
-const response = await fetch(
-`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getFile?file_id=${fileId}`
+if(!fileId) return null;
+if(hetkTelegramBlobUrlCache.has(fileId)){
+    return hetkTelegramBlobUrlCache.get(fileId);
+}
+const response = await hetkTelegramWorkerFetch(
+`/telegram/file?file_id=${encodeURIComponent(fileId)}`,
+{ method:"GET" }
 );
-const result = await response.json();
-if(!result.ok){
+if(!response.ok){
+console.error("Telegram rasm olish xatosi:", response.status);
 return null;
 }
-return `https://api.telegram.org/file/bot${TELEGRAM_BOT_TOKEN}/${result.result.file_path}`;
+const blob = await response.blob();
+const objectUrl = URL.createObjectURL(blob);
+hetkTelegramBlobUrlCache.set(fileId, objectUrl);
+return objectUrl;
 }catch(err){
 console.error(err);
 return null;
@@ -1439,7 +1486,7 @@ document.querySelector('.save-btn').addEventListener('click', function() {
     resetElementForm();
     editingElementId = null;
     renderElementWorkZonePicker([]);
-    document.getElementById('element-panel-title').innerText = "Добавить местоположение";
+    document.getElementById('element-panel-title').innerText = "�������� ��������������";
     deleteElementBtn.classList.add('hidden');
 
     // Qiymatlarni kiritamiz
@@ -1464,7 +1511,7 @@ if (inputBalanceToggle) {
             // Maydonlarni to'ldirish majburiy bo'ladi
             togglePrivateFieldsRequired(true);
         } else {
-            balanceStatusText.innerText = "ЕТК";
+            balanceStatusText.innerText = "���";
             balanceStatusText.style.color = "#007AFF";
             privateOwnerInfoBlock.classList.add('hidden');
             togglePrivateFieldsRequired(false);
@@ -1532,7 +1579,7 @@ if (inputLatitude && inputLongitude) {
             .then(data => {
                 inputElementAddress.value = data.display_name || "Manzil topilmadi";
                 
-                // ⚡ YANGI: Matn so'z o'rtasidan bo'linib, xunuk bo'lib ketmasligi uchun stillar
+                // ? YANGI: Matn so'z o'rtasidan bo'linib, xunuk bo'lib ketmasligi uchun stillar
                 inputElementAddress.style.wordBreak = "keep-all";
                 inputElementAddress.style.overflowWrap = "break-word";
                 inputElementAddress.style.whiteSpace = "normal";
@@ -1592,17 +1639,17 @@ style="width:100%;height:100%;object-fit:cover;">
 
 style="width:100%;height:100%;object-fit:cover;">
 <div class="main-image-badge">
-${mainImageIndex===index ? '⭐ Asosiy' : ''}
+${mainImageIndex===index ? '? Asosiy' : ''}
 </div>
 <button type="button"
 class="set-main-image"
 data-index="${index}">
-${mainImageIndex===index ? '⭐' : '☆'}
+${mainImageIndex===index ? '?' : '?'}
 </button>
 <button type="button"
 class="existing-image-remove"
 data-index="${index}">
-×
+?
 </button>
 `;
 previewContainer.appendChild(box);
@@ -1616,21 +1663,21 @@ box.innerHTML=`
 <img src="${e.target.result}">
 <div class="main-image-badge">
 ${mainImageIndex === (existingImages.length + index)
-? '⭐ Asosiy' : ''}
+? '? Asosiy' : ''}
 </div>
 <button
 type="button"
 class="set-main-image"
 data-index="${existingImages.length + index}">
 ${mainImageIndex === (existingImages.length + index)
-? '⭐'
-: '☆'}
+? '?'
+: '?'}
 </button>
 <button
 type="button"
 class="multi-image-remove"
 data-index="${index}">
-×
+?
 </button>
 `;
   
@@ -1647,14 +1694,14 @@ document
 .forEach(x => x.innerHTML = '');
 document
 .querySelectorAll('.set-main-image')
-.forEach(x => x.innerHTML = '☆');
+.forEach(x => x.innerHTML = '?');
 const currentStar = e.target;
-currentStar.innerHTML = '⭐';
+currentStar.innerHTML = '?';
 const badge =
 currentStar.parentElement
 .querySelector('.main-image-badge');
 if(badge){
-badge.innerHTML = '⭐ Asosiy';
+badge.innerHTML = '? Asosiy';
 }
 return;
 }
@@ -1686,7 +1733,7 @@ selectedFiles.length +
 files.length > 5
 ){
 alert(
-"⚠️ Maksimal 5 ta rasm yuklash mumkin!"
+"?? Maksimal 5 ta rasm yuklash mumkin!"
 );
 return;
 }
@@ -1856,7 +1903,7 @@ function refreshPrimaryFolderList() {
         ">
         +
        </button>`
-    : `<span style="width: 20px; text-align: center; color: #4b6575; font-size: 12px;">•</span>`;
+    : `<span style="width: 20px; text-align: center; color: #4b6575; font-size: 12px;">�</span>`;
 
             row.innerHTML = `
                 ${toggleSign}
@@ -1976,10 +2023,10 @@ function hetkAccountRoleLabel(account){
 
 function hetkAuditActor(){
     const me=hetkCurrentAccount();
-    if(!me) return {uid:'',name:'Noma’lum foydalanuvchi',role:'Foydalanuvchi',display:'Noma’lum foydalanuvchi'};
+    if(!me) return {uid:'',name:'Noma�lum foydalanuvchi',role:'Foydalanuvchi',display:'Noma�lum foydalanuvchi'};
     const name=me.fullName || me.login || 'Foydalanuvchi';
     const role=hetkAccountRoleLabel(me);
-    return {uid:me.uid || '',name,role,display:name + ' — ' + role};
+    return {uid:me.uid || '',name,role,display:name + ' � ' + role};
 }
 
 async function loadElementWorkZones(force){
@@ -2005,7 +2052,7 @@ function hetkWorkZoneName(id,tp){
     if(zone && zone.name) return zone.name;
     if(tp && tp.workZoneNames && tp.workZoneNames[id]) return tp.workZoneNames[id];
     if(tp && (tp.primaryWorkZoneId===id || tp.workZoneId===id) && tp.workZoneName) return tp.workZoneName;
-    return 'Noma’lum U/J';
+    return 'Noma�lum U/J';
 }
 
 function hetkGetTPWorkZoneNames(tp){
@@ -2061,7 +2108,7 @@ async function renderElementWorkZonePicker(selectedIds){
         }
         if(editingElementId && existing.length && !existing.includes(me.workZoneId)){
             hetkSetWorkZoneIds(existing);
-            inputWorkZonePicker.innerHTML='<div class="hetk-element-uj-warning">Bu element boshqa U/J ga biriktirilgan. Siz U/J biriktirishini o‘zgartira olmaysiz.</div>';
+            inputWorkZonePicker.innerHTML='<div class="hetk-element-uj-warning">Bu element boshqa U/J ga biriktirilgan. Siz U/J biriktirishini o�zgartira olmaysiz.</div>';
             return;
         }
         // Master/elektromontyor tahrir qilganda admin biriktirgan qo'shimcha U/J larni saqlab qolamiz.
@@ -2072,8 +2119,8 @@ async function renderElementWorkZonePicker(selectedIds){
         const extras=selected.filter(id=>id!==me.workZoneId).map(id=>hetkWorkZoneName(id,originalElementData));
         inputWorkZonePicker.innerHTML=`
           <div class="hetk-element-uj-locked"><i class="fas fa-lock"></i><span>${hetkEscapeHtml(ownName)}</span></div>
-          ${extras.length ? `<div class="hetk-element-uj-help">Admin biriktirgan qo‘shimcha U/J: ${extras.map(hetkEscapeHtml).join(', ')}</div>` : ''}
-          <div class="hetk-element-uj-help">Siz o‘z U/Jingizni o‘zgartira olmaysiz.</div>`;
+          ${extras.length ? `<div class="hetk-element-uj-help">Admin biriktirgan qo�shimcha U/J: ${extras.map(hetkEscapeHtml).join(', ')}</div>` : ''}
+          <div class="hetk-element-uj-help">Siz o�z U/Jingizni o�zgartira olmaysiz.</div>`;
         return;
     }
 
@@ -2084,7 +2131,7 @@ async function renderElementWorkZonePicker(selectedIds){
     if(!selected.length && editingElementId) selected=existing;
     hetkSetWorkZoneIds(selected);
     if(!zones.length){
-        inputWorkZonePicker.innerHTML='<div class="hetk-element-uj-warning">Hali U/J yaratilmagan. Avval Profil → Hodimlar bo‘limida Master yaratib U/J yarating.</div>';
+        inputWorkZonePicker.innerHTML='<div class="hetk-element-uj-warning">Hali U/J yaratilmagan. Avval Profil > Hodimlar bo�limida Master yaratib U/J yarating.</div>';
         return;
     }
     inputWorkZonePicker.innerHTML=`
@@ -2092,7 +2139,7 @@ async function renderElementWorkZonePicker(selectedIds){
       <div class="hetk-element-uj-list">
         ${zones.map(z=>`<label class="hetk-element-uj-option"><input type="checkbox" class="hetk-element-uj-check" value="${hetkEscapeHtml(z.id)}" ${selected.includes(z.id)?'checked':''}><span>${hetkEscapeHtml(z.name || 'Nomsiz U/J')}</span></label>`).join('')}
       </div>
-      <div class="hetk-element-uj-help">Direktor va Bosh/Asosiy muhandis elementni boshqa U/J ga o‘tkazishi yoki bir nechta U/J ga biriktirishi mumkin.</div>`;
+      <div class="hetk-element-uj-help">Direktor va Bosh/Asosiy muhandis elementni boshqa U/J ga o�tkazishi yoki bir nechta U/J ga biriktirishi mumkin.</div>`;
     inputWorkZonePicker.querySelectorAll('.hetk-element-uj-check').forEach(cb=>cb.addEventListener('change',()=>{
         const ids=Array.from(inputWorkZonePicker.querySelectorAll('.hetk-element-uj-check:checked')).map(x=>x.value);
         hetkSetWorkZoneIds(ids);
@@ -2104,7 +2151,7 @@ async function renderElementWorkZonePicker(selectedIds){
 function hetkAuditText(tp,prefix){
     const name=tp && tp[prefix+'ByName'];
     const role=tp && tp[prefix+'ByRole'];
-    if(name && role) return name+' — '+role;
+    if(name && role) return name+' � '+role;
     if(name) return name;
     return (tp && tp[prefix+'By']) || '-';
 }
@@ -2113,7 +2160,7 @@ function hetkShortPersonName(name){
     const clean=String(name || '').trim().replace(/\s+/g,' ');
     if(!clean) return '-';
     const parts=clean.split(' ');
-    if(parts.length===1) return parts[0].length>14 ? parts[0].slice(0,13)+'…' : parts[0];
+    if(parts.length===1) return parts[0].length>14 ? parts[0].slice(0,13)+'�' : parts[0];
     const surname=parts[0];
     const first=parts[1] || '';
     const initial=first ? first.charAt(0).toUpperCase()+"'" : '';
@@ -2156,7 +2203,7 @@ return showToast(
             }
             if(editingElementId && existingWorkZoneIds.length && !existingWorkZoneIds.includes(meForZone.workZoneId)){
                 hideSaveLoader();isSaving=false;
-                return showToast("Bu element boshqa U/J ga biriktirilgan. Siz U/J ni o‘zgartira olmaysiz!");
+                return showToast("Bu element boshqa U/J ga biriktirilgan. Siz U/J ni o�zgartira olmaysiz!");
             }
             workZoneIdsArray = existingWorkZoneIds.length ? existingWorkZoneIds : [meForZone.workZoneId];
             if(!workZoneIdsArray.includes(meForZone.workZoneId)) workZoneIdsArray.unshift(meForZone.workZoneId);
@@ -2188,7 +2235,7 @@ getFolderPath(primaryFolderId);
 
 const dualText =
 folderIdsArray.length > 1
-? "\n🔀 Qo'shimcha ta'minot mavjud"
+? "\n?? Qo'shimcha ta'minot mavjud"
 : "";
       
 //const folderPath = selectedFolders;
@@ -2212,69 +2259,69 @@ getFolderPath(primaryFolderId);
 const additionalFolderPaths =
 folderIdsArray
 .filter(id => id !== primaryFolderId)
-.map(id => `📂 ${getFolderPath(id)}`)
+.map(id => `?? ${getFolderPath(id)}`)
 .join('\n\n');
 
 const folderSection =
 additionalFolderPaths
-? `📂 Asosiy ta'minot
+? `?? Asosiy ta'minot
 
 ${primaryFolderPath}
 
-🔀 Qo'shimcha ta'minotlar
+?? Qo'shimcha ta'minotlar
 
 ${additionalFolderPaths}`
-: `📂 ${primaryFolderPath}`;
+: `?? ${primaryFolderPath}`;
       
 const caption =
-`⚡ HETK Monitoring
+`? HETK Monitoring
 
-📍 ${inputElementName.value}     ⚡ Quvvati: ${inputPowerSelect.value === "other"
+?? ${inputElementName.value}     ? Quvvati: ${inputPowerSelect.value === "other"
 ? inputCustomPower.value
 : inputPowerSelect.value} kVA
 
-${inputBalanceToggle.checked ? '🔴 XUSUSIY' : '🔵 ETK'}
+${inputBalanceToggle.checked ? '?? XUSUSIY' : '?? ETK'}
 
 ${folderSection}
 
-📍 Manzil:
+?? Manzil:
 ${inputElementAddress.value || "-"}
 
-📌 Kenglik (Latitude): ${inputLatitude.value}
+?? Kenglik (Latitude): ${inputLatitude.value}
 
-📌 Uzunlik (Longitude): ${inputLongitude.value}
+?? Uzunlik (Longitude): ${inputLongitude.value}
 
-🚗 Navigatsiya:
+?? Navigatsiya:
 https://maps.google.com/?q=${inputLatitude.value},${inputLongitude.value}
 
-🕒 Yaratilgan:
+?? Yaratilgan:
 ${createdDate}
 
-✏️ Oxirgi tahrir:
+?? Oxirgi tahrir:
 ${updatedDate}
 
-👤 Tahrirlagan:
+?? Tahrirlagan:
 ${updatedBy}
 
-🛠 Biriktirilgan U/J:
+?? Biriktirilgan U/J:
 ${workZoneNamesText || "-"}
 
 ${inputBalanceToggle.checked ? `
 
-🏢 Korxona:
+?? Korxona:
 ${inputOwnerFirm.value || "-"}
 
-👤 Korxona vakili:
+?? Korxona vakili:
 ${inputOwnerName.value || "-"}
 
-☎️ Korxona telefoni:
+?? Korxona telefoni:
 ${inputOwnerPhone.value || "-"}
 
-🔢 Hisoblagich:
+?? Hisoblagich:
 ${inputMeterNumber.value || "-"}
 ` : ""}
 
-🔎 Qidiruv teglari
+?? Qidiruv teglari
 
 #${tpTag}
 #${inputBalanceToggle.checked ? 'XUSUSIY' : 'ETK'}`;
@@ -2285,13 +2332,10 @@ const media = [];
 //return;
 for(const file of selectedFiles){
 const formData = new FormData();
-formData.append(
-"chat_id",
-TELEGRAM_ARCHIVE_CHAT_ID
-);
 formData.append("photo", file);
-const sendResponse = await fetch(
-`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`,
+const sendResponse = await hetkTelegramApi(
+"sendPhoto",
+TELEGRAM_ARCHIVE_CHAT_ID,
 {
 method:"POST",
 body:formData
@@ -2320,21 +2364,22 @@ await getTelegramFileUrl(fileId);
 uploadedTelegramImages.push({
 fileId:fileId,
 messageId:messageId,
-url:imageUrl
+// Blob URL faqat joriy brauzer sessiyasi uchun; Firebase'ga tokenli URL saqlanmaydi.
+url:""
 });
 }
    
      if(media.length && !editingElementId) {
 media[0].caption = caption
-const albumResponse = await fetch(
-`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMediaGroup`,
+const albumResponse = await hetkTelegramApi(
+"sendMediaGroup",
+TELEGRAM_ARCHIVE_CHAT_ID,
 {
 method:"POST",
 headers:{
 "Content-Type":"application/json"
 },
 body:JSON.stringify({
-chat_id: TELEGRAM_ARCHIVE_CHAT_ID,
 media: media
 })
 }
@@ -2353,15 +2398,15 @@ console.log("ALBUM OK");
        for(const img of uploadedTelegramImages){
 if(img.messageId){
 try{
-await fetch(
-`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/deleteMessage`,
+await hetkTelegramApi(
+"deleteMessage",
+TELEGRAM_ARCHIVE_CHAT_ID,
 {
 method:"POST",
 headers:{
 "Content-Type":"application/json"
 },
 body:JSON.stringify({
-chat_id: TELEGRAM_ARCHIVE_CHAT_ID,
 message_id: img.messageId
 })
 }
@@ -2385,30 +2430,30 @@ const allImages = [
 let tpPageLink = "";
 
 const mainCaption =
-`⚡️ HETK Monitoring
-📍 ${inputElementName.value}   ⚡ Quvvati: ${inputPowerSelect.value === "other"
+`?? HETK Monitoring
+?? ${inputElementName.value}   ? Quvvati: ${inputPowerSelect.value === "other"
 ? inputCustomPower.value
 : inputPowerSelect.value} kVA
                                            
-${inputBalanceToggle.checked ? '🔴 XUSUSIY' : '🔵 ETK'}
-📂 ${folderPath}${dualText}
-🛠 U/J: ${workZoneNamesText || "-"}
-📍 Manzil:
+${inputBalanceToggle.checked ? '?? XUSUSIY' : '?? ETK'}
+?? ${folderPath}${dualText}
+?? U/J: ${workZoneNamesText || "-"}
+?? Manzil:
 ${inputElementAddress.value || "-"}
-🚗 Navigatsiya:
+?? Navigatsiya:
 https://maps.google.com/?q=${inputLatitude.value},${inputLongitude.value}
-🕒 Yaratilgan:
+?? Yaratilgan:
 ${createdDate}
-✏️ Oxirgi tahrir:
+?? Oxirgi tahrir:
 ${updatedDate}
-👤 Tahrirlagan shaxs:
+?? Tahrirlagan shaxs:
 ${updatedBy}
-🔎 Qidiruv teglari
+?? Qidiruv teglari
 
 #${tpTag}
 #${inputBalanceToggle.checked ? 'XUSUSIY' : 'ETK'}
 
-📖 Qo'shimcha ma'lumot mavjud`;
+?? Qo'shimcha ma'lumot mavjud`;
       
  mainImage = allImages[mainImageIndex];
 if(
@@ -2417,15 +2462,15 @@ mainImage.fileId &&
 !editingElementId
 ){
 
-const mainResponse = await fetch(
-`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`,
+const mainResponse = await hetkTelegramApi(
+"sendPhoto",
+TELEGRAM_CHAT_ID,
 {
 method:"POST",
 headers:{
 "Content-Type":"application/json"
 },
 body:JSON.stringify({
-chat_id: TELEGRAM_CHAT_ID,
 photo: mainImage.fileId,
 caption: mainCaption
 })
@@ -2473,7 +2518,11 @@ document.querySelector(
           mahallaLinks: selectedMahallas,
           primaryMahalla:
 selectedMahallas.find(x => x.isPrimary)?.name || "",
-          images: [...existingImages, ...uploadedTelegramImages],
+          images: [...existingImages, ...uploadedTelegramImages].map(img => ({
+              ...img,
+              // Eski Telegram tokenli URL bazada qolib ketmasin; rasm fileId orqali Worker'dan olinadi.
+              url: ""
+          })),
           mainImageIndex: mainImageIndex,
           
   telegramMainMessageId:
@@ -2609,7 +2658,7 @@ try {
     console.error('FIREBASE CREATE ERROR:', firebaseSaveError);
     hideSaveLoader();
     isSaving = false;
-    showToast('Firebase saqlash xatosi: ' + (firebaseSaveError.message || firebaseSaveError.code || 'Noma’lum xato'));
+    showToast('Firebase saqlash xatosi: ' + (firebaseSaveError.message || firebaseSaveError.code || 'Noma�lum xato'));
 }
 } else {
          
@@ -2632,15 +2681,15 @@ needArchiveCaptionEdit &&
 originalElementData?.telegramArchiveMessageIds?.length
 ){
 try{
-const editResponse = await fetch(
-`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageCaption`,
+const editResponse = await hetkTelegramApi(
+"editMessageCaption",
+TELEGRAM_ARCHIVE_CHAT_ID,
 {
 method:"POST",
 headers:{
 "Content-Type":"application/json"
 },
 body:JSON.stringify({
-chat_id: TELEGRAM_ARCHIVE_CHAT_ID,
 message_id:
 originalElementData.telegramArchiveMessageIds[0],
 caption: caption
@@ -2666,15 +2715,15 @@ needArchiveCaptionEdit &&
 originalElementData?.telegramMainMessageId
 ){
 try{
-const mainEditResponse = await fetch(
-`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageCaption`,
+const mainEditResponse = await hetkTelegramApi(
+"editMessageCaption",
+TELEGRAM_CHAT_ID,
 {
 method:"POST",
 headers:{
 "Content-Type":"application/json"
 },
 body:JSON.stringify({
-chat_id: TELEGRAM_CHAT_ID,
 message_id:
 originalElementData.telegramMainMessageId,
 caption: mainCaption
@@ -2705,15 +2754,15 @@ elementData.mainImageIndex
 ];
 if(mainImage?.fileId){
 try{
-const mediaResponse = await fetch(
-`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageMedia`,
+const mediaResponse = await hetkTelegramApi(
+"editMessageMedia",
+TELEGRAM_CHAT_ID,
 {
 method:"POST",
 headers:{
 "Content-Type":"application/json"
 },
 body:JSON.stringify({
-chat_id: TELEGRAM_CHAT_ID,
 message_id:
 originalElementData.telegramMainMessageId,
 media:{
@@ -2758,15 +2807,15 @@ media:img.fileId
 }
 if(archiveMedia.length){
 archiveMedia[0].caption = caption;
-const rebuildResponse = await fetch(
-`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMediaGroup`,
+const rebuildResponse = await hetkTelegramApi(
+"sendMediaGroup",
+TELEGRAM_ARCHIVE_CHAT_ID,
 {
 method:"POST",
 headers:{
 "Content-Type":"application/json"
 },
 body:JSON.stringify({
-chat_id: TELEGRAM_ARCHIVE_CHAT_ID,
 media: archiveMedia
 })
 }
@@ -2805,7 +2854,7 @@ rebuildResult
         console.error('FIREBASE UPDATE ERROR:', firebaseSaveError);
         hideSaveLoader();
         isSaving = false;
-        showToast('Firebase saqlash xatosi: ' + (firebaseSaveError.message || firebaseSaveError.code || 'Noma’lum xato'));
+        showToast('Firebase saqlash xatosi: ' + (firebaseSaveError.message || firebaseSaveError.code || 'Noma�lum xato'));
     }
 
 }
@@ -2819,7 +2868,7 @@ if (deleteElementBtn) {
        if (
 editingElementId &&
 confirm(
-"⚠️ DIQQAT!\n\nMa'lumotlar 30 kun davomida arxivda saqlanadi.\n\nTiklash uchun administratorga murojaat qiling!.\n\nElement o'chirilsinmi?"
+"?? DIQQAT!\n\nMa'lumotlar 30 kun davomida arxivda saqlanadi.\n\nTiklash uchun administratorga murojaat qiling!.\n\nElement o'chirilsinmi?"
 )
 ) {
 
@@ -2839,73 +2888,73 @@ getFolderPath(primaryFolderId);
 const additionalFolderPaths =
 folderIdsArray
 .filter(id => id !== primaryFolderId)
-.map(id => `📂 ${getFolderPath(id)}`)
+.map(id => `?? ${getFolderPath(id)}`)
 .join("\n\n");
 
 const folderSection =
 additionalFolderPaths
-? `📂 Asosiy ta'minot
+? `?? Asosiy ta'minot
 
 ${primaryFolderPath}
 
-🔀 Qo'shimcha ta'minotlar
+?? Qo'shimcha ta'minotlar
 
 ${additionalFolderPaths}`
-: `📂 ${primaryFolderPath}`;
+: `?? ${primaryFolderPath}`;
          
  const deletedCaption =
-`❌ TP O'CHIRILDI
+`? TP O'CHIRILDI
 
-📍 ${originalElementData.name || "-"}    ⚡ Quvvati: ${originalElementData.power || "-"} kVA
+?? ${originalElementData.name || "-"}    ? Quvvati: ${originalElementData.power || "-"} kVA
 
-${originalElementData.isPrivate ? "🔴 XUSUSIY" : "🔵 ETK"}
+${originalElementData.isPrivate ? "?? XUSUSIY" : "?? ETK"}
 
 ${folderSection}
 
-📍 Manzil:
+?? Manzil:
 ${originalElementData.address || "-"}
 
-📌 Kenglik:
+?? Kenglik:
 ${originalElementData.lat || "-"}
 
-📌 Uzunlik:
+?? Uzunlik:
 ${originalElementData.lng || "-"}
 
-🛠 Biriktirilgan U/J:
+?? Biriktirilgan U/J:
 ${hetkGetTPWorkZoneNames(originalElementData).join(", ") || "-"}
 
 ${originalElementData.isPrivate ? `
 
-🏢 Korxona:
+?? Korxona:
 ${originalElementData.ownerFirm || "-"}
 
-👤 Korxona vakili:
+?? Korxona vakili:
 ${originalElementData.ownerName || "-"}
 
-☎️ Korxona telefoni:
+?? Korxona telefoni:
 ${originalElementData.ownerPhone || "-"}
 
-🔢 Hisoblagich:
+?? Hisoblagich:
 ${originalElementData.meterNumber || "-"}
 ` : ""}
 
-📝 Izoh:
+?? Izoh:
 ${originalElementData.note || "-"}
 
-🕒 Yaratilgan:
+?? Yaratilgan:
 ${originalElementData.createdAt
 ? new Date(originalElementData.createdAt).toLocaleString("uz-UZ")
 : "-"}
 
-✏️ Oxirgi tahrir:
+?? Oxirgi tahrir:
 ${originalElementData.updatedAt
 ? new Date(originalElementData.updatedAt).toLocaleString("uz-UZ")
 : "-"}
 
-🗑 O'chirilgan:
+?? O'chirilgan:
 ${new Date().toLocaleString("uz-UZ")}
 
-🆔 Element ID:
+?? Element ID:
 ${editingElementId}`;
     
 const deletedMedia = [];
@@ -2919,29 +2968,29 @@ media: img.fileId
 }
 if(deletedMedia.length){
 deletedMedia[0].caption = deletedCaption;
-await fetch(
-`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMediaGroup`,
+await hetkTelegramApi(
+"sendMediaGroup",
+TELEGRAM_DELETED_CHAT_ID,
 {
 method:"POST",
 headers:{
 "Content-Type":"application/json"
 },
 body:JSON.stringify({
-chat_id: TELEGRAM_DELETED_CHAT_ID,
 media: deletedMedia
 })
 }
 );
 }else{
-await fetch(
-`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
+await hetkTelegramApi(
+"sendMessage",
+TELEGRAM_DELETED_CHAT_ID,
 {
 method:"POST",
 headers:{
 "Content-Type":"application/json"
 },
 body:JSON.stringify({
-chat_id: TELEGRAM_DELETED_CHAT_ID,
 text: deletedCaption
 })
 }
@@ -2949,15 +2998,15 @@ text: deletedCaption
 }
 
          if(originalElementData.telegramMainMessageId){
-await fetch(
-`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/deleteMessage`,
+await hetkTelegramApi(
+"deleteMessage",
+TELEGRAM_CHAT_ID,
 {
 method:"POST",
 headers:{
 "Content-Type":"application/json"
 },
 body:JSON.stringify({
-chat_id: TELEGRAM_CHAT_ID,
 message_id:
 originalElementData.telegramMainMessageId
 })
@@ -2992,12 +3041,12 @@ function resetElementForm() {
     removeImageBtn.classList.add('hidden');
     imageStatusText.innerText = "Rasm";
     imageStatusText.style.color = "#88a0b0";
-    balanceStatusText.innerText = "ЕТК";
+    balanceStatusText.innerText = "���";
     balanceStatusText.style.color = "#007AFF";
     privateOwnerInfoBlock.classList.add('hidden');
     document.getElementById('element-selected-folders').value = "";
     hetkSetWorkZoneIds([]);
-    if(inputWorkZonePicker) inputWorkZonePicker.innerHTML='<div class="hetk-element-uj-warning">U/J ma’lumotlari yuklanmoqda...</div>';
+    if(inputWorkZonePicker) inputWorkZonePicker.innerHTML='<div class="hetk-element-uj-warning">U/J ma�lumotlari yuklanmoqda...</div>';
   selectedFiles=[];
   existingImages=[];
 uploadedTelegramImages=[];
@@ -3019,10 +3068,10 @@ renderSelectedMahallas();
 
 
 // =========================================================================
-// 🔄 ESKI FUNKSIYALARNI INTEGRATSIYA QILISH VA SCADA ANIMATSIYALARI (OVERRIDE)
+// ?? ESKI FUNKSIYALARNI INTEGRATSIYA QILISH VA SCADA ANIMATSIYALARI (OVERRIDE)
 // =========================================================================
 
-// 1. ESKI renderTree funksiyasini tahrirlash (✏️ Qalamcha bosilganda TP elementlarini ham ochish imkoni)
+// 1. ESKI renderTree funksiyasini tahrirlash (?? Qalamcha bosilganda TP elementlarini ham ochish imkoni)
 // Guruhlar bo'limida har bir fiderning ostiga unga biriktirilgan TPlarni ketma-ket joylashtiramiz.
 function renderTree(parentId, container) {
     container.innerHTML = "";
@@ -3053,7 +3102,7 @@ function renderTree(parentId, container) {
     });
 }
 
-// Guruhlar ichida TPlarni chiroyli ketma-ketlikda qalamcha (✏️) bilan chizish funksiyasi
+// Guruhlar ichida TPlarni chiroyli ketma-ketlikda qalamcha (??) bilan chizish funksiyasi
 function renderElementsInTree(folderId, childContainer) {
     if(!hetkCanAccessFolder(folderId)) return;
     database.ref('TPs').once('value', (snapshot) => {
@@ -3103,7 +3152,7 @@ if (tp.folders) {
         flex-shrink:0;
         margin-top:1px;
     ">
-        ↳
+        ?
     </span>
 
     <span style="
@@ -3196,7 +3245,7 @@ if (tp.folders) {
     });
 }
 
-// 2. Elementni tahrirlash uchun oynani ochish funksiyasi (✏️ Bosilganda hamma ma'lumot yuklanadi)
+// 2. Elementni tahrirlash uchun oynani ochish funksiyasi (?? Bosilganda hamma ma'lumot yuklanadi)
  window.openEditElement = function(tpId) {
     database.ref('TPs/' + tpId).once('value', (snapshot) => {
         const tp = snapshot.val();
@@ -3204,14 +3253,14 @@ if (tp.folders) {
         const editMe=hetkCurrentAccount();
         const tpZoneIds=hetkGetTPWorkZoneIds(tp);
         if(editMe && !hetkCanManageElementWorkZones() && editMe.workZoneId && tpZoneIds.length && !tpZoneIds.includes(editMe.workZoneId)){
-            showToast("Bu element boshqa U/J ga biriktirilgan. Tahrirlashga ruxsat yo‘q!");
+            showToast("Bu element boshqa U/J ga biriktirilgan. Tahrirlashga ruxsat yo�q!");
             return;
         }
    originalElementData = JSON.parse(JSON.stringify(tp));
       
         resetElementForm();
         editingElementId = tpId;
-        document.getElementById('element-panel-title').innerText = "Редактировать местоположение";
+        document.getElementById('element-panel-title').innerText = "������������� ��������������";
         deleteElementBtn.classList.remove('hidden');
 
         // Ma'lumotlarni formaga yuklaymiz
@@ -3519,7 +3568,7 @@ border-left:1px dashed rgba(255,255,255,.25);
 : ""
 }
 
-<span style="color:${node.color || '#ffffff'};">📁</span>
+<span style="color:${node.color || '#ffffff'};">??</span>
 <span style="color:${activeFolderId===node.id ? '#4FC3FF' : (node.color || '#ffffff')};">
     ${node.name}${countText}
 </span>
@@ -3564,7 +3613,7 @@ if (tp.folders) {
     line-height:1.35;
     max-width:100%;
 ">
-    <span style="flex-shrink:0;margin-top:1px;">↳</span>
+    <span style="flex-shrink:0;margin-top:1px;">?</span>
 
     <span style="
         flex:1;
@@ -3642,7 +3691,7 @@ transition:.2s;
             const last = index === node.children.length - 1;
             const nextPrefix =
                 treePrefix +
-                (level===0 ? "" : (isLast ? "    " : "│   "));
+                (level===0 ? "" : (isLast ? "    " : "�   "));
 
             renderNode(
                 child,
@@ -3797,11 +3846,9 @@ normalizeSearch(tp.meterNumber || "").includes(q);
 }
 
 function normalizeSearch(text) {
-
     return (text || "")
         .toLowerCase()
-
-        // Kirill -> Lotin
+        // O‘zbek/Rus kirill -> lotin qidiruv uchun
         .replace(/қ/g, "q")
         .replace(/ғ/g, "g")
         .replace(/ҳ/g, "h")
@@ -3813,7 +3860,6 @@ function normalizeSearch(text) {
         .replace(/ш/g, "sh")
         .replace(/ж/g, "j")
         .replace(/ц/g, "s")
-
         .replace(/а/g, "a")
         .replace(/б/g, "b")
         .replace(/в/g, "v")
@@ -3836,10 +3882,7 @@ function normalizeSearch(text) {
         .replace(/ф/g, "f")
         .replace(/х/g, "x")
         .replace(/ы/g, "i")
-        .replace(/э/g, "e")
-
-        // TP
-        .replace(/тп/g, "tp");
+        .replace(/э/g, "e");
 }
 
 function refreshSearchResults(){
@@ -3873,7 +3916,7 @@ function refreshSearchResults(){
         foldersBox.style.display="block";
         resultsBox.innerHTML=`
             <div class="search-info">
-                ⚠ Qidiruvni boshlash uchun avval papkani tanlang.
+                ? Qidiruvni boshlash uchun avval papkani tanlang.
             </div>
         `;
         return;
@@ -4048,7 +4091,7 @@ foldersBox.style.display="none";
       
       resultsBox.innerHTML = `
     <div class="search-info">
-        🔑 ${getSearchTypeName()} • Topildi: ${found.length} ta element
+        ?? ${getSearchTypeName()} � Topildi: ${found.length} ta element
     </div>
     ${renderSearchTree(folderTree)}
 `;
@@ -4122,7 +4165,7 @@ if (!useSearchResults && !isPointInSelectedFolder(point)) {
     return;
 }
 
-            // 📍 DUBLIKAT NUQTALARNI OLDINI OLISH VA SCADA MILTILLASH MANTIQI
+            // ?? DUBLIKAT NUQTALARNI OLDINI OLISH VA SCADA MILTILLASH MANTIQI
             const coordKey = `${lat.toFixed(6)}_${lng.toFixed(6)}`;
 
             if (displayedPointsMap.has(coordKey)) {
@@ -4140,7 +4183,7 @@ if (!useSearchResults && !isPointInSelectedFolder(point)) {
             const primaryColor = (currentFolders[primaryFolderId] && currentFolders[primaryFolderId].color) ? currentFolders[primaryFolderId].color : '#007AFF';
 
             // Xususiy yoki ETK ekanligiga qarab sarlavha tayyorlash
-            const balanceBadge = point.isPrivate ? `<span style="color:#ff4444; font-weight:bold;">[Xususiy - ${point.ownerFirm || ''}]</span>` : `<span style="color:#007AFF; font-weight:bold;">[ЕТК balansi]</span>`;
+            const balanceBadge = point.isPrivate ? `<span style="color:#ff4444; font-weight:bold;">[Xususiy - ${point.ownerFirm || ''}]</span>` : `<span style="color:#007AFF; font-weight:bold;">[��� balansi]</span>`;
 
             // Maxsus divIcon marker yaratish
           const markerDiv = document.createElement('div');
@@ -4183,16 +4226,16 @@ const marker = L.marker([lat, lng], {
             // Popup oynasida barcha muhandislik va schotchik ma'lumotlarini chiroyli chiqarish
             let popupHtml = `
                 <div style="color:white; background:#001a2c; padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); min-width:200px;">
-                    <b style="font-size:15px; color:#fff; display:block; margin-bottom:4px;">⚡ ${displayName}</b>
+                    <b style="font-size:15px; color:#fff; display:block; margin-bottom:4px;">? ${displayName}</b>
                     ${balanceBadge}<br>
-                    <span style="font-size:12px; color:#88a0b0; display:block; margin-top:5px;"><b>Адрес:</b> ${point.address}</span>
+                    <span style="font-size:12px; color:#88a0b0; display:block; margin-top:5px;"><b>�����:</b> ${point.address}</span>
             `;
             if (point.isPrivate) {
                 popupHtml += `
                     <div style="border-top:1px dashed rgba(255,255,255,0.1); margin-top:6px; padding-top:6px; font-size:11px; color:#ffcc00;">
-                        👤 <b>Egasining ismi:</b> ${point.ownerName || '-'}<br>
-                        📞 <b>Tel:</b> ${point.ownerPhone || '-'}<br>
-                        🔢 <b>Hisoblagich №:</b> ${point.meterNumber || '-'}
+                        ?? <b>Egasining ismi:</b> ${point.ownerName || '-'}<br>
+                        ?? <b>Tel:</b> ${point.ownerPhone || '-'}<br>
+                        ?? <b>Hisoblagich �:</b> ${point.meterNumber || '-'}
                     </div>
                 `;
             }
@@ -4203,16 +4246,16 @@ display:flex;
 gap:5px;
 overflow-x:auto;">`;
 
-point.images.forEach(img=>{
+point.images.forEach((img,index)=>{
 popupHtml += `
-<img src="${img.url}"
+<img class="hetk-popup-tg-image" data-image-index="${index}" src=""
 style="
 width:90px;
 height:90px;
 object-fit:cover;
 border-radius:6px;
-cursor:pointer;"
-onclick="window.open('${img.url}','_blank')">
+cursor:pointer;
+background:#0b2a40;">
 `;
 });
 
@@ -4220,6 +4263,21 @@ popupHtml += `</div>`;
 }
 
             marker.bindPopup(popupHtml, { className: 'custom-popup-scada' });
+            marker.on('popupopen', async () => {
+                if(!point.images || !point.images.length) return;
+                const popupEl = marker.getPopup()?.getElement();
+                if(!popupEl) return;
+                const imageEls = popupEl.querySelectorAll('.hetk-popup-tg-image');
+                for(const imageEl of imageEls){
+                    const index = Number(imageEl.dataset.imageIndex);
+                    const imageData = point.images[index];
+                    if(!imageData?.fileId) continue;
+                    const secureUrl = await getTelegramFileUrl(imageData.fileId);
+                    if(!secureUrl) continue;
+                    imageEl.src = secureUrl;
+                    imageEl.onclick = () => window.open(secureUrl, '_blank');
+                }
+            });
             activeMapMarkers.push(marker);
 
             // Obyektimizni xaritaga (Map) saqlaymiz (keyingi dublikat daxldorliklarni tekshirish uchun)
@@ -4232,7 +4290,7 @@ popupHtml += `</div>`;
             
             item.innerHTML = `
                 <div style="font-weight: bold; font-size: 14px; display:flex; justify-content:space-between; align-items:center;">
-                    <span>⚡ ${displayName}</span> 
+                    <span>? ${displayName}</span> 
                     <span style="font-size:10px; opacity:0.6;">${point.isPrivate ? 'Xususiy' : 'ETK'}</span>
                 </div>
                 <div style="color: #88a0b0; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top:2px;">${point.address}</div>
@@ -4262,7 +4320,7 @@ popupHtml += `</div>`;
     });
                              }
 
-// 🔥 BAZANI PANELNI OCHMASDAN ORQA FONDA YUKLASH (YAKUNIY KOD)
+// ?? BAZANI PANELNI OCHMASDAN ORQA FONDA YUKLASH (YAKUNIY KOD)
 document.addEventListener('DOMContentLoaded', () => {
     console.log("Tizim yuklanmoqda...");
 
@@ -4481,7 +4539,7 @@ if (useSearchResults) {
 }
 
 
-// modul 📄
+// modul ??
 
 let elementModal = null;
 function createElementModal(){
@@ -4533,7 +4591,7 @@ font-size:18px;
 ">
 
 <span id="detail-short-folder">
-📂 Papka
+?? Papka
 </span>
 
 <span id="detail-title">
@@ -4559,7 +4617,7 @@ style="
 cursor:pointer;
 font-size:24px;
 color:white;
-">✕</span>
+">?</span>
 </div>
 <div
 id="detail-folder-path"
@@ -4570,7 +4628,7 @@ color:#8fb7d8;
 font-size:13px;
 border-bottom:1px solid rgba(255,255,255,.08);
 ">
-📂 Papka yo'li
+?? Papka yo'li
 </div>
 
 <div id="element-modal-content"
@@ -4617,7 +4675,7 @@ color:#d8d8d8;
 padding:6px;
 box-sizing:border-box;
 ">
-📷<br>Rasm mavjud emas
+??<br>Rasm mavjud emas
 </div>
 
 <div id="preview-zoom"
@@ -4637,7 +4695,7 @@ justify-content:center;
 cursor:pointer;
 font-size:14px;
 ">
-🔍
+??
 </div>
 </div>
 
@@ -4654,7 +4712,7 @@ cursor:pointer;
 font-weight:600;
 display:none;
 ">
-🚗 Navigatsiya
+?? Navigatsiya
 </div>
 
 <div
@@ -4668,7 +4726,7 @@ border:1px solid rgba(255,255,255,.08);
 border-radius:8px;
 display:none;
 ">
-<div style="font-weight:bold;">🕒 Yaratilgan</div>
+<div style="font-weight:bold;">?? Yaratilgan</div>
 <div id="detail-created-date"></div>
 <div id="detail-created-user"></div>
 </div>
@@ -4684,7 +4742,7 @@ border:1px solid rgba(255,255,255,.08);
 border-radius:8px;
 display:none;
 ">
-<div style="font-weight:bold;">✏️ Oxirgi tahrir</div>
+<div style="font-weight:bold;">?? Oxirgi tahrir</div>
 <div id="detail-updated-date"></div>
 <div id="detail-updated-user"></div>
 </div>
@@ -4724,7 +4782,7 @@ font-size:18px;
 font-weight:bold;
 color:#fff;
 ">
-Holati 🟢
+Holati ??
 </div>
 
 <div
@@ -4735,7 +4793,7 @@ font-size:26px;
 font-weight:bold;
 color:#ffd54f;
 ">
-⚡ 160
+? 160
 </div>
 
 </div>
@@ -4744,18 +4802,18 @@ color:#ffd54f;
 
 <div id="detail-address"
 style="margin-bottom:12px;">
-📍 Manzil
+?? Manzil
 </div>
 
 
 <div id="detail-owner"
 style="margin-bottom:12px;">
-🛠 Biriktirilgan U/J
+?? Biriktirilgan U/J
 </div>
 
 <div id="detail-phone"
 style="margin-bottom:12px;">
-U/J ni bosing — hozirgi master ko‘rinadi
+U/J ni bosing � hozirgi master ko�rinadi
 </div>
 
 <div
@@ -4772,7 +4830,7 @@ style="
 font-weight:bold;
 margin-bottom:10px;
 ">
-🔌 Boshqa manbalari
+?? Boshqa manbalari
 </div>
 <div id="detail-other-feeders-list"></div>
 </div>
@@ -4789,25 +4847,25 @@ border-top:1px solid rgba(255,255,255,.08);
 <div
 id="detail-firm"
 style="margin-bottom:12px;display:none;">
-🏢 Korxona
+?? Korxona
 </div>
 
 <div
 id="detail-firm-owner"
 style="margin-bottom:12px;display:none;">
-👤 Vakili
+?? Vakili
 </div>
 
 <div
 id="detail-firm-phone"
 style="margin-bottom:12px;display:none;">
-☎️ Korxona telefoni
+?? Korxona telefoni
 </div>
 
 <div
 id="detail-meter"
 style="display:none;">
-🔢 Hisoblagich
+?? Hisoblagich
 </div>
 
 </div>
@@ -4824,7 +4882,7 @@ font-size:16px;
 cursor:pointer;
 ">
 
-✏️ Tahrirlash
+?? Tahrirlash
 
 </button>
 
@@ -4962,7 +5020,7 @@ async function hetkShowPersonProfile(uid, fallback){
     const role=person.role ? hetkAccountRoleLabel(person) : (person.roleLabel || person.fallbackRole || 'Foydalanuvchi');
     const avatar=person.photoData ? `<img src="${hetkEscapeHtml(person.photoData)}" alt="">` : '<i class="fas fa-user"></i>';
     const zone=person.workZoneName || '';
-    const status=deleted ? 'O‘chirilgan' : (person.active===false ? 'Nofaol' : 'Faol');
+    const status=deleted ? 'O�chirilgan' : (person.active===false ? 'Nofaol' : 'Faol');
     content.innerHTML=`
       <div class="hetk-person-profile-avatar">${avatar}</div>
       <div class="hetk-person-profile-name">${hetkEscapeHtml(fullName)}</div>
@@ -4978,7 +5036,7 @@ async function hetkShowCurrentMaster(workZoneId, target){
     await loadElementWorkZones(true);
     const zone=elementWorkZonesCache[workZoneId];
     if(!zone){
-        if(target) target.innerHTML='<div class="hetk-element-uj-warning">U/J ma’lumoti topilmadi.</div>';
+        if(target) target.innerHTML='<div class="hetk-element-uj-warning">U/J ma�lumoti topilmadi.</div>';
         return;
     }
     if(!zone.currentMasterUid){
@@ -4994,7 +5052,7 @@ async function hetkShowCurrentMaster(workZoneId, target){
         }
         await hetkShowPersonProfile(zone.currentMasterUid,master);
     }catch(e){
-        if(target) target.innerHTML='<div class="hetk-element-uj-warning">Master ma’lumotini yuklab bo‘lmadi.</div>';
+        if(target) target.innerHTML='<div class="hetk-element-uj-warning">Master ma�lumotini yuklab bo�lmadi.</div>';
     }
 }
 
@@ -5025,7 +5083,7 @@ async  function showElementModal(){
     createElementModal();
   
   document.getElementById("detail-short-folder").textContent =
-    "📂 " + (
+    "?? " + (
         currentFolders[currentTP.primaryFolderId]?.name ||
         currentFolders[currentTP.folderId]?.name ||
         "-"
@@ -5040,7 +5098,7 @@ document.getElementById("detail-title-text").textContent =
     currentTP.name || "-";
   
 document.getElementById("detail-folder-path").textContent =
-    "📂 " + getFolderPath(
+    "?? " + getFolderPath(
         currentTP.primaryFolderId || currentTP.folderId
     );
   
@@ -5049,7 +5107,7 @@ document.getElementById("detail-folder-path").textContent =
  //   currentTP.name || "-";
 
 document.getElementById("detail-power").textContent =
-    "⚡ " + (currentTP.power || "-");
+    "? " + (currentTP.power || "-");
 
 
 // ===== HOLATI =====
@@ -5058,12 +5116,12 @@ const statusElement =
 statusElement.style.display =
     currentTP.status ? "block" : "none";
 if(currentTP.status){
-    let statusIcon = "🟢";
+    let statusIcon = "??";
     if(currentTP.status === "satisfactory"){
-        statusIcon = "🟡";
+        statusIcon = "??";
     }
     if(currentTP.status === "emergency"){
-        statusIcon = "🔴";
+        statusIcon = "??";
     }
     statusElement.textContent =
         "Holati " + statusIcon;
@@ -5076,7 +5134,7 @@ document.getElementById("detail-power").style.display =
 
 if(currentTP.power){
     document.getElementById("detail-power").textContent =
-        "⚡ " + currentTP.power;
+        "? " + currentTP.power;
 }
 
 // ===== MANZIL =====
@@ -5085,7 +5143,7 @@ document.getElementById("detail-address").style.display =
 
 if(currentTP.address){
     document.getElementById("detail-address").textContent =
-        "📍 " + currentTP.address;
+        "?? " + currentTP.address;
 }
 
 // ===== BIRIKTIRILGAN U/J VA HOZIRGI MASTER =====
@@ -5097,11 +5155,11 @@ if(currentWorkZoneIds.length){
     detailOwner.style.display="block";
     detailMaster.style.display="block";
     detailOwner.innerHTML = `
-      <div class="hetk-detail-uj-title">🛠 Biriktirilgan ustalik joyi</div>
+      <div class="hetk-detail-uj-title">?? Biriktirilgan ustalik joyi</div>
       <div class="hetk-detail-uj-buttons">
         ${currentWorkZoneIds.map(id=>`<button type="button" class="hetk-detail-uj-btn" data-uj-id="${hetkEscapeHtml(id)}">${hetkEscapeHtml(hetkWorkZoneName(id,currentTP))}</button>`).join('')}
       </div>`;
-    detailMaster.innerHTML='<div class="hetk-element-uj-help">U/J nomini bosing — shu U/J ning hozirgi masteri ko‘rinadi.</div>';
+    detailMaster.innerHTML='<div class="hetk-element-uj-help">U/J nomini bosing � shu U/J ning hozirgi masteri ko�rinadi.</div>';
     detailOwner.querySelectorAll('[data-uj-id]').forEach(btn=>btn.addEventListener('click', async ()=>{
         await hetkShowCurrentMaster(btn.dataset.ujId,detailMaster);
     }));
@@ -5109,8 +5167,8 @@ if(currentWorkZoneIds.length){
     // Eski elementlar uchun vaqtinchalik moslik
     detailOwner.style.display="block";
     detailMaster.style.display="block";
-    detailOwner.textContent="👤 " + (currentTP.responsiblePerson || "Eski javobgar");
-    detailMaster.textContent="📞 " + (currentTP.responsiblePhone || "-");
+    detailOwner.textContent="?? " + (currentTP.responsiblePerson || "Eski javobgar");
+    detailMaster.textContent="?? " + (currentTP.responsiblePhone || "-");
 }else{
     detailOwner.style.display="none";
     detailMaster.style.display="none";
@@ -5139,7 +5197,7 @@ if(otherFolders.length){
     const div = document.createElement("div");
     div.style.marginBottom = "10px";
     div.innerHTML =
-        "📂 " + getFolderPath(folderId);
+        "?? " + getFolderPath(folderId);
     otherFeedersList.appendChild(div);
 });
    
@@ -5153,13 +5211,13 @@ const privateBlock =
 if(currentTP.isPrivate){
     privateBlock.style.display = "block";
     document.getElementById("detail-firm").textContent =
-        "🏢 " + (currentTP.ownerFirm || "-");
+        "?? " + (currentTP.ownerFirm || "-");
     document.getElementById("detail-firm-owner").textContent =
-        "👤 " + (currentTP.ownerName || "-");
+        "?? " + (currentTP.ownerName || "-");
     document.getElementById("detail-firm-phone").textContent =
-        "☎️ " + (currentTP.ownerPhone || "-");
+        "?? " + (currentTP.ownerPhone || "-");
     document.getElementById("detail-meter").textContent =
-        "🔢 " + (currentTP.meterNumber || "-");
+        "?? " + (currentTP.meterNumber || "-");
 }else{
     privateBlock.style.display = "none";
 }
@@ -5169,28 +5227,28 @@ document.getElementById("detail-firm").style.display =
     currentTP.ownerFirm ? "block" : "none";
 
 document.getElementById("detail-firm").textContent =
-    "🏢 " + (currentTP.ownerFirm || "");
+    "?? " + (currentTP.ownerFirm || "");
 
 // ===== KORXONA VAKILI =====
 document.getElementById("detail-firm-owner").style.display =
     currentTP.ownerName ? "block" : "none";
 
 document.getElementById("detail-firm-owner").textContent =
-    "👤 " + (currentTP.ownerName || "");
+    "?? " + (currentTP.ownerName || "");
 
 // ===== KORXONA TELEFONI =====
 document.getElementById("detail-firm-phone").style.display =
     currentTP.ownerPhone ? "block" : "none";
 
 document.getElementById("detail-firm-phone").textContent =
-    "☎️ " + (currentTP.ownerPhone || "");
+    "?? " + (currentTP.ownerPhone || "");
 
 // ===== HISOBLAGICH =====
 document.getElementById("detail-meter").style.display =
     currentTP.meterNumber ? "block" : "none";
 
 document.getElementById("detail-meter").textContent =
-    "🔢 " + (currentTP.meterNumber || "");  
+    "?? " + (currentTP.meterNumber || "");  
   
 const preview = document.getElementById("preview-image");
 if (
@@ -5213,10 +5271,10 @@ border-radius:8px;
 ">
 `;
     }else{
-        preview.innerHTML="📷<br>Rasm mavjud emas";
+        preview.innerHTML="??<br>Rasm mavjud emas";
     }
 }else{ 
-    preview.innerHTML="📷<br>Rasm mavjud emas";
+    preview.innerHTML="??<br>Rasm mavjud emas";
 }
 
 
@@ -5339,11 +5397,11 @@ font-weight:bold;
 ">
 
 <span id="gallery-folder-name">
-📂 Papka
+?? Papka
 </span>
 
 <span id="gallery-element-name">
-⚡ Element
+? Element
 </span>
 
 </div>
@@ -5355,7 +5413,7 @@ font-size:34px;
 cursor:pointer;
 line-height:1;
 ">
-✕
+?
 </span>
 
 </div>
@@ -5416,7 +5474,7 @@ user-select:none;
 z-index:5;
 transition:.3s;
 ">
-❮
+?
 </div>
 
 <div
@@ -5455,7 +5513,7 @@ user-select:none;
 z-index:5;
 transition:.3s;
 ">
-❯
+?
 </div>
 
 </div>
@@ -5522,7 +5580,7 @@ async function openImageGallery(){
     createImageGallery();
 
 document.getElementById("gallery-folder-name").textContent =
-    "📂 " + (
+    "?? " + (
         currentFolders[currentTP.primaryFolderId]?.name ||
         currentFolders[currentTP.folderId]?.name ||
         "-"
@@ -5547,7 +5605,7 @@ document.getElementById("gallery-counter").textContent =
         !currentTP.images ||
         !currentTP.images.length
     ){
-        container.innerHTML = "📷 Rasm mavjud emas";
+        container.innerHTML = "?? Rasm mavjud emas";
         document
             .getElementById("image-gallery-overlay")
             .style.display = "block";
@@ -5575,7 +5633,7 @@ async function loadGalleryImage(){
     const img = galleryImages[galleryIndex];
     const imageUrl = await getTelegramFileUrl(img.fileId);
     if(!imageUrl){
-        container.innerHTML = "❌ Rasm yuklanmadi";
+        container.innerHTML = "? Rasm yuklanmadi";
         return;
     }
     container.innerHTML = `
