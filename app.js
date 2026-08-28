@@ -335,7 +335,7 @@ style="
 font-size:18px;
 margin-right:10px;
 ">
-${selectedMahallas.some(x => x.name === m.name) ? "?" : "0"}
+${selectedMahallas.some(x => x.name === m.name) ? "●" : "○"}
 </span>
 <b>${m.name}</b>
 
@@ -384,13 +384,13 @@ cursor:pointer;
 transition:.2s;
 ">
 <div>
-?? ${item.name}
+🏘 ${item.name}
 </div>
 <div>
 ${
 item.isPrimary
 ?
-'<span style="color:#00bfff;font-weight:bold;">?? Manzil</span>'
+'<span style="color:#00bfff;font-weight:bold;">📍 Manzil</span>'
 :
 ''
 }
@@ -418,9 +418,9 @@ display:flex;
 justify-content:space-between;
 margin-bottom:6px;
 ">
-<span>?? ${item.name}</span>
+<span>🏘 ${item.name}</span>
 <span>
-${item.isPrimary ? "??" : ""}
+${item.isPrimary ? "📍" : ""}
 </span>
 </div>
 `;
@@ -609,7 +609,7 @@ if (elementSearchInput) {
 }
 
 
-// ?? Qidiruv turi kodi
+// 🔑 Qidiruv turi kodi
    const searchTypeBtn = document.getElementById("search-type-btn");
 const searchTypeMenu = document.getElementById("search-type-menu");
 const applySearchType = document.getElementById("apply-search-type");
@@ -1240,72 +1240,25 @@ function refreshTreeDropdownSelection(container, selectedId) {
     }
 }
 
-// 1. Telegram xavfsiz ulanishi — bot tokeni va kanal IDlari frontendda saqlanmaydi.
-// Telegram bilan barcha aloqa Cloudflare Worker orqali amalga oshadi.
-const TELEGRAM_WORKER_URL = "https://hetk-telegram.husniddin-99-02.workers.dev";
-
-// Bu qiymatlar haqiqiy kanal ID emas — faqat Worker ichidagi kanal nomlari.
-const TELEGRAM_CHAT_ID = "main";
-const TELEGRAM_ARCHIVE_CHAT_ID = "archive";
-const TELEGRAM_DELETED_CHAT_ID = "deleted";
-
-async function hetkTelegramIdToken(){
-    if(!window.firebase || typeof firebase.auth !== "function") {
-        throw new Error("Firebase Authentication yuklanmagan");
-    }
-    const user = firebase.auth().currentUser;
-    if(!user) {
-        throw new Error("Telegram amali uchun tizimga qayta kiring");
-    }
-    return await user.getIdToken();
-}
-
-async function hetkTelegramWorkerFetch(path, options = {}){
-    const token = await hetkTelegramIdToken();
-    const headers = new Headers(options.headers || {});
-    headers.set("Authorization", `Bearer ${token}`);
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 45000);
-    try {
-        return await fetch(`${TELEGRAM_WORKER_URL}${path}`, {
-            ...options,
-            headers,
-            signal: controller.signal
-        });
-    } finally {
-        clearTimeout(timeoutId);
-    }
-}
-
-async function hetkTelegramApi(method, channel, options = {}){
-    try {
-        return await hetkTelegramWorkerFetch(
-            `/telegram/${encodeURIComponent(method)}?channel=${encodeURIComponent(channel)}`,
-            options
-        );
-    } catch(err) {
-        console.error("Telegram Worker network error:", err);
-        return new Response(JSON.stringify({
-            ok:false,
-            error: err?.name === "AbortError" ? "WORKER_TIMEOUT" : (err?.message || "WORKER_NETWORK_ERROR")
-        }), {status:599, headers:{"Content-Type":"application/json"}});
-    }
-}
+// 1. Telegram Bot Sozlamalari (Orqa fonda 0 xarajat va bepul limit bilan rasmlarni saqlash uchun)
+const TELEGRAM_BOT_TOKEN = "8992286638:AAFPqW8OuFnBe-u6WZqqxiL1h3nhlIz48Qg"; // Bot tokeningizni shu yerga yozasiz
+const TELEGRAM_CHAT_ID = "-1003934340914"; // Maxfiy kanal yoki guruh IDsini yozasiz
+const TELEGRAM_ARCHIVE_CHAT_ID = "-1003885366930";
+const TELEGRAM_DELETED_CHAT_ID = "-1004441090522";
 
 async function deleteTelegramMessages(messageIds){
 if(!messageIds || !messageIds.length) return;
 for(const messageId of messageIds){
 try{
-await hetkTelegramApi(
-"deleteMessage",
-TELEGRAM_ARCHIVE_CHAT_ID,
+await fetch(
+`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/deleteMessage`,
 {
 method:"POST",
 headers:{
 "Content-Type":"application/json"
 },
 body:JSON.stringify({
+chat_id: TELEGRAM_ARCHIVE_CHAT_ID,
 message_id: messageId
 })
 }
@@ -1319,30 +1272,18 @@ err
 }
 }
 
-const hetkTelegramBlobUrlCache = new Map();
-
 async function getTelegramFileUrl(fileId){
 try{
-if(!fileId) return null;
-if(hetkTelegramBlobUrlCache.has(fileId)){
-    return hetkTelegramBlobUrlCache.get(fileId);
-}
-const response = await hetkTelegramWorkerFetch(
-`/telegram/file?file_id=${encodeURIComponent(fileId)}`,
-{ method:"GET" }
+const response = await fetch(
+`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getFile?file_id=${fileId}`
 );
-if(!response.ok){
-    let detail = "";
-    try { detail = (await response.clone().json())?.error || ""; } catch(_) {}
-    console.error("Telegram rasm olish xatosi:", response.status, detail);
-    return null;
+const result = await response.json();
+if(!result.ok){
+return null;
 }
-const blob = await response.blob();
-const objectUrl = URL.createObjectURL(blob);
-hetkTelegramBlobUrlCache.set(fileId, objectUrl);
-return objectUrl;
+return `https://api.telegram.org/file/bot${TELEGRAM_BOT_TOKEN}/${result.result.file_path}`;
 }catch(err){
-console.error("Telegram rasm olish xatosi:", err);
+console.error(err);
 return null;
 }
 }
@@ -1591,7 +1532,7 @@ if (inputLatitude && inputLongitude) {
             .then(data => {
                 inputElementAddress.value = data.display_name || "Manzil topilmadi";
                 
-                // ? YANGI: Matn so'z o'rtasidan bo'linib, xunuk bo'lib ketmasligi uchun stillar
+                // ⚡ YANGI: Matn so'z o'rtasidan bo'linib, xunuk bo'lib ketmasligi uchun stillar
                 inputElementAddress.style.wordBreak = "keep-all";
                 inputElementAddress.style.overflowWrap = "break-word";
                 inputElementAddress.style.whiteSpace = "normal";
@@ -1651,17 +1592,17 @@ style="width:100%;height:100%;object-fit:cover;">
 
 style="width:100%;height:100%;object-fit:cover;">
 <div class="main-image-badge">
-${mainImageIndex===index ? '? Asosiy' : ''}
+${mainImageIndex===index ? '⭐ Asosiy' : ''}
 </div>
 <button type="button"
 class="set-main-image"
 data-index="${index}">
-${mainImageIndex===index ? '?' : '?'}
+${mainImageIndex===index ? '⭐' : '☆'}
 </button>
 <button type="button"
 class="existing-image-remove"
 data-index="${index}">
-?
+×
 </button>
 `;
 previewContainer.appendChild(box);
@@ -1675,21 +1616,21 @@ box.innerHTML=`
 <img src="${e.target.result}">
 <div class="main-image-badge">
 ${mainImageIndex === (existingImages.length + index)
-? '? Asosiy' : ''}
+? '⭐ Asosiy' : ''}
 </div>
 <button
 type="button"
 class="set-main-image"
 data-index="${existingImages.length + index}">
 ${mainImageIndex === (existingImages.length + index)
-? '?'
-: '?'}
+? '⭐'
+: '☆'}
 </button>
 <button
 type="button"
 class="multi-image-remove"
 data-index="${index}">
-?
+×
 </button>
 `;
   
@@ -1706,14 +1647,14 @@ document
 .forEach(x => x.innerHTML = '');
 document
 .querySelectorAll('.set-main-image')
-.forEach(x => x.innerHTML = '?');
+.forEach(x => x.innerHTML = '☆');
 const currentStar = e.target;
-currentStar.innerHTML = '?';
+currentStar.innerHTML = '⭐';
 const badge =
 currentStar.parentElement
 .querySelector('.main-image-badge');
 if(badge){
-badge.innerHTML = '? Asosiy';
+badge.innerHTML = '⭐ Asosiy';
 }
 return;
 }
@@ -1745,7 +1686,7 @@ selectedFiles.length +
 files.length > 5
 ){
 alert(
-"?? Maksimal 5 ta rasm yuklash mumkin!"
+"⚠️ Maksimal 5 ta rasm yuklash mumkin!"
 );
 return;
 }
@@ -2143,7 +2084,7 @@ async function renderElementWorkZonePicker(selectedIds){
     if(!selected.length && editingElementId) selected=existing;
     hetkSetWorkZoneIds(selected);
     if(!zones.length){
-        inputWorkZonePicker.innerHTML='<div class="hetk-element-uj-warning">Hali U/J yaratilmagan. Avval Profil > Hodimlar bo‘limida Master yaratib U/J yarating.</div>';
+        inputWorkZonePicker.innerHTML='<div class="hetk-element-uj-warning">Hali U/J yaratilmagan. Avval Profil → Hodimlar bo‘limida Master yaratib U/J yarating.</div>';
         return;
     }
     inputWorkZonePicker.innerHTML=`
@@ -2247,7 +2188,7 @@ getFolderPath(primaryFolderId);
 
 const dualText =
 folderIdsArray.length > 1
-? "\n?? Qo'shimcha ta'minot mavjud"
+? "\n🔀 Qo'shimcha ta'minot mavjud"
 : "";
       
 //const folderPath = selectedFolders;
@@ -2271,69 +2212,69 @@ getFolderPath(primaryFolderId);
 const additionalFolderPaths =
 folderIdsArray
 .filter(id => id !== primaryFolderId)
-.map(id => `?? ${getFolderPath(id)}`)
+.map(id => `📂 ${getFolderPath(id)}`)
 .join('\n\n');
 
 const folderSection =
 additionalFolderPaths
-? `?? Asosiy ta'minot
+? `📂 Asosiy ta'minot
 
 ${primaryFolderPath}
 
-?? Qo'shimcha ta'minotlar
+🔀 Qo'shimcha ta'minotlar
 
 ${additionalFolderPaths}`
-: `?? ${primaryFolderPath}`;
+: `📂 ${primaryFolderPath}`;
       
 const caption =
-`? HETK Monitoring
+`⚡ HETK Monitoring
 
-?? ${inputElementName.value}     ? Quvvati: ${inputPowerSelect.value === "other"
+📍 ${inputElementName.value}     ⚡ Quvvati: ${inputPowerSelect.value === "other"
 ? inputCustomPower.value
 : inputPowerSelect.value} kVA
 
-${inputBalanceToggle.checked ? '?? XUSUSIY' : '?? ETK'}
+${inputBalanceToggle.checked ? '🔴 XUSUSIY' : '🔵 ETK'}
 
 ${folderSection}
 
-?? Manzil:
+📍 Manzil:
 ${inputElementAddress.value || "-"}
 
-?? Kenglik (Latitude): ${inputLatitude.value}
+📌 Kenglik (Latitude): ${inputLatitude.value}
 
-?? Uzunlik (Longitude): ${inputLongitude.value}
+📌 Uzunlik (Longitude): ${inputLongitude.value}
 
-?? Navigatsiya:
+🚗 Navigatsiya:
 https://maps.google.com/?q=${inputLatitude.value},${inputLongitude.value}
 
-?? Yaratilgan:
+🕒 Yaratilgan:
 ${createdDate}
 
-?? Oxirgi tahrir:
+✏️ Oxirgi tahrir:
 ${updatedDate}
 
-?? Tahrirlagan:
+👤 Tahrirlagan:
 ${updatedBy}
 
-?? Biriktirilgan U/J:
+🛠 Biriktirilgan U/J:
 ${workZoneNamesText || "-"}
 
 ${inputBalanceToggle.checked ? `
 
-?? Korxona:
+🏢 Korxona:
 ${inputOwnerFirm.value || "-"}
 
-?? Korxona vakili:
+👤 Korxona vakili:
 ${inputOwnerName.value || "-"}
 
-?? Korxona telefoni:
+☎️ Korxona telefoni:
 ${inputOwnerPhone.value || "-"}
 
-?? Hisoblagich:
+🔢 Hisoblagich:
 ${inputMeterNumber.value || "-"}
 ` : ""}
 
-?? Qidiruv teglari
+🔎 Qidiruv teglari
 
 #${tpTag}
 #${inputBalanceToggle.checked ? 'XUSUSIY' : 'ETK'}`;
@@ -2344,11 +2285,13 @@ const media = [];
 //return;
 for(const file of selectedFiles){
 const formData = new FormData();
+formData.append(
+"chat_id",
+TELEGRAM_ARCHIVE_CHAT_ID
+);
 formData.append("photo", file);
-showSaveLoader(20,"Rasm xavfsiz kanalga yuborilmoqda...");
-const sendResponse = await hetkTelegramApi(
-"sendPhoto",
-TELEGRAM_ARCHIVE_CHAT_ID,
+const sendResponse = await fetch(
+`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`,
 {
 method:"POST",
 body:formData
@@ -2357,10 +2300,7 @@ body:formData
 const sendResult =
 await sendResponse.json();
 if(!sendResult.ok){
-hideSaveLoader();
-isSaving = false;
-console.error("TELEGRAM SEND ERROR:", sendResult);
-showToast("Telegram/Worker xatosi: " + (sendResult.description || sendResult.error || "Rasm yuborilmadi"));
+showToast("Telegramga rasm yuborishda xatolik!");
 return;
 }
 const photoArray =
@@ -2380,22 +2320,21 @@ await getTelegramFileUrl(fileId);
 uploadedTelegramImages.push({
 fileId:fileId,
 messageId:messageId,
-// Blob URL faqat shu brauzer sessiyasi uchun.
-url:""
+url:imageUrl
 });
 }
    
      if(media.length && !editingElementId) {
 media[0].caption = caption
-const albumResponse = await hetkTelegramApi(
-"sendMediaGroup",
-TELEGRAM_ARCHIVE_CHAT_ID,
+const albumResponse = await fetch(
+`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMediaGroup`,
 {
 method:"POST",
 headers:{
 "Content-Type":"application/json"
 },
 body:JSON.stringify({
+chat_id: TELEGRAM_ARCHIVE_CHAT_ID,
 media: media
 })
 }
@@ -2414,15 +2353,15 @@ console.log("ALBUM OK");
        for(const img of uploadedTelegramImages){
 if(img.messageId){
 try{
-await hetkTelegramApi(
-"deleteMessage",
-TELEGRAM_ARCHIVE_CHAT_ID,
+await fetch(
+`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/deleteMessage`,
 {
 method:"POST",
 headers:{
 "Content-Type":"application/json"
 },
 body:JSON.stringify({
+chat_id: TELEGRAM_ARCHIVE_CHAT_ID,
 message_id: img.messageId
 })
 }
@@ -2446,30 +2385,30 @@ const allImages = [
 let tpPageLink = "";
 
 const mainCaption =
-`?? HETK Monitoring
-?? ${inputElementName.value}   ? Quvvati: ${inputPowerSelect.value === "other"
+`⚡️ HETK Monitoring
+📍 ${inputElementName.value}   ⚡ Quvvati: ${inputPowerSelect.value === "other"
 ? inputCustomPower.value
 : inputPowerSelect.value} kVA
                                            
-${inputBalanceToggle.checked ? '?? XUSUSIY' : '?? ETK'}
-?? ${folderPath}${dualText}
-?? U/J: ${workZoneNamesText || "-"}
-?? Manzil:
+${inputBalanceToggle.checked ? '🔴 XUSUSIY' : '🔵 ETK'}
+📂 ${folderPath}${dualText}
+🛠 U/J: ${workZoneNamesText || "-"}
+📍 Manzil:
 ${inputElementAddress.value || "-"}
-?? Navigatsiya:
+🚗 Navigatsiya:
 https://maps.google.com/?q=${inputLatitude.value},${inputLongitude.value}
-?? Yaratilgan:
+🕒 Yaratilgan:
 ${createdDate}
-?? Oxirgi tahrir:
+✏️ Oxirgi tahrir:
 ${updatedDate}
-?? Tahrirlagan shaxs:
+👤 Tahrirlagan shaxs:
 ${updatedBy}
-?? Qidiruv teglari
+🔎 Qidiruv teglari
 
 #${tpTag}
 #${inputBalanceToggle.checked ? 'XUSUSIY' : 'ETK'}
 
-?? Qo'shimcha ma'lumot mavjud`;
+📖 Qo'shimcha ma'lumot mavjud`;
       
  mainImage = allImages[mainImageIndex];
 if(
@@ -2478,15 +2417,15 @@ mainImage.fileId &&
 !editingElementId
 ){
 
-const mainResponse = await hetkTelegramApi(
-"sendPhoto",
-TELEGRAM_CHAT_ID,
+const mainResponse = await fetch(
+`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`,
 {
 method:"POST",
 headers:{
 "Content-Type":"application/json"
 },
 body:JSON.stringify({
+chat_id: TELEGRAM_CHAT_ID,
 photo: mainImage.fileId,
 caption: mainCaption
 })
@@ -2534,11 +2473,7 @@ document.querySelector(
           mahallaLinks: selectedMahallas,
           primaryMahalla:
 selectedMahallas.find(x => x.isPrimary)?.name || "",
-          images: [...existingImages, ...uploadedTelegramImages].map(img => ({
-              ...img,
-              // Tokenli eski Telegram URL saqlanmaydi; rasm fileId orqali Worker'dan olinadi.
-              url: ""
-          })),
+          images: [...existingImages, ...uploadedTelegramImages],
           mainImageIndex: mainImageIndex,
           
   telegramMainMessageId:
@@ -2697,15 +2632,15 @@ needArchiveCaptionEdit &&
 originalElementData?.telegramArchiveMessageIds?.length
 ){
 try{
-const editResponse = await hetkTelegramApi(
-"editMessageCaption",
-TELEGRAM_ARCHIVE_CHAT_ID,
+const editResponse = await fetch(
+`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageCaption`,
 {
 method:"POST",
 headers:{
 "Content-Type":"application/json"
 },
 body:JSON.stringify({
+chat_id: TELEGRAM_ARCHIVE_CHAT_ID,
 message_id:
 originalElementData.telegramArchiveMessageIds[0],
 caption: caption
@@ -2731,15 +2666,15 @@ needArchiveCaptionEdit &&
 originalElementData?.telegramMainMessageId
 ){
 try{
-const mainEditResponse = await hetkTelegramApi(
-"editMessageCaption",
-TELEGRAM_CHAT_ID,
+const mainEditResponse = await fetch(
+`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageCaption`,
 {
 method:"POST",
 headers:{
 "Content-Type":"application/json"
 },
 body:JSON.stringify({
+chat_id: TELEGRAM_CHAT_ID,
 message_id:
 originalElementData.telegramMainMessageId,
 caption: mainCaption
@@ -2770,15 +2705,15 @@ elementData.mainImageIndex
 ];
 if(mainImage?.fileId){
 try{
-const mediaResponse = await hetkTelegramApi(
-"editMessageMedia",
-TELEGRAM_CHAT_ID,
+const mediaResponse = await fetch(
+`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageMedia`,
 {
 method:"POST",
 headers:{
 "Content-Type":"application/json"
 },
 body:JSON.stringify({
+chat_id: TELEGRAM_CHAT_ID,
 message_id:
 originalElementData.telegramMainMessageId,
 media:{
@@ -2823,15 +2758,15 @@ media:img.fileId
 }
 if(archiveMedia.length){
 archiveMedia[0].caption = caption;
-const rebuildResponse = await hetkTelegramApi(
-"sendMediaGroup",
-TELEGRAM_ARCHIVE_CHAT_ID,
+const rebuildResponse = await fetch(
+`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMediaGroup`,
 {
 method:"POST",
 headers:{
 "Content-Type":"application/json"
 },
 body:JSON.stringify({
+chat_id: TELEGRAM_ARCHIVE_CHAT_ID,
 media: archiveMedia
 })
 }
@@ -2884,7 +2819,7 @@ if (deleteElementBtn) {
        if (
 editingElementId &&
 confirm(
-"?? DIQQAT!\n\nMa'lumotlar 30 kun davomida arxivda saqlanadi.\n\nTiklash uchun administratorga murojaat qiling!.\n\nElement o'chirilsinmi?"
+"⚠️ DIQQAT!\n\nMa'lumotlar 30 kun davomida arxivda saqlanadi.\n\nTiklash uchun administratorga murojaat qiling!.\n\nElement o'chirilsinmi?"
 )
 ) {
 
@@ -2904,73 +2839,73 @@ getFolderPath(primaryFolderId);
 const additionalFolderPaths =
 folderIdsArray
 .filter(id => id !== primaryFolderId)
-.map(id => `?? ${getFolderPath(id)}`)
+.map(id => `📂 ${getFolderPath(id)}`)
 .join("\n\n");
 
 const folderSection =
 additionalFolderPaths
-? `?? Asosiy ta'minot
+? `📂 Asosiy ta'minot
 
 ${primaryFolderPath}
 
-?? Qo'shimcha ta'minotlar
+🔀 Qo'shimcha ta'minotlar
 
 ${additionalFolderPaths}`
-: `?? ${primaryFolderPath}`;
+: `📂 ${primaryFolderPath}`;
          
  const deletedCaption =
-`? TP O'CHIRILDI
+`❌ TP O'CHIRILDI
 
-?? ${originalElementData.name || "-"}    ? Quvvati: ${originalElementData.power || "-"} kVA
+📍 ${originalElementData.name || "-"}    ⚡ Quvvati: ${originalElementData.power || "-"} kVA
 
-${originalElementData.isPrivate ? "?? XUSUSIY" : "?? ETK"}
+${originalElementData.isPrivate ? "🔴 XUSUSIY" : "🔵 ETK"}
 
 ${folderSection}
 
-?? Manzil:
+📍 Manzil:
 ${originalElementData.address || "-"}
 
-?? Kenglik:
+📌 Kenglik:
 ${originalElementData.lat || "-"}
 
-?? Uzunlik:
+📌 Uzunlik:
 ${originalElementData.lng || "-"}
 
-?? Biriktirilgan U/J:
+🛠 Biriktirilgan U/J:
 ${hetkGetTPWorkZoneNames(originalElementData).join(", ") || "-"}
 
 ${originalElementData.isPrivate ? `
 
-?? Korxona:
+🏢 Korxona:
 ${originalElementData.ownerFirm || "-"}
 
-?? Korxona vakili:
+👤 Korxona vakili:
 ${originalElementData.ownerName || "-"}
 
-?? Korxona telefoni:
+☎️ Korxona telefoni:
 ${originalElementData.ownerPhone || "-"}
 
-?? Hisoblagich:
+🔢 Hisoblagich:
 ${originalElementData.meterNumber || "-"}
 ` : ""}
 
-?? Izoh:
+📝 Izoh:
 ${originalElementData.note || "-"}
 
-?? Yaratilgan:
+🕒 Yaratilgan:
 ${originalElementData.createdAt
 ? new Date(originalElementData.createdAt).toLocaleString("uz-UZ")
 : "-"}
 
-?? Oxirgi tahrir:
+✏️ Oxirgi tahrir:
 ${originalElementData.updatedAt
 ? new Date(originalElementData.updatedAt).toLocaleString("uz-UZ")
 : "-"}
 
-?? O'chirilgan:
+🗑 O'chirilgan:
 ${new Date().toLocaleString("uz-UZ")}
 
-?? Element ID:
+🆔 Element ID:
 ${editingElementId}`;
     
 const deletedMedia = [];
@@ -2984,29 +2919,29 @@ media: img.fileId
 }
 if(deletedMedia.length){
 deletedMedia[0].caption = deletedCaption;
-await hetkTelegramApi(
-"sendMediaGroup",
-TELEGRAM_DELETED_CHAT_ID,
+await fetch(
+`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMediaGroup`,
 {
 method:"POST",
 headers:{
 "Content-Type":"application/json"
 },
 body:JSON.stringify({
+chat_id: TELEGRAM_DELETED_CHAT_ID,
 media: deletedMedia
 })
 }
 );
 }else{
-await hetkTelegramApi(
-"sendMessage",
-TELEGRAM_DELETED_CHAT_ID,
+await fetch(
+`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
 {
 method:"POST",
 headers:{
 "Content-Type":"application/json"
 },
 body:JSON.stringify({
+chat_id: TELEGRAM_DELETED_CHAT_ID,
 text: deletedCaption
 })
 }
@@ -3014,15 +2949,15 @@ text: deletedCaption
 }
 
          if(originalElementData.telegramMainMessageId){
-await hetkTelegramApi(
-"deleteMessage",
-TELEGRAM_CHAT_ID,
+await fetch(
+`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/deleteMessage`,
 {
 method:"POST",
 headers:{
 "Content-Type":"application/json"
 },
 body:JSON.stringify({
+chat_id: TELEGRAM_CHAT_ID,
 message_id:
 originalElementData.telegramMainMessageId
 })
@@ -3084,10 +3019,10 @@ renderSelectedMahallas();
 
 
 // =========================================================================
-// ?? ESKI FUNKSIYALARNI INTEGRATSIYA QILISH VA SCADA ANIMATSIYALARI (OVERRIDE)
+// 🔄 ESKI FUNKSIYALARNI INTEGRATSIYA QILISH VA SCADA ANIMATSIYALARI (OVERRIDE)
 // =========================================================================
 
-// 1. ESKI renderTree funksiyasini tahrirlash (?? Qalamcha bosilganda TP elementlarini ham ochish imkoni)
+// 1. ESKI renderTree funksiyasini tahrirlash (✏️ Qalamcha bosilganda TP elementlarini ham ochish imkoni)
 // Guruhlar bo'limida har bir fiderning ostiga unga biriktirilgan TPlarni ketma-ket joylashtiramiz.
 function renderTree(parentId, container) {
     container.innerHTML = "";
@@ -3118,7 +3053,7 @@ function renderTree(parentId, container) {
     });
 }
 
-// Guruhlar ichida TPlarni chiroyli ketma-ketlikda qalamcha (??) bilan chizish funksiyasi
+// Guruhlar ichida TPlarni chiroyli ketma-ketlikda qalamcha (✏️) bilan chizish funksiyasi
 function renderElementsInTree(folderId, childContainer) {
     if(!hetkCanAccessFolder(folderId)) return;
     database.ref('TPs').once('value', (snapshot) => {
@@ -3168,7 +3103,7 @@ if (tp.folders) {
         flex-shrink:0;
         margin-top:1px;
     ">
-        ?
+        ↳
     </span>
 
     <span style="
@@ -3261,7 +3196,7 @@ if (tp.folders) {
     });
 }
 
-// 2. Elementni tahrirlash uchun oynani ochish funksiyasi (?? Bosilganda hamma ma'lumot yuklanadi)
+// 2. Elementni tahrirlash uchun oynani ochish funksiyasi (✏️ Bosilganda hamma ma'lumot yuklanadi)
  window.openEditElement = function(tpId) {
     database.ref('TPs/' + tpId).once('value', (snapshot) => {
         const tp = snapshot.val();
@@ -3584,7 +3519,7 @@ border-left:1px dashed rgba(255,255,255,.25);
 : ""
 }
 
-<span style="color:${node.color || '#ffffff'};">??</span>
+<span style="color:${node.color || '#ffffff'};">📁</span>
 <span style="color:${activeFolderId===node.id ? '#4FC3FF' : (node.color || '#ffffff')};">
     ${node.name}${countText}
 </span>
@@ -3629,7 +3564,7 @@ if (tp.folders) {
     line-height:1.35;
     max-width:100%;
 ">
-    <span style="flex-shrink:0;margin-top:1px;">?</span>
+    <span style="flex-shrink:0;margin-top:1px;">↳</span>
 
     <span style="
         flex:1;
@@ -3707,7 +3642,7 @@ transition:.2s;
             const last = index === node.children.length - 1;
             const nextPrefix =
                 treePrefix +
-                (level===0 ? "" : (isLast ? "    " : "¦   "));
+                (level===0 ? "" : (isLast ? "    " : "│   "));
 
             renderNode(
                 child,
@@ -3938,7 +3873,7 @@ function refreshSearchResults(){
         foldersBox.style.display="block";
         resultsBox.innerHTML=`
             <div class="search-info">
-                ? Qidiruvni boshlash uchun avval papkani tanlang.
+                ⚠ Qidiruvni boshlash uchun avval papkani tanlang.
             </div>
         `;
         return;
@@ -4113,7 +4048,7 @@ foldersBox.style.display="none";
       
       resultsBox.innerHTML = `
     <div class="search-info">
-        ?? ${getSearchTypeName()} • Topildi: ${found.length} ta element
+        🔑 ${getSearchTypeName()} • Topildi: ${found.length} ta element
     </div>
     ${renderSearchTree(folderTree)}
 `;
@@ -4187,7 +4122,7 @@ if (!useSearchResults && !isPointInSelectedFolder(point)) {
     return;
 }
 
-            // ?? DUBLIKAT NUQTALARNI OLDINI OLISH VA SCADA MILTILLASH MANTIQI
+            // 📍 DUBLIKAT NUQTALARNI OLDINI OLISH VA SCADA MILTILLASH MANTIQI
             const coordKey = `${lat.toFixed(6)}_${lng.toFixed(6)}`;
 
             if (displayedPointsMap.has(coordKey)) {
@@ -4248,16 +4183,16 @@ const marker = L.marker([lat, lng], {
             // Popup oynasida barcha muhandislik va schotchik ma'lumotlarini chiroyli chiqarish
             let popupHtml = `
                 <div style="color:white; background:#001a2c; padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); min-width:200px;">
-                    <b style="font-size:15px; color:#fff; display:block; margin-bottom:4px;">? ${displayName}</b>
+                    <b style="font-size:15px; color:#fff; display:block; margin-bottom:4px;">⚡ ${displayName}</b>
                     ${balanceBadge}<br>
                     <span style="font-size:12px; color:#88a0b0; display:block; margin-top:5px;"><b>Адрес:</b> ${point.address}</span>
             `;
             if (point.isPrivate) {
                 popupHtml += `
                     <div style="border-top:1px dashed rgba(255,255,255,0.1); margin-top:6px; padding-top:6px; font-size:11px; color:#ffcc00;">
-                        ?? <b>Egasining ismi:</b> ${point.ownerName || '-'}<br>
-                        ?? <b>Tel:</b> ${point.ownerPhone || '-'}<br>
-                        ?? <b>Hisoblagich №:</b> ${point.meterNumber || '-'}
+                        👤 <b>Egasining ismi:</b> ${point.ownerName || '-'}<br>
+                        📞 <b>Tel:</b> ${point.ownerPhone || '-'}<br>
+                        🔢 <b>Hisoblagich №:</b> ${point.meterNumber || '-'}
                     </div>
                 `;
             }
@@ -4268,16 +4203,16 @@ display:flex;
 gap:5px;
 overflow-x:auto;">`;
 
-point.images.forEach((img,index)=>{
+point.images.forEach(img=>{
 popupHtml += `
-<img class="hetk-popup-tg-image" data-image-index="${index}" src=""
+<img src="${img.url}"
 style="
 width:90px;
 height:90px;
 object-fit:cover;
 border-radius:6px;
-cursor:pointer;
-background:#0b2a40;">
+cursor:pointer;"
+onclick="window.open('${img.url}','_blank')">
 `;
 });
 
@@ -4285,21 +4220,6 @@ popupHtml += `</div>`;
 }
 
             marker.bindPopup(popupHtml, { className: 'custom-popup-scada' });
-            marker.on('popupopen', async () => {
-                if(!point.images || !point.images.length) return;
-                const popupEl = marker.getPopup()?.getElement();
-                if(!popupEl) return;
-                const imageEls = popupEl.querySelectorAll('.hetk-popup-tg-image');
-                for(const imageEl of imageEls){
-                    const index = Number(imageEl.dataset.imageIndex);
-                    const imageData = point.images[index];
-                    if(!imageData?.fileId) continue;
-                    const secureUrl = await getTelegramFileUrl(imageData.fileId);
-                    if(!secureUrl) continue;
-                    imageEl.src = secureUrl;
-                    imageEl.onclick = () => window.open(secureUrl, '_blank');
-                }
-            });
             activeMapMarkers.push(marker);
 
             // Obyektimizni xaritaga (Map) saqlaymiz (keyingi dublikat daxldorliklarni tekshirish uchun)
@@ -4312,7 +4232,7 @@ popupHtml += `</div>`;
             
             item.innerHTML = `
                 <div style="font-weight: bold; font-size: 14px; display:flex; justify-content:space-between; align-items:center;">
-                    <span>? ${displayName}</span> 
+                    <span>⚡ ${displayName}</span> 
                     <span style="font-size:10px; opacity:0.6;">${point.isPrivate ? 'Xususiy' : 'ETK'}</span>
                 </div>
                 <div style="color: #88a0b0; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top:2px;">${point.address}</div>
@@ -4342,7 +4262,7 @@ popupHtml += `</div>`;
     });
                              }
 
-// ?? BAZANI PANELNI OCHMASDAN ORQA FONDA YUKLASH (YAKUNIY KOD)
+// 🔥 BAZANI PANELNI OCHMASDAN ORQA FONDA YUKLASH (YAKUNIY KOD)
 document.addEventListener('DOMContentLoaded', () => {
     console.log("Tizim yuklanmoqda...");
 
@@ -4561,7 +4481,7 @@ if (useSearchResults) {
 }
 
 
-// modul ??
+// modul 📄
 
 let elementModal = null;
 function createElementModal(){
@@ -4613,7 +4533,7 @@ font-size:18px;
 ">
 
 <span id="detail-short-folder">
-?? Papka
+📂 Papka
 </span>
 
 <span id="detail-title">
@@ -4639,7 +4559,7 @@ style="
 cursor:pointer;
 font-size:24px;
 color:white;
-">?</span>
+">✕</span>
 </div>
 <div
 id="detail-folder-path"
@@ -4650,7 +4570,7 @@ color:#8fb7d8;
 font-size:13px;
 border-bottom:1px solid rgba(255,255,255,.08);
 ">
-?? Papka yo'li
+📂 Papka yo'li
 </div>
 
 <div id="element-modal-content"
@@ -4697,7 +4617,7 @@ color:#d8d8d8;
 padding:6px;
 box-sizing:border-box;
 ">
-??<br>Rasm mavjud emas
+📷<br>Rasm mavjud emas
 </div>
 
 <div id="preview-zoom"
@@ -4717,7 +4637,7 @@ justify-content:center;
 cursor:pointer;
 font-size:14px;
 ">
-??
+🔍
 </div>
 </div>
 
@@ -4734,7 +4654,7 @@ cursor:pointer;
 font-weight:600;
 display:none;
 ">
-?? Navigatsiya
+🚗 Navigatsiya
 </div>
 
 <div
@@ -4748,7 +4668,7 @@ border:1px solid rgba(255,255,255,.08);
 border-radius:8px;
 display:none;
 ">
-<div style="font-weight:bold;">?? Yaratilgan</div>
+<div style="font-weight:bold;">🕒 Yaratilgan</div>
 <div id="detail-created-date"></div>
 <div id="detail-created-user"></div>
 </div>
@@ -4764,7 +4684,7 @@ border:1px solid rgba(255,255,255,.08);
 border-radius:8px;
 display:none;
 ">
-<div style="font-weight:bold;">?? Oxirgi tahrir</div>
+<div style="font-weight:bold;">✏️ Oxirgi tahrir</div>
 <div id="detail-updated-date"></div>
 <div id="detail-updated-user"></div>
 </div>
@@ -4804,7 +4724,7 @@ font-size:18px;
 font-weight:bold;
 color:#fff;
 ">
-Holati ??
+Holati 🟢
 </div>
 
 <div
@@ -4815,7 +4735,7 @@ font-size:26px;
 font-weight:bold;
 color:#ffd54f;
 ">
-? 160
+⚡ 160
 </div>
 
 </div>
@@ -4824,13 +4744,13 @@ color:#ffd54f;
 
 <div id="detail-address"
 style="margin-bottom:12px;">
-?? Manzil
+📍 Manzil
 </div>
 
 
 <div id="detail-owner"
 style="margin-bottom:12px;">
-?? Biriktirilgan U/J
+🛠 Biriktirilgan U/J
 </div>
 
 <div id="detail-phone"
@@ -4852,7 +4772,7 @@ style="
 font-weight:bold;
 margin-bottom:10px;
 ">
-?? Boshqa manbalari
+🔌 Boshqa manbalari
 </div>
 <div id="detail-other-feeders-list"></div>
 </div>
@@ -4869,25 +4789,25 @@ border-top:1px solid rgba(255,255,255,.08);
 <div
 id="detail-firm"
 style="margin-bottom:12px;display:none;">
-?? Korxona
+🏢 Korxona
 </div>
 
 <div
 id="detail-firm-owner"
 style="margin-bottom:12px;display:none;">
-?? Vakili
+👤 Vakili
 </div>
 
 <div
 id="detail-firm-phone"
 style="margin-bottom:12px;display:none;">
-?? Korxona telefoni
+☎️ Korxona telefoni
 </div>
 
 <div
 id="detail-meter"
 style="display:none;">
-?? Hisoblagich
+🔢 Hisoblagich
 </div>
 
 </div>
@@ -4904,7 +4824,7 @@ font-size:16px;
 cursor:pointer;
 ">
 
-?? Tahrirlash
+✏️ Tahrirlash
 
 </button>
 
@@ -5105,7 +5025,7 @@ async  function showElementModal(){
     createElementModal();
   
   document.getElementById("detail-short-folder").textContent =
-    "?? " + (
+    "📂 " + (
         currentFolders[currentTP.primaryFolderId]?.name ||
         currentFolders[currentTP.folderId]?.name ||
         "-"
@@ -5120,7 +5040,7 @@ document.getElementById("detail-title-text").textContent =
     currentTP.name || "-";
   
 document.getElementById("detail-folder-path").textContent =
-    "?? " + getFolderPath(
+    "📂 " + getFolderPath(
         currentTP.primaryFolderId || currentTP.folderId
     );
   
@@ -5129,7 +5049,7 @@ document.getElementById("detail-folder-path").textContent =
  //   currentTP.name || "-";
 
 document.getElementById("detail-power").textContent =
-    "? " + (currentTP.power || "-");
+    "⚡ " + (currentTP.power || "-");
 
 
 // ===== HOLATI =====
@@ -5138,12 +5058,12 @@ const statusElement =
 statusElement.style.display =
     currentTP.status ? "block" : "none";
 if(currentTP.status){
-    let statusIcon = "??";
+    let statusIcon = "🟢";
     if(currentTP.status === "satisfactory"){
-        statusIcon = "??";
+        statusIcon = "🟡";
     }
     if(currentTP.status === "emergency"){
-        statusIcon = "??";
+        statusIcon = "🔴";
     }
     statusElement.textContent =
         "Holati " + statusIcon;
@@ -5156,7 +5076,7 @@ document.getElementById("detail-power").style.display =
 
 if(currentTP.power){
     document.getElementById("detail-power").textContent =
-        "? " + currentTP.power;
+        "⚡ " + currentTP.power;
 }
 
 // ===== MANZIL =====
@@ -5165,7 +5085,7 @@ document.getElementById("detail-address").style.display =
 
 if(currentTP.address){
     document.getElementById("detail-address").textContent =
-        "?? " + currentTP.address;
+        "📍 " + currentTP.address;
 }
 
 // ===== BIRIKTIRILGAN U/J VA HOZIRGI MASTER =====
@@ -5177,7 +5097,7 @@ if(currentWorkZoneIds.length){
     detailOwner.style.display="block";
     detailMaster.style.display="block";
     detailOwner.innerHTML = `
-      <div class="hetk-detail-uj-title">?? Biriktirilgan ustalik joyi</div>
+      <div class="hetk-detail-uj-title">🛠 Biriktirilgan ustalik joyi</div>
       <div class="hetk-detail-uj-buttons">
         ${currentWorkZoneIds.map(id=>`<button type="button" class="hetk-detail-uj-btn" data-uj-id="${hetkEscapeHtml(id)}">${hetkEscapeHtml(hetkWorkZoneName(id,currentTP))}</button>`).join('')}
       </div>`;
@@ -5189,8 +5109,8 @@ if(currentWorkZoneIds.length){
     // Eski elementlar uchun vaqtinchalik moslik
     detailOwner.style.display="block";
     detailMaster.style.display="block";
-    detailOwner.textContent="?? " + (currentTP.responsiblePerson || "Eski javobgar");
-    detailMaster.textContent="?? " + (currentTP.responsiblePhone || "-");
+    detailOwner.textContent="👤 " + (currentTP.responsiblePerson || "Eski javobgar");
+    detailMaster.textContent="📞 " + (currentTP.responsiblePhone || "-");
 }else{
     detailOwner.style.display="none";
     detailMaster.style.display="none";
@@ -5219,7 +5139,7 @@ if(otherFolders.length){
     const div = document.createElement("div");
     div.style.marginBottom = "10px";
     div.innerHTML =
-        "?? " + getFolderPath(folderId);
+        "📂 " + getFolderPath(folderId);
     otherFeedersList.appendChild(div);
 });
    
@@ -5233,13 +5153,13 @@ const privateBlock =
 if(currentTP.isPrivate){
     privateBlock.style.display = "block";
     document.getElementById("detail-firm").textContent =
-        "?? " + (currentTP.ownerFirm || "-");
+        "🏢 " + (currentTP.ownerFirm || "-");
     document.getElementById("detail-firm-owner").textContent =
-        "?? " + (currentTP.ownerName || "-");
+        "👤 " + (currentTP.ownerName || "-");
     document.getElementById("detail-firm-phone").textContent =
-        "?? " + (currentTP.ownerPhone || "-");
+        "☎️ " + (currentTP.ownerPhone || "-");
     document.getElementById("detail-meter").textContent =
-        "?? " + (currentTP.meterNumber || "-");
+        "🔢 " + (currentTP.meterNumber || "-");
 }else{
     privateBlock.style.display = "none";
 }
@@ -5249,28 +5169,28 @@ document.getElementById("detail-firm").style.display =
     currentTP.ownerFirm ? "block" : "none";
 
 document.getElementById("detail-firm").textContent =
-    "?? " + (currentTP.ownerFirm || "");
+    "🏢 " + (currentTP.ownerFirm || "");
 
 // ===== KORXONA VAKILI =====
 document.getElementById("detail-firm-owner").style.display =
     currentTP.ownerName ? "block" : "none";
 
 document.getElementById("detail-firm-owner").textContent =
-    "?? " + (currentTP.ownerName || "");
+    "👤 " + (currentTP.ownerName || "");
 
 // ===== KORXONA TELEFONI =====
 document.getElementById("detail-firm-phone").style.display =
     currentTP.ownerPhone ? "block" : "none";
 
 document.getElementById("detail-firm-phone").textContent =
-    "?? " + (currentTP.ownerPhone || "");
+    "☎️ " + (currentTP.ownerPhone || "");
 
 // ===== HISOBLAGICH =====
 document.getElementById("detail-meter").style.display =
     currentTP.meterNumber ? "block" : "none";
 
 document.getElementById("detail-meter").textContent =
-    "?? " + (currentTP.meterNumber || "");  
+    "🔢 " + (currentTP.meterNumber || "");  
   
 const preview = document.getElementById("preview-image");
 if (
@@ -5293,10 +5213,10 @@ border-radius:8px;
 ">
 `;
     }else{
-        preview.innerHTML="??<br>Rasm mavjud emas";
+        preview.innerHTML="📷<br>Rasm mavjud emas";
     }
 }else{ 
-    preview.innerHTML="??<br>Rasm mavjud emas";
+    preview.innerHTML="📷<br>Rasm mavjud emas";
 }
 
 
@@ -5419,11 +5339,11 @@ font-weight:bold;
 ">
 
 <span id="gallery-folder-name">
-?? Papka
+📂 Papka
 </span>
 
 <span id="gallery-element-name">
-? Element
+⚡ Element
 </span>
 
 </div>
@@ -5435,7 +5355,7 @@ font-size:34px;
 cursor:pointer;
 line-height:1;
 ">
-?
+✕
 </span>
 
 </div>
@@ -5496,7 +5416,7 @@ user-select:none;
 z-index:5;
 transition:.3s;
 ">
-?
+❮
 </div>
 
 <div
@@ -5535,7 +5455,7 @@ user-select:none;
 z-index:5;
 transition:.3s;
 ">
-?
+❯
 </div>
 
 </div>
@@ -5602,7 +5522,7 @@ async function openImageGallery(){
     createImageGallery();
 
 document.getElementById("gallery-folder-name").textContent =
-    "?? " + (
+    "📂 " + (
         currentFolders[currentTP.primaryFolderId]?.name ||
         currentFolders[currentTP.folderId]?.name ||
         "-"
@@ -5627,7 +5547,7 @@ document.getElementById("gallery-counter").textContent =
         !currentTP.images ||
         !currentTP.images.length
     ){
-        container.innerHTML = "?? Rasm mavjud emas";
+        container.innerHTML = "📷 Rasm mavjud emas";
         document
             .getElementById("image-gallery-overlay")
             .style.display = "block";
@@ -5655,7 +5575,7 @@ async function loadGalleryImage(){
     const img = galleryImages[galleryIndex];
     const imageUrl = await getTelegramFileUrl(img.fileId);
     if(!imageUrl){
-        container.innerHTML = "? Rasm yuklanmadi";
+        container.innerHTML = "❌ Rasm yuklanmadi";
         return;
     }
     container.innerHTML = `
