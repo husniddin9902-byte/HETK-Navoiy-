@@ -4,7 +4,7 @@
   const ROLE_DEFS = {
     super_admin: {
       label: 'Bosh administrator', level: 100,
-      createRoles: ['director','chief_engineer','tb_engineer','pto_engineer','chief_dispatcher','master','adli_kard_engineer','dispatcher','electrician','employee'],
+      createRoles: ['director','chief_engineer','regional_tb_engineer','tb_engineer','pto_engineer','chief_dispatcher','master','adli_kard_engineer','dispatcher','electrician','employee'],
       canCreateUsers: true, canDeactivateUsers: true, canManagePermissions: true, canManageFolders: true
     },
     director: {
@@ -17,9 +17,13 @@
       createRoles: ['tb_engineer','pto_engineer','chief_dispatcher','master','adli_kard_engineer','dispatcher','electrician','employee'],
       canCreateUsers: true, canDeactivateUsers: true, canManagePermissions: true, canManageFolders: true
     },
+    regional_tb_engineer: {
+      label: 'MMQXT va E muhandisi (viloyat)', level: 80,
+      createRoles: [], canCreateUsers: false, canDeactivateUsers: false, canManagePermissions: false, canManageFolders: false
+    },
     tb_engineer: {
-      label: 'TB muhandis', level: 75,
-      createRoles: [], canCreateUsers: false, canDeactivateUsers: false, canManagePermissions: true, canManageFolders: false
+      label: 'MMQXT va E muhandisi (tuman)', level: 75,
+      createRoles: [], canCreateUsers: false, canDeactivateUsers: false, canManagePermissions: false, canManageFolders: false
     },
     pto_engineer: {
       label: 'PTO muhandis', level: 65,
@@ -367,6 +371,8 @@
         updatedAt: now,
         lastLoginAt: now,
         photoData: '',
+        safety: defaultSafetyRecord(),
+        disciplinaryActions: {},
         permissions: defaultPermissionsForRole('super_admin')
       };
       const firstUpdates = {};
@@ -399,8 +405,239 @@
     if(!account) return 'Hodim';
     if(account.role === 'master' && account.workZoneName) return account.workZoneName + ' Masteri';
     if(account.role === 'electrician' && account.workZoneName) return account.workZoneName + ' Elektromontyori';
+    if(account.role === 'tb_engineer' || account.role === 'regional_tb_engineer') return ROLE_DEFS[account.role].label;
     if(account.roleLabel) return account.roleLabel;
     return ROLE_DEFS[account.role] ? ROLE_DEFS[account.role].label : (account.role || 'Hodim');
+  }
+
+  const SAFETY_GROUPS = ['I','II','III','IV','V'];
+  const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+  const DISCIPLINE_LIFETIME_MS = 365 * ONE_DAY_MS;
+
+  function defaultSafetyRecord(){
+    return {group:'I', examDate:'', validUntil:'', certificateNo:'', notes:'', updatedAt:0, updatedBy:'', updatedByName:'', updatedByRole:''};
+  }
+
+  function safetyRecord(account){
+    return Object.assign(defaultSafetyRecord(), (account && account.safety) || {});
+  }
+
+  function parseDateEnd(value){
+    if(!value) return 0;
+    if(typeof value === 'number') return value;
+    const raw=String(value).trim();
+    if(!raw) return 0;
+    const t=Date.parse(raw.length<=10 ? raw+'T23:59:59' : raw);
+    return Number.isFinite(t) ? t : 0;
+  }
+
+  function parseDateStart(value){
+    if(!value) return 0;
+    if(typeof value === 'number') return value;
+    const raw=String(value).trim();
+    const t=Date.parse(raw.length<=10 ? raw+'T00:00:00' : raw);
+    return Number.isFinite(t) ? t : 0;
+  }
+
+  function effectiveSafetyGroup(account){
+    const rec=safetyRecord(account);
+    const until=parseDateEnd(rec.validUntil);
+    if(until && until < Date.now()) return 'I';
+    return SAFETY_GROUPS.includes(String(rec.group||'').toUpperCase()) ? String(rec.group).toUpperCase() : 'I';
+  }
+
+  function permitState(account){
+    const rec=safetyRecord(account);
+    const until=parseDateEnd(rec.validUntil);
+    const start=parseDateStart(rec.examDate) || (until ? until - 365*ONE_DAY_MS : 0);
+    if(!until) return {kind:'none',days:null,hours:null,text:'Muddat kiritilmagan',percent:0,until:0};
+    const left=until-Date.now();
+    if(left<=0) return {kind:'expired',days:0,hours:0,text:'Muddati o‘tgan',percent:0,until};
+    const days=Math.floor(left/ONE_DAY_MS);
+    const hours=Math.floor((left%ONE_DAY_MS)/(60*60*1000));
+    const total=Math.max(ONE_DAY_MS,until-start);
+    const percent=Math.max(0,Math.min(100,Math.round((left/total)*100)));
+    let kind='ok';
+    if(days<=10) kind='danger'; else if(days<=30) kind='warn';
+    return {kind,days,hours,text:days+' kun '+hours+' soat qoldi',percent,until};
+  }
+
+  function formatDateOnly(value){
+    const t=parseDateStart(value);
+    if(!t) return '—';
+    return new Date(t).toLocaleDateString('uz-UZ');
+  }
+
+  function isSafetyOfficer(account){
+    const role=(account||currentAccount||{}).role;
+    return role==='tb_engineer' || role==='regional_tb_engineer';
+  }
+
+  function isDistrictSafetyOfficer(account){return !!account && account.role==='tb_engineer';}
+  function isRegionalSafetyOfficer(account){return !!account && account.role==='regional_tb_engineer';}
+
+  function isDistrictPermitCategory(target){
+    if(!target) return false;
+    if(target.role==='electrician') return true;
+    const text=(String(target.roleLabel||'')+' '+String(getRoleLabel(target)||'')).toLowerCase();
+    return text.includes('shofyor') || text.includes('shofyor') || text.includes('haydovchi');
+  }
+
+  function canEditSafetyPermit(target){
+    if(!currentAccount || !target || target.uid===currentAccount.uid) return false;
+    if(!isTargetWithinScope(target)) return false;
+    if(isRegionalSafetyOfficer(currentAccount)){
+      return target.role!=='super_admin' && target.role!=='regional_tb_engineer';
+    }
+    if(isDistrictSafetyOfficer(currentAccount)) return isDistrictPermitCategory(target);
+    return false;
+  }
+
+  function canManageDiscipline(target){
+    if(!currentAccount || !target || target.uid===currentAccount.uid) return false;
+    if(!isSafetyOfficer(currentAccount)) return false;
+    if(!isTargetWithinScope(target)) return false;
+    if(isDistrictSafetyOfficer(currentAccount) && target.role==='regional_tb_engineer') return false;
+    return target.role!=='super_admin';
+  }
+
+  function activeDisciplinaryActions(account){
+    const raw=(account && account.disciplinaryActions) || {};
+    const now=Date.now();
+    return Object.keys(raw).map(id=>Object.assign({id},raw[id]||{})).filter(x=>x && x.expiresAt && Number(x.expiresAt)>now).sort((a,b)=>Number(b.issuedAt||0)-Number(a.issuedAt||0));
+  }
+
+  function disciplineCountdown(action){
+    const left=Math.max(0,Number(action.expiresAt||0)-Date.now());
+    const days=Math.floor(left/ONE_DAY_MS);
+    const hours=Math.floor((left%ONE_DAY_MS)/(60*60*1000));
+    return days+' kun '+hours+' soat qoldi';
+  }
+
+  function safetyPermitHtml(account, opts){
+    opts=opts||{};
+    const rec=safetyRecord(account);
+    const state=permitState(account);
+    const group=effectiveSafetyGroup(account);
+    const canEdit=!!opts.canEdit;
+    return `<section class="hetk-safety-card">
+      <div class="hetk-safety-title"><div><i class="fas fa-id-badge"></i><span>MALAKA GUVOHNOMASI</span></div>${canEdit?'<button type="button" class="hetk-safety-edit-btn" data-safety-edit="'+escapeAttr(account.uid||'')+'"><i class="fas fa-pen"></i> Tahrirlash</button>':''}</div>
+      <div class="hetk-safety-main">
+        <div class="hetk-safety-group"><small>XTB guruhi</small><strong>${escapeHtml(group)}</strong><span>guruh</span></div>
+        <div class="hetk-safety-expiry"><div class="hetk-safety-expiry-top"><span>Ruxsatnoma muddati</span><b class="${state.kind}">${escapeHtml(state.text)}</b></div><div class="hetk-safety-progress"><i class="${state.kind}" style="width:${state.percent}%"></i></div><small>${state.until ? 'Amal qiladi: '+escapeHtml(new Date(state.until).toLocaleDateString('uz-UZ')) : 'TB muhandisi ma’lumot kiritadi'}</small></div>
+      </div>
+      <div class="hetk-certificate-table">
+        <div><span>Guvohnoma №</span><b>${escapeHtml(rec.certificateNo||'—')}</b></div>
+        <div><span>Bilimlar sinovi</span><b>${escapeHtml(formatDateOnly(rec.examDate))}</b></div>
+        <div><span>Amal qilish sanasi</span><b>${escapeHtml(formatDateOnly(rec.validUntil))}</b></div>
+        <div><span>Sinov / tahrir qilgan</span><b>${escapeHtml(rec.updatedByName ? rec.updatedByName+' · '+(rec.updatedByRole||'') : '—')}</b></div>
+      </div>
+      ${rec.notes?`<div class="hetk-safety-note">${escapeHtml(rec.notes)}</div>`:''}
+    </section>`;
+  }
+
+  function disciplineHtml(account, opts){
+    opts=opts||{};
+    const actions=activeDisciplinaryActions(account);
+    const canManage=!!opts.canManage;
+    return `<section class="hetk-discipline-card">
+      <div class="hetk-discipline-head"><div><i class="fas fa-exclamation-triangle"></i><span>Ogohlantirish va hayfsanlar</span></div>${canManage?'<button type="button" class="hetk-discipline-add" data-discipline-add="'+escapeAttr(account.uid||'')+'"><i class="fas fa-plus"></i> Berish</button>':''}</div>
+      <div class="hetk-discipline-list">${actions.length?actions.map(a=>`<article class="hetk-discipline-item ${a.type==='reprimand'?'reprimand':'warning'}"><div class="hetk-discipline-item-main"><b>${a.type==='reprimand'?'Hayfsan':'Ogohlantirish'}</b><p>${escapeHtml(a.reason||'Sabab ko‘rsatilmagan')}</p><small>${new Date(Number(a.issuedAt||0)).toLocaleString('uz-UZ')} · ${escapeHtml(a.issuedByName||'TB muhandisi')}</small></div><div class="hetk-discipline-time"><span>${escapeHtml(disciplineCountdown(a))}</span>${canManage?`<button type="button" data-discipline-remove="${escapeAttr(account.uid||'')}" data-action-id="${escapeAttr(a.id)}" title="Olib tashlash"><i class="fas fa-times"></i></button>`:''}</div></article>`).join(''):'<div class="hetk-discipline-empty"><i class="fas fa-check-circle"></i> Faol ogohlantirish yoki hayfsan yo‘q.</div>'}</div>
+    </section>`;
+  }
+
+  function renderProfileSafetySummary(account){
+    const summary=document.querySelector('.hetk-profile-summary');
+    const training=byId('profile-training');
+    if(!summary || !training) return;
+    let wrap=summary.querySelector('.hetk-profile-summary-actions');
+    if(!wrap){
+      wrap=document.createElement('div');wrap.className='hetk-profile-summary-actions';
+      training.parentNode.insertBefore(wrap,training);wrap.appendChild(training);
+    }
+    let card=wrap.querySelector('.hetk-profile-safety-mini');
+    if(!card){card=document.createElement('div');card.className='hetk-profile-safety-mini';wrap.appendChild(card);}
+    const st=permitState(account); const group=effectiveSafetyGroup(account);
+    card.className='hetk-profile-safety-mini '+st.kind;
+    card.innerHTML=`<div><i class="fas fa-shield-alt"></i><b>XTB · ${escapeHtml(group)} guruh</b></div><span>${escapeHtml(st.text)}</span><em><i style="width:${st.percent}%"></i></em>`;
+  }
+
+  function renderProfileSafetySections(account){
+    return safetyPermitHtml(account,{canEdit:false}) + disciplineHtml(account,{canManage:false});
+  }
+
+  function bindSafetyActions(root){
+    const scope=root || document;
+    scope.querySelectorAll('[data-safety-edit]').forEach(btn=>btn.addEventListener('click',()=>openSafetyPermitEditor(btn.dataset.safetyEdit)));
+    scope.querySelectorAll('[data-discipline-add]').forEach(btn=>btn.addEventListener('click',()=>openDisciplineEditor(btn.dataset.disciplineAdd)));
+    scope.querySelectorAll('[data-discipline-remove]').forEach(btn=>btn.addEventListener('click',()=>removeDisciplinaryAction(btn.dataset.disciplineRemove,btn.dataset.actionId)));
+  }
+
+  function closeSafetyOverlay(){ const el=byId('hetk-safety-overlay'); if(el) el.remove(); }
+
+  function openSafetyPermitEditor(uid){
+    const raw=teamUsersCache[uid]; if(!raw) return;
+    const target=Object.assign({uid},raw); if(!canEditSafetyPermit(target)) return;
+    closeSafetyOverlay();
+    const rec=safetyRecord(target);
+    const overlay=document.createElement('div'); overlay.id='hetk-safety-overlay'; overlay.className='hetk-safety-overlay';
+    overlay.innerHTML=`<div class="hetk-safety-overlay-backdrop" data-close-safety></div><div class="hetk-safety-editor"><header><div><small>${escapeHtml(target.fullName||'Hodim')}</small><h3>MALAKA GUVOHNOMASI</h3></div><button type="button" data-close-safety><i class="fas fa-times"></i></button></header><div class="hetk-safety-editor-body"><div id="hetk-safety-editor-msg" class="hetk-user-editor-message"></div><div class="hetk-safety-form-grid"><label><span>XTB guruhi *</span><select id="hetk-safety-group">${SAFETY_GROUPS.map(g=>`<option value="${g}" ${effectiveSafetyGroup(target)===g?'selected':''}>${g} guruh</option>`).join('')}</select></label><label><span>Guvohnoma raqami</span><input id="hetk-safety-cert" value="${escapeAttr(rec.certificateNo||'')}" placeholder="Masalan: 125/26"></label><label><span>Bilimlar sinovi sanasi *</span><input id="hetk-safety-exam" type="date" value="${escapeAttr(rec.examDate||'')}"></label><label><span>Ruxsatnoma amal qilish muddati *</span><input id="hetk-safety-until" type="date" value="${escapeAttr(rec.validUntil||'')}"></label></div><label class="hetk-safety-notes-label"><span>Izoh</span><textarea id="hetk-safety-notes" rows="3" placeholder="Sinov yoki ruxsatnoma bo‘yicha izoh">${escapeHtml(rec.notes||'')}</textarea></label></div><footer><button type="button" data-close-safety>Bekor qilish</button><button type="button" id="hetk-safety-save"><i class="fas fa-save"></i> Saqlash</button></footer></div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelectorAll('[data-close-safety]').forEach(x=>x.addEventListener('click',closeSafetyOverlay));
+    byId('hetk-safety-save').addEventListener('click',()=>saveSafetyPermit(uid));
+  }
+
+  async function saveSafetyPermit(uid){
+    const raw=teamUsersCache[uid]; if(!raw) return;
+    const target=Object.assign({uid},raw); if(!canEditSafetyPermit(target)) return;
+    const group=String(byId('hetk-safety-group').value||'I');
+    const certificateNo=String(byId('hetk-safety-cert').value||'').trim();
+    const examDate=String(byId('hetk-safety-exam').value||'');
+    const validUntil=String(byId('hetk-safety-until').value||'');
+    const notes=String(byId('hetk-safety-notes').value||'').trim();
+    const msg=byId('hetk-safety-editor-msg'); const btn=byId('hetk-safety-save');
+    if(!examDate || !validUntil){msg.className='hetk-user-editor-message show error';msg.textContent='Bilimlar sinovi sanasi va ruxsatnoma muddatini kiriting.';return;}
+    if(parseDateEnd(validUntil)<parseDateStart(examDate)){msg.className='hetk-user-editor-message show error';msg.textContent='Ruxsatnoma muddati sinov sanasidan oldin bo‘lishi mumkin emas.';return;}
+    setBusy(btn,true,'Saqlanmoqda...');
+    try{
+      const now=Date.now(); const roleLabel=getRoleLabel(currentAccount);
+      await databaseRef.ref('users/'+uid+'/safety').update({group,certificateNo,examDate,validUntil,notes,updatedAt:now,updatedBy:currentAccount.uid,updatedByName:currentAccount.fullName||currentAccount.login||'',updatedByRole:roleLabel});
+      closeSafetyOverlay();
+    }catch(e){msg.className='hetk-user-editor-message show error';msg.textContent=friendlyAuthError(e);}finally{setBusy(btn,false);}
+  }
+
+  function closeDisciplineOverlay(){ const el=byId('hetk-discipline-overlay'); if(el) el.remove(); }
+
+  function openDisciplineEditor(uid){
+    const raw=teamUsersCache[uid]; if(!raw) return;
+    const target=Object.assign({uid},raw); if(!canManageDiscipline(target)) return;
+    closeDisciplineOverlay();
+    const overlay=document.createElement('div');overlay.id='hetk-discipline-overlay';overlay.className='hetk-safety-overlay';
+    overlay.innerHTML=`<div class="hetk-safety-overlay-backdrop" data-close-discipline></div><div class="hetk-safety-editor hetk-discipline-editor"><header><div><small>${escapeHtml(target.fullName||'Hodim')}</small><h3>Intizomiy chora</h3></div><button type="button" data-close-discipline><i class="fas fa-times"></i></button></header><div class="hetk-safety-editor-body"><div id="hetk-discipline-msg" class="hetk-user-editor-message"></div><div class="hetk-discipline-type"><label><input type="radio" name="hetk-discipline-type" value="warning" checked><span><i class="fas fa-exclamation-circle"></i> Ogohlantirish</span></label><label><input type="radio" name="hetk-discipline-type" value="reprimand"><span><i class="fas fa-gavel"></i> Hayfsan</span></label></div><label class="hetk-safety-notes-label"><span>Sababi *</span><textarea id="hetk-discipline-reason" rows="4" placeholder="Ogohlantirish yoki hayfsan sababini yozing"></textarea></label><div class="hetk-discipline-rule"><i class="fas fa-clock"></i> Chora berilgan vaqtdan boshlab 1 yil amal qiladi va muddat tugagach faol ro‘yxatdan avtomatik chiqadi.</div></div><footer><button type="button" data-close-discipline>Bekor qilish</button><button type="button" id="hetk-discipline-save"><i class="fas fa-check"></i> Tasdiqlash</button></footer></div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelectorAll('[data-close-discipline]').forEach(x=>x.addEventListener('click',closeDisciplineOverlay));
+    byId('hetk-discipline-save').addEventListener('click',()=>saveDisciplinaryAction(uid));
+  }
+
+  async function saveDisciplinaryAction(uid){
+    const raw=teamUsersCache[uid]; if(!raw) return;
+    const target=Object.assign({uid},raw); if(!canManageDiscipline(target)) return;
+    const type=(document.querySelector('input[name="hetk-discipline-type"]:checked')||{}).value||'warning';
+    const reason=String(byId('hetk-discipline-reason').value||'').trim(); const msg=byId('hetk-discipline-msg'); const btn=byId('hetk-discipline-save');
+    if(reason.length<3){msg.className='hetk-user-editor-message show error';msg.textContent='Sababini yozing.';return;}
+    setBusy(btn,true,'Saqlanmoqda...');
+    try{
+      const now=Date.now(); const ref=databaseRef.ref('users/'+uid+'/disciplinaryActions').push();
+      await ref.set({type,reason,issuedAt:now,expiresAt:now+DISCIPLINE_LIFETIME_MS,issuedByUid:currentAccount.uid,issuedByName:currentAccount.fullName||currentAccount.login||'',issuedByRole:getRoleLabel(currentAccount)});
+      closeDisciplineOverlay();
+    }catch(e){msg.className='hetk-user-editor-message show error';msg.textContent=friendlyAuthError(e);}finally{setBusy(btn,false);}
+  }
+
+  async function removeDisciplinaryAction(uid,actionId){
+    const raw=teamUsersCache[uid]; if(!raw || !actionId) return;
+    const target=Object.assign({uid},raw); if(!canManageDiscipline(target)) return;
+    if(!confirm('Bu ogohlantirish/hayfsanni olib tashlaysizmi?')) return;
+    try{await databaseRef.ref('users/'+uid+'/disciplinaryActions/'+actionId).remove();}catch(e){alert(friendlyAuthError(e));}
   }
 
   function normalizeWorkZoneName(value){
@@ -455,6 +692,7 @@
     }
     const avatar = document.querySelector('.hetk-profile-avatar');
     applyAvatar(avatar, account.photoData);
+    renderProfileSafetySummary(account);
     renderPersonalEditor(account);
     renderEmployeesManager(account);
     installLogoutButton();
@@ -478,8 +716,8 @@
           <div class="hetk-account-grid">
             <div class="hetk-account-field"><label>F.I.Sh</label><input id="hetk-edit-name" value="${escapeAttr(account.fullName || '')}"></div>
             <div class="hetk-account-field"><label>Telefon</label><input id="hetk-edit-phone" value="${escapeAttr(account.phone || '')}" placeholder="+998 ..."></div>
-            <div class="hetk-account-field"><label>Login</label><input id="hetk-edit-login" value="${escapeAttr(account.login || '')}" autocomplete="username" placeholder="Masalan: tojiev1"></div>
-            <div class="hetk-account-field"><label>Loginni o‘zgartirish uchun hozirgi parol</label><input id="hetk-login-current-password" type="password" autocomplete="current-password" placeholder="Login o‘zgarmasa shart emas"></div>
+            <div class="hetk-account-field" id="hetk-login-field"><label>Login</label><input id="hetk-edit-login" value="${escapeAttr(account.login || '')}" autocomplete="username" placeholder="Masalan: tojiev1"><small class="hetk-field-error" id="hetk-login-error"></small></div>
+            <div class="hetk-account-field" id="hetk-login-password-field"><label>Loginni o‘zgartirish uchun hozirgi parol</label><input id="hetk-login-current-password" type="password" autocomplete="current-password" placeholder="Login o‘zgarmasa shart emas"><small class="hetk-field-error" id="hetk-login-password-error"></small></div>
             <div class="hetk-account-field"><label>Lavozim</label><input value="${escapeAttr(roleLabel)}" readonly></div>
             ${(account.role==='master'||account.role==='electrician') ? `<div class="hetk-account-field"><label>Ustalik joyi</label><input value="${escapeAttr(account.workZoneName || account.region || '')}" readonly></div>` : `<div class="hetk-account-field"><label>Hudud</label><input value="${escapeAttr(account.region || '')}" readonly></div>`}
             <div class="hetk-account-field"><label>Holati</label><input value="${account.active === false ? 'Nofaol' : 'Faol'}" readonly></div>
@@ -498,6 +736,7 @@
             <div class="hetk-account-status" id="hetk-password-status"></div>
           </div>
         </div>
+        ${renderProfileSafetySections(account)}
       </div>`;
 
     const photoPreview = byId('hetk-account-photo-preview');
@@ -505,6 +744,9 @@
     byId('hetk-account-photo-input').addEventListener('change', handlePhotoUpload);
     byId('hetk-save-profile').addEventListener('click', saveProfileChanges);
     byId('hetk-change-password').addEventListener('click', changePassword);
+    bindSafetyActions(pane);
+    const loginEl=byId('hetk-edit-login'); if(loginEl) loginEl.addEventListener('input',clearLoginFieldErrors);
+    const loginPwd=byId('hetk-login-current-password'); if(loginPwd) loginPwd.addEventListener('input',clearLoginFieldErrors);
   }
 
   function roleDef(role){
@@ -642,6 +884,8 @@
     if(!currentAccount || !target) return false;
     if(target.uid === currentAccount.uid) return true;
     if(currentAccount.role === 'super_admin') return true;
+    // MMQXT va E muhandisi o‘z hududidagi barcha hodimlarni, lavozimidan qat’i nazar ko‘radi.
+    if(isSafetyOfficer(currentAccount)) return isTargetWithinScope(target);
     if(Number(target.level || roleDef(target.role).level || 0) >= Number(currentAccount.level || roleDef(currentAccount.role).level || 0)) return false;
     return isTargetWithinScope(target);
   }
@@ -687,6 +931,7 @@
         <div class="hetk-team-layout">
           <section class="hetk-team-list-card">
             <div class="hetk-team-search"><i class="fas fa-search"></i><input id="hetk-team-search" placeholder="Hodimni qidirish..."></div>
+            ${isSafetyOfficer(account) ? `<div class="hetk-safety-filters"><select id="hetk-safety-filter"><option value="all">Barcha ruxsatnomalar</option><option value="expired">Muddati o‘tgan</option><option value="10">10 kun ichida</option><option value="30">30 kun ichida</option><option value="90">90 kun ichida</option><option value="valid">Amaldagi</option><option value="none">Muddat kiritilmagan</option></select><select id="hetk-safety-group-filter"><option value="all">Barcha XTB guruhlar</option>${SAFETY_GROUPS.map(g=>`<option value="${g}">${g} guruh</option>`).join('')}</select></div>` : ''}
             <div class="hetk-team-count" id="hetk-team-count">Yuklanmoqda...</div>
             <div class="hetk-team-list" id="hetk-team-list"></div>
           </section>
@@ -770,6 +1015,8 @@
     });
     const search=byId('hetk-team-search');
     if(search) search.addEventListener('input', renderTeamList);
+    const safetyFilter=byId('hetk-safety-filter'); if(safetyFilter) safetyFilter.addEventListener('change',renderTeamList);
+    const safetyGroupFilter=byId('hetk-safety-group-filter'); if(safetyGroupFilter) safetyGroupFilter.addEventListener('change',renderTeamList);
     const add=byId('hetk-add-user');
     if(add) add.addEventListener('click', openCreateUserEditor);
     document.querySelectorAll('[data-close-user-editor]').forEach(el => el.addEventListener('click', closeUserEditor));
@@ -783,12 +1030,33 @@
 
   function getVisibleUsers(){
     const q=String((byId('hetk-team-search') && byId('hetk-team-search').value) || '').trim().toLowerCase();
+    const permitFilter=String((byId('hetk-safety-filter')&&byId('hetk-safety-filter').value)||'all');
+    const groupFilter=String((byId('hetk-safety-group-filter')&&byId('hetk-safety-group-filter').value)||'all');
     return Object.keys(teamUsersCache).map(uid => Object.assign({uid},teamUsersCache[uid] || {})).filter(canViewTarget).filter(u => {
-      if(!q) return true;
-      const roots=accountFolderRoots(u);
-      const paths=roots.map(id=>folderPath(id)).join(' ');
-      return [u.fullName,u.login,getRoleLabel(u),u.region,u.workZoneName,paths].join(' ').toLowerCase().includes(q);
+      if(q){
+        const roots=accountFolderRoots(u);
+        const paths=roots.map(id=>folderPath(id)).join(' ');
+        if(![u.fullName,u.login,getRoleLabel(u),u.region,u.workZoneName,paths].join(' ').toLowerCase().includes(q)) return false;
+      }
+      if(groupFilter!=='all' && effectiveSafetyGroup(u)!==groupFilter) return false;
+      if(permitFilter!=='all'){
+        const st=permitState(u);
+        if(permitFilter==='expired' && st.kind!=='expired') return false;
+        if(permitFilter==='none' && st.kind!=='none') return false;
+        if(permitFilter==='valid' && (st.kind==='expired'||st.kind==='none')) return false;
+        if(['10','30','90'].includes(permitFilter)){
+          const limit=Number(permitFilter);
+          if(st.days===null || st.kind==='expired' || st.days>limit) return false;
+        }
+      }
+      return true;
     }).sort((a,b) => {
+      if(isSafetyOfficer(currentAccount)){
+        const ax=permitState(a), bx=permitState(b);
+        const av=ax.kind==='expired'?-1:(ax.days===null?999999:ax.days);
+        const bv=bx.kind==='expired'?-1:(bx.days===null?999999:bx.days);
+        if(av!==bv) return av-bv;
+      }
       if(a.uid === currentAccount.uid) return -1;
       if(b.uid === currentAccount.uid) return 1;
       return Number(b.level||0)-Number(a.level||0) || String(a.fullName||'').localeCompare(String(b.fullName||''));
@@ -881,7 +1149,7 @@
     return `<button class="hetk-team-user hetk-team-tree-user${selected}" style="--team-depth:${depth}" type="button" data-team-uid="${escapeAttr(u.uid)}">
       <span class="hetk-team-user-avatar">${u.photoData ? `<img src="${escapeAttr(u.photoData)}" alt="">` : '<i class="fas fa-user"></i>'}</span>
       <span class="hetk-team-user-main"><b>${escapeHtml(u.fullName || 'Nomsiz hodim')}</b><small>${escapeHtml(getRoleLabel(u))}</small><em>${escapeHtml(u.login || '')}</em></span>
-      <span class="hetk-team-user-state ${u.active===false?'off':'on'}">${u.active===false?'Nofaol':'Faol'}</span>
+      <span class="hetk-team-user-side"><span class="hetk-team-safety-badge ${permitState(u).kind}">XTB ${escapeHtml(effectiveSafetyGroup(u))}</span><span class="hetk-team-user-state ${u.active===false?'off':'on'}">${u.active===false?'Nofaol':'Faol'}</span></span>
     </button>`;
   }
 
@@ -951,6 +1219,8 @@
     const roots=accountFolderRoots(u);
     const canEdit=canManageTarget(u,'permissions') || canManageTarget(u,'edit');
     const canDeactivate=canManageTarget(u,'deactivate');
+    const canSafetyEdit=canEditSafetyPermit(u);
+    const canDiscipline=canManageDiscipline(u);
     const chips=u.rootAccess ? '<span class="hetk-scope-chip root"><i class="fas fa-globe"></i> Barcha hududlar</span>' : (roots.length ? roots.map(id => `<span class="hetk-scope-chip"><i class="fas fa-folder"></i>${escapeHtml(folderPath(id) || (teamFoldersCache[id] && teamFoldersCache[id].name) || 'Papka')}</span>`).join('') : '<span class="hetk-scope-chip empty">Papka biriktirilmagan</span>');
     box.innerHTML=`
       <div class="hetk-team-detail-head">
@@ -958,6 +1228,8 @@
         <div><h3>${escapeHtml(u.fullName || 'Nomsiz hodim')}</h3><p>${escapeHtml(getRoleLabel(u))}</p><span>${escapeHtml(u.login || '')}</span></div>
         <span class="hetk-detail-status ${u.active===false?'off':'on'}"><i></i>${u.active===false?'Nofaol':'Tizimda faol'}</span>
       </div>
+      ${safetyPermitHtml(u,{canEdit:canSafetyEdit})}
+      ${disciplineHtml(u,{canManage:canDiscipline})}
       <div class="hetk-team-detail-section"><h4>Ruxsat etilgan hududlar</h4><div class="hetk-scope-chips">${chips}</div></div>
       <div class="hetk-team-detail-grid">
         <div><span>Telefon</span><b>${escapeHtml(u.phone || '—')}</b></div>
@@ -969,13 +1241,11 @@
         ${canEdit ? '<button type="button" id="hetk-edit-team-user" class="primary"><i class="fas fa-user-shield"></i> Lavozim / papka ruxsatlari</button>' : ''}
         ${canDeactivate ? `<button type="button" id="hetk-toggle-team-user" class="${u.active===false?'restore':'danger'}"><i class="fas ${u.active===false?'fa-user-check':'fa-user-slash'}"></i> ${u.active===false?'Qayta faollashtirish':'Bloklash'}</button>` : ''}
         ${(canDeactivate && u.active===false) ? '<button type="button" id="hetk-delete-team-user" class="permanent"><i class="fas fa-trash-alt"></i> Butunlay o‘chirish</button>' : ''}
-      </div>` : '<div class="hetk-team-readonly"><i class="fas fa-lock"></i> Bu foydalanuvchini boshqarish huquqi yo‘q.</div>'}`;
-    const edit=byId('hetk-edit-team-user');
-    if(edit) edit.addEventListener('click', () => openEditUserEditor(uid));
-    const toggle=byId('hetk-toggle-team-user');
-    if(toggle) toggle.addEventListener('click', () => toggleUserActive(uid));
-    const del=byId('hetk-delete-team-user');
-    if(del) del.addEventListener('click', () => deleteUserPermanently(uid));
+      </div>` : ((!canSafetyEdit && !canDiscipline) ? '<div class="hetk-team-readonly"><i class="fas fa-lock"></i> Bu foydalanuvchining lavozim/papka ma’lumotlarini boshqarish huquqi yo‘q.</div>' : '')}`;
+    const edit=byId('hetk-edit-team-user'); if(edit) edit.addEventListener('click', () => openEditUserEditor(uid));
+    const toggle=byId('hetk-toggle-team-user'); if(toggle) toggle.addEventListener('click', () => toggleUserActive(uid));
+    const del=byId('hetk-delete-team-user'); if(del) del.addEventListener('click', () => deleteUserPermanently(uid));
+    bindSafetyActions(box);
   }
 
   function editorMessage(type,text){
@@ -1321,7 +1591,8 @@
           }
           const account=Object.assign({},patch,{
             uid,login,authEmail:internalEmail,active:true,createdAt:now,createdBy:currentAccount.uid,
-            createdByName:currentAccount.fullName || currentAccount.login || 'Admin',lastLoginAt:0,photoData:''
+            createdByName:currentAccount.fullName || currentAccount.login || 'Admin',lastLoginAt:0,photoData:'',
+            safety:defaultSafetyRecord(),disciplinaryActions:{}
           });
           if(needsZone){account.workZoneId=finalZoneId;account.workZoneName=zoneName;account.region=zoneName;}
           updates['users/'+uid]=account;
@@ -1399,7 +1670,7 @@
             }
           });
         }
-        updates['users/'+editingTeamUid]=patch;
+        Object.keys(patch).forEach(key => { updates['users/'+editingTeamUid+'/'+key]=patch[key]; });
         await databaseRef.ref().update(updates);
         closeUserEditor();
       }
@@ -1486,6 +1757,20 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
     menu.appendChild(btn);
   }
 
+  function clearLoginFieldErrors(){
+    ['hetk-login-field','hetk-login-password-field'].forEach(id=>{const el=byId(id);if(el) el.classList.remove('has-error');});
+    ['hetk-login-error','hetk-login-password-error'].forEach(id=>{const el=byId(id);if(el) el.textContent='';});
+  }
+
+  function setLoginFieldError(which,text){
+    const field=byId(which==='login'?'hetk-login-field':'hetk-login-password-field');
+    const err=byId(which==='login'?'hetk-login-error':'hetk-login-password-error');
+    if(field) field.classList.add('has-error');
+    if(err) err.textContent=text||'';
+    const input=byId(which==='login'?'hetk-edit-login':'hetk-login-current-password');
+    if(input){input.focus(); try{input.scrollIntoView({behavior:'smooth',block:'center'});}catch(_e){}}
+  }
+
   async function saveProfileChanges(){
     if(!currentAccount || !auth.currentUser) return;
     const name = String(byId('hetk-edit-name').value || '').trim();
@@ -1494,10 +1779,11 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
     const newLogin = normalizeLogin(byId('hetk-edit-login').value || '');
     const loginPassword = String(byId('hetk-login-current-password').value || '');
     const status = byId('hetk-profile-save-status');
+    clearLoginFieldErrors();
     if(name.length < 3){ status.className='hetk-account-status error'; status.textContent='F.I.Sh ni to‘liq kiriting.'; return; }
-    if(newLogin.length < 3){ status.className='hetk-account-status error'; status.textContent='Login kamida 3 ta belgidan iborat bo‘lsin.'; return; }
+    if(newLogin.length < 3){ status.className='hetk-account-status error'; status.textContent='Login kamida 3 ta belgidan iborat bo‘lsin.'; setLoginFieldError('login','Login kamida 3 ta belgidan iborat bo‘lsin.'); return; }
     const loginChanged = newLogin !== oldLogin;
-    if(loginChanged && !loginPassword){ status.className='hetk-account-status error'; status.textContent='Loginni o‘zgartirish uchun hozirgi parolingizni kiriting.'; return; }
+    if(loginChanged && !loginPassword){ status.className='hetk-account-status error'; status.textContent='Login o‘zgargan. Hozirgi parolingizni kiriting.'; setLoginFieldError('password','Loginni saqlash uchun hozirgi parol majburiy.'); return; }
     const btn = byId('hetk-save-profile');
     setBusy(btn,true,'Saqlanmoqda...');
     try{
@@ -1533,7 +1819,12 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
       const pwd=byId('hetk-login-current-password'); if(pwd) pwd.value='';
     }catch(e){
       const liveStatus=byId('hetk-profile-save-status') || status;
-      liveStatus.className='hetk-account-status error'; liveStatus.textContent=friendlyAuthError(e);
+      const friendly=friendlyAuthError(e);
+      liveStatus.className='hetk-account-status error'; liveStatus.textContent=friendly;
+      if(loginChanged){
+        if(e && ['auth/wrong-password','auth/invalid-credential','auth/invalid-login-credentials'].includes(e.code)) setLoginFieldError('password','Hozirgi parol noto‘g‘ri.');
+        else if(String(friendly).toLowerCase().includes('login')) setLoginFieldError('login',friendly);
+      }
     }finally{ setBusy(btn,false); }
   }
 
@@ -1687,6 +1978,8 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
     getAccountRoleLabel(account){return getRoleLabel(account);},
     getWorkZones(){return teamWorkZonesCache;},
     canManageElementWorkZones(){return !!(this.currentUser && ['super_admin','director','chief_engineer'].includes(this.currentUser.role));},
+    getSafetyGroup(account){return effectiveSafetyGroup(account||this.currentUser);},
+    getPermitState(account){return permitState(account||this.currentUser);},
     canCreateRole(targetRole){
       const me=this.currentUser;
       return !!(me && (roleDef(me.role).createRoles || []).includes(targetRole));
