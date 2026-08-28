@@ -270,3 +270,93 @@
   .hetk-person-profile-card{padding:22px 16px 17px;border-radius:15px;}
   .hetk-person-profile-info{grid-template-columns:1fr 1fr;}
 }
+
+/* ===== STAGE 5 — login xatoni aniq ko‘rsatish ===== */
+.hetk-account-field.has-error input,
+.hetk-account-field.has-error select{
+  border-color:#d92d20 !important;
+  box-shadow:0 0 0 3px rgba(217,45,32,.11) !important;
+  background:#fff7f6 !important;
+}
+.hetk-field-error{display:none;margin-top:6px;color:#b42318;font-size:11px;font-weight:700;line-height:1.35;}
+.hetk-account-field.has-error .hetk-field-error{display:block;}
+
+/* ===== STAGE 5 — profil tepasidagi XTB holati ===== */
+.hetk-profile-summary-actions{display:flex;align-items:stretch;justify-content:flex-end;gap:9px;min-width:0;}
+.hetk-profile-summary-actions .hetk-profile-training{min-width:145px;}
+.hetk-profile-safety-mini{
+  min-width:170px;max-width:210px;padding:8px 10px;border-radius:10px;background:#f3f8fc;border:1px solid #d8e6f0;
+  display:flex;flex-direction:column;justify-content:center;gap:4px;color:#35536b;box-sizing:border-box;
+}
+.hetk-profile-safety-mini>div{display:flex;align-items:center;gap:6px;font-size:11px;white-space:nowrap;}
+.hetk-profile-safety-mini>div i{color:#1687ff}.hetk-profile-safety-mini>div b{font-size:11px;}
+.hetk-profile-safety-mini>span{font-size:9px;color:#6f8194;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.hetk-profile-safety-mini>em{height:4px;border-radius:999px;background:#dde7ef;overflow:hidden;display:block;}
+.hetk-profile-safety-mini>em i{display:block;height:100%;border-radius:inherit;background:#25a667;}
+.hetk-profile-safety-mini.warn>em i{background:#f79009}.hetk-profile-safety-mini.danger>em i,.hetk-profile-safety-mini.expired>em i{background:#d92d20}
+.hetk-profile-safety-mini.expired,.hetk-profile-safety-mini.danger{background:#fff4f2;border-color:#f5c2bd}.hetk-profile-safety-mini.warn{background:#fffaeb;border-color:#fedf89}
+
+/* ===== STAGE 5 — MALAKA GUVOHNOMASI ===== */
+.hetk-safety-card,.hetk-discipline-card{
+  margin:16px 0 0;background:#fff;border:1px solid #d9e4ec;border-radius:14px;overflow:hidden;box-shadow:0 5px 16px rgba(33,66,92,.055);
+}
+.hetk-account-card>.hetk-safety-card,.hetk-account-card>.hetk-discipline-card{margin:16px 28px 0;}
+.hetk-account-card>.hetk-discipline-card{margin-bottom:26px;}
+.hetk-safety-title,.hetk-discipline-head{min-height:48px;padding:9px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;background:#00233b;color:#fff;}
+.hetk-safety-title>div,.hetk-discipline-head>div{display:flex;align-items:center;gap:8px;font-weight:800;font-size:13px;letter-spacing:.25px;}
+.hetk-safety-title>div i{color:#62b7ff}.hetk-discipline-head>div i{color:#ffcc66}
+.hetk-safety-edit-btn,.hetk-discipline-add{border:0;border-radius:8px;padding:7px 10px;background:#1687ff;color:#fff;font-weight:700;font-size:10px;cursor:pointer;white-space:nowrap;}
+.hetk-safety-main{display:grid;grid-template-columns:120px minmax(0,1fr);gap:16px;align-items:center;padding:16px;}
+.hetk-safety-group{height:92px;border-radius:12px;background:#eef6fc;border:1px solid #d7e6f1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#31536b;}
+.hetk-safety-group small{font-size:9px;color:#73889a}.hetk-safety-group strong{font-size:32px;line-height:1;color:#0474c8;margin:4px 0}.hetk-safety-group span{font-size:9px;}
+.hetk-safety-expiry-top{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:10px;color:#75899a;margin-bottom:8px;}
+.hetk-safety-expiry-top b{font-size:11px;color:#16804a}.hetk-safety-expiry-top b.warn{color:#b54708}.hetk-safety-expiry-top b.danger,.hetk-safety-expiry-top b.expired{color:#b42318}.hetk-safety-expiry-top b.none{color:#667085}
+.hetk-safety-progress{height:10px;border-radius:999px;background:#e5edf3;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(0,0,0,.025);}
+.hetk-safety-progress i{height:100%;display:block;border-radius:999px;background:#25a667;transition:width .2s ease}.hetk-safety-progress i.warn{background:#f79009}.hetk-safety-progress i.danger,.hetk-safety-progress i.expired{background:#d92d20}.hetk-safety-progress i.none{background:#98a2b3}
+.hetk-safety-expiry>small{display:block;margin-top:7px;font-size:9px;color:#75899a;}
+.hetk-certificate-table{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-top:1px solid #e2eaf0;}
+.hetk-certificate-table>div{padding:11px 14px;border-right:1px solid #e7edf2;border-bottom:1px solid #e7edf2;min-width:0}.hetk-certificate-table>div:nth-child(2n){border-right:0;}
+.hetk-certificate-table span{display:block;font-size:9px;color:#8495a3;margin-bottom:4px}.hetk-certificate-table b{display:block;font-size:11px;color:#29475e;overflow-wrap:anywhere;}
+.hetk-safety-note{margin:10px 14px 14px;padding:10px;border-radius:9px;background:#f6f9fb;color:#60788b;font-size:10px;line-height:1.45;}
+
+/* ===== STAGE 5 — ogohlantirish / hayfsan ===== */
+.hetk-discipline-list{padding:10px;display:grid;gap:8px;}
+.hetk-discipline-item{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;border:1px solid #fedf89;background:#fffaeb;border-radius:10px;padding:10px 11px;}
+.hetk-discipline-item.reprimand{border-color:#f5c2bd;background:#fff4f2;}
+.hetk-discipline-item-main{min-width:0}.hetk-discipline-item-main b{font-size:11px;color:#b54708}.hetk-discipline-item.reprimand .hetk-discipline-item-main b{color:#b42318}
+.hetk-discipline-item-main p{margin:3px 0 5px;color:#475467;font-size:10px;line-height:1.4}.hetk-discipline-item-main small{font-size:8.5px;color:#7c8e9c;}
+.hetk-discipline-time{display:flex;align-items:center;gap:7px;flex:0 0 auto}.hetk-discipline-time>span{font-size:9px;color:#8a5b16;font-weight:700;white-space:nowrap}.hetk-discipline-item.reprimand .hetk-discipline-time>span{color:#a7352c}
+.hetk-discipline-time button{width:26px;height:26px;border-radius:50%;border:0;background:rgba(180,35,24,.1);color:#b42318;cursor:pointer;}
+.hetk-discipline-empty{padding:12px;color:#4b8166;font-size:10px;display:flex;align-items:center;gap:7px;}
+
+/* ===== STAGE 5 — TB filtrlar ===== */
+.hetk-safety-filters{display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:0 12px 10px;}
+.hetk-safety-filters select{min-width:0;height:34px;border:1px solid #d5e2ec;border-radius:8px;background:#f8fbfd;color:#3e5b72;padding:0 8px;font-size:9.5px;outline:none;}
+.hetk-team-user-side{display:flex;flex-direction:column;align-items:flex-end;gap:4px;}
+.hetk-team-safety-badge{font-size:8px;font-weight:800;padding:3px 6px;border-radius:999px;background:#eaf8f0;color:#17854d;white-space:nowrap;}
+.hetk-team-safety-badge.warn{background:#fff3d1;color:#9a6700}.hetk-team-safety-badge.danger,.hetk-team-safety-badge.expired{background:#fee4e2;color:#b42318}.hetk-team-safety-badge.none{background:#eef2f6;color:#667085}
+
+/* ===== STAGE 5 — TB tahrirlash oynalari ===== */
+.hetk-safety-overlay{position:fixed;inset:0;z-index:2800000;display:flex;align-items:center;justify-content:center;padding:18px;box-sizing:border-box;}
+.hetk-safety-overlay-backdrop{position:absolute;inset:0;background:rgba(0,18,31,.72);backdrop-filter:blur(2px);}
+.hetk-safety-editor{position:relative;width:min(620px,calc(100vw - 26px));max-height:min(760px,calc(100vh - 30px));overflow:auto;border-radius:17px;background:#fff;box-shadow:0 25px 80px rgba(0,0,0,.4);color:#253d51;}
+.hetk-safety-editor header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 18px;background:#00233b;color:#fff;position:sticky;top:0;z-index:2;}
+.hetk-safety-editor header small{display:block;color:#91afc3;font-size:10px;margin-bottom:2px}.hetk-safety-editor header h3{margin:0;font-size:18px}.hetk-safety-editor header button{width:36px;height:36px;border:0;border-radius:50%;background:rgba(255,255,255,.1);color:#fff;cursor:pointer;}
+.hetk-safety-editor-body{padding:18px}.hetk-safety-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.hetk-safety-form-grid label,.hetk-safety-notes-label{display:block}.hetk-safety-form-grid label>span,.hetk-safety-notes-label>span{display:block;font-size:11px;font-weight:700;color:#536b7e;margin-bottom:6px}
+.hetk-safety-form-grid input,.hetk-safety-form-grid select,.hetk-safety-notes-label textarea{width:100%;box-sizing:border-box;border:1px solid #d4e1ea;border-radius:9px;background:#f8fbfd;color:#243b4d;padding:10px 11px;font:inherit;font-size:12px;outline:none}.hetk-safety-notes-label{margin-top:12px}.hetk-safety-notes-label textarea{resize:vertical;}
+.hetk-safety-editor footer{display:flex;justify-content:flex-end;gap:9px;padding:12px 18px 16px;border-top:1px solid #e5ecf1}.hetk-safety-editor footer button{border:0;border-radius:9px;padding:10px 14px;font-weight:700;cursor:pointer}.hetk-safety-editor footer button:last-child{background:#1687ff;color:#fff;}
+.hetk-discipline-type{display:grid;grid-template-columns:1fr 1fr;gap:9px}.hetk-discipline-type input{position:absolute;opacity:0;pointer-events:none}.hetk-discipline-type span{display:flex;align-items:center;justify-content:center;gap:7px;border:1px solid #d9e4ec;border-radius:10px;padding:12px;background:#f8fbfd;color:#526b7d;font-weight:700;cursor:pointer}.hetk-discipline-type input:checked+span{border-color:#1687ff;background:#eaf4ff;color:#0875cc;box-shadow:0 0 0 2px rgba(22,135,255,.09)}
+.hetk-discipline-rule{margin-top:12px;padding:10px;border-radius:9px;background:#f6f9fb;color:#61798b;font-size:10px;line-height:1.45;}
+
+@media(max-width:720px){
+  .hetk-profile-summary-actions{width:100%;grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;}
+  .hetk-profile-summary-actions .hetk-profile-training{min-width:0;width:100%;padding:0 8px;font-size:12px;}
+  .hetk-profile-safety-mini{min-width:0;max-width:none;width:100%;padding:7px 9px;}
+  .hetk-profile-safety-mini>div b{font-size:10px}.hetk-profile-safety-mini>span{font-size:8px;}
+  .hetk-account-card>.hetk-safety-card,.hetk-account-card>.hetk-discipline-card{margin:14px 14px 0}.hetk-account-card>.hetk-discipline-card{margin-bottom:16px;}
+  .hetk-safety-main{grid-template-columns:92px minmax(0,1fr);gap:11px;padding:12px}.hetk-safety-group{height:80px}.hetk-safety-group strong{font-size:27px}
+  .hetk-certificate-table{grid-template-columns:1fr 1fr}.hetk-certificate-table>div{padding:9px 10px}
+  .hetk-discipline-item{flex-direction:column}.hetk-discipline-time{width:100%;justify-content:space-between}
+  .hetk-safety-filters{grid-template-columns:1fr;}
+  .hetk-safety-form-grid{grid-template-columns:1fr}.hetk-safety-editor{max-height:calc(100vh - 18px);width:calc(100vw - 18px)}
+}
