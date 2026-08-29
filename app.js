@@ -693,6 +693,126 @@ const balanceOptions = document.getElementById("balance-options");
 const responsibleSelected = document.getElementById("responsible-selected");
 const responsibleSelectedText = document.getElementById("responsible-selected-text");
 const responsibleOptions = document.getElementById("responsible-options");
+const HETK_FILTER_ZONE_RENDER_LIMIT = 80;
+let hetkFilterWorkZones = [];
+
+function hetkFilterWorkZonePaths(zone){
+    return Object.keys((zone && zone.folders) || {})
+        .filter(id => zone.folders[id] && currentFolders[id])
+        .map(id => getFolderPath(id))
+        .filter(Boolean);
+}
+
+function hetkVisibleWorkZonesForFilter(){
+    const me=hetkCurrentAccount();
+    if(!me) return [];
+    return Object.keys(elementWorkZonesCache || {})
+        .map(id => Object.assign({id},elementWorkZonesCache[id] || {}))
+        .filter(zone => hetkZoneAllowedForCurrentUser(zone))
+        .sort((a,b) => String(a.name || '').localeCompare(String(b.name || '')));
+}
+
+function hetkSetResponsibleFilterSelection(value){
+    const selectedValue=value && value!=='all' ? value : 'none';
+    const zone=elementWorkZonesCache && elementWorkZonesCache[selectedValue];
+    if(responsibleSelectedText){
+        responsibleSelectedText.textContent=selectedValue==='none'
+            ? 'Hammasi'
+            : ((zone && zone.name) || 'Tanlangan U/J');
+    }
+    if(responsibleOptions){
+        responsibleOptions.querySelectorAll('.responsible-option').forEach(option=>{
+            option.classList.toggle('active',option.dataset.value===selectedValue);
+        });
+    }
+}
+
+function hetkPaintResponsibleWorkZoneList(query){
+    const list=responsibleOptions && responsibleOptions.querySelector('#hetk-filter-workzone-list');
+    const info=responsibleOptions && responsibleOptions.querySelector('#hetk-filter-workzone-info');
+    if(!list) return;
+    const normalizedQuery=normalizeSearch(String(query || '').trim());
+    let matches=hetkFilterWorkZones.filter(zone=>{
+        if(!normalizedQuery) return true;
+        const paths=hetkFilterWorkZonePaths(zone);
+        return normalizeSearch([zone.name || '',...paths].join(' ')).includes(normalizedQuery);
+    });
+    const selectedId=filterState.responsible;
+    if(selectedId!=='none' && !normalizedQuery){
+        const selected=hetkFilterWorkZones.find(zone=>zone.id===selectedId);
+        const selectedIndex=matches.findIndex(zone=>zone.id===selectedId);
+        if(selected && selectedIndex>0){
+            matches.splice(selectedIndex,1);
+            matches.unshift(selected);
+        }
+    }
+    const visible=matches.slice(0,HETK_FILTER_ZONE_RENDER_LIMIT);
+    const allActive=filterState.responsible==='none';
+    const rows=[`<button type="button" class="responsible-option ${allActive?'active':''}" data-value="none" style="width:100%;padding:10px 12px;border:0;border-bottom:1px solid rgba(255,255,255,.08);background:${allActive?'rgba(0,122,255,.22)':'transparent'};color:#fff;text-align:left;cursor:pointer"><span style="font-weight:700">Hammasi</span><small style="display:block;color:#8fa8ba;margin-top:3px">Ruxsat doirasidagi barcha U/J</small></button>`];
+    visible.forEach(zone=>{
+        const paths=hetkFilterWorkZonePaths(zone);
+        const pathText=paths.length>2 ? paths.slice(0,2).join(' • ')+' • +'+(paths.length-2) : paths.join(' • ');
+        const active=filterState.responsible===zone.id;
+        rows.push(`<button type="button" class="responsible-option ${active?'active':''}" data-value="${hetkEscapeHtml(zone.id)}" style="width:100%;padding:10px 12px;border:0;border-bottom:1px solid rgba(255,255,255,.08);background:${active?'rgba(0,122,255,.22)':'transparent'};color:#fff;text-align:left;cursor:pointer"><span style="font-weight:700">${hetkEscapeHtml(zone.name || 'Nomsiz U/J')}</span>${pathText?`<small style="display:block;color:#8fa8ba;margin-top:3px;white-space:normal">${hetkEscapeHtml(pathText)}</small>`:''}</button>`);
+    });
+    if(!visible.length){
+        rows.push('<div style="padding:14px;color:#8fa8ba;text-align:center">U/J topilmadi</div>');
+    }
+    list.innerHTML=rows.join('');
+    if(info){
+        const hidden=Math.max(0,matches.length-visible.length);
+        info.textContent=hidden
+            ? `Yana ${hidden} ta U/J bor — nomi yoki hududini yozing.`
+            : `${matches.length} ta U/J ko‘rinmoqda`;
+    }
+    list.querySelectorAll('.responsible-option').forEach(option=>{
+        option.onclick=function(event){
+            event.stopPropagation();
+            filterState.responsible=this.dataset.value || 'none';
+            hetkSetResponsibleFilterSelection(filterState.responsible);
+            responsibleOptions.style.display='none';
+        };
+    });
+}
+
+async function renderResponsibleWorkZoneFilter(){
+    if(!responsibleOptions) return;
+    responsibleOptions.innerHTML='<div style="padding:12px;color:#8fa8ba;text-align:center">U/J lar yuklanmoqda...</div>';
+    try{
+        await loadElementWorkZones(true);
+        hetkFilterWorkZones=hetkVisibleWorkZonesForFilter();
+        if(filterState.responsible!=='none' && !hetkFilterWorkZones.some(zone=>zone.id===filterState.responsible)){
+            filterState.responsible='none';
+            appliedFilterState.responsible='none';
+        }
+        responsibleOptions.innerHTML=`
+          <div style="position:sticky;top:0;z-index:2;padding:9px;background:#06263a;border-bottom:1px solid rgba(255,255,255,.1)">
+            <input id="hetk-filter-workzone-search" type="search" placeholder="U/J yoki hudud nomini yozing..." style="width:100%;box-sizing:border-box;padding:10px 11px;border:1px solid rgba(255,255,255,.18);border-radius:8px;background:#071f31;color:#fff;outline:none">
+            <div id="hetk-filter-workzone-info" style="margin-top:7px;color:#8fa8ba;font-size:11px"></div>
+          </div>
+          <div id="hetk-filter-workzone-list" style="max-height:320px;overflow-y:auto"></div>`;
+        const input=responsibleOptions.querySelector('#hetk-filter-workzone-search');
+        if(input){
+            input.onclick=event=>event.stopPropagation();
+            input.oninput=()=>hetkPaintResponsibleWorkZoneList(input.value);
+        }
+        hetkPaintResponsibleWorkZoneList('');
+        hetkSetResponsibleFilterSelection(filterState.responsible);
+        if(input && hetkFilterWorkZones.length>12) setTimeout(()=>input.focus(),0);
+    }catch(error){
+        responsibleOptions.innerHTML='<div style="padding:14px;color:#ff8b8b;text-align:center">U/J larni yuklab bo‘lmadi</div>';
+    }
+}
+
+function hetkPointMatchesResponsibleFilter(tp,value){
+    if(!value || value==='none' || value==='all') return true;
+    const ids=hetkGetTPWorkZoneIds(tp);
+    if(ids.includes(value)) return true;
+    if(ids.length) return false;
+    const zone=elementWorkZonesCache && elementWorkZonesCache[value];
+    const oldName=normalizeSearch((tp && (tp.responsiblePerson || tp.responsible)) || '');
+    return !!(zone && oldName && oldName===normalizeSearch(zone.name || ''));
+}
 
 // Oxirgi yangilangan dropdown
 const updatedSelected = document.getElementById("updated-selected");
@@ -807,12 +927,17 @@ if (filterBtn && filterMenu) {
 };
 
   
-  responsibleSelected.onclick = function (e) {
+  responsibleSelected.onclick = async function (e) {
     e.stopPropagation();
 
     const isOpen = responsibleOptions.style.display === "block";
     closeAllFilterDropdowns();
-    responsibleOptions.style.display = isOpen ? "none" : "block";
+    if(isOpen){
+        responsibleOptions.style.display="none";
+        return;
+    }
+    responsibleOptions.style.display="block";
+    await renderResponsibleWorkZoneFilter();
 };
 
   updatedSelected.onclick = function (e) {
@@ -930,11 +1055,7 @@ statusOptions
         balanceSelectedText
     );
 
-    setFilterDropdown(
-        "responsible-option",
-        filterState.responsible,
-        responsibleSelectedText
-    );
+    hetkSetResponsibleFilterSelection(filterState.responsible);
 
     setFilterDropdown(
         "created-option",
@@ -993,11 +1114,7 @@ clearFilterBtn.onclick = function () {
         "none",
         balanceSelectedText
     );
-    setFilterDropdown(
-        "responsible-option",
-        "none",
-        responsibleSelectedText
-    );
+    hetkSetResponsibleFilterSelection("none");
     setFilterDropdown(
         "created-option",
         "none",
@@ -3392,6 +3509,10 @@ function applyHETKAccessControls(){
 
 document.addEventListener('hetk-auth-ready', function(){
     applyHETKAccessControls();
+    loadElementWorkZones(true).then(()=>{
+        hetkFilterWorkZones=hetkVisibleWorkZonesForFilter();
+        if(responsibleOptions && responsibleOptions.style.display==='block') renderResponsibleWorkZoneFilter();
+    }).catch(()=>{});
     const treeRoot=document.getElementById('tree-root');
     if(treeRoot && typeof renderTree==='function') renderTree('root',treeRoot);
     if(typeof renderElementTreeDropdown==='function') renderElementTreeDropdown();
@@ -3399,7 +3520,24 @@ document.addEventListener('hetk-auth-ready', function(){
     if(typeof refreshSearchResults==='function') refreshSearchResults();
 });
 
+document.addEventListener('hetk-auth-user-updated', function(){
+    loadElementWorkZones(true).then(()=>{
+        hetkFilterWorkZones=hetkVisibleWorkZonesForFilter();
+        if(filterState.responsible!=='none' && !hetkFilterWorkZones.some(zone=>zone.id===filterState.responsible)){
+            filterState.responsible='none';
+            appliedFilterState.responsible='none';
+            hetkSetResponsibleFilterSelection('none');
+        }
+        if(responsibleOptions && responsibleOptions.style.display==='block') renderResponsibleWorkZoneFilter();
+    }).catch(()=>{});
+});
+
 document.addEventListener('hetk-auth-cleared', function(){
+    elementWorkZonesCache={};
+    hetkFilterWorkZones=[];
+    filterState.responsible='none';
+    appliedFilterState.responsible='none';
+    hetkSetResponsibleFilterSelection('none');
     const treeRoot=document.getElementById('tree-root');
     if(treeRoot) treeRoot.innerHTML='';
     activeMapMarkers.forEach(m => { try{map.removeLayer(m);}catch(e){} });
@@ -3768,6 +3906,10 @@ normalizeSearch(tp.meterNumber || "").includes(q);
         return;
     }
 
+    if(!hetkPointMatchesResponsibleFilter(tp,filterState.responsible)){
+        return;
+    }
+
   found.push(tp); 
       });
     return found;
@@ -3827,6 +3969,7 @@ function refreshSearchResults(){
   
  const hasFilter =
     filterState.balance !== "none" ||
+    filterState.responsible !== "none" ||
     filterState.created !== "none" ||
     filterState.updated !== "none" ||
     filterState.comment !== "none" ||
@@ -3845,7 +3988,7 @@ function refreshSearchResults(){
     return;
 }
   
-    if(searchState.folderId==="root"){
+    if(searchState.folderId==="root" && filterState.responsible==="none"){
         resultsBox.style.display="block";
         foldersBox.style.display="block";
         resultsBox.innerHTML=`
@@ -3923,6 +4066,11 @@ if (text !== "" && !matched) {
 }
 
 // Keyingi barcha filtrlar shu yerga ulanadi
+
+// Ustalik joyi (U/J) filtri
+if(!hetkPointMatchesResponsibleFilter(tp,filterState.responsible)){
+    return;
+}
           
 // Balans filtri
 if (filterState.balance !== "all") {
@@ -4055,11 +4203,13 @@ function loadFilteredPoints() {
 const useSearchResults =
     searchState.text.trim() !== "" ||
     filterState.balance !== "none" ||
+    filterState.responsible !== "none" ||
     filterState.created !== "none" ||
     filterState.updated !== "none" ||
     filterState.comment !== "none" ||
     filterState.dual !== "none" ||
-    filterState.power !== "none";
+    filterState.power !== "none" ||
+    filterState.status !== "none";
        
         const allPoints = snapshot.val() || {};
 
@@ -4302,6 +4452,7 @@ function showFoldersTab() {
 
 const hasFilter =
     filterState.balance !== "none" ||
+    filterState.responsible !== "none" ||
     filterState.created !== "none" ||
     filterState.updated !== "none" ||
     filterState.comment !== "none" ||
@@ -4386,11 +4537,13 @@ if (panelTabItems) {
 const useSearchResults =
     searchState.text.trim() !== "" ||
     filterState.balance !== "none" ||
+    filterState.responsible !== "none" ||
     filterState.created !== "none" ||
     filterState.updated !== "none" ||
     filterState.comment !== "none" ||
     filterState.dual !== "none" ||
-    filterState.power !== "none";
+    filterState.power !== "none" ||
+    filterState.status !== "none";
 
 if (useSearchResults) {
 
@@ -5584,7 +5737,7 @@ async function nextGalleryImage(){
 async function previousGalleryImage(){
     if(galleryIndex <= 0){
         return;
-    } 
+    }
     galleryIndex--;
     await loadGalleryImage();
     showGalleryControls();
