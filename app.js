@@ -1240,27 +1240,36 @@ function refreshTreeDropdownSelection(container, selectedId) {
     }
 }
 
-// 1. Telegram Bot Sozlamalari (Orqa fonda 0 xarajat va bepul limit bilan rasmlarni saqlash uchun)
-const TELEGRAM_BOT_TOKEN = "8992286638:AAFPqW8OuFnBe-u6WZqqxiL1h3nhlIz48Qg"; // Bot tokeningizni shu yerga yozasiz
-const TELEGRAM_CHAT_ID = "-1003934340914"; // Maxfiy kanal yoki guruh IDsini yozasiz
-const TELEGRAM_ARCHIVE_CHAT_ID = "-1003885366930";
-const TELEGRAM_DELETED_CHAT_ID = "-1004441090522";
+// 1. Telegram Secure Worker sozlamalari. Bot tokeni va kanal IDlari app.js ichida saqlanmaydi.
+const TELEGRAM_WORKER_URL = "https://hetk-telegram.husniddin-99-02.workers.dev";
+
+async function getTelegramAuthToken(){
+const user = firebase.auth().currentUser;
+if(!user) throw new Error("AUTH_REQUIRED");
+return await user.getIdToken();
+}
+
+async function telegramWorkerFetch(method, channel, options = {}){
+const token = await getTelegramAuthToken();
+const headers = new Headers(options.headers || {});
+headers.set("Authorization", `Bearer ${token}`);
+return await fetch(
+`${TELEGRAM_WORKER_URL}/telegram/${method}?channel=${encodeURIComponent(channel)}`,
+{...options, headers}
+);
+}
 
 async function deleteTelegramMessages(messageIds){
 if(!messageIds || !messageIds.length) return;
 for(const messageId of messageIds){
 try{
-await fetch(
-`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/deleteMessage`,
+await telegramWorkerFetch("deleteMessage", "archive",
 {
 method:"POST",
 headers:{
 "Content-Type":"application/json"
 },
-body:JSON.stringify({
-chat_id: TELEGRAM_ARCHIVE_CHAT_ID,
-message_id: messageId
-})
+body:JSON.stringify({message_id: messageId})
 }
 );
 }catch(err){
@@ -1274,14 +1283,14 @@ err
 
 async function getTelegramFileUrl(fileId){
 try{
+const token = await getTelegramAuthToken();
 const response = await fetch(
-`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getFile?file_id=${fileId}`
+`${TELEGRAM_WORKER_URL}/telegram/file?file_id=${encodeURIComponent(fileId)}`,
+{headers:{"Authorization":`Bearer ${token}`}}
 );
-const result = await response.json();
-if(!result.ok){
-return null;
-}
-return `https://api.telegram.org/file/bot${TELEGRAM_BOT_TOKEN}/${result.result.file_path}`;
+if(!response.ok) return null;
+const blob = await response.blob();
+return URL.createObjectURL(blob);
 }catch(err){
 console.error(err);
 return null;
@@ -2285,13 +2294,8 @@ const media = [];
 //return;
 for(const file of selectedFiles){
 const formData = new FormData();
-formData.append(
-"chat_id",
-TELEGRAM_ARCHIVE_CHAT_ID
-);
 formData.append("photo", file);
-const sendResponse = await fetch(
-`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`,
+const sendResponse = await telegramWorkerFetch("sendPhoto", "archive",
 {
 method:"POST",
 body:formData
@@ -2326,17 +2330,13 @@ url:imageUrl
    
      if(media.length && !editingElementId) {
 media[0].caption = caption
-const albumResponse = await fetch(
-`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMediaGroup`,
+const albumResponse = await telegramWorkerFetch("sendMediaGroup", "archive",
 {
 method:"POST",
 headers:{
 "Content-Type":"application/json"
 },
-body:JSON.stringify({
-chat_id: TELEGRAM_ARCHIVE_CHAT_ID,
-media: media
-})
+body:JSON.stringify({media: media})
 }
 );
 const albumResult =
@@ -2353,17 +2353,13 @@ console.log("ALBUM OK");
        for(const img of uploadedTelegramImages){
 if(img.messageId){
 try{
-await fetch(
-`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/deleteMessage`,
+await telegramWorkerFetch("deleteMessage", "archive",
 {
 method:"POST",
 headers:{
 "Content-Type":"application/json"
 },
-body:JSON.stringify({
-chat_id: TELEGRAM_ARCHIVE_CHAT_ID,
-message_id: img.messageId
-})
+body:JSON.stringify({message_id: img.messageId})
 }
 );
 }catch(err){
@@ -2417,15 +2413,13 @@ mainImage.fileId &&
 !editingElementId
 ){
 
-const mainResponse = await fetch(
-`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`,
+const mainResponse = await telegramWorkerFetch("sendPhoto", "main",
 {
 method:"POST",
 headers:{
 "Content-Type":"application/json"
 },
 body:JSON.stringify({
-chat_id: TELEGRAM_CHAT_ID,
 photo: mainImage.fileId,
 caption: mainCaption
 })
@@ -2632,15 +2626,13 @@ needArchiveCaptionEdit &&
 originalElementData?.telegramArchiveMessageIds?.length
 ){
 try{
-const editResponse = await fetch(
-`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageCaption`,
+const editResponse = await telegramWorkerFetch("editMessageCaption", "archive",
 {
 method:"POST",
 headers:{
 "Content-Type":"application/json"
 },
 body:JSON.stringify({
-chat_id: TELEGRAM_ARCHIVE_CHAT_ID,
 message_id:
 originalElementData.telegramArchiveMessageIds[0],
 caption: caption
@@ -2666,15 +2658,13 @@ needArchiveCaptionEdit &&
 originalElementData?.telegramMainMessageId
 ){
 try{
-const mainEditResponse = await fetch(
-`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageCaption`,
+const mainEditResponse = await telegramWorkerFetch("editMessageCaption", "main",
 {
 method:"POST",
 headers:{
 "Content-Type":"application/json"
 },
 body:JSON.stringify({
-chat_id: TELEGRAM_CHAT_ID,
 message_id:
 originalElementData.telegramMainMessageId,
 caption: mainCaption
@@ -2705,15 +2695,13 @@ elementData.mainImageIndex
 ];
 if(mainImage?.fileId){
 try{
-const mediaResponse = await fetch(
-`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageMedia`,
+const mediaResponse = await telegramWorkerFetch("editMessageMedia", "main",
 {
 method:"POST",
 headers:{
 "Content-Type":"application/json"
 },
 body:JSON.stringify({
-chat_id: TELEGRAM_CHAT_ID,
 message_id:
 originalElementData.telegramMainMessageId,
 media:{
@@ -2758,17 +2746,13 @@ media:img.fileId
 }
 if(archiveMedia.length){
 archiveMedia[0].caption = caption;
-const rebuildResponse = await fetch(
-`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMediaGroup`,
+const rebuildResponse = await telegramWorkerFetch("sendMediaGroup", "archive",
 {
 method:"POST",
 headers:{
 "Content-Type":"application/json"
 },
-body:JSON.stringify({
-chat_id: TELEGRAM_ARCHIVE_CHAT_ID,
-media: archiveMedia
-})
+body:JSON.stringify({media: archiveMedia})
 }
 );
 const rebuildResult =
@@ -2919,45 +2903,35 @@ media: img.fileId
 }
 if(deletedMedia.length){
 deletedMedia[0].caption = deletedCaption;
-await fetch(
-`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMediaGroup`,
+await telegramWorkerFetch("sendMediaGroup", "deleted",
 {
 method:"POST",
 headers:{
 "Content-Type":"application/json"
 },
-body:JSON.stringify({
-chat_id: TELEGRAM_DELETED_CHAT_ID,
-media: deletedMedia
-})
+body:JSON.stringify({media: deletedMedia})
 }
 );
 }else{
-await fetch(
-`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
+await telegramWorkerFetch("sendMessage", "deleted",
 {
 method:"POST",
 headers:{
 "Content-Type":"application/json"
 },
-body:JSON.stringify({
-chat_id: TELEGRAM_DELETED_CHAT_ID,
-text: deletedCaption
-})
+body:JSON.stringify({text: deletedCaption})
 }
 );
 }
 
          if(originalElementData.telegramMainMessageId){
-await fetch(
-`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/deleteMessage`,
+await telegramWorkerFetch("deleteMessage", "main",
 {
 method:"POST",
 headers:{
 "Content-Type":"application/json"
 },
 body:JSON.stringify({
-chat_id: TELEGRAM_CHAT_ID,
 message_id:
 originalElementData.telegramMainMessageId
 })
