@@ -3116,6 +3116,9 @@ renderSelectedMahallas();
 // 🔄 ESKI FUNKSIYALARNI INTEGRATSIYA QILISH VA SCADA ANIMATSIYALARI (OVERRIDE)
 // =========================================================================
 
+let currentTP = null;
+let selectedTreeElementRow = null;
+
 // 1. ESKI renderTree funksiyasini tahrirlash (✏️ Qalamcha bosilganda TP elementlarini ham ochish imkoni)
 // Guruhlar bo'limida har bir fiderning ostiga unga biriktirilgan TPlarni ketma-ket joylashtiramiz.
 function renderTree(parentId, container) {
@@ -3241,6 +3244,18 @@ if (tp.folders) {
             ${tp.name || "TP"}
         </span>
 
+        <span class="tp-tree-selected-actions"
+              style="display:flex;align-items:center;gap:8px;opacity:0;pointer-events:none;transition:.2s;flex-shrink:0;margin-right:4px;">
+            <i class="fas fa-map-marked-alt"
+               title="Xaritada ko‘rsatish"
+               style="color:#43c6ff;font-size:13px;padding:4px;cursor:pointer;"
+               onclick="event.stopPropagation(); showElementOnPanelMap('${tpId}')"></i>
+            <i class="far fa-file-alt"
+               title="Element ma’lumotlari"
+               style="color:#ffffff;font-size:13px;padding:4px;cursor:pointer;"
+               onclick="event.stopPropagation(); showElementModal()"></i>
+        </span>
+
         <i class="fas fa-pencil-alt element-edit-pencil-icon"
            style="
                 color:#88a0b0;
@@ -3263,25 +3278,30 @@ if (tp.folders) {
 }
 `;
 
-                // Hoverda va bosilganda stil berish
-                tpRow.addEventListener('mouseenter', () => tpRow.style.background = "rgba(255,255,255,0.05)");
-                tpRow.addEventListener('mouseleave', () => tpRow.style.background = "transparent");
-                
-                // TP bosilsa xaritada focus bo'lish mantiqi
+                // Hover va tanlangan element foni
+                tpRow.addEventListener('mouseenter', () => {
+                    if(!tpRow.classList.contains('selected')) tpRow.style.background="rgba(255,255,255,0.05)";
+                });
+                tpRow.addEventListener('mouseleave', () => {
+                    tpRow.style.background=tpRow.classList.contains('selected') ? "rgba(33,126,180,.38)" : "transparent";
+                });
+
+                // TP bosilsa faqat tanlanadi; xaritaga alohida tugma olib o'tadi
                 tpRow.addEventListener('click', () => {
-                    if(listModal) listModal.style.display = 'none';
-                    const lat = parseFloat(tp.lat);
-                    const lng = parseFloat(tp.lng);
-                    map.setView([lat, lng], 18);
-                    
-                    // Xaritada markerini topib popup ochish
-                    activeMapMarkers.forEach(m => {
-                        if (m.getLatLng().lat === lat && m.getLatLng().lng === lng) {
-                            m.openPopup();
-                        }
+                    document.querySelectorAll('.tp-tree-row-item').forEach(row=>{
+                        row.classList.remove('selected');
+                        row.style.background='transparent';
+                        row.style.boxShadow='none';
+                        const actions=row.querySelector('.tp-tree-selected-actions');
+                        if(actions){actions.style.opacity='0';actions.style.pointerEvents='none';}
                     });
-                    updatePanelValues(lat, lng, null, true);
-                    updateAddress(lat, lng, true);
+                    tpRow.classList.add('selected');
+                    tpRow.style.background="rgba(33,126,180,.38)";
+                    tpRow.style.boxShadow="inset 3px 0 0 #43c6ff";
+                    const actions=tpRow.querySelector('.tp-tree-selected-actions');
+                    if(actions){actions.style.opacity='1';actions.style.pointerEvents='auto';}
+                    selectedTreeElementRow=tpRow;
+                    currentTP=Object.assign({},tp,{id:tpId});
                 });
 
                 childContainer.appendChild(tpRow);
@@ -3730,6 +3750,12 @@ opacity:0;
 transition:.2s;
 ">
 
+<i class="fas fa-map-marked-alt"
+   title="Xaritada ko‘rsatish"
+   onclick="event.stopPropagation();showElementOnPanelMap('${tp.id}')"
+   style="cursor:pointer;color:#43c6ff;">
+</i>
+
 <i class="far fa-file-alt"
    title="Element kartasi"
    onclick="event.stopPropagation(); showElementModal();"
@@ -3779,13 +3805,20 @@ transition:.2s;
     return html;
 }
 let selectedSearchItem = null;
-let currentTP = null;
 
 window.openSearchResult = function(item){
     document.querySelectorAll(".search-item").forEach(el=>{
         el.classList.remove("selected");
+        el.style.background="transparent";
+        el.style.boxShadow="none";
+        const actions=el.querySelector('.search-item-actions');
+        if(actions) actions.style.opacity='0';
     });
     item.classList.add("selected");
+    item.style.background="rgba(33,126,180,.55)";
+    item.style.boxShadow="inset 3px 0 0 #43c6ff";
+    const actions=item.querySelector('.search-item-actions');
+    if(actions) actions.style.opacity='1';
     selectedSearchItem = item;
     const id = item.dataset.id;
     currentTP = searchState.results.find(tp => tp.id === id) || null;
@@ -4505,10 +4538,20 @@ if (panelTabFolders) {
 // 2. "Xarita" bo'limi bosilganda (Panel ichida universal to'liq xarita ochiladi)
 var panelInternalMap = null;
 var panelInternalMarkers = [];
+let panelMapRequestedElementId = null;
+
+window.showElementOnPanelMap = function(tpId){
+    if(!tpId) return showToast("Element topilmadi!");
+    if(!panelTabItems) return showToast("Xarita bo‘limi topilmadi!");
+    panelMapRequestedElementId=tpId;
+    panelTabItems.click();
+};
 
 if (panelTabItems) {
     panelTabItems.addEventListener('click', () => {
-        
+        const requestedElementId=panelMapRequestedElementId;
+        panelMapRequestedElementId=null;
+
       showMapTab();
   
       
@@ -4533,6 +4576,13 @@ if (panelTabItems) {
 // MANA SHUNI QO'YING
 
           let filteredKeys;
+
+if(requestedElementId){
+    const requestedPoint=allPoints[requestedElementId];
+    filteredKeys=requestedPoint && hetkPointAllowedByUser(requestedPoint)
+        ? [requestedElementId]
+        : [];
+}else{
 
 const useSearchResults =
     searchState.text.trim() !== "" ||
@@ -4569,14 +4619,21 @@ if (useSearchResults) {
         return activeFolderId === "root" ? true : isPointInSelectedFolder(point);
     });
 }
+}
+
+if(requestedElementId && !filteredKeys.length){
+    showToast("Tanlangan elementni xaritada ko‘rsatib bo‘lmadi!");
+}
             
             let bounds = [];
+            let requestedMarker=null;
+            let requestedLatLng=null;
 
             filteredKeys.forEach(key => {
                 const point = allPoints[key];
                 const lat = parseFloat(point.lat);
                 const lng = parseFloat(point.lng);
-                const displayName = point.address.split(',')[0] || "Element";
+                const displayName = point.name || String(point.address || '').split(',')[0] || "Element";
 
                 if (!isNaN(lat) && !isNaN(lng)) {
                     bounds.push([lat, lng]);
@@ -4593,8 +4650,12 @@ if (useSearchResults) {
                     });
 
                     const marker = L.marker([lat, lng], { icon: pIcon }).addTo(panelInternalMap);
-                    marker.bindPopup(`<b>${displayName}</b><br>${point.address}`);
+                    marker.bindPopup(`<b>${displayName}</b><br>${point.address || ''}`);
                     panelInternalMarkers.push(marker);
+                    if(requestedElementId && key===requestedElementId){
+                        requestedMarker=marker;
+                        requestedLatLng=[lat,lng];
+                    }
                 }
             });
 
@@ -4602,7 +4663,10 @@ if (useSearchResults) {
             setTimeout(() => {
                 if (panelInternalMap) {
                     panelInternalMap.invalidateSize();
-                    if (bounds.length > 0) {
+                    if(requestedMarker && requestedLatLng){
+                        panelInternalMap.setView(requestedLatLng,18);
+                        requestedMarker.openPopup();
+                    }else if (bounds.length > 0) {
                         panelInternalMap.fitBounds(bounds, { padding: [30, 30], maxZoom: 16 });
                     }
                 }
