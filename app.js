@@ -473,6 +473,7 @@ function setPrimaryMahalla(name){
 window.selectFolder = function(id) {
     if(id !== 'root' && !hetkCanSeeFolder(id)) return showToast("Bu papkaga ruxsatingiz yo'q.");
     activeFolderId = id;
+    hetkSyncResponsibleFilterWithActiveFolder();
     
     document.querySelectorAll('.folder-header').forEach(el => {
         el.classList.remove('active-folder');
@@ -485,6 +486,9 @@ window.selectFolder = function(id) {
  loadFilteredPoints();
     searchState.folderId = id;
     refreshSearchResults();
+    if(responsibleOptions && responsibleOptions.style.display==='block'){
+        renderResponsibleWorkZoneFilter();
+    }
     showToast(`Tanlandi: ${currentFolders[id].name}`);
 };
 
@@ -703,13 +707,57 @@ function hetkFilterWorkZonePaths(zone){
         .filter(Boolean);
 }
 
+// U/J tanlangan papkaning o'ziga yoki uning ichki papkalariga tegishlimi?
+// U/J yuqori papkaga biriktirilgan bo'lsa, uning ichidagi papka tanlanganda ham ko'rinadi.
+function hetkWorkZoneMatchesActiveFolder(zone){
+    if(activeFolderId === 'root') return true;
+    const zoneFolderIds=Object.keys((zone && zone.folders) || {})
+        .filter(id => zone.folders[id] && currentFolders[id]);
+    if(!zoneFolderIds.length) return false;
+    return zoneFolderIds.some(folderId =>
+        isPointInsideFolder(folderId,activeFolderId) ||
+        isPointInsideFolder(activeFolderId,folderId)
+    );
+}
+
+function hetkActiveFolderFilterLabel(){
+    if(activeFolderId === 'root') return 'Ruxsat doirasidagi barcha U/J';
+    const folder=currentFolders[activeFolderId];
+    return folder && folder.name
+        ? `${folder.name} va ichki papkalardagi barcha U/J`
+        : 'Tanlangan papkadagi barcha U/J';
+}
+
 function hetkVisibleWorkZonesForFilter(){
     const me=hetkCurrentAccount();
     if(!me) return [];
     return Object.keys(elementWorkZonesCache || {})
         .map(id => Object.assign({id},elementWorkZonesCache[id] || {}))
-        .filter(zone => hetkZoneAllowedForCurrentUser(zone))
+        .filter(zone =>
+            hetkZoneAllowedForCurrentUser(zone) &&
+            hetkWorkZoneMatchesActiveFolder(zone)
+        )
         .sort((a,b) => String(a.name || '').localeCompare(String(b.name || '')));
+}
+
+function hetkSyncResponsibleFilterWithActiveFolder(){
+    hetkFilterWorkZones=hetkVisibleWorkZonesForFilter();
+    const visibleIds=new Set(hetkFilterWorkZones.map(zone=>zone.id));
+    let changed=false;
+
+    if(filterState.responsible!=='none' && !visibleIds.has(filterState.responsible)){
+        filterState.responsible='none';
+        changed=true;
+    }
+    if(appliedFilterState.responsible!=='none' && !visibleIds.has(appliedFilterState.responsible)){
+        appliedFilterState.responsible='none';
+        changed=true;
+    }
+
+    if(changed){
+        hetkSetResponsibleFilterSelection('none');
+        updateFilterCount();
+    }
 }
 
 function hetkSetResponsibleFilterSelection(value){
@@ -748,7 +796,7 @@ function hetkPaintResponsibleWorkZoneList(query){
     }
     const visible=matches.slice(0,HETK_FILTER_ZONE_RENDER_LIMIT);
     const allActive=filterState.responsible==='none';
-    const rows=[`<button type="button" class="responsible-option ${allActive?'active':''}" data-value="none" style="width:100%;padding:10px 12px;border:0;border-bottom:1px solid rgba(255,255,255,.08);background:${allActive?'rgba(0,122,255,.22)':'transparent'};color:#fff;text-align:left;cursor:pointer"><span style="font-weight:700">Hammasi</span><small style="display:block;color:#8fa8ba;margin-top:3px">Ruxsat doirasidagi barcha U/J</small></button>`];
+    const rows=[`<button type="button" class="responsible-option ${allActive?'active':''}" data-value="none" style="width:100%;padding:10px 12px;border:0;border-bottom:1px solid rgba(255,255,255,.08);background:${allActive?'rgba(0,122,255,.22)':'transparent'};color:#fff;text-align:left;cursor:pointer"><span style="font-weight:700">Hammasi</span><small style="display:block;color:#8fa8ba;margin-top:3px">${hetkEscapeHtml(hetkActiveFolderFilterLabel())}</small></button>`];
     visible.forEach(zone=>{
         const paths=hetkFilterWorkZonePaths(zone);
         const pathText=paths.length>2 ? paths.slice(0,2).join(' • ')+' • +'+(paths.length-2) : paths.join(' • ');
@@ -761,9 +809,12 @@ function hetkPaintResponsibleWorkZoneList(query){
     list.innerHTML=rows.join('');
     if(info){
         const hidden=Math.max(0,matches.length-visible.length);
+        const scopeName=activeFolderId === 'root'
+            ? 'Ruxsat doirasi'
+            : ((currentFolders[activeFolderId] && currentFolders[activeFolderId].name) || 'Tanlangan papka');
         info.textContent=hidden
-            ? `Yana ${hidden} ta U/J bor — nomi yoki hududini yozing.`
-            : `${matches.length} ta U/J ko‘rinmoqda`;
+            ? `${scopeName}: yana ${hidden} ta U/J bor — nomi yoki hududini yozing.`
+            : `${scopeName}: ${matches.length} ta U/J ko‘rinmoqda`;
     }
     list.querySelectorAll('.responsible-option').forEach(option=>{
         option.onclick=function(event){
