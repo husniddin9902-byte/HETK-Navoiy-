@@ -1577,6 +1577,8 @@ const inputWorkZonePicker = document.getElementById('input-workzone-picker');
 const inputWorkZoneIds = document.getElementById('input-workzone-ids');
 let elementWorkZonesCache = {};
 const inputElementNote = document.getElementById('input-element-note');
+const inputBalanceMeterSerial = document.getElementById('input-balance-meter-serial');
+const inputConcentratorSerial = document.getElementById('input-concentrator-serial');
 const inputBalanceToggle = document.getElementById('input-balance-toggle');
 const balanceStatusText = document.getElementById('balance-status-text');
 const privateOwnerInfoBlock = document.getElementById('private-owner-info-block');
@@ -2642,6 +2644,12 @@ document.querySelector(
 )?.value || "excellent",
           
             note: inputElementNote.value,
+            balanceMeterSerial: inputBalanceMeterSerial
+                ? inputBalanceMeterSerial.value.trim()
+                : (originalElementData?.balanceMeterSerial || ""),
+            concentratorSerial: inputConcentratorSerial
+                ? inputConcentratorSerial.value.trim()
+                : (originalElementData?.concentratorSerial || ""),
           mahallaLinks: selectedMahallas,
           primaryMahalla:
 selectedMahallas.find(x => x.isPrimary)?.name || "",
@@ -3413,6 +3421,8 @@ if (standardPowers.includes(Number(tp.power))) {
       
        renderElementWorkZonePicker(hetkGetTPWorkZoneIds(tp));
         inputElementNote.value = tp.note || "";
+        if(inputBalanceMeterSerial) inputBalanceMeterSerial.value = tp.balanceMeterSerial || "";
+        if(inputConcentratorSerial) inputConcentratorSerial.value = tp.concentratorSerial || "";
 
 // Mahallalarni yuklash
 selectedMahallas = JSON.parse(
@@ -5255,6 +5265,23 @@ U/J ni bosing — hozirgi master ko‘rinadi
 </div>
 
 <div
+id="detail-askue-identifiers"
+style="
+display:none;
+margin:14px 0;
+padding:12px;
+background:#132d43;
+border:1px solid rgba(255,255,255,.08);
+border-radius:9px;
+">
+<div style="font-weight:bold;margin-bottom:9px;color:#9fc7ff;">
+📟 Hisoblagich va konsentrator
+</div>
+<div id="detail-balance-meter-serial" style="display:none;margin-bottom:7px;"></div>
+<div id="detail-concentrator-serial" style="display:none;"></div>
+</div>
+
+<div
 id="detail-other-feeders"
 style="
 display:none;
@@ -5611,6 +5638,23 @@ if(currentWorkZoneIds.length){
     detailOwner.style.display="none";
     detailMaster.style.display="none";
 }
+
+// ===== HISOBLAGICH VA KONSENTRATOR RAQAMLARI =====
+const askueIdentifiersBlock=document.getElementById("detail-askue-identifiers");
+const detailBalanceMeterSerial=document.getElementById("detail-balance-meter-serial");
+const detailConcentratorSerial=document.getElementById("detail-concentrator-serial");
+const hasBalanceMeterSerial=!!String(currentTP.balanceMeterSerial || "").trim();
+const hasConcentratorSerial=!!String(currentTP.concentratorSerial || "").trim();
+
+askueIdentifiersBlock.style.display=(hasBalanceMeterSerial || hasConcentratorSerial) ? "block" : "none";
+detailBalanceMeterSerial.style.display=hasBalanceMeterSerial ? "block" : "none";
+detailConcentratorSerial.style.display=hasConcentratorSerial ? "block" : "none";
+detailBalanceMeterSerial.textContent=hasBalanceMeterSerial
+    ? "⚖️ Balans hisoblagichi: " + currentTP.balanceMeterSerial
+    : "";
+detailConcentratorSerial.textContent=hasConcentratorSerial
+    ? "📡 Konsentrator: " + currentTP.concentratorSerial
+    : "";
 
  
 // ===== BOSHQA MANBALARI =====
