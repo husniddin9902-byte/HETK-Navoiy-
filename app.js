@@ -1244,19 +1244,29 @@ function refreshTreeDropdownSelection(container, selectedId) {
 const TELEGRAM_WORKER_URL = "https://hetk-telegram.husniddin-99-02.workers.dev";
 
 async function getTelegramAuthToken(){
+if(window.HETKAuth && typeof window.HETKAuth.getIdToken === "function"){
+return await window.HETKAuth.getIdToken(false);
+}
 const user = firebase.auth().currentUser;
 if(!user) throw new Error("AUTH_REQUIRED");
 return await user.getIdToken();
 }
 
 async function telegramWorkerFetch(method, channel, options = {}){
-const token = await getTelegramAuthToken();
+async function send(forceRefresh){
+const token = window.HETKAuth && typeof window.HETKAuth.getIdToken === "function"
+? await window.HETKAuth.getIdToken(forceRefresh)
+: await getTelegramAuthToken();
 const headers = new Headers(options.headers || {});
 headers.set("Authorization", `Bearer ${token}`);
 return await fetch(
 `${TELEGRAM_WORKER_URL}/telegram/${method}?channel=${encodeURIComponent(channel)}`,
 {...options, headers}
 );
+}
+let response = await send(false);
+if(response.status === 401) response = await send(true);
+return response;
 }
 
 async function deleteTelegramMessages(messageIds){
@@ -1281,20 +1291,13 @@ err
 }
 }
 
-async function getTelegramFileUrl(fileId){
-try{
-const token = await getTelegramAuthToken();
-const response = await fetch(
-`${TELEGRAM_WORKER_URL}/telegram/file?file_id=${encodeURIComponent(fileId)}`,
-{headers:{"Authorization":`Bearer ${token}`}}
-);
-if(!response.ok) return null;
-const blob = await response.blob();
-return URL.createObjectURL(blob);
-}catch(err){
-console.error(err);
-return null;
+function telegramFileUrl(fileId){
+if(!fileId) return null;
+return `${TELEGRAM_WORKER_URL}/telegram/file?file_id=${encodeURIComponent(fileId)}`;
 }
+
+async function getTelegramFileUrl(fileId){
+return telegramFileUrl(fileId);
 }
 
 let currentUploadedImageUrl = ""; // Telegramdan kelgan rasm linkini vaqtincha saqlash uchun
@@ -4178,15 +4181,16 @@ gap:5px;
 overflow-x:auto;">`;
 
 point.images.forEach(img=>{
+const secureImageUrl = telegramFileUrl(img.fileId) || img.url || '';
 popupHtml += `
-<img src="${img.url}"
+<img src="${secureImageUrl}"
 style="
 width:90px;
 height:90px;
 object-fit:cover;
 border-radius:6px;
 cursor:pointer;"
-onclick="window.open('${img.url}','_blank')">
+onclick="window.open('${secureImageUrl}','_blank')">
 `;
 });
 
