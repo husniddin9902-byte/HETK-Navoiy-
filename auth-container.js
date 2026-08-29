@@ -77,6 +77,175 @@
   let teamTreeExpanded = new Set(['__root__']);
   let teamTreeAutoInitialized = false;
 
+  const TELEGRAM_WORKER_URL = 'https://hetk-telegram.husniddin-99-02.workers.dev';
+  const DEFAULT_MALE_AVATAR = 'profile-default-male.png';
+  const DEFAULT_FEMALE_AVATAR = 'profile-default-female.png';
+
+  function normalizeGender(value){ return value === 'female' ? 'female' : 'male'; }
+  function genderLabel(value){ return normalizeGender(value) === 'female' ? 'Ayol' : 'Erkak'; }
+  function defaultAvatarUrl(gender){
+    const fileName = normalizeGender(gender) === 'female' ? DEFAULT_FEMALE_AVATAR : DEFAULT_MALE_AVATAR;
+    return new URL(fileName, document.baseURI).href;
+  }
+  function telegramProfilePhotoUrl(fileId){
+    return fileId ? `${TELEGRAM_WORKER_URL}/telegram/file?file_id=${encodeURIComponent(fileId)}` : '';
+  }
+  function accountAvatarUrl(account){
+    if(account && account.telegramPhotoFileId) return telegramProfilePhotoUrl(account.telegramPhotoFileId);
+    if(account && account.photoData) return account.photoData;
+    return defaultAvatarUrl(account && account.gender);
+  }
+
+  async function employeeTelegramFetch(method, body, isForm){
+    if(!auth || !auth.currentUser) throw new Error('Telegram uchun tizimga qayta kiring.');
+    async function send(forceRefresh){
+      const token = await auth.currentUser.getIdToken(!!forceRefresh);
+      const headers = {'Authorization':'Bearer '+token};
+      if(!isForm) headers['Content-Type']='application/json';
+      return await fetch(`${TELEGRAM_WORKER_URL}/telegram/${method}?channel=employees`,{
+        method:'POST',headers,body:isForm ? body : JSON.stringify(body || {})
+      });
+    }
+    let response=await send(false);
+    if(response.status===401) response=await send(true);
+    let result={};
+    try{ result=await response.json(); }catch(_e){}
+    if(!response.ok || !result.ok) throw new Error(result.description || result.error || 'Telegram xatosi');
+    return result;
+  }
+
+  function shortText(value,max){
+    const text=String(value || '').trim();
+    return text.length>max ? text.slice(0,max-1)+'…' : text;
+  }
+  function formatProfileDate(value){
+    if(!value) return '—';
+    if(typeof value==='string' && /^\d{4}-\d{2}-\d{2}$/.test(value)){
+      const p=value.split('-'); return `${p[2]}.${p[1]}.${p[0]}`;
+    }
+    const d=new Date(value); return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString('uz-UZ');
+  }
+  function employeeFoldersText(account){
+    if(account && account.rootAccess) return "O‘zbekiston — barcha hududlar";
+    const ids=Object.keys((account && account.folders) || {}).filter(id=>account.folders[id]);
+    if(!ids.length) return 'Biriktirilmagan';
+    return shortText(ids.map(id=>folderPath(id) || ((teamFoldersCache[id]||{}).name) || id).join('; '),170);
+  }
+  function employeePermissionsText(account){
+    const labels={createUsers:'hodim yaratish',deactivateUsers:'bloklash',managePermissions:'ruxsat boshqarish',manageFolders:'papka boshqarish'};
+    const allowed=Object.keys(labels).filter(key=>hasPermission(key,account)).map(key=>labels[key]);
+    return allowed.length ? allowed.join(', ') : 'Oddiy foydalanish';
+  }
+  function activeDisciplineText(account){
+    const now=Date.now();
+    const list=Object.values((account && account.disciplinaryActions) || {}).filter(x=>x && (!x.expiresAt || Number(x.expiresAt)>now));
+    if(!list.length) return 'Yo‘q';
+    return shortText(list.map(x=>(x.type==='reprimand'?'Hayfsan':'Ogohlantirish')+': '+(x.reason||'')).join('; '),120);
+  }
+  function buildEmployeeTelegramCaption(account){
+    const rec=safetyRecord(account);
+    const state=permitState(account);
+    const lines=[
+      '👤 HODIM PROFILI',
+      '',
+      `🪪 F.I.Sh: ${account.fullName || '—'}`,
+      `⚧ Jinsi: ${genderLabel(account.gender)}`,
+      `📞 Telefon: ${account.phone || '—'}`,
+      `🔐 Login: ${account.login || '—'}`,
+      `💼 Lavozim: ${getRoleLabel(account)}`,
+      `📍 Hudud / U/J: ${account.workZoneName || account.region || '—'}`,
+      `📌 Holati: ${account.active===false ? 'Nofaol' : 'Faol'}`,
+      `📂 Hudud ruxsati: ${employeeFoldersText(account)}`,
+      `🛡 Tizim huquqlari: ${employeePermissionsText(account)}`,
+      '',
+      '📜 MALAKA GUVOHNOMASI',
+      `⚡ XTB guruhi: ${rec.group || 'I'}`,
+      `🔢 Guvohnoma №: ${rec.certificateNo || '—'}`,
+      `🗓 Sinov sanasi: ${formatProfileDate(rec.examDate)}`,
+      `⏳ Amal muddati: ${formatProfileDate(rec.validUntil)}`,
+      `✅ Ruxsatnoma holati: ${state.text || '—'}`,
+      `📝 Izoh: ${shortText(rec.notes || '—',100)}`,
+      `⚠️ Intizomiy holat: ${activeDisciplineText(account)}`,
+      '',
+      `➕ Yaratgan: ${account.createdByName || '—'}`,
+      `🕒 Yaratilgan: ${formatProfileDate(account.createdAt)}`,
+      `🔄 Yangilangan: ${formatProfileDate(account.updatedAt)}`,
+      `🆔 UID: ${account.uid || '—'}`
+    ];
+    return lines.join('\n').slice(0,1024);
+  }
+
+  async function blobFromDataUrl(dataUrl){
+    const response=await fetch(dataUrl); return await response.blob();
+  }
+  async function defaultAvatarBlob(gender){
+    const response=await fetch(defaultAvatarUrl(gender),{cache:'no-store'});
+    if(!response.ok) throw new Error('Standart profil rasmi topilmadi.');
+    return await response.blob();
+  }
+  async function sendEmployeePhotoPost(account, photoSource){
+    const caption=buildEmployeeTelegramCaption(account);
+    if(typeof photoSource==='string' && photoSource){
+      return await employeeTelegramFetch('sendPhoto',{photo:photoSource,caption},false);
+    }
+    const blob=photoSource instanceof Blob ? photoSource : await defaultAvatarBlob(account.gender);
+    const form=new FormData();
+    form.append('photo',blob,'profile.jpg');
+    form.append('caption',caption);
+    return await employeeTelegramFetch('sendPhoto',form,true);
+  }
+  async function deleteEmployeePost(messageId){
+    if(!messageId) return;
+    try{ await employeeTelegramFetch('deleteMessage',{message_id:messageId},false); }catch(e){ console.warn('Eski hodim posti o‘chirilmadi:',e); }
+  }
+  async function syncEmployeeTelegram(uid, account, options){
+    options=options || {};
+    const merged=Object.assign({uid},account || {});
+    const legacyBlob=merged.photoData ? await blobFromDataUrl(merged.photoData) : null;
+    const newPhoto=options.photoBlob || legacyBlob || null;
+    const mustRepost=!!newPhoto || !merged.telegramEmployeeMessageId || options.replaceDefaultPhoto;
+    if(mustRepost){
+      const oldMessageId=merged.telegramEmployeeMessageId || null;
+      const source=newPhoto || (merged.telegramPhotoFileId && !options.replaceDefaultPhoto ? merged.telegramPhotoFileId : null);
+      const sent=await sendEmployeePhotoPost(merged,source);
+      const photos=(sent.result && sent.result.photo) || [];
+      const lastPhoto=photos[photos.length-1] || {};
+      const patch={
+        telegramEmployeeMessageId:sent.result.message_id,
+        telegramPhotoFileId:lastPhoto.file_id || merged.telegramPhotoFileId || '',
+        telegramPhotoKind:newPhoto ? 'custom' : 'default',
+        photoData:null,
+        telegramUpdatedAt:Date.now()
+      };
+      await databaseRef.ref('users/'+uid).update(patch);
+      await deleteEmployeePost(oldMessageId);
+      return Object.assign({},merged,patch);
+    }
+    try{
+      await employeeTelegramFetch('editMessageCaption',{
+        message_id:merged.telegramEmployeeMessageId,
+        caption:buildEmployeeTelegramCaption(merged)
+      },false);
+      await databaseRef.ref('users/'+uid+'/telegramUpdatedAt').set(Date.now());
+      return merged;
+    }catch(e){
+      if(String(e.message||'').toLowerCase().includes('message is not modified')) return merged;
+      const sent=await sendEmployeePhotoPost(merged,merged.telegramPhotoFileId || null);
+      const photos=(sent.result && sent.result.photo) || [];
+      const lastPhoto=photos[photos.length-1] || {};
+      const patch={telegramEmployeeMessageId:sent.result.message_id,telegramPhotoFileId:lastPhoto.file_id||merged.telegramPhotoFileId||'',telegramUpdatedAt:Date.now(),photoData:null};
+      await databaseRef.ref('users/'+uid).update(patch);
+      return Object.assign({},merged,patch);
+    }
+  }
+  async function safeSyncEmployeeTelegram(uid, account, options){
+    try{return await syncEmployeeTelegram(uid,account,options);}catch(e){
+      console.error('Hodim Telegram posti yangilanmadi:',e);
+      if(options && options.showError) alert('Hodim saqlandi, lekin Telegram posti yangilanmadi: '+(e.message||e));
+      return account;
+    }
+  }
+
   function byId(id){ return document.getElementById(id); }
 
   function normalizeLogin(value){
@@ -243,6 +412,7 @@
             <p class="hetk-auth-subtitle">Bu tizimdagi birinchi va eng yuqori darajadagi foydalanuvchi bo‘ladi.</p>
             <div class="hetk-auth-field"><label>F.I.Sh</label><input class="hetk-auth-input" id="hetk-setup-name" placeholder="To‘liq ism-sharif"></div>
             <div class="hetk-auth-field"><label>Login</label><input class="hetk-auth-input" id="hetk-setup-login" autocomplete="username" placeholder="Masalan: admin"></div>
+            <div class="hetk-auth-field"><label>Jinsi</label><select class="hetk-auth-input" id="hetk-setup-gender"><option value="male">Erkak</option><option value="female">Ayol</option></select></div>
             <div class="hetk-auth-field"><label>Parol</label><div class="hetk-auth-input-wrap"><input class="hetk-auth-input" id="hetk-setup-password" type="password" autocomplete="new-password" placeholder="Kamida 6 ta belgi"><button class="hetk-auth-pass-toggle" type="button" data-toggle-password="hetk-setup-password"><i class="fas fa-eye"></i></button></div></div>
             <div class="hetk-auth-field"><label>Parolni takrorlang</label><div class="hetk-auth-input-wrap"><input class="hetk-auth-input" id="hetk-setup-password2" type="password" autocomplete="new-password" placeholder="Parolni qayta kiriting"><button class="hetk-auth-pass-toggle" type="button" data-toggle-password="hetk-setup-password2"><i class="fas fa-eye"></i></button></div></div>
             <button id="hetk-create-first-admin" class="hetk-auth-primary" type="button">Bosh adminni yaratish</button>
@@ -333,6 +503,7 @@
     if(usersExist) return setMessage('error','Bosh administrator avval yaratilgan.');
     const fullName = String(byId('hetk-setup-name').value || '').trim();
     const login = normalizeLogin(byId('hetk-setup-login').value);
+    const gender = normalizeGender(byId('hetk-setup-gender') && byId('hetk-setup-gender').value);
     const pass1 = byId('hetk-setup-password').value;
     const pass2 = byId('hetk-setup-password2').value;
     const btn = byId('hetk-create-first-admin');
@@ -363,6 +534,7 @@
         level: ROLE_DEFS.super_admin.level,
         region: "O'zbekiston",
         phone: '',
+        gender,
         active: true,
         rootAccess: true,
         folders: {},
@@ -370,7 +542,7 @@
         createdAt: now,
         updatedAt: now,
         lastLoginAt: now,
-        photoData: '',
+        photoData: null,
         safety: defaultSafetyRecord(),
         disciplinaryActions: {},
         permissions: defaultPermissionsForRole('super_admin')
@@ -379,6 +551,7 @@
       firstUpdates['users/' + uid] = account;
       firstUpdates['loginIndex/' + loginIndexKey(login)] = {uid,login,authEmail:internalEmail,active:true,updatedAt:now};
       await databaseRef.ref().update(firstUpdates);
+      Object.assign(account,await safeSyncEmployeeTelegram(uid,account,{replaceDefaultPhoto:true,showError:true}));
       await cred.user.updateProfile({displayName: fullName});
       usersExist = true;
       currentAccount = account;
@@ -601,7 +774,9 @@
     setBusy(btn,true,'Saqlanmoqda...');
     try{
       const now=Date.now(); const roleLabel=getRoleLabel(currentAccount);
-      await databaseRef.ref('users/'+uid+'/safety').update({group,certificateNo,examDate,validUntil,notes,updatedAt:now,updatedBy:currentAccount.uid,updatedByName:currentAccount.fullName||currentAccount.login||'',updatedByRole:roleLabel});
+      const safety={group,certificateNo,examDate,validUntil,notes,updatedAt:now,updatedBy:currentAccount.uid,updatedByName:currentAccount.fullName||currentAccount.login||'',updatedByRole:roleLabel};
+      await databaseRef.ref('users/'+uid+'/safety').update(safety);
+      await safeSyncEmployeeTelegram(uid,Object.assign({},target,{safety,updatedAt:now}),{showError:true});
       closeSafetyOverlay();
     }catch(e){msg.className='hetk-user-editor-message show error';msg.textContent=friendlyAuthError(e);}finally{setBusy(btn,false);}
   }
@@ -628,7 +803,10 @@
     setBusy(btn,true,'Saqlanmoqda...');
     try{
       const now=Date.now(); const ref=databaseRef.ref('users/'+uid+'/disciplinaryActions').push();
-      await ref.set({type,reason,issuedAt:now,expiresAt:now+DISCIPLINE_LIFETIME_MS,issuedByUid:currentAccount.uid,issuedByName:currentAccount.fullName||currentAccount.login||'',issuedByRole:getRoleLabel(currentAccount)});
+      const action={type,reason,issuedAt:now,expiresAt:now+DISCIPLINE_LIFETIME_MS,issuedByUid:currentAccount.uid,issuedByName:currentAccount.fullName||currentAccount.login||'',issuedByRole:getRoleLabel(currentAccount)};
+      await ref.set(action);
+      const actions=Object.assign({},target.disciplinaryActions||{}); actions[ref.key]=action;
+      await safeSyncEmployeeTelegram(uid,Object.assign({},target,{disciplinaryActions:actions,updatedAt:now}),{showError:true});
       closeDisciplineOverlay();
     }catch(e){msg.className='hetk-user-editor-message show error';msg.textContent=friendlyAuthError(e);}finally{setBusy(btn,false);}
   }
@@ -637,7 +815,11 @@
     const raw=teamUsersCache[uid]; if(!raw || !actionId) return;
     const target=Object.assign({uid},raw); if(!canManageDiscipline(target)) return;
     if(!confirm('Bu ogohlantirish/hayfsanni olib tashlaysizmi?')) return;
-    try{await databaseRef.ref('users/'+uid+'/disciplinaryActions/'+actionId).remove();}catch(e){alert(friendlyAuthError(e));}
+    try{
+      await databaseRef.ref('users/'+uid+'/disciplinaryActions/'+actionId).remove();
+      const actions=Object.assign({},target.disciplinaryActions||{}); delete actions[actionId];
+      await safeSyncEmployeeTelegram(uid,Object.assign({},target,{disciplinaryActions:actions,updatedAt:Date.now()}),{showError:true});
+    }catch(e){alert(friendlyAuthError(e));}
   }
 
   function normalizeWorkZoneName(value){
@@ -691,7 +873,7 @@
       regionEl.style.display = zoneRole ? 'none' : '';
     }
     const avatar = document.querySelector('.hetk-profile-avatar');
-    applyAvatar(avatar, account.photoData);
+    applyAvatar(avatar, accountAvatarUrl(account));
     renderProfileSafetySummary(account);
     renderPersonalEditor(account);
     renderEmployeesManager(account);
@@ -716,6 +898,7 @@
           <div class="hetk-account-grid">
             <div class="hetk-account-field"><label>F.I.Sh</label><input id="hetk-edit-name" value="${escapeAttr(account.fullName || '')}"></div>
             <div class="hetk-account-field"><label>Telefon</label><input id="hetk-edit-phone" value="${escapeAttr(account.phone || '')}" placeholder="+998 ..."></div>
+            <div class="hetk-account-field"><label>Jinsi</label><select id="hetk-edit-gender"><option value="male" ${normalizeGender(account.gender)==='male'?'selected':''}>Erkak</option><option value="female" ${normalizeGender(account.gender)==='female'?'selected':''}>Ayol</option></select></div>
             <div class="hetk-account-field" id="hetk-login-field"><label>Login</label><input id="hetk-edit-login" value="${escapeAttr(account.login || '')}" autocomplete="username" placeholder="Masalan: tojiev1"><small class="hetk-field-error" id="hetk-login-error"></small></div>
             <div class="hetk-account-field" id="hetk-login-password-field"><label>Loginni o‘zgartirish uchun hozirgi parol</label><input id="hetk-login-current-password" type="password" autocomplete="current-password" placeholder="Login o‘zgarmasa shart emas"><small class="hetk-field-error" id="hetk-login-password-error"></small></div>
             <div class="hetk-account-field"><label>Lavozim</label><input value="${escapeAttr(roleLabel)}" readonly></div>
@@ -740,7 +923,7 @@
       </div>`;
 
     const photoPreview = byId('hetk-account-photo-preview');
-    applyAvatar(photoPreview, account.photoData);
+    applyAvatar(photoPreview, accountAvatarUrl(account));
     byId('hetk-account-photo-input').addEventListener('change', handlePhotoUpload);
     byId('hetk-save-profile').addEventListener('click', saveProfileChanges);
     byId('hetk-change-password').addEventListener('click', changePassword);
@@ -952,6 +1135,7 @@
             <div class="hetk-user-form-grid">
               <div class="hetk-user-field"><label>F.I.Sh *</label><input id="hetk-user-fullname" placeholder="To‘liq ism-sharif"></div>
               <div class="hetk-user-field"><label>Telefon</label><input id="hetk-user-phone" placeholder="+998 ..."></div>
+              <div class="hetk-user-field"><label>Jinsi *</label><select id="hetk-user-gender"><option value="male">Erkak</option><option value="female">Ayol</option></select></div>
               <div class="hetk-user-field"><label>Login *</label><input id="hetk-user-login" placeholder="Masalan: xatirchi.master"></div>
               <div class="hetk-user-field"><label>Lavozim *</label><select id="hetk-user-role"></select></div>
               <div class="hetk-user-field hetk-create-password"><label>Vaqtinchalik parol *</label><input id="hetk-user-password" type="password" placeholder="Kamida 6 ta belgi"></div>
@@ -1147,7 +1331,7 @@
   function renderTeamUserRow(u,depth){
     const selected=selectedTeamUid===u.uid ? ' selected' : '';
     return `<button class="hetk-team-user hetk-team-tree-user${selected}" style="--team-depth:${depth}" type="button" data-team-uid="${escapeAttr(u.uid)}">
-      <span class="hetk-team-user-avatar">${u.photoData ? `<img src="${escapeAttr(u.photoData)}" alt="">` : '<i class="fas fa-user"></i>'}</span>
+      <span class="hetk-team-user-avatar"><img src="${escapeAttr(accountAvatarUrl(u))}" alt=""></span>
       <span class="hetk-team-user-main"><b>${escapeHtml(u.fullName || 'Nomsiz hodim')}</b><small>${escapeHtml(getRoleLabel(u))}</small><em>${escapeHtml(u.login || '')}</em></span>
       <span class="hetk-team-user-side"><span class="hetk-team-safety-badge ${permitState(u).kind}">XTB ${escapeHtml(effectiveSafetyGroup(u))}</span><span class="hetk-team-user-state ${u.active===false?'off':'on'}">${u.active===false?'Nofaol':'Faol'}</span></span>
     </button>`;
@@ -1224,7 +1408,7 @@
     const chips=u.rootAccess ? '<span class="hetk-scope-chip root"><i class="fas fa-globe"></i> Barcha hududlar</span>' : (roots.length ? roots.map(id => `<span class="hetk-scope-chip"><i class="fas fa-folder"></i>${escapeHtml(folderPath(id) || (teamFoldersCache[id] && teamFoldersCache[id].name) || 'Papka')}</span>`).join('') : '<span class="hetk-scope-chip empty">Papka biriktirilmagan</span>');
     box.innerHTML=`
       <div class="hetk-team-detail-head">
-        <span class="hetk-team-detail-avatar">${u.photoData ? `<img src="${escapeAttr(u.photoData)}" alt="">` : '<i class="fas fa-user"></i>'}</span>
+        <span class="hetk-team-detail-avatar"><img src="${escapeAttr(accountAvatarUrl(u))}" alt=""></span>
         <div><h3>${escapeHtml(u.fullName || 'Nomsiz hodim')}</h3><p>${escapeHtml(getRoleLabel(u))}</p><span>${escapeHtml(u.login || '')}</span></div>
         <span class="hetk-detail-status ${u.active===false?'off':'on'}"><i></i>${u.active===false?'Nofaol':'Tizimda faol'}</span>
       </div>
@@ -1442,6 +1626,7 @@
     byId('hetk-user-editor-subtitle').textContent='Faqat o‘zingizdan quyi lavozim va o‘zingiz ko‘ra oladigan papkalarni bera olasiz.';
     byId('hetk-user-fullname').value='';byId('hetk-user-fullname').readOnly=false;
     byId('hetk-user-phone').value='';byId('hetk-user-phone').readOnly=false;
+    byId('hetk-user-gender').value='male';byId('hetk-user-gender').disabled=false;
     byId('hetk-user-login').value='';byId('hetk-user-login').readOnly=false;
     byId('hetk-user-password').value='';byId('hetk-user-password2').value='';
     document.querySelectorAll('.hetk-create-password').forEach(x => x.style.display='');
@@ -1465,6 +1650,7 @@
     const canEditCore=canManageTarget(u,'edit');
     byId('hetk-user-fullname').value=u.fullName || '';byId('hetk-user-fullname').readOnly=!canEditCore;
     byId('hetk-user-phone').value=u.phone || '';byId('hetk-user-phone').readOnly=!canEditCore;
+    byId('hetk-user-gender').value=normalizeGender(u.gender);byId('hetk-user-gender').disabled=!canEditCore;
     byId('hetk-user-login').value=u.login || '';byId('hetk-user-login').readOnly=true;
     document.querySelectorAll('.hetk-create-password').forEach(x => x.style.display='none');
     editorFolderLimitRoots=null;editorFolderLocked=false;
@@ -1501,6 +1687,7 @@
     const btn=byId('hetk-user-save');
     const fullName=String(byId('hetk-user-fullname').value||'').trim();
     const phone=String(byId('hetk-user-phone').value||'').trim();
+    const gender=normalizeGender(byId('hetk-user-gender').value);
     const login=normalizeLogin(byId('hetk-user-login').value);
     const role=byId('hetk-user-role').value;
     let selectedRoots=normalizeSelectedFolderRoots(getEditorSelectedFolders(),teamFoldersCache);
@@ -1539,7 +1726,7 @@
     const foldersObj={}; selectedRoots.forEach(id => foldersObj[id]=true);
     const def=roleDef(role);
     const patch={
-      fullName,phone,role,roleLabel:def.label,level:def.level,
+      fullName,phone,gender,role,roleLabel:def.label,level:def.level,
       region:needsZone ? zoneName : buildRegionFromRoots(selectedRoots),
       rootAccess:false,folders:foldersObj,
       permissions:defaultPermissionsForRole(role),updatedAt:Date.now(),updatedBy:currentAccount.uid
@@ -1591,13 +1778,14 @@
           }
           const account=Object.assign({},patch,{
             uid,login,authEmail:internalEmail,active:true,createdAt:now,createdBy:currentAccount.uid,
-            createdByName:currentAccount.fullName || currentAccount.login || 'Admin',lastLoginAt:0,photoData:'',
+            createdByName:currentAccount.fullName || currentAccount.login || 'Admin',lastLoginAt:0,photoData:null,
             safety:defaultSafetyRecord(),disciplinaryActions:{}
           });
           if(needsZone){account.workZoneId=finalZoneId;account.workZoneName=zoneName;account.region=zoneName;}
           updates['users/'+uid]=account;
           updates['loginIndex/'+loginIndexKey(login)]={uid,login,authEmail:internalEmail,active:true,updatedAt:now};
           await databaseRef.ref().update(updates);
+          Object.assign(account,await safeSyncEmployeeTelegram(uid,account,{replaceDefaultPhoto:true,showError:true}));
           try{ await cred.user.updateProfile({displayName:fullName}); }catch(_e){}
           await sec.signOut();
           selectedTeamUid=uid;
@@ -1617,6 +1805,7 @@
         if(!canManageTarget(target,'edit')){
           patch.fullName=target.fullName || '';
           patch.phone=target.phone || '';
+          patch.gender=normalizeGender(target.gender);
           patch.role=target.role;
           patch.roleLabel=target.roleLabel || roleDef(target.role).label;
           patch.level=target.level || roleDef(target.role).level;
@@ -1672,6 +1861,9 @@
         }
         Object.keys(patch).forEach(key => { updates['users/'+editingTeamUid+'/'+key]=patch[key]; });
         await databaseRef.ref().update(updates);
+        const updatedTarget=Object.assign({},target,patch,{uid:editingTeamUid});
+        const genderChanged=normalizeGender(target.gender)!==normalizeGender(updatedTarget.gender);
+        await safeSyncEmployeeTelegram(editingTeamUid,updatedTarget,{replaceDefaultPhoto:genderChanged && updatedTarget.telegramPhotoKind!=='custom',showError:true});
         closeUserEditor();
       }
     }catch(e){
@@ -1702,6 +1894,7 @@
       }
     }
     await databaseRef.ref().update(updates);
+    await safeSyncEmployeeTelegram(uid,Object.assign({},u,{active:next,updatedAt:updates['users/'+uid+'/updatedAt']}),{showError:true});
   }
 
   async function deleteUserPermanently(uid){
@@ -1734,6 +1927,7 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
         updates['WorkZones/'+zoneId+'/updatedBy']=currentAccount.uid;
       }
     });
+    await deleteEmployeePost(u.telegramEmployeeMessageId);
     await databaseRef.ref().update(updates);
     if(selectedTeamUid===uid){
       selectedTeamUid=null;
@@ -1775,6 +1969,7 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
     if(!currentAccount || !auth.currentUser) return;
     const name = String(byId('hetk-edit-name').value || '').trim();
     const phone = String(byId('hetk-edit-phone').value || '').trim();
+    const gender = normalizeGender(byId('hetk-edit-gender') && byId('hetk-edit-gender').value);
     const oldLogin = normalizeLogin(currentAccount.login || '');
     const newLogin = normalizeLogin(byId('hetk-edit-login').value || '');
     const loginPassword = String(byId('hetk-login-current-password').value || '');
@@ -1797,10 +1992,12 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
       }
 
       const now = Date.now();
-      const patch = {fullName:name,phone,login:newLogin,authEmail,updatedAt:now};
+      const oldGender=normalizeGender(currentAccount.gender);
+      const patch = {fullName:name,phone,gender,login:newLogin,authEmail,updatedAt:now};
       const updates = {};
       updates['users/' + auth.currentUser.uid + '/fullName'] = name;
       updates['users/' + auth.currentUser.uid + '/phone'] = phone;
+      updates['users/' + auth.currentUser.uid + '/gender'] = gender;
       updates['users/' + auth.currentUser.uid + '/login'] = newLogin;
       updates['users/' + auth.currentUser.uid + '/authEmail'] = authEmail;
       updates['users/' + auth.currentUser.uid + '/updatedAt'] = now;
@@ -1810,6 +2007,7 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
 
       await auth.currentUser.updateProfile({displayName:name});
       currentAccount = Object.assign({},currentAccount,patch);
+      currentAccount = Object.assign({},currentAccount,await safeSyncEmployeeTelegram(auth.currentUser.uid,currentAccount,{replaceDefaultPhoto:oldGender!==gender && currentAccount.telegramPhotoKind!=='custom',showError:true}));
       populateProfile(currentAccount);
       const newStatus = byId('hetk-profile-save-status');
       if(newStatus){
@@ -1828,7 +2026,7 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
     }finally{ setBusy(btn,false); }
   }
 
-  function fileToCompressedDataUrl(file){
+  function fileToCompressedBlob(file){
     return new Promise((resolve,reject) => {
       if(!file || !file.type.startsWith('image/')) return reject(new Error('Rasm faylini tanlang.'));
       if(file.size > 6 * 1024 * 1024) return reject(new Error('Rasm hajmi 6 MB dan katta bo‘lmasin.'));
@@ -1845,7 +2043,7 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
           const scale=Math.max(size/img.width,size/img.height);
           const w=img.width*scale,h=img.height*scale;
           ctx.drawImage(img,(size-w)/2,(size-h)/2,w,h);
-          resolve(canvas.toDataURL('image/jpeg',0.82));
+          canvas.toBlob(blob=>blob ? resolve(blob) : reject(new Error('Rasmni tayyorlab bo‘lmadi.')),'image/jpeg',0.82);
         };
         img.src=reader.result;
       };
@@ -1860,9 +2058,10 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
     const status = byId('hetk-profile-save-status');
     if(status){status.className='hetk-account-status';status.textContent='Rasm tayyorlanmoqda...';}
     try{
-      const photoData = await fileToCompressedDataUrl(file);
-      await databaseRef.ref('users/' + auth.currentUser.uid).update({photoData,updatedAt:Date.now()});
-      currentAccount.photoData = photoData;
+      const photoBlob = await fileToCompressedBlob(file);
+      currentAccount.updatedAt=Date.now();
+      currentAccount = Object.assign({},currentAccount,await syncEmployeeTelegram(auth.currentUser.uid,currentAccount,{photoBlob}));
+      currentAccount.photoData=null;
       populateProfile(currentAccount);
       const newStatus=byId('hetk-profile-save-status');
       if(newStatus){newStatus.className='hetk-account-status success';newStatus.textContent='Profil rasmi saqlandi.';}
@@ -1928,6 +2127,9 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
         document.dispatchEvent(new CustomEvent('hetk-auth-user-updated',{detail:{user:currentAccount}}));
       });
       await databaseRef.ref('users/' + user.uid).update({lastLoginAt:Date.now()});
+      if(!currentAccount.telegramEmployeeMessageId || currentAccount.photoData){
+        currentAccount=Object.assign({},currentAccount,await safeSyncEmployeeTelegram(user.uid,currentAccount,{showError:false}));
+      }
       populateProfile(currentAccount);
       window.HETKAuth.currentUser = currentAccount;
       setOverlayVisible(false);
