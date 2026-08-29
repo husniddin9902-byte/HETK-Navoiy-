@@ -218,12 +218,19 @@ const addFolderPanel = document.getElementById('add-folder-panel');
 const cancelFolder = document.getElementById('cancel-folder');
 const hueSlider = document.getElementById('color-slider');
 
-// 2 va 3-rasmlar mosligi: Har ikkala tugma ham boshqaruv panelini ochadi
-if(listBtn) listBtn.addEventListener('click', () => { listModal.style.display = 'flex'; loadFolders(); });
+// Boshqaruv paneli har safar toza boshlang'ich holatda ochiladi.
+if(listBtn) listBtn.addEventListener('click', () => {
+    hetkResetManagementPanelState();
+    listModal.style.display = 'flex';
+    loadFolders();
+});
 
 // Profil oynasini ochish/yopish profile-container.js ichida boshqariladi.
 
-if(closeList) closeList.addEventListener('click', () => { listModal.style.display = 'none'; });
+if(closeList) closeList.addEventListener('click', () => {
+    listModal.style.display = 'none';
+    hetkResetManagementPanelState();
+});
 
 
 if(openAddBtn) openAddBtn.addEventListener('click', () => { 
@@ -4590,6 +4597,229 @@ if (panelTabFolders) {
 var panelInternalMap = null;
 var panelInternalMarkers = [];
 let panelMapRequestedElementId = null;
+const HETK_PANEL_MAP_DEFAULT_CENTER = [40.10,65.81];
+const HETK_PANEL_MAP_DEFAULT_ZOOM = 14;
+
+function hetkResetManagementPanelState(){
+    activeFolderId='root';
+    searchState.folderId='root';
+    searchState.text='';
+    searchState.results=[];
+    searchState.resultIds=new Set();
+    window.__lastFilteredPoints=[];
+
+    if(elementSearchInput) elementSearchInput.value='';
+    currentSearchType='name';
+    tempSearchType='name';
+    const nameSearchRadio=document.querySelector('input[name="searchType"][value="name"]');
+    if(nameSearchRadio) nameSearchRadio.checked=true;
+    if(searchTypeMenu) searchTypeMenu.style.display='none';
+
+    resetFilters();
+    appliedFilterState={...filterState};
+    setFilterDropdown('balance-option','none',balanceSelectedText);
+    hetkSetResponsibleFilterSelection('none');
+    setFilterDropdown('created-option','none',createdSelectedText);
+    setFilterDropdown('updated-option','none',updatedSelectedText);
+    setFilterDropdown('comment-option','none',commentSelectedText);
+    setFilterDropdown('dual-option','none',dualSelectedText);
+    setFilterDropdown('power-option','none',powerSelectedText);
+    setFilterDropdown('status-option','none',statusSelectedText);
+    updateFilterCount();
+    if(filterMenu) filterMenu.style.display='none';
+    if(typeof closeAllFilterDropdowns==='function') closeAllFilterDropdowns();
+
+    document.querySelectorAll('.folder-header').forEach(row=>row.classList.remove('active-folder'));
+    document.querySelectorAll('.tp-tree-row-item,.search-item').forEach(row=>{
+        row.classList.remove('selected');
+        row.style.background='transparent';
+        row.style.boxShadow='none';
+    });
+    selectedTreeElementRow=null;
+    selectedSearchItem=null;
+    currentTP=null;
+
+    const resultsBox=document.getElementById('search-results');
+    if(resultsBox){
+        resultsBox.innerHTML='';
+        resultsBox.style.display='none';
+    }
+    const foldersBox=document.getElementById('folders-section');
+    if(foldersBox) foldersBox.style.display='block';
+
+    panelMapRequestedElementId=null;
+    if(panelInternalMap){
+        panelInternalMap.closePopup();
+        panelInternalMarkers.forEach(marker=>{
+            try{panelInternalMap.removeLayer(marker);}catch(_e){}
+        });
+        panelInternalMarkers=[];
+        panelInternalMap.setView(HETK_PANEL_MAP_DEFAULT_CENTER,HETK_PANEL_MAP_DEFAULT_ZOOM);
+    }
+    showFoldersTab();
+}
+
+function hetkEnsurePanelMapCardStyles(){
+    if(document.getElementById('hetk-panel-map-card-styles')) return;
+    const style=document.createElement('style');
+    style.id='hetk-panel-map-card-styles';
+    style.textContent=`
+      .hetk-panel-map-popup .leaflet-popup-content-wrapper{
+        padding:0!important;background:transparent!important;border-radius:14px!important;
+        box-shadow:0 12px 34px rgba(0,0,0,.48)!important;overflow:hidden;
+      }
+      .hetk-panel-map-popup .leaflet-popup-content{margin:0!important;width:auto!important;line-height:1.3!important;}
+      .hetk-panel-map-popup .leaflet-popup-tip{background:#0d2a40!important;box-shadow:none!important;}
+      .hetk-panel-map-popup .leaflet-popup-close-button{display:none!important;}
+      .hetk-panel-map-card{
+        width:min(520px,calc(100vw - 48px));max-width:520px;color:#fff;background:#0c2134;
+        border:1px solid rgba(92,174,226,.28);border-radius:14px;overflow:hidden;
+        font-family:inherit;box-sizing:border-box;
+      }
+      .hetk-panel-map-card *{box-sizing:border-box;}
+      .hetk-panel-map-card-head{display:flex;align-items:center;gap:9px;padding:12px 14px;background:#173d5b;}
+      .hetk-panel-map-card-folder{font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:38%;}
+      .hetk-panel-map-card-name{font-weight:800;font-size:17px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+      .hetk-panel-map-card-close{margin-left:auto;width:32px;height:32px;border:0;background:transparent;color:#fff;font-size:25px;line-height:1;cursor:pointer;}
+      .hetk-panel-map-card-path{padding:9px 14px;background:#102c43;color:#9abbd3;font-size:12px;border-bottom:1px solid rgba(255,255,255,.08);overflow-wrap:anywhere;}
+      .hetk-panel-map-card-body{display:grid;grid-template-columns:132px minmax(0,1fr);min-height:138px;}
+      .hetk-panel-map-card-photo{margin:12px;width:108px;height:108px;border-radius:10px;background:#173854;border:2px solid rgba(92,174,226,.25);overflow:hidden;display:flex;align-items:center;justify-content:center;text-align:center;color:#9ab0c1;font-size:12px;}
+      .hetk-panel-map-card-photo img{width:100%;height:100%;object-fit:cover;object-position:50% 25%;display:none;}
+      .hetk-panel-map-card-info{padding:13px 14px 10px;border-left:1px solid rgba(255,255,255,.08);min-width:0;}
+      .hetk-panel-map-card-status{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:13px;font-weight:800;font-size:16px;}
+      .hetk-panel-map-card-dot{display:inline-block;width:15px;height:15px;border-radius:50%;margin-left:5px;box-shadow:0 0 0 2px rgba(255,255,255,.12);vertical-align:-2px;}
+      .hetk-panel-map-card-power{color:#ffd54f;font-size:21px;white-space:nowrap;}
+      .hetk-panel-map-card-zone-title{color:#9ab0c1;font-size:12px;margin-bottom:7px;}
+      .hetk-panel-map-card-zones{display:flex;flex-wrap:wrap;gap:6px;}
+      .hetk-panel-map-card-zone{border:1px solid #2f81b8;background:#12344e;color:#d8efff;border-radius:18px;padding:6px 10px;font:inherit;font-size:12px;cursor:pointer;}
+      .hetk-panel-map-card-zone-static{cursor:default;border-color:#526b7d;color:#c0ccd5;}
+      .hetk-panel-map-card-master-note{font-size:11px;color:#ffb4b4;margin-top:6px;}
+      .hetk-panel-map-card-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;padding:10px 12px 12px;border-top:1px solid rgba(255,255,255,.08);}
+      .hetk-panel-map-card-action{border:1px solid rgba(92,174,226,.35);border-radius:9px;background:#173854;color:#fff;padding:10px 9px;font:inherit;font-weight:700;cursor:pointer;text-align:center;}
+      .hetk-panel-map-card-action:hover{background:#205175;}
+      .hetk-panel-map-card-nav{background:#1266a2;border-color:#258bd1;}
+      @media(max-width:560px){
+        .hetk-panel-map-card{width:min(390px,calc(100vw - 38px));}
+        .hetk-panel-map-card-head{padding:10px 11px;gap:7px;}
+        .hetk-panel-map-card-folder{max-width:42%;font-size:13px;}
+        .hetk-panel-map-card-name{font-size:15px;}
+        .hetk-panel-map-card-body{grid-template-columns:112px minmax(0,1fr);}
+        .hetk-panel-map-card-photo{width:88px;height:96px;margin:11px;}
+        .hetk-panel-map-card-info{padding:11px 10px 9px;}
+        .hetk-panel-map-card-status{font-size:14px;margin-bottom:10px;}
+        .hetk-panel-map-card-power{font-size:18px;}
+        .hetk-panel-map-card-action{padding:9px 6px;font-size:12px;}
+      }
+    `;
+    document.head.appendChild(style);
+}
+
+function hetkPanelMapPrimaryFolderId(point){
+    const folderIds=point && point.folders
+        ? Object.keys(point.folders).filter(id=>point.folders[id])
+        : [];
+    return (point && (point.primaryFolderId || point.folderId)) || folderIds[0] || '';
+}
+
+function hetkPanelMapStatusColor(status){
+    if(status==='emergency') return '#ff3b30';
+    if(status==='satisfactory') return '#ffd43b';
+    if(status) return '#24cf5f';
+    return '#7d91a2';
+}
+
+function hetkCreatePanelMapCard(point,tpId){
+    const primaryFolderId=hetkPanelMapPrimaryFolderId(point);
+    const folderName=(currentFolders[primaryFolderId] && currentFolders[primaryFolderId].name) || 'Papka';
+    const folderPath=primaryFolderId ? getFolderPath(primaryFolderId) : 'Papka biriktirilmagan';
+    const balanceColor=point.isPrivate ? '#ff4444' : '#1e88e5';
+    const statusColor=hetkPanelMapStatusColor(point.status);
+    const workZoneIds=hetkGetTPWorkZoneIds(point);
+    const card=document.createElement('div');
+    card.className='hetk-panel-map-card';
+
+    const zonesHtml=workZoneIds.length
+        ? workZoneIds.map(id=>`<button type="button" class="hetk-panel-map-card-zone" data-uj-id="${hetkEscapeHtml(id)}">${hetkEscapeHtml(hetkWorkZoneName(id,point))}</button>`).join('')
+        : ((point.responsiblePerson || point.responsible)
+            ? `<span class="hetk-panel-map-card-zone hetk-panel-map-card-zone-static">${hetkEscapeHtml(point.responsiblePerson || point.responsible)}</span>`
+            : '<span style="color:#7d91a2;font-size:12px">U/J biriktirilmagan</span>');
+
+    card.innerHTML=`
+      <div class="hetk-panel-map-card-head">
+        <span class="hetk-panel-map-card-folder">📂 ${hetkEscapeHtml(folderName)}</span>
+        <i class="fas fa-bolt" style="color:${balanceColor};font-size:18px;flex-shrink:0"></i>
+        <span class="hetk-panel-map-card-name">${hetkEscapeHtml(point.name || 'Element')}</span>
+        <button type="button" class="hetk-panel-map-card-close" aria-label="Yopish">×</button>
+      </div>
+      <div class="hetk-panel-map-card-path">📂 ${hetkEscapeHtml(folderPath)}</div>
+      <div class="hetk-panel-map-card-body">
+        <div class="hetk-panel-map-card-photo">
+          <span class="hetk-panel-map-card-photo-empty">📷<br>Rasm mavjud emas</span>
+          <img alt="${hetkEscapeHtml(point.name || 'Element rasmi')}">
+        </div>
+        <div class="hetk-panel-map-card-info">
+          <div class="hetk-panel-map-card-status">
+            <span>Holati <span class="hetk-panel-map-card-dot" style="background:${statusColor}"></span></span>
+            <span class="hetk-panel-map-card-power">⚡ ${hetkEscapeHtml(point.power || '-')}</span>
+          </div>
+          <div class="hetk-panel-map-card-zone-title">🛠 Biriktirilgan ustalik joyi</div>
+          <div class="hetk-panel-map-card-zones">${zonesHtml}</div>
+          <div class="hetk-panel-map-card-master-note"></div>
+        </div>
+      </div>
+      <div class="hetk-panel-map-card-actions">
+        <button type="button" class="hetk-panel-map-card-action hetk-panel-map-card-details">📄 Batafsil</button>
+        <button type="button" class="hetk-panel-map-card-action hetk-panel-map-card-nav">🚗 Navigatsiya</button>
+      </div>`;
+
+    const fullPoint=Object.assign({},point,{id:tpId});
+    card.querySelector('.hetk-panel-map-card-close').onclick=event=>{
+        event.stopPropagation();
+        if(panelInternalMap) panelInternalMap.closePopup();
+    };
+    card.querySelector('.hetk-panel-map-card-details').onclick=async event=>{
+        event.stopPropagation();
+        currentTP=fullPoint;
+        await showElementModal();
+    };
+    const navButton=card.querySelector('.hetk-panel-map-card-nav');
+    if(point.lat && point.lng){
+        navButton.onclick=event=>{
+            event.stopPropagation();
+            window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(point.lat)},${encodeURIComponent(point.lng)}`,'_blank','noopener');
+        };
+    }else{
+        navButton.disabled=true;
+        navButton.style.opacity='.45';
+        navButton.title='Koordinata mavjud emas';
+    }
+    const masterNote=card.querySelector('.hetk-panel-map-card-master-note');
+    card.querySelectorAll('[data-uj-id]').forEach(button=>{
+        button.onclick=async event=>{
+            event.stopPropagation();
+            await hetkShowCurrentMaster(button.dataset.ujId,masterNote);
+        };
+    });
+
+    const images=Array.isArray(point.images) ? point.images : [];
+    const mainIndex=Number.isInteger(Number(point.mainImageIndex)) ? Number(point.mainImageIndex) : 0;
+    const mainImage=images[mainIndex] || images[0];
+    const imageUrl=mainImage && (telegramFileUrl(mainImage.fileId) || mainImage.url || '');
+    if(imageUrl){
+        const image=card.querySelector('.hetk-panel-map-card-photo img');
+        const empty=card.querySelector('.hetk-panel-map-card-photo-empty');
+        image.onload=()=>{
+            image.style.display='block';
+            if(empty) empty.style.display='none';
+        };
+        image.onerror=()=>{
+            image.style.display='none';
+            if(empty) empty.style.display='block';
+        };
+        image.src=imageUrl;
+    }
+    return card;
+}
 
 window.showElementOnPanelMap = function(tpId){
     if(!tpId) return showToast("Element topilmadi!");
@@ -4608,7 +4838,9 @@ if (panelTabItems) {
       
         // Ichki xaritani bir marta yaratib olamiz
         if (!panelInternalMap) {
-            panelInternalMap = L.map('panel-map', { zoomControl: true }).setView([40.10, 65.81], 14);
+            hetkEnsurePanelMapCardStyles();
+            panelInternalMap = L.map('panel-map', { zoomControl: true, closePopupOnClick: true })
+                .setView(HETK_PANEL_MAP_DEFAULT_CENTER, HETK_PANEL_MAP_DEFAULT_ZOOM);
             
             L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
                 maxZoom: 20,
@@ -4621,8 +4853,9 @@ if (panelTabItems) {
         panelInternalMarkers = [];
 
         // Bazadan faqat tanlangan guruh ma'lumotlarini filtrlash
-        database.ref('TPs').once('value', (snapshot) => {
+        database.ref('TPs').once('value', async (snapshot) => {
             const allPoints = snapshot.val() || {};
+            try{await loadElementWorkZones(false);}catch(_e){}
 
 // MANA SHUNI QO'YING
 
@@ -4690,18 +4923,35 @@ if(requestedElementId && !filteredKeys.length){
                     bounds.push([lat, lng]);
                     
                     // Guruh rangini aniqlash
-                    const folderColor = (currentFolders[point.folderId] && currentFolders[point.folderId].color) ? currentFolders[point.folderId].color : '#ff4444';
+                    const markerFolderId=hetkPanelMapPrimaryFolderId(point);
+                    const folderColor = (currentFolders[markerFolderId] && currentFolders[markerFolderId].color) ? currentFolders[markerFolderId].color : '#ff4444';
 
                     // Marker dizayni (O'z rangi bilan)
                     const pIcon = L.divIcon({
                         className: 'panel-internal-marker',
                         html: `<i class="fas fa-map-marker-alt" style="color: ${folderColor}; font-size: 24px; text-shadow: 0 0 3px black;"></i>`,
                         iconSize: [24, 24],
-                        iconAnchor: [12, 24]
+                        iconAnchor: [12, 24],
+                        popupAnchor: [0, -28]
                     });
 
                     const marker = L.marker([lat, lng], { icon: pIcon }).addTo(panelInternalMap);
-                    marker.bindPopup(`<b>${displayName}</b><br>${point.address || ''}`);
+                    const popupCard=hetkCreatePanelMapCard(point,key);
+                    marker.bindPopup(popupCard,{
+                        className:'hetk-panel-map-popup',
+                        closeButton:false,
+                        autoClose:true,
+                        closeOnClick:true,
+                        autoPan:true,
+                        maxWidth:560,
+                        minWidth:280,
+                        offset:[0,-8],
+                        autoPanPaddingTopLeft:[18,80],
+                        autoPanPaddingBottomRight:[18,24]
+                    });
+                    marker.on('popupopen',()=>{
+                        currentTP=Object.assign({},point,{id:key});
+                    });
                     panelInternalMarkers.push(marker);
                     if(requestedElementId && key===requestedElementId){
                         requestedMarker=marker;
