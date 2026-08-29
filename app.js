@@ -5584,7 +5584,7 @@ async function nextGalleryImage(){
 async function previousGalleryImage(){
     if(galleryIndex <= 0){
         return;
-    }
+    } 
     galleryIndex--;
     await loadGalleryImage();
     showGalleryControls();
