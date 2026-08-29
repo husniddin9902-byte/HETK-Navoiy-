@@ -1974,6 +1974,10 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
   window.HETKAuth = {
     currentUser:null,
     roles:ROLE_DEFS,
+    async getIdToken(forceRefresh){
+      if(!auth || !auth.currentUser) throw new Error('AUTH_REQUIRED');
+      return await auth.currentUser.getIdToken(!!forceRefresh);
+    },
     getRoleLabel(role){return ROLE_DEFS[role] ? ROLE_DEFS[role].label : role;},
     getAccountRoleLabel(account){return getRoleLabel(account);},
     getWorkZones(){return teamWorkZonesCache;},
