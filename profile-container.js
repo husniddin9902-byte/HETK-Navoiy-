@@ -1,5 +1,5 @@
 (function(){
-    'use strict';
+    'use strict'; 
 
     function getModal(){
         return document.getElementById('profile-container');
