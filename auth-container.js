@@ -1009,8 +1009,21 @@
       const changes=noticeChanges(notice.changes);
       const pending=notice.kind==='approval' && notice.status==='pending';
       const status=notice.status ? `<span class="hetk-notice-status ${escapeAttr(notice.status)}">${escapeHtml(noticeStatusText(notice.status))}</span>` : '';
-      const changeHtml=changes.length ? `<div class="hetk-notice-changes">${changes.map(change=>`
-        <div><b>${escapeHtml(change.label || 'O‘zgarish')}</b><span><del>${escapeHtml(change.before || '—')}</del><i class="fas fa-arrow-right"></i><ins>${escapeHtml(change.after || '—')}</ins></span></div>`).join('')}</div>` : '';
+      const changeHtml=changes.length ? `<div class="hetk-notice-changes">
+        <div class="hetk-notice-changes-title"><i class="fas fa-exchange-alt"></i><span>Tahrirlangan joylar</span><b>${changes.length} ta</b></div>
+        ${changes.map(change=>{
+          const beforeValue=change.before===undefined || change.before===null || change.before==='' ? '—' : change.before;
+          const afterValue=change.after===undefined || change.after===null || change.after==='' ? '—' : change.after;
+          return `<div class="hetk-notice-change-field">
+            <strong>${escapeHtml(change.label || 'O‘zgarish')}</strong>
+            <div class="hetk-notice-change-values">
+              <section><small>Tahrirdan oldin</small><del>${escapeHtml(beforeValue)}</del></section>
+              <i class="fas fa-arrow-right"></i>
+              <section><small>Tahrirdan keyin</small><ins>${escapeHtml(afterValue)}</ins></section>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>` : '';
       const location=[notice.folderPath,notice.workZoneName].filter(Boolean).map(escapeHtml).join(' · ');
       return `<article class="hetk-notice-card ${notice.read?'':'unread'} ${pending?'approval-pending':''}" data-notice-id="${escapeAttr(notice.id || '')}">
         <div class="hetk-notice-icon"><i class="fas ${noticeIcon(notice)}"></i></div>
