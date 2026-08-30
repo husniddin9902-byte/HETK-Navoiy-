@@ -2229,26 +2229,80 @@ function hetkElementValue(tp,key){
     tp=tp || {};
     if(key==='folders') return hetkElementFolderIds(tp).map(id=>getFolderPath(id)).filter(Boolean).join('; ') || '—';
     if(key==='workZones') return hetkGetTPWorkZoneNames(tp).join(', ') || '—';
+    if(key==='primaryFolderId'){
+        const id=tp.primaryFolderId || tp.folderId;
+        return id ? (getFolderPath(id) || id) : '—';
+    }
+    if(key==='primaryWorkZoneId'){
+        const id=tp.primaryWorkZoneId || tp.workZoneId;
+        return id ? hetkWorkZoneName(id,tp) : '—';
+    }
+    if(key==='mahallaLinks'){
+        const links=Array.isArray(tp.mahallaLinks) ? tp.mahallaLinks : [];
+        return links.map(item=>item && (item.name || item.title || item.mahalla || item.id)).filter(Boolean).join(', ') || tp.primaryMahalla || '—';
+    }
     if(key==='status') return hetkStatusText(tp.status);
     if(key==='isPrivate') return tp.isPrivate ? 'Xususiy balans' : 'ETK balansi';
     if(key==='images') return (Array.isArray(tp.images) ? tp.images.length : 0)+' ta rasm';
+    if(key==='mainImageIndex'){
+        const count=Array.isArray(tp.images) ? tp.images.length : 0;
+        return count ? `${Number(tp.mainImageIndex || 0)+1}-rasm` : '—';
+    }
     if(key==='coordinates') return `${tp.lat || '—'}, ${tp.lng || '—'}`;
     const value=tp[key];
     return value===undefined || value===null || value==='' ? '—' : String(value);
+}
+
+function hetkElementCompareValue(tp,key){
+    tp=tp || {};
+    if(key==='folders') return JSON.stringify(hetkElementFolderIds(tp).slice().sort());
+    if(key==='workZones') return JSON.stringify(hetkGetTPWorkZoneIds(tp).slice().sort());
+    if(key==='primaryFolderId') return String(tp.primaryFolderId || tp.folderId || '');
+    if(key==='primaryWorkZoneId') return String(tp.primaryWorkZoneId || tp.workZoneId || '');
+    if(key==='coordinates') return JSON.stringify([String(tp.lat ?? ''),String(tp.lng ?? '')]);
+    if(key==='mahallaLinks'){
+        const links=Array.isArray(tp.mahallaLinks) ? tp.mahallaLinks : [];
+        return JSON.stringify(links.map(item=>({
+            id:item && (item.id || item.key || ''),
+            name:item && (item.name || item.title || item.mahalla || ''),
+            isPrimary:!!(item && item.isPrimary)
+        })));
+    }
+    if(key==='images'){
+        const images=Array.isArray(tp.images) ? tp.images : [];
+        return JSON.stringify(images.map(img=>img && (img.fileId || img.telegramFileId || img.url || img.src || img.name || '')));
+    }
+    if(key==='isPrivate') return tp.isPrivate===true ? '1' : '0';
+    const value=tp[key];
+    return value===undefined || value===null ? '' : String(value);
 }
 
 function hetkElementChanges(before,after){
     const fields=[
         ['name','Nomi'],['power','Quvvati (kVA)'],['status','Texnik holati'],['note','Izoh'],
         ['folders','Papka / fider'],['workZones','Ustalik joyi'],['address','Manzil'],
+        ['primaryFolderId','Asosiy papka / fider'],['primaryWorkZoneId','Asosiy ustalik joyi'],
+        ['mahallaLinks','Mahalla'],
         ['coordinates','Koordinata'],['isPrivate','Balans'],['ownerFirm','Korxona'],
         ['ownerName','Korxona vakili'],['ownerPhone','Korxona telefoni'],
         ['meterNumber','Hisoblagich'],['balanceMeterSerial','Balans hisoblagichi'],
-        ['concentratorSerial','Konsentrator'],['images','Rasmlar']
+        ['concentratorSerial','Konsentrator'],['images','Rasmlar'],['mainImageIndex','Asosiy rasm']
     ];
-    return fields.map(([key,label])=>({
-        key,label,before:hetkElementValue(before,key),after:hetkElementValue(after,key)
-    })).filter(change=>change.before!==change.after).slice(0,16);
+    return fields.filter(([key])=>hetkElementCompareValue(before,key)!==hetkElementCompareValue(after,key)).map(([key,label])=>{
+        let oldValue=hetkElementValue(before,key);
+        let newValue=hetkElementValue(after,key);
+        if(key==='images' && oldValue===newValue){
+            oldValue=`${oldValue} (avvalgi)`;
+            newValue=`${newValue} (yangi)`;
+        }
+        return {key,label,before:oldValue,after:newValue};
+    });
+}
+
+function hetkChangesForDatabase(changes){
+    const result={};
+    (changes || []).forEach((change,index)=>{result[String(index)]=change;});
+    return result;
 }
 
 async function hetkNotificationRecipients(tp,excludeUid){
@@ -2317,14 +2371,14 @@ async function hetkWriteUserNotices(recipientUids,payload,noticeId){
 
 async function hetkNotifyElementActivity(action,tpId,before,after){
     const actor=hetkAuditActor();
-    const element=after || before || {};
+    const element=action==='edit' ? Object.assign({},before || {},after || {}) : (after || before || {});
     const recipientSet=new Set(await hetkNotificationRecipients(element,actor.uid));
     if(before && after){
         (await hetkNotificationRecipients(before,actor.uid)).forEach(uid=>recipientSet.add(uid));
     }
     const recipients=Array.from(recipientSet);
     if(!recipients.length) return;
-    const changes=action==='edit' ? hetkElementChanges(before,after) : [];
+    const changes=action==='edit' ? hetkElementChanges(before || {},element) : [];
     if(action==='edit' && !changes.length) return;
     const actualAction=action==='edit' && changes.length===1 && changes[0].key==='note' ? 'comment' : action;
     const verbs={create:'yangi element kiritdi',edit:'elementni tahrirladi',comment:'elementga izoh yozdi'};
@@ -2336,7 +2390,8 @@ async function hetkNotifyElementActivity(action,tpId,before,after){
         elementId:tpId,elementName:element.name || 'Element',
         folderPath:folderPaths.join('; ') || 'Papka biriktirilmagan',
         workZoneName:hetkGetTPWorkZoneNames(element).join(', ') || 'U/J biriktirilmagan',
-        changes,createdAt:Date.now(),expiresAt:Date.now()+HETK_NOTICE_LIFETIME_MS
+        changes:hetkChangesForDatabase(changes),changeCount:changes.length,
+        createdAt:Date.now(),expiresAt:Date.now()+HETK_NOTICE_LIFETIME_MS
     });
 }
 
@@ -3260,8 +3315,11 @@ async function hetkFinalizeApprovedElementDeletion(requestId,request){
     if(!(request.approvers && request.approvers[actor.uid]) && actor.role!=='super_admin') throw new Error('Bu so‘rovni tasdiqlashga ruxsatingiz yo‘q.');
     if(Number(request.dueAt||0)<Date.now()) throw new Error('Tasdiqlash muddati tugagan. Element o‘chirilmaydi.');
     const statusRef=database.ref(`ElementDeletionRequests/${requestId}/status`);
-    const lock=await statusRef.transaction(status=>status==='pending' ? 'processing' : undefined);
-    if(!lock.committed) throw new Error('Bu so‘rov avval ko‘rib chiqilgan.');
+    // Firebase tranzaksiyasi birinchi chaqiriqda kesh hali yuklanmagan bo‘lsa `null`
+    // berishi mumkin. So‘rov yuqorida `pending` deb tekshirilgan, shuning uchun shu
+    // dastlabki `null` ham serverdagi haqiqiy qiymat bilan qayta solishtiriladi.
+    const lock=await statusRef.transaction(status=>(status===null || status==='pending') ? 'processing' : undefined,undefined,false);
+    if(!lock.committed || lock.snapshot.val()!=='processing') throw new Error('Bu so‘rov avval ko‘rib chiqilgan.');
     try{
         await database.ref(`ElementDeletionRequests/${requestId}`).update({processingAt:Date.now(),processingBy:actor.uid});
         const tpSnap=await database.ref(`TPs/${request.tpId}`).once('value');
