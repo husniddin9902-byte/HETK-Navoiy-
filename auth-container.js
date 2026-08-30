@@ -261,6 +261,83 @@
       .replace(/^\.+|\.+$/g, '');
   }
 
+  function normalizeSmsPhone(value){
+    let digits=String(value || '').replace(/\D/g,'');
+    if(digits.startsWith('00')) digits=digits.slice(2);
+    if(digits.length===9) digits='998'+digits;
+    else if(digits.length===10 && digits.startsWith('0')) digits='998'+digits.slice(1);
+    if(digits.length<10 || digits.length>15) return '';
+    return '+'+digits;
+  }
+
+  function isMobileSmsDevice(){
+    if(navigator.userAgentData && navigator.userAgentData.mobile) return true;
+    const ua=navigator.userAgent || '';
+    return /Android|iPhone|iPad|iPod|Mobile/i.test(ua) ||
+      (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+  }
+
+  function currentSiteAddress(){
+    try{
+      const url=new URL(document.baseURI);
+      url.hash='';
+      url.search='';
+      if(/\/index\.html$/i.test(url.pathname)) url.pathname=url.pathname.replace(/index\.html$/i,'');
+      return url.href;
+    }catch(_e){
+      return window.location.href.split('#')[0].split('?')[0];
+    }
+  }
+
+  function buildNewAccountSms(fullName,login,password){
+    return [
+      'HETK tizimiga kirish ma’lumotlari',
+      '',
+      'Hodim: '+fullName,
+      'Sayt: '+currentSiteAddress(),
+      'Login: '+login,
+      'Vaqtinchalik parol: '+password,
+      '',
+      'Iltimos, saytga kirgach login va parolni almashtirib oling.'
+    ].join('\n');
+  }
+
+  function openNewAccountSms(details){
+    const phone=normalizeSmsPhone(details.phone);
+    if(!phone) return;
+    if(!isMobileSmsDevice()){
+      alert('Hodim saqlandi. Tayyor SMS faqat telefonda ochiladi.');
+      return;
+    }
+
+    const text=buildNewAccountSms(details.fullName,details.login,details.password);
+    const isiOS=/iPhone|iPad|iPod/i.test(navigator.userAgent || '') ||
+      (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+    const smsUrl=`sms:${phone}${isiOS?'&':'?'}body=${encodeURIComponent(text)}`;
+
+    const old=byId('hetk-sms-launcher');
+    if(old) old.remove();
+    const launcher=document.createElement('div');
+    launcher.id='hetk-sms-launcher';
+    launcher.style.cssText='position:fixed;left:12px;right:12px;bottom:18px;z-index:1000002;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-radius:12px;background:#082f49;color:#fff;box-shadow:0 8px 30px rgba(0,0,0,.35);font:600 14px/1.35 sans-serif';
+    const info=document.createElement('span');
+    info.textContent='Hodim saqlandi. SMS ochilmasa:';
+    const link=document.createElement('a');
+    link.href=smsUrl;
+    link.textContent='📩 SMSni ochish';
+    link.style.cssText='flex:none;padding:9px 12px;border-radius:8px;background:#0ea5e9;color:#fff;text-decoration:none;font-weight:700';
+    const close=document.createElement('button');
+    close.type='button';
+    close.textContent='×';
+    close.setAttribute('aria-label','Yopish');
+    close.style.cssText='flex:none;border:0;background:transparent;color:#fff;font-size:24px;line-height:1;cursor:pointer';
+    close.addEventListener('click',()=>launcher.remove());
+    launcher.append(info,link,close);
+    document.body.appendChild(launcher);
+    setTimeout(()=>{ if(launcher.isConnected) window.location.href=smsUrl; },80);
+    setTimeout(()=>{ if(launcher.isConnected) launcher.remove(); },60000);
+  }
+
   function loginToEmail(login){
     // Eski foydalanuvchilar bilan moslik uchun qoldirilgan legacy email.
     return normalizeLogin(login) + '@hetk.local';
@@ -1143,7 +1220,7 @@
             <div id="hetk-user-editor-message" class="hetk-user-editor-message"></div>
             <div class="hetk-user-form-grid">
               <div class="hetk-user-field"><label>F.I.Sh *</label><input id="hetk-user-fullname" placeholder="To‘liq ism-sharif"></div>
-              <div class="hetk-user-field"><label>Telefon</label><input id="hetk-user-phone" placeholder="+998 ..."></div>
+              <div class="hetk-user-field"><label>Telefon *</label><input id="hetk-user-phone" inputmode="tel" autocomplete="tel" placeholder="+998 ..."></div>
               <div class="hetk-user-field"><label>Jinsi *</label><select id="hetk-user-gender"><option value="male">Erkak</option><option value="female">Ayol</option></select></div>
               <div class="hetk-user-field"><label>Login *</label><input id="hetk-user-login" placeholder="Masalan: xatirchi.master"></div>
               <div class="hetk-user-field"><label>Lavozim *</label><select id="hetk-user-role"></select></div>
@@ -1995,12 +2072,15 @@
   async function saveUserEditor(){
     const btn=byId('hetk-user-save');
     const fullName=String(byId('hetk-user-fullname').value||'').trim();
-    const phone=String(byId('hetk-user-phone').value||'').trim();
+    let phone=String(byId('hetk-user-phone').value||'').trim();
+    const smsPhone=normalizeSmsPhone(phone);
+    if(smsPhone) phone=smsPhone;
     const gender=normalizeGender(byId('hetk-user-gender').value);
     const login=normalizeLogin(byId('hetk-user-login').value);
     const role=byId('hetk-user-role').value;
     let selectedRoots=normalizeSelectedFolderRoots(getEditorSelectedFolders(),teamFoldersCache);
     if(fullName.length<3) return editorMessage('error','F.I.Sh ni to‘liq kiriting.');
+    if(userEditorMode==='create' && !smsPhone) return editorMessage('error','SMS yuborish uchun hodimning telefon raqamini +998 formatida kiriting.');
     if(userEditorMode==='create' && login.length<3) return editorMessage('error','Login kamida 3 ta belgidan iborat bo‘lsin.');
     if(!ROLE_DEFS[role]) return editorMessage('error','Lavozimni tanlang.');
     if(userEditorMode==='create' && !getCreatableRoles().includes(role)) return editorMessage('error','Bu lavozimni yaratishga ruxsatingiz yo‘q.');
@@ -2097,6 +2177,8 @@
           await sec.signOut();
           selectedTeamUid=uid;
           closeUserEditor();
+          try{ openNewAccountSms({fullName,phone,login,password:pass1}); }
+          catch(smsError){ console.warn('SMS ilovasi ochilmadi:',smsError); }
         }catch(e){
           if(cred && cred.user){ try{ await cred.user.delete(); }catch(_e){} }
           try{ await sec.signOut(); }catch(_e){}
