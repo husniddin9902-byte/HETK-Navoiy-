@@ -4,17 +4,17 @@
   const ROLE_DEFS = {
     super_admin: {
       label: 'Bosh administrator', level: 100,
-      createRoles: ['director','chief_engineer','regional_tb_engineer','tb_engineer','pto_engineer','chief_dispatcher','master','adli_kard_engineer','dispatcher','electrician','employee'],
+      createRoles: ['director','chief_engineer','regional_tb_engineer','tb_engineer','askue_chief_engineer','sales_chief','pto_engineer','chief_dispatcher','master','adli_kard_engineer','dispatcher','electrician','employee'],
       canCreateUsers: true, canDeactivateUsers: true, canManagePermissions: true, canManageFolders: true
     },
     director: {
       label: 'Direktor', level: 90,
-      createRoles: ['chief_engineer','tb_engineer','pto_engineer','chief_dispatcher','master','adli_kard_engineer','dispatcher','electrician','employee'],
+      createRoles: ['chief_engineer','tb_engineer','askue_chief_engineer','sales_chief','pto_engineer','chief_dispatcher','master','adli_kard_engineer','dispatcher','electrician','employee'],
       canCreateUsers: true, canDeactivateUsers: true, canManagePermissions: true, canManageFolders: true
     },
     chief_engineer: {
       label: 'Bosh / Asosiy muhandis', level: 85,
-      createRoles: ['tb_engineer','pto_engineer','chief_dispatcher','master','adli_kard_engineer','dispatcher','electrician','employee'],
+      createRoles: ['tb_engineer','askue_chief_engineer','sales_chief','pto_engineer','chief_dispatcher','master','adli_kard_engineer','dispatcher','electrician','employee'],
       canCreateUsers: true, canDeactivateUsers: true, canManagePermissions: true, canManageFolders: true
     },
     regional_tb_engineer: {
@@ -23,6 +23,14 @@
     },
     tb_engineer: {
       label: 'MMQXT va E muhandisi (tuman)', level: 75,
+      createRoles: [], canCreateUsers: false, canDeactivateUsers: false, canManagePermissions: false, canManageFolders: false
+    },
+    askue_chief_engineer: {
+      label: 'ASKUE bosh muhandisi', level: 70,
+      createRoles: [], canCreateUsers: false, canDeactivateUsers: false, canManagePermissions: false, canManageFolders: false
+    },
+    sales_chief: {
+      label: 'Sotish bo‘limi boshlig‘i', level: 70,
       createRoles: [], canCreateUsers: false, canDeactivateUsers: false, canManagePermissions: false, canManageFolders: false
     },
     pto_engineer: {
@@ -86,8 +94,21 @@
   let userNotificationsCache = {};
   let communicationTab = 'notifications';
   let notificationsCleanupTimer = null;
+  let userMessagesRef = null;
+  let userMessagesUid = '';
+  let userMessagesCache = {};
+  let savedFilesRef = null;
+  let savedFilesUid = '';
+  let savedFilesCache = {};
+  let messagesCleanupTimer = null;
+  let messageComposeMode = 'direct';
+  let selectedMessageRecipientUid = '';
+  let selectedBroadcastRoles = new Set();
 
   const TELEGRAM_WORKER_URL = 'https://hetk-telegram.husniddin-99-02.workers.dev';
+  const MESSAGE_LIFETIME_MS = 365 * 24 * 60 * 60 * 1000;
+  const MESSAGE_MAX_FILE_BYTES = 20 * 1024 * 1024;
+  const MASS_MESSAGE_ROLES = new Set(['super_admin','director','chief_engineer','regional_tb_engineer','tb_engineer','askue_chief_engineer','sales_chief','chief_dispatcher']);
   const DEFAULT_MALE_AVATAR = 'profile-default-male.png';
   const DEFAULT_FEMALE_AVATAR = 'profile-default-female.png';
 
@@ -120,6 +141,24 @@
     if(response.status===401) response=await send(true);
     let result={};
     try{ result=await response.json(); }catch(_e){}
+    if(!response.ok || !result.ok) throw new Error(result.description || result.error || 'Telegram xatosi');
+    return result;
+  }
+
+  async function messageTelegramFetch(method, body, isForm){
+    if(!auth || !auth.currentUser) throw new Error('Telegram uchun tizimga qayta kiring.');
+    async function send(forceRefresh){
+      const token=await auth.currentUser.getIdToken(!!forceRefresh);
+      const headers={'Authorization':'Bearer '+token};
+      if(!isForm) headers['Content-Type']='application/json';
+      return await fetch(`${TELEGRAM_WORKER_URL}/telegram/${method}?channel=messages`,{
+        method:'POST',headers,body:isForm ? body : JSON.stringify(body || {})
+      });
+    }
+    let response=await send(false);
+    if(response.status===401) response=await send(true);
+    let result={};
+    try{result=await response.json();}catch(_e){}
     if(!response.ok || !result.ok) throw new Error(result.description || result.error || 'Telegram xatosi');
     return result;
   }
@@ -648,6 +687,7 @@
       populateProfile(account);
       window.HETKAuth.currentUser = account;
       await startUserNotifications(uid);
+      await startUserMessages(uid);
       setOverlayVisible(false);
       document.dispatchEvent(new CustomEvent('hetk-auth-ready',{detail:{user:account}}));
       setMessage('success','Bosh administrator yaratildi. Tizimga kirildi.');
@@ -991,10 +1031,22 @@
     if(Object.keys(updates).length) await databaseRef.ref().update(updates);
   }
 
+  async function markAllMessagesRead(){
+    if(!currentAccount) return;
+    const updates={};
+    Object.keys(userMessagesCache).forEach(id=>{
+      const message=userMessagesCache[id];
+      if(message && message.direction!=='sent' && !message.read) updates[`UserMessages/${currentAccount.uid}/${id}/read`]=true;
+    });
+    if(Object.keys(updates).length) await databaseRef.ref().update(updates);
+  }
+
   function updateOuterMessageBadge(){
     const badge=document.querySelector('.hetk-profile-tab[data-profile-tab="messages"] .hetk-profile-badge');
     if(!badge) return;
-    const unread=Object.values(userNotificationsCache).filter(item=>item && !item.read).length;
+    const unreadNotices=Object.values(userNotificationsCache).filter(item=>item && !item.read).length;
+    const unreadMessages=Object.values(userMessagesCache).filter(item=>item && item.direction!=='sent' && !item.read).length;
+    const unread=unreadNotices+unreadMessages;
     badge.textContent=unread>99 ? '99+' : String(unread);
     badge.hidden=unread===0;
     badge.style.display=unread===0 ? 'none' : '';
@@ -1044,11 +1096,314 @@
     }).join('')}</div>`;
   }
 
+  function messageCategory(value){
+    return ({normal:{label:'Oddiy xabar',icon:'fa-comment-alt'},news:{label:'Yangilik',icon:'fa-newspaper'},order:{label:'Buyruq',icon:'fa-file-signature'},fax:{label:'Faksogramma',icon:'fa-fax'}})[value] || {label:'Xabar',icon:'fa-envelope'};
+  }
+
+  function messageLevel(account){return Number((account && account.level) || roleDef(account && account.role).level || 0);}
+
+  function messageAccountRoots(account){
+    const roots=accountFolderRoots(account);
+    if(account && account.workZoneId && teamWorkZonesCache[account.workZoneId]){
+      workZoneRoots(teamWorkZonesCache[account.workZoneId]).forEach(id=>{if(!roots.includes(id)) roots.push(id);});
+    }
+    return roots;
+  }
+
+  function messageDistrictKeys(account){
+    const keys=new Set();
+    messageAccountRoots(account).forEach(rootId=>{
+      let current=rootId,guard=0,found='';
+      while(current && current!=='root' && teamFoldersCache[current] && guard<100){
+        const name=String(teamFoldersCache[current].name || '').toLowerCase();
+        if(!found && /(^|\s)(tet|tuman|shahar)(\s|$)|elektr.*tarmoq/.test(name)) found=current;
+        current=teamFoldersCache[current].parentId;guard++;
+      }
+      if(found) keys.add(found);
+    });
+    return keys;
+  }
+
+  function messageAccountContains(sender,target){
+    if(!sender || !target) return false;
+    if(sender.rootAccess || sender.role==='super_admin') return true;
+    if(target.rootAccess) return false;
+    const allowed=new Set(getAccessibleFolderIds(sender,teamFoldersCache));
+    const targetRoots=messageAccountRoots(target);
+    return !!targetRoots.length && targetRoots.every(id=>allowed.has(id));
+  }
+
+  function messageSameTerritory(first,second){
+    if(!first || !second) return false;
+    if(first.uid===second.uid) return true;
+    if(first.rootAccess || first.role==='super_admin') return true;
+    if(second.rootAccess || second.role==='super_admin') return false;
+    const a=messageDistrictKeys(first),b=messageDistrictKeys(second);
+    if(a.size && b.size && Array.from(a).some(id=>b.has(id))) return true;
+    return messageAccountContains(first,second) || messageAccountContains(second,first);
+  }
+
+  function canSendMassMessages(account){
+    if(!account) return false;
+    return account.role==='master' || MASS_MESSAGE_ROLES.has(account.role) || !!account.rootAccess;
+  }
+
+  function messageDirectCandidates(){
+    if(!currentAccount) return [];
+    return Object.keys(teamUsersCache).map(uid=>Object.assign({uid},teamUsersCache[uid] || {}))
+      .filter(user=>user.uid!==currentAccount.uid && user.active!==false && messageSameTerritory(currentAccount,user))
+      .sort((a,b)=>messageLevel(b)-messageLevel(a) || String(a.fullName||a.login||'').localeCompare(String(b.fullName||b.login||'')));
+  }
+
+  function messageBroadcastBaseRecipients(){
+    if(!currentAccount || !canSendMassMessages(currentAccount)) return [];
+    const myLevel=messageLevel(currentAccount);
+    return Object.keys(teamUsersCache).map(uid=>Object.assign({uid},teamUsersCache[uid] || {}))
+      .filter(user=>user.uid!==currentAccount.uid && user.active!==false)
+      .filter(user=>currentAccount.role==='master'
+        ? !!currentAccount.workZoneId && user.workZoneId===currentAccount.workZoneId && messageLevel(user)<myLevel
+        : messageSameTerritory(currentAccount,user) && messageLevel(user)<myLevel);
+  }
+
+  function messageAvailableBroadcastRoles(){
+    const found=new Set(messageBroadcastBaseRecipients().map(user=>user.role).filter(Boolean));
+    return Array.from(found).sort((a,b)=>messageLevel({role:b})-messageLevel({role:a}) || roleDef(a).label.localeCompare(roleDef(b).label));
+  }
+
+  function messageSelectedRecipients(){
+    if(messageComposeMode==='direct'){
+      const raw=teamUsersCache[selectedMessageRecipientUid];
+      if(!raw) return [];
+      const user=Object.assign({uid:selectedMessageRecipientUid},raw);
+      return user.active===false || !messageSameTerritory(currentAccount,user) ? [] : [user];
+    }
+    const base=messageBroadcastBaseRecipients();
+    if(currentAccount && currentAccount.role==='master') return base;
+    return base.filter(user=>selectedBroadcastRoles.has(user.role));
+  }
+
+  function messageFileUrl(fileId){
+    return fileId ? `${TELEGRAM_WORKER_URL}/telegram/file?file_id=${encodeURIComponent(fileId)}` : '';
+  }
+
+  function messageFilePreview(message){
+    const file=message && message.file;
+    if(!file || !file.fileId) return '';
+    const url=messageFileUrl(file.fileId);
+    if(file.mediaType==='image') return `<div class="hetk-message-image"><img src="${escapeAttr(url)}" alt="${escapeAttr(file.fileName || 'Rasm')}"></div>`;
+    return `<div class="hetk-message-document"><i class="fas fa-file-alt"></i><div><b>${escapeHtml(file.fileName || 'Fayl')}</b><small>${escapeHtml(file.mimeType || 'Fayl')}</small></div></div>`;
+  }
+
+  function renderMessageCard(message){
+    const category=messageCategory(message.category);
+    const received=message.direction!=='sent';
+    const file=message.file && message.file.fileId;
+    const audience=message.recipientType==='broadcast' ? (message.recipientLabel || 'Ommaviy') : (received ? 'Sizga' : (message.recipientLabel || 'Yakka'));
+    return `<article class="hetk-message-card ${received && !message.read?'unread':''}" data-message-id="${escapeAttr(message.id || '')}">
+      <div class="hetk-message-card-head">
+        <span class="hetk-message-kind ${escapeAttr(message.category || 'normal')}"><i class="fas ${category.icon}"></i>${escapeHtml(category.label)}</span>
+        <span class="hetk-message-audience ${message.recipientType==='broadcast'?'mass':''}"><i class="fas ${message.recipientType==='broadcast'?'fa-bullhorn':'fa-user'}"></i>${escapeHtml(audience)}</span>
+        <time>${escapeHtml(noticeTime(message.createdAt))}</time>
+      </div>
+      <div class="hetk-message-sender"><b>${escapeHtml(message.senderName || 'Foydalanuvchi')}</b><span>${escapeHtml(message.senderRole || '')}</span></div>
+      <h4>${escapeHtml(message.title || category.label)}</h4>
+      ${message.text?`<p>${escapeHtml(message.text)}</p>`:''}
+      ${messageFilePreview(message)}
+      <div class="hetk-message-card-actions">
+        ${file?`<button type="button" data-open-message-file="${escapeAttr(message.id || '')}"><i class="fas fa-download"></i> Ochish</button><button type="button" data-save-message-file="${escapeAttr(message.id || '')}"><i class="fas fa-folder-plus"></i> Fayllarga saqlash</button>`:''}
+      </div>
+    </article>`;
+  }
+
   function renderChatsDesign(){
-    return `<div class="hetk-chat-design">
-      <aside><div class="hetk-chat-search"><i class="fas fa-search"></i><input placeholder="Hodimni qidirish..." disabled></div>${communicationEmpty('fa-user-friends','Suhbatlar hali boshlanmagan','Keyingi bosqichda lavozim darajasi bo‘yicha yozishma ochiladi.')}</aside>
-      <section>${communicationEmpty('fa-comments','Shaxsiy xabarlar','Matn va Telegramda saqlanadigan rasmlar keyingi bosqichda shu yerda ishlaydi.')}</section>
+    const canMass=canSendMassMessages(currentAccount);
+    if(!canMass) messageComposeMode='direct';
+    const candidates=messageDirectCandidates();
+    if(!selectedMessageRecipientUid || !candidates.some(user=>user.uid===selectedMessageRecipientUid)) selectedMessageRecipientUid=candidates[0] ? candidates[0].uid : '';
+    const availableRoles=messageAvailableBroadcastRoles();
+    Array.from(selectedBroadcastRoles).forEach(role=>{if(!availableRoles.includes(role)) selectedBroadcastRoles.delete(role);});
+    const selectedRecipients=messageSelectedRecipients();
+    const messages=Object.keys(userMessagesCache).map(id=>Object.assign({id},userMessagesCache[id] || {})).filter(message=>message.createdAt).sort((a,b)=>Number(b.createdAt||0)-Number(a.createdAt||0));
+    const recipientList=candidates.length ? candidates.map(user=>`<button type="button" class="hetk-message-recipient ${user.uid===selectedMessageRecipientUid?'selected':''}" data-message-recipient="${escapeAttr(user.uid)}">
+      <span><img src="${escapeAttr(accountAvatarUrl(user))}" alt=""></span><div><b>${escapeHtml(user.fullName || user.login || 'Hodim')}</b><small>${escapeHtml(getRoleLabel(user))}</small><em>${escapeHtml(user.workZoneName || user.region || '')}</em></div>
+    </button>`).join('') : communicationEmpty('fa-user-slash','Hodim topilmadi','Siz bilan bir hududdagi faol hodimlar shu yerda chiqadi.');
+    const rolePicker=currentAccount && currentAccount.role==='master'
+      ? `<div class="hetk-message-mass-info"><i class="fas fa-hard-hat"></i><div><b>${escapeHtml(currentAccount.workZoneName || 'O‘z U/Jingiz')}</b><span>${selectedRecipients.length} nafar quyi hodimga yuboriladi.</span></div></div>`
+      : `<div class="hetk-message-role-picker"><b>Qaysi lavozimlarga?</b>${availableRoles.length ? availableRoles.map(role=>`<label><input type="checkbox" data-message-role="${escapeAttr(role)}" ${selectedBroadcastRoles.has(role)?'checked':''}><span>${escapeHtml(roleDef(role).label)}</span><em>${messageBroadcastBaseRecipients().filter(user=>user.role===role).length}</em></label>`).join('') : '<p>Quyi lavozimdagi qabul qiluvchilar topilmadi.</p>'}</div>`;
+    return `<div class="hetk-chat-center">
+      <aside class="hetk-message-people">
+        <div class="hetk-message-mode-tabs"><button type="button" data-message-mode="direct" class="${messageComposeMode==='direct'?'active':''}"><i class="fas fa-user"></i> Yakka</button>${canMass?`<button type="button" data-message-mode="broadcast" class="${messageComposeMode==='broadcast'?'active':''}"><i class="fas fa-bullhorn"></i> Ommaviy</button>`:''}</div>
+        ${messageComposeMode==='direct'?`<div class="hetk-chat-search"><i class="fas fa-search"></i><input id="hetk-message-person-search" placeholder="Hodimni qidirish..."></div><div id="hetk-message-recipient-list" class="hetk-message-recipient-list">${recipientList}</div>`:`<div class="hetk-message-mass-aside"><i class="fas fa-users"></i><b>Ommaviy yuborish</b><p>Faqat o‘zingizga qarashli hudud va quyi lavozimlar.</p><strong>${selectedRecipients.length} qabul qiluvchi</strong></div>`}
+      </aside>
+      <section class="hetk-message-main">
+        <div class="hetk-message-composer">
+          <div class="hetk-message-composer-head"><div><h4>${messageComposeMode==='broadcast'?'Ommaviy xabar':'Yakka xabar'}</h4><p>${messageComposeMode==='broadcast'?'Tanlangan lavozimlardagi hodimlarga yuboriladi.':'Bir hududdagi tanlangan hodimga yuboriladi.'}</p></div><span>${selectedRecipients.length} qabul qiluvchi</span></div>
+          ${messageComposeMode==='broadcast'?rolePicker:''}
+          <div class="hetk-message-form-grid"><label><span>Xabar turi</span><select id="hetk-message-category"><option value="normal">Oddiy xabar</option><option value="news">Yangilik</option><option value="order">Buyruq</option><option value="fax">Faksogramma</option></select></label><label><span>Sarlavha *</span><input id="hetk-message-title" maxlength="120" placeholder="Xabar sarlavhasi"></label></div>
+          <label class="hetk-message-text"><span>Xabar matni</span><textarea id="hetk-message-text" maxlength="3000" rows="4" placeholder="Xabarni yozing..."></textarea></label>
+          <div class="hetk-message-attach-row"><label class="hetk-message-file-label"><input id="hetk-message-file" type="file" hidden><i class="fas fa-paperclip"></i><span id="hetk-message-file-name">Rasm yoki fayl biriktirish</span></label><button type="button" id="hetk-message-send"><i class="fas fa-paper-plane"></i> Yuborish</button></div>
+          <div id="hetk-message-status" class="hetk-message-status"></div>
+          <div class="hetk-message-retention"><i class="fas fa-shield-alt"></i> Media va fayl Telegram kanalida saqlanadi. Xabar tizimda 1 yil turadi.</div>
+        </div>
+        <div class="hetk-message-inbox-head"><div><h4>Xabarlar</h4><p>Qabul qilingan va yuborilgan xabarlar.</p></div><span>${messages.length} ta</span></div>
+        <div class="hetk-message-inbox">${messages.length ? messages.map(renderMessageCard).join('') : communicationEmpty('fa-inbox','Xabarlar yo‘q','Yangi xabarlar shu yerda chiqadi.')}</div>
+      </section>
     </div>`;
+  }
+
+  function setMessageStatus(type,text){
+    const el=byId('hetk-message-status');
+    if(!el) return;
+    el.className='hetk-message-status'+(type?' '+type:'');
+    el.textContent=text || '';
+  }
+
+  async function uploadMessageAttachment(file,meta){
+    if(!file) return null;
+    if(file.size>MESSAGE_MAX_FILE_BYTES) throw new Error('Fayl hajmi 20 MB dan oshmasin.');
+    const mediaType=String(file.type||'').startsWith('image/') ? 'image' : 'document';
+    const method=mediaType==='image' ? 'sendPhoto' : 'sendDocument';
+    const field=mediaType==='image' ? 'photo' : 'document';
+    const category=messageCategory(meta.category);
+    const caption=[`📨 HETK · ${category.label}`,`👤 ${meta.senderName}`,`📌 ${meta.title}`,meta.text?`📝 ${meta.text}`:''].filter(Boolean).join('\n').slice(0,1000);
+    const form=new FormData();
+    form.append(field,file,file.name || (mediaType==='image'?'image.jpg':'file'));
+    form.append('caption',caption);
+    const result=await messageTelegramFetch(method,form,true);
+    let fileObject=null;
+    if(mediaType==='image' && result.result && Array.isArray(result.result.photo)) fileObject=result.result.photo[result.result.photo.length-1];
+    if(mediaType==='document' && result.result) fileObject=result.result.document;
+    if(!fileObject || !fileObject.file_id) throw new Error('Telegram fayl identifikatorini qaytarmadi.');
+    return {
+      fileId:fileObject.file_id,fileUniqueId:fileObject.file_unique_id || '',
+      telegramMessageId:result.result.message_id || null,mediaType,
+      fileName:file.name || (mediaType==='image'?'Rasm':'Fayl'),mimeType:file.type || fileObject.mime_type || '',
+      fileSize:Number(file.size || fileObject.file_size || 0)
+    };
+  }
+
+  async function sendInternalMessage(){
+    if(!currentAccount || !databaseRef) return;
+    const button=byId('hetk-message-send');
+    const title=String((byId('hetk-message-title')||{}).value || '').trim();
+    const textValue=String((byId('hetk-message-text')||{}).value || '').trim();
+    const category=String((byId('hetk-message-category')||{}).value || 'normal');
+    const fileInput=byId('hetk-message-file');
+    const file=fileInput && fileInput.files ? fileInput.files[0] : null;
+    const recipients=messageSelectedRecipients();
+    if(title.length<3) return setMessageStatus('error','Sarlavhani kiriting.');
+    if(!textValue && !file) return setMessageStatus('error','Xabar matni yoki fayl kiriting.');
+    if(!recipients.length) return setMessageStatus('error','Qabul qiluvchini tanlang.');
+    if(messageComposeMode==='broadcast' && !canSendMassMessages(currentAccount)) return setMessageStatus('error','Ommaviy xabar yuborishga ruxsatingiz yo‘q.');
+    setBusy(button,true,'Yuborilmoqda...');
+    setMessageStatus('loading',file?'Fayl Telegram kanaliga yuklanmoqda...':'Xabar yuborilmoqda...');
+    try{
+      const now=Date.now();
+      const senderName=currentAccount.fullName || currentAccount.login || 'Foydalanuvchi';
+      const senderRole=getRoleLabel(currentAccount);
+      const uploadedFile=await uploadMessageAttachment(file,{category,title,text:textValue,senderName});
+      const ref=databaseRef.ref('Messages').push();
+      const recipientMap={};recipients.forEach(user=>recipientMap[user.uid]=true);
+      const recipientLabel=messageComposeMode==='broadcast'
+        ? (currentAccount.role==='master' ? (currentAccount.workZoneName || 'O‘z U/J hodimlari') : Array.from(selectedBroadcastRoles).map(role=>roleDef(role).label).join(', '))
+        : (recipients[0].fullName || recipients[0].login || 'Hodim');
+      const base={
+        id:ref.key,senderUid:currentAccount.uid,senderName,senderRole,senderLevel:messageLevel(currentAccount),
+        category,title,text:textValue,recipientType:messageComposeMode==='broadcast'?'broadcast':'direct',
+        recipientLabel,recipientCount:recipients.length,file:uploadedFile || null,
+        createdAt:now,expiresAt:now+MESSAGE_LIFETIME_MS
+      };
+      const updates={};
+      updates[`Messages/${ref.key}`]=Object.assign({},base,{recipients:recipientMap});
+      recipients.forEach(user=>{updates[`UserMessages/${user.uid}/${ref.key}`]=Object.assign({},base,{direction:'received',read:false});});
+      updates[`UserMessages/${currentAccount.uid}/${ref.key}`]=Object.assign({},base,{direction:'sent',read:true});
+      await databaseRef.ref().update(updates);
+      setMessageStatus('success',`${recipients.length} nafar hodimga yuborildi.`);
+      if(byId('hetk-message-title')) byId('hetk-message-title').value='';
+      if(byId('hetk-message-text')) byId('hetk-message-text').value='';
+      if(fileInput) fileInput.value='';
+      if(byId('hetk-message-file-name')) byId('hetk-message-file-name').textContent='Rasm yoki fayl biriktirish';
+    }catch(error){
+      setMessageStatus('error',error.message || 'Xabar yuborilmadi.');
+    }finally{setBusy(button,false);}
+  }
+
+  async function markInternalMessageRead(messageId){
+    if(!currentAccount || !messageId) return;
+    const message=userMessagesCache[messageId];
+    if(!message || message.read || message.direction==='sent') return;
+    try{await databaseRef.ref(`UserMessages/${currentAccount.uid}/${messageId}/read`).set(true);}catch(_e){}
+  }
+
+  async function saveMessageFile(messageId){
+    if(!currentAccount || !messageId) return;
+    const message=userMessagesCache[messageId];
+    if(!message || !message.file || !message.file.fileId) return;
+    const saved=Object.assign({},message.file,{
+      id:messageId,messageId,title:message.title || message.file.fileName || 'Fayl',category:message.category || 'normal',
+      senderUid:message.senderUid || '',senderName:message.senderName || '',senderRole:message.senderRole || '',
+      messageCreatedAt:message.createdAt || Date.now(),savedAt:Date.now()
+    });
+    try{
+      await databaseRef.ref(`UserSavedFiles/${currentAccount.uid}/${messageId}`).set(saved);
+      setMessageStatus('success','Fayl “Fayllar” menyusiga saqlandi.');
+    }catch(error){setMessageStatus('error','Faylni saqlab bo‘lmadi.');}
+  }
+
+  function openStoredMessageFile(messageId){
+    const message=userMessagesCache[messageId] || savedFilesCache[messageId];
+    const file=message && (message.file || message);
+    if(file && file.fileId) window.open(messageFileUrl(file.fileId),'_blank','noopener');
+  }
+
+  function bindChatsDesign(){
+    const content=byId('hetk-communication-content');
+    if(!content) return;
+    content.querySelectorAll('[data-message-mode]').forEach(button=>button.addEventListener('click',()=>{
+      messageComposeMode=button.dataset.messageMode==='broadcast'?'broadcast':'direct';
+      renderCommunicationContent();
+    }));
+    content.querySelectorAll('[data-message-recipient]').forEach(button=>button.addEventListener('click',()=>{
+      selectedMessageRecipientUid=button.dataset.messageRecipient;
+      renderCommunicationContent();
+    }));
+    const search=byId('hetk-message-person-search');
+    if(search) search.addEventListener('input',()=>{
+      const q=search.value.trim().toLowerCase();
+      content.querySelectorAll('[data-message-recipient]').forEach(button=>{button.style.display=!q || button.textContent.toLowerCase().includes(q)?'':'none';});
+    });
+    content.querySelectorAll('[data-message-role]').forEach(input=>input.addEventListener('change',()=>{
+      if(input.checked) selectedBroadcastRoles.add(input.dataset.messageRole); else selectedBroadcastRoles.delete(input.dataset.messageRole);
+      renderCommunicationContent();
+    }));
+    const file=byId('hetk-message-file');
+    if(file) file.addEventListener('change',()=>{
+      const selected=file.files && file.files[0];
+      const name=byId('hetk-message-file-name');
+      if(name) name.textContent=selected ? `${selected.name} · ${Math.max(1,Math.round(selected.size/1024))} KB` : 'Rasm yoki fayl biriktirish';
+    });
+    const send=byId('hetk-message-send');if(send) send.addEventListener('click',sendInternalMessage);
+    content.querySelectorAll('[data-message-id]').forEach(card=>card.addEventListener('click',()=>markInternalMessageRead(card.dataset.messageId)));
+    content.querySelectorAll('[data-open-message-file]').forEach(button=>button.addEventListener('click',event=>{event.stopPropagation();openStoredMessageFile(button.dataset.openMessageFile);}));
+    content.querySelectorAll('[data-save-message-file]').forEach(button=>button.addEventListener('click',event=>{event.stopPropagation();saveMessageFile(button.dataset.saveMessageFile);}));
+  }
+
+  function renderSavedFilesPane(){
+    const pane=document.querySelector('[data-profile-pane="files"]');
+    if(!pane) return;
+    const files=Object.keys(savedFilesCache).map(id=>Object.assign({id},savedFilesCache[id] || {})).filter(file=>file.fileId).sort((a,b)=>Number(b.savedAt||0)-Number(a.savedAt||0));
+    pane.innerHTML=`<div class="hetk-files-wrap">
+      <div class="hetk-files-head"><div><h3><i class="fas fa-folder-open"></i> Saqlangan fayllar</h3><p>Xabarlardan saqlangan buyruq, faksogramma, yangilik va boshqa fayllar.</p></div><span>${files.length} ta</span></div>
+      <div class="hetk-files-grid">${files.length ? files.map(file=>{
+        const category=messageCategory(file.category);
+        return `<article class="hetk-saved-file-card"><div class="hetk-saved-file-icon ${escapeAttr(file.mediaType || 'document')}">${file.mediaType==='image'?`<img src="${escapeAttr(messageFileUrl(file.fileId))}" alt="">`:`<i class="fas fa-file-alt"></i>`}</div><div class="hetk-saved-file-main"><span><i class="fas ${category.icon}"></i>${escapeHtml(category.label)}</span><h4>${escapeHtml(file.title || file.fileName || 'Fayl')}</h4><p>${escapeHtml(file.senderName || '')}${file.senderRole?' · '+escapeHtml(file.senderRole):''}</p><small>Saqlangan: ${escapeHtml(noticeTime(file.savedAt))}</small></div><div class="hetk-saved-file-actions"><button type="button" data-open-saved-file="${escapeAttr(file.id)}" title="Ochish"><i class="fas fa-download"></i></button><button type="button" data-remove-saved-file="${escapeAttr(file.id)}" title="Ro‘yxatdan olib tashlash"><i class="fas fa-trash-alt"></i></button></div></article>`;
+      }).join('') : communicationEmpty('fa-folder-open','Saqlangan fayl yo‘q','Xabardagi “Fayllarga saqlash” tugmasi orqali kerakli faylni shu yerga qo‘shing.')}</div>
+    </div>`;
+    pane.querySelectorAll('[data-open-saved-file]').forEach(button=>button.addEventListener('click',()=>openStoredMessageFile(button.dataset.openSavedFile)));
+    pane.querySelectorAll('[data-remove-saved-file]').forEach(button=>button.addEventListener('click',async()=>{
+      if(!confirm('Fayl “Fayllar” ro‘yxatidan olib tashlansinmi? Telegramdagi asl fayl o‘chmaydi.')) return;
+      await databaseRef.ref(`UserSavedFiles/${currentAccount.uid}/${button.dataset.removeSavedFile}`).remove();
+    }));
   }
 
   function renderCommunicationContent(){
@@ -1058,6 +1413,8 @@
     if(communicationTab==='chats') content.innerHTML=renderChatsDesign();
     else if(communicationTab==='approvals') content.innerHTML=renderNoticeCards(items.filter(item=>item.kind==='approval'),true);
     else content.innerHTML=renderNoticeCards(items.filter(item=>item.kind!=='approval'),false);
+
+    if(communicationTab==='chats') bindChatsDesign();
 
     content.querySelectorAll('[data-notice-id]').forEach(card=>card.addEventListener('click',()=>markNoticeRead(card.dataset.noticeId)));
     content.querySelectorAll('[data-approve-request],[data-reject-request]').forEach(button=>button.addEventListener('click',async event=>{
@@ -1078,11 +1435,12 @@
     const items=Object.values(userNotificationsCache).filter(Boolean);
     const noticeCount=items.filter(item=>item.kind!=='approval' && !item.read).length;
     const approvalCount=items.filter(item=>item.kind==='approval' && item.status==='pending').length;
+    const messageCount=Object.values(userMessagesCache).filter(item=>item && item.direction!=='sent' && !item.read).length;
     pane.innerHTML=`<div class="hetk-communication-wrap">
       <div class="hetk-communication-head"><div><h3>Xabarlar markazi</h3><p>Hududdagi o‘zgarishlar, tasdiqlashlar va shaxsiy yozishmalar.</p></div><button type="button" id="hetk-notices-read-all"><i class="fas fa-check-double"></i> Barchasini o‘qildi qilish</button></div>
       <div class="hetk-communication-tabs">
         <button type="button" data-communication-tab="notifications" class="${communicationTab==='notifications'?'active':''}"><i class="fas fa-bell"></i><span>Bildirishnomalar</span>${noticeCount?`<b>${noticeCount}</b>`:''}</button>
-        <button type="button" data-communication-tab="chats" class="${communicationTab==='chats'?'active':''}"><i class="fas fa-comment-alt"></i><span>Xabarlar</span></button>
+        <button type="button" data-communication-tab="chats" class="${communicationTab==='chats'?'active':''}"><i class="fas fa-comment-alt"></i><span>Xabarlar</span>${messageCount?`<b>${messageCount}</b>`:''}</button>
         <button type="button" data-communication-tab="approvals" class="${communicationTab==='approvals'?'active':''}"><i class="fas fa-user-check"></i><span>Tasdiqlashlar</span>${approvalCount?`<b>${approvalCount}</b>`:''}</button>
       </div>
       <div id="hetk-communication-content" class="hetk-communication-content"></div>
@@ -1091,7 +1449,7 @@
       communicationTab=button.dataset.communicationTab;
       renderCommunicationPane();
     }));
-    const readAll=byId('hetk-notices-read-all');if(readAll) readAll.addEventListener('click',markAllNoticesRead);
+    const readAll=byId('hetk-notices-read-all');if(readAll) readAll.addEventListener('click',()=>communicationTab==='chats'?markAllMessagesRead():markAllNoticesRead());
     renderCommunicationContent();
     updateOuterMessageBadge();
   }
@@ -1132,6 +1490,59 @@
     notificationsCleanupTimer=setInterval(()=>pruneUserNotifications(uid),6*60*60*1000);
   }
 
+  async function pruneUserMessages(uid){
+    if(!uid || !databaseRef) return;
+    try{
+      const [messagesSnap,filesSnap]=await Promise.all([
+        databaseRef.ref(`UserMessages/${uid}`).once('value'),
+        databaseRef.ref(`UserSavedFiles/${uid}`).once('value')
+      ]);
+      const now=Date.now(),updates={};
+      const messages=messagesSnap.val() || {},files=filesSnap.val() || {};
+      Object.keys(messages).forEach(id=>{
+        const item=messages[id] || {};
+        if((Number(item.expiresAt)||Number(item.createdAt||0)+MESSAGE_LIFETIME_MS)<now){
+          updates[`UserMessages/${uid}/${id}`]=null;
+          updates[`Messages/${id}`]=null;
+        }
+      });
+      Object.keys(files).forEach(id=>{
+        const item=files[id] || {};
+        if(Number(item.expiresAt)>0 && Number(item.expiresAt)<now) updates[`UserSavedFiles/${uid}/${id}`]=null;
+      });
+      if(Object.keys(updates).length) await databaseRef.ref().update(updates);
+    }catch(_e){}
+  }
+
+  function stopUserMessages(){
+    if(userMessagesRef) userMessagesRef.off('value');
+    if(savedFilesRef) savedFilesRef.off('value');
+    userMessagesRef=null;userMessagesUid='';userMessagesCache={};
+    savedFilesRef=null;savedFilesUid='';savedFilesCache={};
+    if(messagesCleanupTimer){clearInterval(messagesCleanupTimer);messagesCleanupTimer=null;}
+    updateOuterMessageBadge();
+  }
+
+  async function startUserMessages(uid){
+    if(!uid || !databaseRef) return;
+    if(userMessagesRef && userMessagesUid===uid) return;
+    stopUserMessages();
+    userMessagesUid=uid;savedFilesUid=uid;
+    await pruneUserMessages(uid);
+    userMessagesRef=databaseRef.ref(`UserMessages/${uid}`);
+    savedFilesRef=databaseRef.ref(`UserSavedFiles/${uid}`);
+    userMessagesRef.on('value',snap=>{
+      userMessagesCache=snap.val() || {};
+      renderCommunicationPane();
+      updateOuterMessageBadge();
+    });
+    savedFilesRef.on('value',snap=>{
+      savedFilesCache=snap.val() || {};
+      renderSavedFilesPane();
+    });
+    messagesCleanupTimer=setInterval(()=>pruneUserMessages(uid),6*60*60*1000);
+  }
+
   function populateProfile(account){
     const nameEl = byId('profile-name');
     const posEl = byId('profile-position');
@@ -1149,6 +1560,7 @@
     renderPersonalEditor(account);
     renderEmployeesManager(account);
     renderCommunicationPane();
+    renderSavedFilesPane();
     installLogoutButton();
   }
 
@@ -1495,12 +1907,14 @@
       if(selectedTeamUid && !teamUsersCache[selectedTeamUid]) selectedTeamUid=null;
       renderTeamList();
       if(selectedTeamUid) renderTeamDetail(selectedTeamUid);
+      if(communicationTab==='chats') renderCommunicationContent();
     });
     foldersTeamRef.on('value', snap => {
       teamFoldersCache=snap.val() || {};
       renderTeamList();
       if(selectedTeamUid) renderTeamDetail(selectedTeamUid);
       if(!byId('hetk-user-editor').hidden) renderUserFolderPicker(getEditorSelectedFolders());
+      if(communicationTab==='chats') renderCommunicationContent();
     });
     workZonesTeamRef.on('value', snap => {
       teamWorkZonesCache=snap.val() || {};
@@ -1508,6 +1922,7 @@
       renderTeamList();
       if(selectedTeamUid) renderTeamDetail(selectedTeamUid);
       if(!byId('hetk-user-editor').hidden) refreshWorkZoneEditor();
+      if(communicationTab==='chats') renderCommunicationContent();
     });
     const search=byId('hetk-team-search');
     if(search) search.addEventListener('input', renderTeamList);
@@ -2724,6 +3139,7 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
         document.dispatchEvent(new CustomEvent('hetk-auth-user-updated',{detail:{user:currentAccount}}));
       });
       await startUserNotifications(user.uid);
+      await startUserMessages(user.uid);
       await databaseRef.ref('users/' + user.uid).update({lastLoginAt:Date.now()});
       if(!currentAccount.telegramEmployeeMessageId || currentAccount.photoData){
         currentAccount=Object.assign({},currentAccount,await safeSyncEmployeeTelegram(user.uid,currentAccount,{showError:false}));
@@ -2763,6 +3179,7 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
       }else{
         if(currentUserLiveRef){ currentUserLiveRef.off('value'); currentUserLiveRef=null; }
         stopUserNotifications();
+        stopUserMessages();
         currentAccount=null;
         window.HETKAuth.currentUser=null;
         document.dispatchEvent(new CustomEvent('hetk-auth-cleared'));
