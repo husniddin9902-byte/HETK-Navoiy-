@@ -1186,11 +1186,18 @@
     return fileId ? `${TELEGRAM_WORKER_URL}/telegram/file?file_id=${encodeURIComponent(fileId)}` : '';
   }
 
+  function isImageAttachment(file){
+    if(!file) return false;
+    const mime=String(file.mimeType || file.type || '').toLowerCase();
+    const name=String(file.fileName || file.name || '').toLowerCase().split(/[?#]/)[0];
+    return mime.startsWith('image/') || /\.(?:avif|bmp|gif|heic|heif|jpe?g|png|webp)$/.test(name);
+  }
+
   function messageFilePreview(message){
     const file=message && message.file;
     if(!file || !file.fileId) return '';
     const url=messageFileUrl(file.fileId);
-    if(file.mediaType==='image') return `<div class="hetk-message-image"><img src="${escapeAttr(url)}" alt="${escapeAttr(file.fileName || 'Rasm')}"></div>`;
+    if(isImageAttachment(file)) return `<div class="hetk-message-image"><a href="${escapeAttr(url)}" target="_blank" rel="noopener" title="Rasmni katta ochish"><img src="${escapeAttr(url)}" alt="${escapeAttr(file.fileName || 'Rasm')}"></a></div>`;
     return `<div class="hetk-message-document"><i class="fas fa-file-alt"></i><div><b>${escapeHtml(file.fileName || 'Fayl')}</b><small>${escapeHtml(file.mimeType || 'Fayl')}</small></div></div>`;
   }
 
@@ -1261,9 +1268,10 @@
   async function uploadMessageAttachment(file,meta){
     if(!file) return null;
     if(file.size>MESSAGE_MAX_FILE_BYTES) throw new Error('Fayl hajmi 20 MB dan oshmasin.');
-    const mediaType=String(file.type||'').startsWith('image/') ? 'image' : 'document';
-    const method=mediaType==='image' ? 'sendPhoto' : 'sendDocument';
-    const field=mediaType==='image' ? 'photo' : 'document';
+    const mediaType=isImageAttachment(file) ? 'image' : 'document';
+    const sendAsPhoto=mediaType==='image' && file.size<=10*1024*1024;
+    const method=sendAsPhoto ? 'sendPhoto' : 'sendDocument';
+    const field=sendAsPhoto ? 'photo' : 'document';
     const category=messageCategory(meta.category);
     const caption=[`📨 HETK · ${category.label}`,`👤 ${meta.senderName}`,`📌 ${meta.title}`,meta.text?`📝 ${meta.text}`:''].filter(Boolean).join('\n').slice(0,1000);
     const form=new FormData();
@@ -1271,8 +1279,8 @@
     form.append('caption',caption);
     const result=await messageTelegramFetch(method,form,true);
     let fileObject=null;
-    if(mediaType==='image' && result.result && Array.isArray(result.result.photo)) fileObject=result.result.photo[result.result.photo.length-1];
-    if(mediaType==='document' && result.result) fileObject=result.result.document;
+    if(sendAsPhoto && result.result && Array.isArray(result.result.photo)) fileObject=result.result.photo[result.result.photo.length-1];
+    if(!sendAsPhoto && result.result) fileObject=result.result.document;
     if(!fileObject || !fileObject.file_id) throw new Error('Telegram fayl identifikatorini qaytarmadi.');
     return {
       fileId:fileObject.file_id,fileUniqueId:fileObject.file_unique_id || '',
@@ -1396,7 +1404,8 @@
       <div class="hetk-files-head"><div><h3><i class="fas fa-folder-open"></i> Saqlangan fayllar</h3><p>Xabarlardan saqlangan buyruq, faksogramma, yangilik va boshqa fayllar.</p></div><span>${files.length} ta</span></div>
       <div class="hetk-files-grid">${files.length ? files.map(file=>{
         const category=messageCategory(file.category);
-        return `<article class="hetk-saved-file-card"><div class="hetk-saved-file-icon ${escapeAttr(file.mediaType || 'document')}">${file.mediaType==='image'?`<img src="${escapeAttr(messageFileUrl(file.fileId))}" alt="">`:`<i class="fas fa-file-alt"></i>`}</div><div class="hetk-saved-file-main"><span><i class="fas ${category.icon}"></i>${escapeHtml(category.label)}</span><h4>${escapeHtml(file.title || file.fileName || 'Fayl')}</h4><p>${escapeHtml(file.senderName || '')}${file.senderRole?' · '+escapeHtml(file.senderRole):''}</p><small>Saqlangan: ${escapeHtml(noticeTime(file.savedAt))}</small></div><div class="hetk-saved-file-actions"><button type="button" data-open-saved-file="${escapeAttr(file.id)}" title="Ochish"><i class="fas fa-download"></i></button><button type="button" data-remove-saved-file="${escapeAttr(file.id)}" title="Ro‘yxatdan olib tashlash"><i class="fas fa-trash-alt"></i></button></div></article>`;
+        const imageFile=isImageAttachment(file);
+        return `<article class="hetk-saved-file-card"><div class="hetk-saved-file-icon ${imageFile?'image':'document'}">${imageFile?`<img src="${escapeAttr(messageFileUrl(file.fileId))}" alt="">`:`<i class="fas fa-file-alt"></i>`}</div><div class="hetk-saved-file-main"><span><i class="fas ${category.icon}"></i>${escapeHtml(category.label)}</span><h4>${escapeHtml(file.title || file.fileName || 'Fayl')}</h4><p>${escapeHtml(file.senderName || '')}${file.senderRole?' · '+escapeHtml(file.senderRole):''}</p><small>Saqlangan: ${escapeHtml(noticeTime(file.savedAt))}</small></div><div class="hetk-saved-file-actions"><button type="button" data-open-saved-file="${escapeAttr(file.id)}" title="Ochish"><i class="fas fa-download"></i></button><button type="button" data-remove-saved-file="${escapeAttr(file.id)}" title="Ro‘yxatdan olib tashlash"><i class="fas fa-trash-alt"></i></button></div></article>`;
       }).join('') : communicationEmpty('fa-folder-open','Saqlangan fayl yo‘q','Xabardagi “Fayllarga saqlash” tugmasi orqali kerakli faylni shu yerga qo‘shing.')}</div>
     </div>`;
     pane.querySelectorAll('[data-open-saved-file]').forEach(button=>button.addEventListener('click',()=>openStoredMessageFile(button.dataset.openSavedFile)));
