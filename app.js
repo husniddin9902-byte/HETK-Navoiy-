@@ -1628,6 +1628,7 @@ document.getElementById("add-manual-mahalla");
 
 // 3. "Save Location" tugmasi bosilganda formani ochish mantiqi (Plus knopka shartmas!)
 document.querySelector('.save-btn').addEventListener('click', function() {
+    if(!hetkHasPermission('createElements')) return showToast("Siz element kirita olmaysiz. Faqat ko‘rish va izoh yozish mumkin.");
     // Joriy paneldagi textlardan koordinatalarni ajratib olamiz
     const currentLat = parseFloat(document.getElementById('latitude').innerText);
     const currentLng = parseFloat(document.getElementById('longitude').innerText);
@@ -2186,6 +2187,8 @@ function hetkAuditActor(){
 
 // ===== ELEMENT / PAPKA BILDIRISHNOMALARI VA O'CHIRISH TASDIG'I =====
 const HETK_NOTICE_LIFETIME_MS=30*24*60*60*1000;
+const HETK_ELEMENT_COMMENT_LIFETIME_MS=180*24*60*60*1000;
+let hetkCommentCleanupTimer=null;
 
 function hetkElementFolderIds(tp){
     if(!tp) return [];
@@ -2367,6 +2370,139 @@ async function hetkWriteUserNotices(recipientUids,payload,noticeId){
     });
     await database.ref().update(updates);
     return id;
+}
+
+function hetkElementCommentId(tp){
+    return String((tp && (tp.id || tp.tpId)) || '');
+}
+
+function hetkFormatCommentTime(value){
+    const date=new Date(Number(value)||0);
+    return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString('uz-UZ');
+}
+
+async function hetkNotifyElementComment(tpId,tp,comment){
+    const actor=hetkAuditActor();
+    const recipients=await hetkNotificationRecipients(tp,actor.uid);
+    if(!recipients.length) return 0;
+    const folderPaths=hetkElementFolderIds(tp).map(id=>getFolderPath(id)).filter(Boolean);
+    await hetkWriteUserNotices(recipients,{
+        kind:'activity',action:'comment',
+        title:`${actor.name} ${tp.name || 'element'}ga izoh yozdi`,
+        actorUid:actor.uid,actorName:actor.name,actorRole:actor.role,
+        elementId:tpId,elementName:tp.name || 'Element',commentId:comment.id,
+        commentText:comment.text,
+        folderPath:folderPaths.join('; ') || 'Papka biriktirilmagan',
+        workZoneName:hetkGetTPWorkZoneNames(tp).join(', ') || 'U/J biriktirilmagan',
+        createdAt:comment.createdAt,expiresAt:Date.now()+HETK_NOTICE_LIFETIME_MS
+    });
+    return recipients.length;
+}
+
+async function hetkRenderElementComments(tp){
+    const list=document.getElementById('detail-comments-list');
+    const count=document.getElementById('detail-comments-count');
+    const textarea=document.getElementById('detail-comment-input');
+    const button=document.getElementById('detail-comment-submit');
+    const legacy=document.getElementById('detail-legacy-note');
+    if(!list || !count || !textarea || !button || !legacy) return;
+    const tpId=hetkElementCommentId(tp);
+    const canComment=!!tpId && hetkHasPermission('commentElements') && hetkPointAllowedByUser(tp);
+    textarea.disabled=!canComment;
+    button.disabled=!canComment;
+    legacy.style.display=String((tp && tp.note) || '').trim() ? 'block' : 'none';
+    legacy.innerHTML=legacy.style.display==='block'
+        ? `<b>📝 Elementning asosiy izohi</b><p>${hetkEscapeHtml(tp.note)}</p>`
+        : '';
+    if(!tpId){
+        list.innerHTML='<div class="hetk-element-comments-empty">Element ID topilmadi.</div>';
+        count.textContent='0';
+        return;
+    }
+    list.innerHTML='<div class="hetk-element-comments-loading"><i class="fas fa-spinner fa-spin"></i> Izohlar yuklanmoqda...</div>';
+    try{
+        const snap=await database.ref(`TPComments/${tpId}`).once('value');
+        const raw=snap.val() || {};
+        const now=Date.now(),expiredUpdates={};
+        const comments=Object.keys(raw).map(id=>Object.assign({id},raw[id] || {})).filter(comment=>{
+            const expired=Number(comment.expiresAt || 0)>0 && Number(comment.expiresAt)<now;
+            if(expired) expiredUpdates[`TPComments/${tpId}/${comment.id}`]=null;
+            return !expired && comment.text;
+        }).sort((a,b)=>Number(b.createdAt||0)-Number(a.createdAt||0));
+        if(Object.keys(expiredUpdates).length) database.ref().update(expiredUpdates).catch(()=>{});
+        count.textContent=String(comments.length);
+        list.innerHTML=comments.length ? comments.map(comment=>`
+          <article class="hetk-element-comment-item">
+            <div class="hetk-element-comment-avatar"><i class="fas fa-user"></i></div>
+            <div class="hetk-element-comment-main">
+              <div class="hetk-element-comment-meta">
+                <button type="button" data-comment-author="${hetkEscapeHtml(comment.authorUid || '')}" title="Profilni ochish">${hetkEscapeHtml(comment.authorName || 'Foydalanuvchi')}</button>
+                <span>${hetkEscapeHtml(comment.authorRole || '')}</span>
+                <time>${hetkEscapeHtml(hetkFormatCommentTime(comment.createdAt))}</time>
+              </div>
+              <p>${hetkEscapeHtml(comment.text)}</p>
+            </div>
+          </article>`).join('') : '<div class="hetk-element-comments-empty"><i class="far fa-comment-dots"></i><span>Hali izoh yozilmagan.</span></div>';
+        list.querySelectorAll('[data-comment-author]').forEach(author=>author.addEventListener('click',()=>{
+            const uid=author.dataset.commentAuthor;
+            if(uid) hetkShowPersonProfile(uid,{fullName:author.textContent});
+        }));
+    }catch(error){
+        list.innerHTML='<div class="hetk-element-comments-empty">Izohlarni yuklab bo‘lmadi.</div>';
+    }
+}
+
+async function hetkSubmitElementComment(){
+    const tp=currentTP;
+    const tpId=hetkElementCommentId(tp);
+    const textarea=document.getElementById('detail-comment-input');
+    const button=document.getElementById('detail-comment-submit');
+    if(!tp || !tpId || !textarea || !button) return;
+    if(!hetkHasPermission('commentElements') || !hetkPointAllowedByUser(tp)) return showToast('Bu elementga izoh yozish ruxsati yo‘q.');
+    const text=String(textarea.value || '').trim();
+    if(text.length<2) return showToast('Izoh matnini kiriting!');
+    if(text.length>1000) return showToast('Izoh 1000 ta belgidan oshmasin!');
+    const actor=hetkAuditActor();
+    if(!actor.uid) return showToast('Foydalanuvchi aniqlanmadi.');
+    const ref=database.ref(`TPComments/${tpId}`).push();
+    const now=Date.now();
+    const comment={
+        id:ref.key,text,authorUid:actor.uid,authorName:actor.name,authorRole:actor.role,
+        createdAt:now,expiresAt:now+HETK_ELEMENT_COMMENT_LIFETIME_MS
+    };
+    button.disabled=true;
+    button.innerHTML='<i class="fas fa-spinner fa-spin"></i> Saqlanmoqda...';
+    try{
+        await ref.set(comment);
+        textarea.value='';
+        let recipientCount=0;
+        try{recipientCount=await hetkNotifyElementComment(tpId,tp,comment);}catch(error){console.warn('Izoh bildirishnomasi yuborilmadi:',error);}
+        await hetkRenderElementComments(tp);
+        showToast(recipientCount ? 'Izoh saqlandi va Masterga yuborildi.' : 'Izoh saqlandi. Bu elementga Master biriktirilmagan.');
+    }catch(error){
+        showToast('Izohni saqlab bo‘lmadi: '+(error.message || 'Noma’lum xato'));
+    }finally{
+        button.disabled=false;
+        button.innerHTML='<i class="fas fa-paper-plane"></i> Izoh yuborish';
+    }
+}
+
+async function hetkCleanupExpiredElementComments(){
+    try{
+        const snap=await database.ref('TPComments').once('value');
+        const groups=snap.val() || {},now=Date.now(),updates={};
+        Object.keys(groups).forEach(tpId=>Object.keys(groups[tpId] || {}).forEach(commentId=>{
+            const comment=groups[tpId][commentId] || {};
+            if(Number(comment.expiresAt || 0)>0 && Number(comment.expiresAt)<now) updates[`TPComments/${tpId}/${commentId}`]=null;
+        }));
+        if(Object.keys(updates).length) await database.ref().update(updates);
+    }catch(error){console.warn('Eski element izohlari tozalanmadi:',error);}
+}
+
+function hetkStartElementCommentCleanup(){
+    if(hetkCommentCleanupTimer) clearInterval(hetkCommentCleanupTimer);
+    hetkCleanupExpiredElementComments();
+    hetkCommentCleanupTimer=setInterval(hetkCleanupExpiredElementComments,6*60*60*1000);
 }
 
 async function hetkNotifyElementActivity(action,tpId,before,after){
@@ -2572,6 +2708,13 @@ function hetkShortPersonName(name){
 if (elementMainForm) {
     elementMainForm.addEventListener('submit', async function(e) {
         e.preventDefault();
+
+        const requiredPermission=editingElementId ? 'editElements' : 'createElements';
+        if(!hetkHasPermission(requiredPermission)){
+            return showToast(editingElementId
+                ? "Siz elementni tahrirlay olmaysiz. Faqat izoh yozish mumkin."
+                : "Siz element kirita olmaysiz. Faqat ko‘rish va izoh yozish mumkin.");
+        }
 
 if(isSaving){
 return;
@@ -3351,6 +3494,7 @@ async function hetkFinalizeApprovedElementDeletion(requestId,request){
             approvedBy:actor.uid,approvedByName:actor.name,expiresAt:now+HETK_NOTICE_LIFETIME_MS
         });
         updates[`TPs/${request.tpId}`]=null;
+        updates[`TPComments/${request.tpId}`]=null;
         updates[`ElementDeletionRequests/${requestId}/status`]='approved';
         updates[`ElementDeletionRequests/${requestId}/resolvedAt`]=now;
         updates[`ElementDeletionRequests/${requestId}/resolvedBy`]=actor.uid;
@@ -3453,6 +3597,7 @@ window.HETKElementActions={resolveDeletionRequest:hetkResolveDeletionRequest};
 // Elementni o'chirish tugmasi mantiqi
 if (deleteElementBtn) {
     deleteElementBtn.addEventListener('click', async function() {
+       if(!hetkHasPermission('deleteElements')) return showToast("Siz elementni o‘chira olmaysiz. Faqat izoh yozish mumkin.");
        if(editingElementId && originalElementData){
            if(!confirm("Element darhol o‘chmaydi. Mas’ul Masterga tasdiqlash uchun yuboriladi va 3 ish kuni kutiladi.\n\nO‘chirish so‘rovi yuborilsinmi?")) return;
            try{
@@ -3800,6 +3945,7 @@ if (tp.folders) {
 
         <i class="fas fa-pencil-alt element-edit-pencil-icon"
            style="
+                display:${hetkHasPermission('editElements') ? 'inline-block' : 'none'};
                 color:#88a0b0;
                 font-size:12px;
                 padding:4px;
@@ -3854,6 +4000,7 @@ if (tp.folders) {
 
 // 2. Elementni tahrirlash uchun oynani ochish funksiyasi (✏️ Bosilganda hamma ma'lumot yuklanadi)
  window.openEditElement = function(tpId) {
+    if(!hetkHasPermission('editElements')) return showToast("Siz elementni tahrirlay olmaysiz. Faqat izoh yozish mumkin.");
     database.ref('TPs/' + tpId).once('value', (snapshot) => {
         const tp = snapshot.val();
         if (!tp) return;
@@ -3868,7 +4015,7 @@ if (tp.folders) {
         resetElementForm();
         editingElementId = tpId;
         document.getElementById('element-panel-title').innerText = "Редактировать местоположение";
-        deleteElementBtn.classList.remove('hidden');
+        deleteElementBtn.classList.toggle('hidden',!hetkHasPermission('deleteElements'));
 
         // Ma'lumotlarni formaga yuklaymiz
         inputElementName.value = tp.name || "";
@@ -4063,8 +4210,11 @@ function hetkPointAllowedByUser(tp){
 
 function applyHETKAccessControls(){
     const canManageFolders=hetkHasPermission('manageFolders');
+    const canCreateElements=hetkHasPermission('createElements');
     const addBtn=document.getElementById('open-add-folder');
     if(addBtn) addBtn.style.display=canManageFolders ? '' : 'none';
+    const addElementBtn=document.querySelector('.save-btn');
+    if(addElementBtn) addElementBtn.style.display=canCreateElements ? '' : 'none';
     const deleteBtn=document.getElementById('delete-folder-btn');
     const updateBtn=document.getElementById('update-folder-btn');
     if(deleteBtn) deleteBtn.style.display=canManageFolders ? '' : 'none';
@@ -4074,6 +4224,7 @@ function applyHETKAccessControls(){
 document.addEventListener('hetk-auth-ready', function(){
     applyHETKAccessControls();
     hetkCleanupDeletionRequests();
+    hetkStartElementCommentCleanup();
     loadElementWorkZones(true).then(()=>{
         hetkFilterWorkZones=hetkVisibleWorkZonesForFilter();
         if(responsibleOptions && responsibleOptions.style.display==='block') renderResponsibleWorkZoneFilter();
@@ -4086,6 +4237,7 @@ document.addEventListener('hetk-auth-ready', function(){
 });
 
 document.addEventListener('hetk-auth-user-updated', function(){
+    applyHETKAccessControls();
     loadElementWorkZones(true).then(()=>{
         hetkFilterWorkZones=hetkVisibleWorkZonesForFilter();
         if(filterState.responsible!=='none' && !hetkFilterWorkZones.some(zone=>zone.id===filterState.responsible)){
@@ -4098,6 +4250,7 @@ document.addEventListener('hetk-auth-user-updated', function(){
 });
 
 document.addEventListener('hetk-auth-cleared', function(){
+    if(hetkCommentCleanupTimer){clearInterval(hetkCommentCleanupTimer);hetkCommentCleanupTimer=null;}
     elementWorkZonesCache={};
     hetkFilterWorkZones=[];
     filterState.responsible='none';
@@ -4310,7 +4463,7 @@ transition:.2s;
 <i class="fas fa-edit"
    title="Tahrirlash"
   onclick="event.stopPropagation();openEditElement('${tp.id}')"
-   style="cursor:pointer;">
+   style="cursor:pointer;display:${hetkHasPermission('editElements') ? 'inline-block' : 'none'};">
 </i>
 
 </div>
@@ -5813,6 +5966,20 @@ style="display:none;">
 
 </div>
 
+<section id="detail-comments" class="hetk-element-comments">
+  <div class="hetk-element-comments-head">
+    <div><i class="far fa-comments"></i><span>Izohlar</span><b id="detail-comments-count">0</b></div>
+    <small>Izohlar 6 oy saqlanadi</small>
+  </div>
+  <div id="detail-legacy-note" class="hetk-element-legacy-note" style="display:none;"></div>
+  <div id="detail-comments-list" class="hetk-element-comments-list"></div>
+  <div class="hetk-element-comment-form">
+    <textarea id="detail-comment-input" maxlength="1000" rows="3" placeholder="Masalan: KTP atrofini tozalash kerak..."></textarea>
+    <button type="button" id="detail-comment-submit"><i class="fas fa-paper-plane"></i> Izoh yuborish</button>
+  </div>
+  <div class="hetk-element-comment-help"><i class="fas fa-info-circle"></i> Izoh element ma’lumotlarini tahrirlamaydi. Mas’ul Masterga bildirishnoma boradi.</div>
+</section>
+
 <button id="edit-element-btn"
 style="
 width:100%;
@@ -5838,6 +6005,22 @@ cursor:pointer;
     document
         .getElementById("close-element-modal")
         .onclick = closeElementModal;
+    document
+        .getElementById("detail-comment-submit")
+        .onclick = hetkSubmitElementComment;
+    document
+        .getElementById("detail-comment-input")
+        .addEventListener('keydown',function(event){
+            if((event.ctrlKey || event.metaKey) && event.key==='Enter') hetkSubmitElementComment();
+        });
+    document
+        .getElementById("edit-element-btn")
+        .onclick = function(){
+            const tpId=hetkElementCommentId(currentTP);
+            if(!tpId || !hetkHasPermission('editElements')) return showToast('Elementni tahrirlash ruxsati yo‘q.');
+            closeElementModal();
+            openEditElement(tpId);
+        };
     document
         .getElementById("element-modal-overlay")
         .onclick=function(e){
@@ -6284,6 +6467,12 @@ if(currentTP.lat && currentTP.lng){
 }else{
     nav.style.display = "none";
 }
+
+const detailEditButton=document.getElementById('edit-element-btn');
+if(detailEditButton){
+    detailEditButton.style.display=hetkHasPermission('editElements') && hetkPointAllowedByUser(currentTP) ? 'block' : 'none';
+}
+hetkRenderElementComments(currentTP).catch(error=>console.warn('Element izohlari ochilmadi:',error));
   
     document
         .getElementById("element-modal-overlay")
