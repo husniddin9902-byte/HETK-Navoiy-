@@ -104,6 +104,11 @@
   let messageComposeMode = 'direct';
   let selectedMessageRecipientUid = '';
   let selectedBroadcastRoles = new Set();
+  let messageComposerOpen = false;
+  let editingMessageId = '';
+  let notificationSettingsRef = null;
+  let notificationSettingsUid = '';
+  let notificationSettingsCache = {};
 
   const TELEGRAM_WORKER_URL = 'https://hetk-telegram.husniddin-99-02.workers.dev';
   const MESSAGE_LIFETIME_MS = 365 * 24 * 60 * 60 * 1000;
@@ -688,6 +693,7 @@
       window.HETKAuth.currentUser = account;
       await startUserNotifications(uid);
       await startUserMessages(uid);
+      startNotificationSettings(uid);
       setOverlayVisible(false);
       document.dispatchEvent(new CustomEvent('hetk-auth-ready',{detail:{user:account}}));
       setMessage('success','Bosh administrator yaratildi. Tizimga kirildi.');
@@ -1041,6 +1047,18 @@
     if(Object.keys(updates).length) await databaseRef.ref().update(updates);
   }
 
+  function notificationPreferenceEnabled(kind){
+    return notificationSettingsCache[kind] !== false;
+  }
+
+  async function toggleNotificationPreference(kind){
+    if(!currentAccount || !['notifications','chats','approvals'].includes(kind)) return;
+    const next=!notificationPreferenceEnabled(kind);
+    try{
+      await databaseRef.ref(`UserNotificationSettings/${currentAccount.uid}/${kind}`).set(next);
+    }catch(error){alert('Bildirishnoma holatini saqlab bo‘lmadi.');}
+  }
+
   function updateOuterMessageBadge(){
     const badge=document.querySelector('.hetk-profile-tab[data-profile-tab="messages"] .hetk-profile-badge');
     if(!badge) return;
@@ -1205,12 +1223,13 @@
     const category=messageCategory(message.category);
     const received=message.direction!=='sent';
     const file=message.file && message.file.fileId;
+    const ownMessage=message.direction==='sent' && currentAccount && message.senderUid===currentAccount.uid;
     const audience=message.recipientType==='broadcast' ? (message.recipientLabel || 'Ommaviy') : (received ? 'Sizga' : (message.recipientLabel || 'Yakka'));
     return `<article class="hetk-message-card ${received && !message.read?'unread':''}" data-message-id="${escapeAttr(message.id || '')}">
       <div class="hetk-message-card-head">
         <span class="hetk-message-kind ${escapeAttr(message.category || 'normal')}"><i class="fas ${category.icon}"></i>${escapeHtml(category.label)}</span>
         <span class="hetk-message-audience ${message.recipientType==='broadcast'?'mass':''}"><i class="fas ${message.recipientType==='broadcast'?'fa-bullhorn':'fa-user'}"></i>${escapeHtml(audience)}</span>
-        <time>${escapeHtml(noticeTime(message.createdAt))}</time>
+        ${message.editedAt?'<span class="hetk-message-edited">Tahrirlangan</span>':''}<time>${escapeHtml(noticeTime(message.createdAt))}</time>
       </div>
       <div class="hetk-message-sender"><b>${escapeHtml(message.senderName || 'Foydalanuvchi')}</b><span>${escapeHtml(message.senderRole || '')}</span></div>
       <h4>${escapeHtml(message.title || category.label)}</h4>
@@ -1218,6 +1237,7 @@
       ${messageFilePreview(message)}
       <div class="hetk-message-card-actions">
         ${file?`<button type="button" data-open-message-file="${escapeAttr(message.id || '')}"><i class="fas fa-download"></i> Ochish</button><button type="button" data-save-message-file="${escapeAttr(message.id || '')}"><i class="fas fa-folder-plus"></i> Fayllarga saqlash</button>`:''}
+        ${ownMessage?`<span class="hetk-message-own-actions"><button type="button" data-edit-message="${escapeAttr(message.id || '')}" title="Xabarni tahrirlash"><i class="fas fa-pen"></i> Tahrirlash</button><button type="button" data-delete-message="${escapeAttr(message.id || '')}" title="Xabarni o‘chirish"><i class="fas fa-trash-alt"></i> O‘chirish</button></span>`:''}
       </div>
     </article>`;
   }
@@ -1225,6 +1245,11 @@
   function renderChatsDesign(){
     const canMass=canSendMassMessages(currentAccount);
     if(!canMass) messageComposeMode='direct';
+    let editingMessage=editingMessageId ? userMessagesCache[editingMessageId] : null;
+    if(editingMessageId && (!editingMessage || editingMessage.direction!=='sent' || !currentAccount || editingMessage.senderUid!==currentAccount.uid)){
+      editingMessageId='';editingMessage=null;
+    }
+    const isEditing=!!editingMessage;
     const candidates=messageDirectCandidates();
     if(!selectedMessageRecipientUid || !candidates.some(user=>user.uid===selectedMessageRecipientUid)) selectedMessageRecipientUid=candidates[0] ? candidates[0].uid : '';
     const availableRoles=messageAvailableBroadcastRoles();
@@ -1237,22 +1262,26 @@
     const rolePicker=currentAccount && currentAccount.role==='master'
       ? `<div class="hetk-message-mass-info"><i class="fas fa-hard-hat"></i><div><b>${escapeHtml(currentAccount.workZoneName || 'O‘z U/Jingiz')}</b><span>${selectedRecipients.length} nafar quyi hodimga yuboriladi.</span></div></div>`
       : `<div class="hetk-message-role-picker"><b>Qaysi lavozimlarga?</b>${availableRoles.length ? availableRoles.map(role=>`<label><input type="checkbox" data-message-role="${escapeAttr(role)}" ${selectedBroadcastRoles.has(role)?'checked':''}><span>${escapeHtml(roleDef(role).label)}</span><em>${messageBroadcastBaseRecipients().filter(user=>user.role===role).length}</em></label>`).join('') : '<p>Quyi lavozimdagi qabul qiluvchilar topilmadi.</p>'}</div>`;
-    return `<div class="hetk-chat-center">
-      <aside class="hetk-message-people">
+    const selectedCategory=isEditing ? (editingMessage.category || 'normal') : 'normal';
+    const categoryOptions=[['normal','Oddiy xabar'],['news','Yangilik'],['order','Buyruq'],['fax','Faksogramma']].map(option=>`<option value="${option[0]}" ${selectedCategory===option[0]?'selected':''}>${option[1]}</option>`).join('');
+    const composer=messageComposerOpen ? `<div class="hetk-message-composer ${isEditing?'is-editing':''}">
+          <div class="hetk-message-composer-head"><div><h4>${isEditing?'Xabarni tahrirlash':(messageComposeMode==='broadcast'?'Ommaviy xabar':'Yakka xabar')}</h4><p>${isEditing?'Qabul qiluvchilar o‘zgarmaydi. O‘zgarish hammaga bir vaqtda ko‘rinadi.':(messageComposeMode==='broadcast'?'Tanlangan lavozimlardagi hodimlarga yuboriladi.':'Bir hududdagi tanlangan hodimga yuboriladi.')}</p></div><span>${isEditing?Number(editingMessage.recipientCount||0):selectedRecipients.length} qabul qiluvchi</span></div>
+          ${!isEditing && messageComposeMode==='broadcast'?rolePicker:''}
+          <div class="hetk-message-form-grid"><label><span>Xabar turi</span><select id="hetk-message-category">${categoryOptions}</select></label><label><span>Sarlavha *</span><input id="hetk-message-title" maxlength="120" placeholder="Xabar sarlavhasi" value="${escapeAttr(isEditing?(editingMessage.title||''):'')}"></label></div>
+          <label class="hetk-message-text"><span>Xabar matni</span><textarea id="hetk-message-text" maxlength="3000" rows="4" placeholder="Xabarni yozing...">${isEditing?escapeHtml(editingMessage.text||''):''}</textarea></label>
+          <div class="hetk-message-attach-row">${isEditing?`<div class="hetk-message-edit-file"><i class="fas ${editingMessage.file&&editingMessage.file.fileId?'fa-paperclip':'fa-info-circle'}"></i><span>${editingMessage.file&&editingMessage.file.fileId?escapeHtml(editingMessage.file.fileName||'Biriktirilgan fayl o‘zgarmaydi.'):'Bu xabarda biriktirilgan fayl yo‘q.'}</span></div>`:`<label class="hetk-message-file-label"><input id="hetk-message-file" type="file" hidden><i class="fas fa-paperclip"></i><span id="hetk-message-file-name">Rasm yoki fayl biriktirish</span></label>`}<button type="button" id="hetk-message-send"><i class="fas ${isEditing?'fa-save':'fa-paper-plane'}"></i> ${isEditing?'O‘zgarishni saqlash':'Yuborish'}</button></div>
+          <div id="hetk-message-status" class="hetk-message-status"></div>
+          <div class="hetk-message-retention"><i class="fas fa-shield-alt"></i> ${isEditing?'Tahrir barcha qabul qiluvchilarda yangilanadi.':'Media va fayl Telegram kanalida saqlanadi. Xabar tizimda 1 yil turadi.'}</div>
+        </div>` : '';
+    return `<div class="hetk-chat-center ${messageComposerOpen?'composer-open':'composer-closed'} ${isEditing?'composer-editing':''}">
+      ${messageComposerOpen&&!isEditing?`<aside class="hetk-message-people">
         <div class="hetk-message-mode-tabs"><button type="button" data-message-mode="direct" class="${messageComposeMode==='direct'?'active':''}"><i class="fas fa-user"></i> Yakka</button>${canMass?`<button type="button" data-message-mode="broadcast" class="${messageComposeMode==='broadcast'?'active':''}"><i class="fas fa-bullhorn"></i> Ommaviy</button>`:''}</div>
         ${messageComposeMode==='direct'?`<div class="hetk-chat-search"><i class="fas fa-search"></i><input id="hetk-message-person-search" placeholder="Hodimni qidirish..."></div><div id="hetk-message-recipient-list" class="hetk-message-recipient-list">${recipientList}</div>`:`<div class="hetk-message-mass-aside"><i class="fas fa-users"></i><b>Ommaviy yuborish</b><p>Faqat o‘zingizga qarashli hudud va quyi lavozimlar.</p><strong>${selectedRecipients.length} qabul qiluvchi</strong></div>`}
-      </aside>
+      </aside>`:''}
       <section class="hetk-message-main">
-        <div class="hetk-message-composer">
-          <div class="hetk-message-composer-head"><div><h4>${messageComposeMode==='broadcast'?'Ommaviy xabar':'Yakka xabar'}</h4><p>${messageComposeMode==='broadcast'?'Tanlangan lavozimlardagi hodimlarga yuboriladi.':'Bir hududdagi tanlangan hodimga yuboriladi.'}</p></div><span>${selectedRecipients.length} qabul qiluvchi</span></div>
-          ${messageComposeMode==='broadcast'?rolePicker:''}
-          <div class="hetk-message-form-grid"><label><span>Xabar turi</span><select id="hetk-message-category"><option value="normal">Oddiy xabar</option><option value="news">Yangilik</option><option value="order">Buyruq</option><option value="fax">Faksogramma</option></select></label><label><span>Sarlavha *</span><input id="hetk-message-title" maxlength="120" placeholder="Xabar sarlavhasi"></label></div>
-          <label class="hetk-message-text"><span>Xabar matni</span><textarea id="hetk-message-text" maxlength="3000" rows="4" placeholder="Xabarni yozing..."></textarea></label>
-          <div class="hetk-message-attach-row"><label class="hetk-message-file-label"><input id="hetk-message-file" type="file" hidden><i class="fas fa-paperclip"></i><span id="hetk-message-file-name">Rasm yoki fayl biriktirish</span></label><button type="button" id="hetk-message-send"><i class="fas fa-paper-plane"></i> Yuborish</button></div>
-          <div id="hetk-message-status" class="hetk-message-status"></div>
-          <div class="hetk-message-retention"><i class="fas fa-shield-alt"></i> Media va fayl Telegram kanalida saqlanadi. Xabar tizimda 1 yil turadi.</div>
-        </div>
-        <div class="hetk-message-inbox-head"><div><h4>Xabarlar</h4><p>Qabul qilingan va yuborilgan xabarlar.</p></div><span>${messages.length} ta</span></div>
+        <div class="hetk-message-compose-toolbar"><div><h4>Xabarlar</h4><p>Qabul qilingan va yuborilgan xabarlar.</p></div><button type="button" data-toggle-message-composer class="${messageComposerOpen?'close':''}"><i class="fas ${messageComposerOpen?'fa-times':'fa-plus'}"></i> ${messageComposerOpen?'Panelni yopish':'Yangi xabar yozish'}</button></div>
+        ${composer}
+        <div class="hetk-message-inbox-head"><span>${messages.length} ta xabar</span></div>
         <div class="hetk-message-inbox">${messages.length ? messages.map(renderMessageCard).join('') : communicationEmpty('fa-inbox','Xabarlar yo‘q','Yangi xabarlar shu yerda chiqadi.')}</div>
       </section>
     </div>`;
@@ -1265,6 +1294,11 @@
     el.textContent=text || '';
   }
 
+  function buildMessageTelegramCaption(meta){
+    const category=messageCategory(meta.category);
+    return [`📨 HETK · ${category.label}`,`👤 ${meta.senderName}`,`📌 ${meta.title}`,meta.text?`📝 ${meta.text}`:''].filter(Boolean).join('\n').slice(0,1000);
+  }
+
   async function uploadMessageAttachment(file,meta){
     if(!file) return null;
     if(file.size>MESSAGE_MAX_FILE_BYTES) throw new Error('Fayl hajmi 20 MB dan oshmasin.');
@@ -1272,8 +1306,7 @@
     const sendAsPhoto=mediaType==='image' && file.size<=10*1024*1024;
     const method=sendAsPhoto ? 'sendPhoto' : 'sendDocument';
     const field=sendAsPhoto ? 'photo' : 'document';
-    const category=messageCategory(meta.category);
-    const caption=[`📨 HETK · ${category.label}`,`👤 ${meta.senderName}`,`📌 ${meta.title}`,meta.text?`📝 ${meta.text}`:''].filter(Boolean).join('\n').slice(0,1000);
+    const caption=buildMessageTelegramCaption(meta);
     const form=new FormData();
     form.append(field,file,file.name || (mediaType==='image'?'image.jpg':'file'));
     form.append('caption',caption);
@@ -1326,14 +1359,74 @@
       recipients.forEach(user=>{updates[`UserMessages/${user.uid}/${ref.key}`]=Object.assign({},base,{direction:'received',read:false});});
       updates[`UserMessages/${currentAccount.uid}/${ref.key}`]=Object.assign({},base,{direction:'sent',read:true});
       await databaseRef.ref().update(updates);
-      setMessageStatus('success',`${recipients.length} nafar hodimga yuborildi.`);
-      if(byId('hetk-message-title')) byId('hetk-message-title').value='';
-      if(byId('hetk-message-text')) byId('hetk-message-text').value='';
-      if(fileInput) fileInput.value='';
-      if(byId('hetk-message-file-name')) byId('hetk-message-file-name').textContent='Rasm yoki fayl biriktirish';
+      messageComposerOpen=false;editingMessageId='';
+      renderCommunicationContent();
     }catch(error){
       setMessageStatus('error',error.message || 'Xabar yuborilmadi.');
     }finally{setBusy(button,false);}
+  }
+
+  function beginEditInternalMessage(messageId){
+    const message=userMessagesCache[messageId];
+    if(!message || message.direction!=='sent' || !currentAccount || message.senderUid!==currentAccount.uid) return;
+    editingMessageId=messageId;messageComposerOpen=true;
+    renderCommunicationContent();
+  }
+
+  async function updateInternalMessage(){
+    if(!currentAccount || !editingMessageId) return;
+    const button=byId('hetk-message-send');
+    const title=String((byId('hetk-message-title')||{}).value || '').trim();
+    const textValue=String((byId('hetk-message-text')||{}).value || '').trim();
+    const category=String((byId('hetk-message-category')||{}).value || 'normal');
+    const localMessage=userMessagesCache[editingMessageId];
+    if(!localMessage || localMessage.direction!=='sent' || localMessage.senderUid!==currentAccount.uid) return setMessageStatus('error','Bu xabarni tahrirlash mumkin emas.');
+    if(title.length<3) return setMessageStatus('error','Sarlavhani kiriting.');
+    if(!textValue && !(localMessage.file&&localMessage.file.fileId)) return setMessageStatus('error','Xabar matnini kiriting.');
+    setBusy(button,true,'Saqlanmoqda...');setMessageStatus('loading','O‘zgarishlar saqlanmoqda...');
+    try{
+      const snapshot=await databaseRef.ref(`Messages/${editingMessageId}`).once('value');
+      const canonical=snapshot.val() || {};
+      if(!canonical.senderUid || canonical.senderUid!==currentAccount.uid || canonical.deleted) throw new Error('Bu xabarni tahrirlash mumkin emas.');
+      const now=Date.now();
+      if(canonical.file&&canonical.file.telegramMessageId){
+        await messageTelegramFetch('editMessageCaption',{
+          message_id:canonical.file.telegramMessageId,
+          caption:buildMessageTelegramCaption({category,title,text:textValue,senderName:canonical.senderName || currentAccount.fullName || currentAccount.login || 'Foydalanuvchi'})
+        },false);
+      }
+      const updates={};
+      const fields={category,title,text:textValue,editedAt:now,editedByUid:currentAccount.uid};
+      Object.keys(fields).forEach(key=>{updates[`Messages/${editingMessageId}/${key}`]=fields[key];});
+      const recipientUids=Object.keys(canonical.recipients || {}).filter(uid=>canonical.recipients[uid]);
+      recipientUids.concat([currentAccount.uid]).forEach(uid=>{
+        Object.keys(fields).forEach(key=>{updates[`UserMessages/${uid}/${editingMessageId}/${key}`]=fields[key];});
+      });
+      await databaseRef.ref().update(updates);
+      editingMessageId='';messageComposerOpen=false;
+      renderCommunicationContent();
+    }catch(error){setMessageStatus('error',error.message || 'Xabar tahrirlanmadi.');}
+    finally{setBusy(button,false);}
+  }
+
+  async function deleteInternalMessage(messageId){
+    const message=userMessagesCache[messageId];
+    if(!message || message.direction!=='sent' || !currentAccount || message.senderUid!==currentAccount.uid) return;
+    if(!confirm('Xabar barcha qabul qiluvchilarning ro‘yxatidan o‘chirilsinmi? Telegramdagi arxiv fayli saqlanib qoladi.')) return;
+    try{
+      const snapshot=await databaseRef.ref(`Messages/${messageId}`).once('value');
+      const canonical=snapshot.val() || {};
+      if(!canonical.senderUid || canonical.senderUid!==currentAccount.uid || canonical.deleted) throw new Error('Xabar avval o‘chirilgan yoki uni o‘chirishga ruxsat yo‘q.');
+      const updates={};
+      Object.keys(canonical.recipients || {}).filter(uid=>canonical.recipients[uid]).forEach(uid=>{updates[`UserMessages/${uid}/${messageId}`]=null;});
+      updates[`UserMessages/${currentAccount.uid}/${messageId}`]=null;
+      updates[`Messages/${messageId}/deleted`]=true;
+      updates[`Messages/${messageId}/deletedAt`]=Date.now();
+      updates[`Messages/${messageId}/deletedByUid`]=currentAccount.uid;
+      await databaseRef.ref().update(updates);
+      if(editingMessageId===messageId){editingMessageId='';messageComposerOpen=false;}
+      renderCommunicationContent();
+    }catch(error){alert(error.message || 'Xabarni o‘chirib bo‘lmadi.');}
   }
 
   async function markInternalMessageRead(messageId){
@@ -1367,6 +1460,11 @@
   function bindChatsDesign(){
     const content=byId('hetk-communication-content');
     if(!content) return;
+    content.querySelectorAll('[data-toggle-message-composer]').forEach(button=>button.addEventListener('click',()=>{
+      if(messageComposerOpen){messageComposerOpen=false;editingMessageId='';}
+      else messageComposerOpen=true;
+      renderCommunicationContent();
+    }));
     content.querySelectorAll('[data-message-mode]').forEach(button=>button.addEventListener('click',()=>{
       messageComposeMode=button.dataset.messageMode==='broadcast'?'broadcast':'direct';
       renderCommunicationContent();
@@ -1390,10 +1488,12 @@
       const name=byId('hetk-message-file-name');
       if(name) name.textContent=selected ? `${selected.name} · ${Math.max(1,Math.round(selected.size/1024))} KB` : 'Rasm yoki fayl biriktirish';
     });
-    const send=byId('hetk-message-send');if(send) send.addEventListener('click',sendInternalMessage);
+    const send=byId('hetk-message-send');if(send) send.addEventListener('click',()=>editingMessageId?updateInternalMessage():sendInternalMessage());
     content.querySelectorAll('[data-message-id]').forEach(card=>card.addEventListener('click',()=>markInternalMessageRead(card.dataset.messageId)));
     content.querySelectorAll('[data-open-message-file]').forEach(button=>button.addEventListener('click',event=>{event.stopPropagation();openStoredMessageFile(button.dataset.openMessageFile);}));
     content.querySelectorAll('[data-save-message-file]').forEach(button=>button.addEventListener('click',event=>{event.stopPropagation();saveMessageFile(button.dataset.saveMessageFile);}));
+    content.querySelectorAll('[data-edit-message]').forEach(button=>button.addEventListener('click',event=>{event.stopPropagation();beginEditInternalMessage(button.dataset.editMessage);}));
+    content.querySelectorAll('[data-delete-message]').forEach(button=>button.addEventListener('click',event=>{event.stopPropagation();deleteInternalMessage(button.dataset.deleteMessage);}));
   }
 
   function renderSavedFilesPane(){
@@ -1445,19 +1545,22 @@
     const noticeCount=items.filter(item=>item.kind!=='approval' && !item.read).length;
     const approvalCount=items.filter(item=>item.kind==='approval' && item.status==='pending').length;
     const messageCount=Object.values(userMessagesCache).filter(item=>item && item.direction!=='sent' && !item.read).length;
+    const communicationTabItem=(kind,icon,label,count)=>`<div class="hetk-communication-tab-item ${communicationTab===kind?'active':''}"><button type="button" class="hetk-communication-tab-main" data-communication-tab="${kind}"><i class="fas ${icon}"></i><span>${label}</span>${count?`<b>${count}</b>`:''}</button><button type="button" class="hetk-notification-toggle ${notificationPreferenceEnabled(kind)?'':'muted'}" data-notification-toggle="${kind}" title="${notificationPreferenceEnabled(kind)?'Bildirishnomani o‘chirish':'Bildirishnomani yoqish'}"><i class="fas fa-bell"></i><em></em></button></div>`;
     pane.innerHTML=`<div class="hetk-communication-wrap">
       <div class="hetk-communication-head"><div><h3>Xabarlar markazi</h3><p>Hududdagi o‘zgarishlar, tasdiqlashlar va shaxsiy yozishmalar.</p></div><button type="button" id="hetk-notices-read-all"><i class="fas fa-check-double"></i> Barchasini o‘qildi qilish</button></div>
       <div class="hetk-communication-tabs">
-        <button type="button" data-communication-tab="notifications" class="${communicationTab==='notifications'?'active':''}"><i class="fas fa-bell"></i><span>Bildirishnomalar</span>${noticeCount?`<b>${noticeCount}</b>`:''}</button>
-        <button type="button" data-communication-tab="chats" class="${communicationTab==='chats'?'active':''}"><i class="fas fa-comment-alt"></i><span>Xabarlar</span>${messageCount?`<b>${messageCount}</b>`:''}</button>
-        <button type="button" data-communication-tab="approvals" class="${communicationTab==='approvals'?'active':''}"><i class="fas fa-user-check"></i><span>Tasdiqlashlar</span>${approvalCount?`<b>${approvalCount}</b>`:''}</button>
+        ${communicationTabItem('notifications','fa-bell','Bildirishnomalar',noticeCount)}
+        ${communicationTabItem('chats','fa-comment-alt','Xabarlar',messageCount)}
+        ${communicationTabItem('approvals','fa-user-check','Tasdiqlashlar',approvalCount)}
       </div>
       <div id="hetk-communication-content" class="hetk-communication-content"></div>
     </div>`;
     pane.querySelectorAll('[data-communication-tab]').forEach(button=>button.addEventListener('click',()=>{
       communicationTab=button.dataset.communicationTab;
+      if(communicationTab!=='chats'){messageComposerOpen=false;editingMessageId='';}
       renderCommunicationPane();
     }));
+    pane.querySelectorAll('[data-notification-toggle]').forEach(button=>button.addEventListener('click',()=>toggleNotificationPreference(button.dataset.notificationToggle)));
     const readAll=byId('hetk-notices-read-all');if(readAll) readAll.addEventListener('click',()=>communicationTab==='chats'?markAllMessagesRead():markAllNoticesRead());
     renderCommunicationContent();
     updateOuterMessageBadge();
@@ -1499,6 +1602,22 @@
     notificationsCleanupTimer=setInterval(()=>pruneUserNotifications(uid),6*60*60*1000);
   }
 
+  function stopNotificationSettings(){
+    if(notificationSettingsRef) notificationSettingsRef.off('value');
+    notificationSettingsRef=null;notificationSettingsUid='';notificationSettingsCache={};
+  }
+
+  function startNotificationSettings(uid){
+    if(!uid || !databaseRef) return;
+    if(notificationSettingsRef && notificationSettingsUid===uid) return;
+    stopNotificationSettings();notificationSettingsUid=uid;
+    notificationSettingsRef=databaseRef.ref(`UserNotificationSettings/${uid}`);
+    notificationSettingsRef.on('value',snapshot=>{
+      notificationSettingsCache=snapshot.val() || {};
+      renderCommunicationPane();
+    });
+  }
+
   async function pruneUserMessages(uid){
     if(!uid || !databaseRef) return;
     try{
@@ -1528,6 +1647,7 @@
     if(savedFilesRef) savedFilesRef.off('value');
     userMessagesRef=null;userMessagesUid='';userMessagesCache={};
     savedFilesRef=null;savedFilesUid='';savedFilesCache={};
+    messageComposerOpen=false;editingMessageId='';
     if(messagesCleanupTimer){clearInterval(messagesCleanupTimer);messagesCleanupTimer=null;}
     updateOuterMessageBadge();
   }
@@ -3149,6 +3269,7 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
       });
       await startUserNotifications(user.uid);
       await startUserMessages(user.uid);
+      startNotificationSettings(user.uid);
       await databaseRef.ref('users/' + user.uid).update({lastLoginAt:Date.now()});
       if(!currentAccount.telegramEmployeeMessageId || currentAccount.photoData){
         currentAccount=Object.assign({},currentAccount,await safeSyncEmployeeTelegram(user.uid,currentAccount,{showError:false}));
@@ -3189,6 +3310,7 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
         if(currentUserLiveRef){ currentUserLiveRef.off('value'); currentUserLiveRef=null; }
         stopUserNotifications();
         stopUserMessages();
+        stopNotificationSettings();
         currentAccount=null;
         window.HETKAuth.currentUser=null;
         document.dispatchEvent(new CustomEvent('hetk-auth-cleared'));
