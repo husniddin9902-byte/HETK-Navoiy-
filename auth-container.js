@@ -81,6 +81,11 @@
   let workZoneSelectedFolderIds = new Set();
   let workZonePickerExpanded = new Set();
   let editingWorkZoneId = null;
+  let userNotificationsRef = null;
+  let userNotificationsUid = '';
+  let userNotificationsCache = {};
+  let communicationTab = 'notifications';
+  let notificationsCleanupTimer = null;
 
   const TELEGRAM_WORKER_URL = 'https://hetk-telegram.husniddin-99-02.workers.dev';
   const DEFAULT_MALE_AVATAR = 'profile-default-male.png';
@@ -639,6 +644,7 @@
       currentAccount = account;
       populateProfile(account);
       window.HETKAuth.currentUser = account;
+      await startUserNotifications(uid);
       setOverlayVisible(false);
       document.dispatchEvent(new CustomEvent('hetk-auth-ready',{detail:{user:account}}));
       setMessage('success','Bosh administrator yaratildi. Tizimga kirildi.');
@@ -943,6 +949,171 @@
     }
   }
 
+  function noticeTime(value){
+    const date=new Date(Number(value)||0);
+    return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString('uz-UZ');
+  }
+
+  function noticeChanges(value){
+    if(Array.isArray(value)) return value.filter(Boolean);
+    return Object.keys(value || {}).sort((a,b)=>Number(a)-Number(b)).map(key=>value[key]).filter(Boolean);
+  }
+
+  function noticeStatusText(status){
+    return ({pending:'Kutilmoqda',approved:'Tasdiqlandi',rejected:'Bekor qilindi',expired:'Muddati tugadi',processing:'Bajarilmoqda'})[status] || status || '';
+  }
+
+  function noticeIcon(notice){
+    if(notice.kind==='approval') return 'fa-trash-alt';
+    if(notice.action==='create') return 'fa-plus-circle';
+    if(notice.action==='comment') return 'fa-comment-dots';
+    if(String(notice.action||'').startsWith('folder_')) return 'fa-folder';
+    if(String(notice.action||'').startsWith('deletion_')) return 'fa-user-check';
+    return 'fa-edit';
+  }
+
+  async function markNoticeRead(noticeId){
+    if(!currentAccount || !noticeId) return;
+    const notice=userNotificationsCache[noticeId];
+    if(notice && notice.read) return;
+    try{await databaseRef.ref(`UserNotifications/${currentAccount.uid}/${noticeId}/read`).set(true);}catch(_e){}
+  }
+
+  async function markAllNoticesRead(){
+    if(!currentAccount) return;
+    const updates={};
+    Object.keys(userNotificationsCache).forEach(id=>{
+      if(!userNotificationsCache[id].read) updates[`UserNotifications/${currentAccount.uid}/${id}/read`]=true;
+    });
+    if(Object.keys(updates).length) await databaseRef.ref().update(updates);
+  }
+
+  function updateOuterMessageBadge(){
+    const badge=document.querySelector('.hetk-profile-tab[data-profile-tab="messages"] .hetk-profile-badge');
+    if(!badge) return;
+    const unread=Object.values(userNotificationsCache).filter(item=>item && !item.read).length;
+    badge.textContent=unread>99 ? '99+' : String(unread);
+    badge.hidden=unread===0;
+    badge.style.display=unread===0 ? 'none' : '';
+  }
+
+  function communicationEmpty(icon,title,text){
+    return `<div class="hetk-communication-empty"><i class="fas ${icon}"></i><h4>${escapeHtml(title)}</h4><p>${escapeHtml(text)}</p></div>`;
+  }
+
+  function renderNoticeCards(items,approvalMode){
+    if(!items.length){
+      return communicationEmpty(approvalMode?'fa-check-circle':'fa-bell-slash',approvalMode?'Tasdiqlash so‘rovi yo‘q':'Bildirishnoma yo‘q',approvalMode?'Yangi o‘chirish so‘rovlari shu yerda chiqadi.':'Hududingizdagi yangi o‘zgarishlar shu yerda chiqadi.');
+    }
+    return `<div class="hetk-notice-list">${items.map(notice=>{
+      const changes=noticeChanges(notice.changes);
+      const pending=notice.kind==='approval' && notice.status==='pending';
+      const status=notice.status ? `<span class="hetk-notice-status ${escapeAttr(notice.status)}">${escapeHtml(noticeStatusText(notice.status))}</span>` : '';
+      const changeHtml=changes.length ? `<div class="hetk-notice-changes">${changes.map(change=>`
+        <div><b>${escapeHtml(change.label || 'O‘zgarish')}</b><span><del>${escapeHtml(change.before || '—')}</del><i class="fas fa-arrow-right"></i><ins>${escapeHtml(change.after || '—')}</ins></span></div>`).join('')}</div>` : '';
+      const location=[notice.folderPath,notice.workZoneName].filter(Boolean).map(escapeHtml).join(' · ');
+      return `<article class="hetk-notice-card ${notice.read?'':'unread'} ${pending?'approval-pending':''}" data-notice-id="${escapeAttr(notice.id || '')}">
+        <div class="hetk-notice-icon"><i class="fas ${noticeIcon(notice)}"></i></div>
+        <div class="hetk-notice-main">
+          <div class="hetk-notice-title-row"><h4>${escapeHtml(notice.title || 'Bildirishnoma')}</h4>${status}</div>
+          <div class="hetk-notice-meta"><span><i class="far fa-clock"></i> ${escapeHtml(noticeTime(notice.createdAt))}</span>${notice.actorRole?`<span>${escapeHtml(notice.actorRole)}</span>`:''}</div>
+          ${location?`<div class="hetk-notice-location"><i class="fas fa-map-marker-alt"></i> ${location}</div>`:''}
+          ${changeHtml}
+          ${pending?`<div class="hetk-notice-due"><i class="fas fa-hourglass-half"></i> 3 ish kunlik muddat: ${escapeHtml(noticeTime(notice.dueAt))} gacha</div>
+          <div class="hetk-notice-actions"><button type="button" class="approve" data-approve-request="${escapeAttr(notice.requestId || '')}"><i class="fas fa-check"></i> Tasdiqlash</button><button type="button" class="reject" data-reject-request="${escapeAttr(notice.requestId || '')}"><i class="fas fa-times"></i> Bekor qilish</button></div>`:''}
+        </div>
+      </article>`;
+    }).join('')}</div>`;
+  }
+
+  function renderChatsDesign(){
+    return `<div class="hetk-chat-design">
+      <aside><div class="hetk-chat-search"><i class="fas fa-search"></i><input placeholder="Hodimni qidirish..." disabled></div>${communicationEmpty('fa-user-friends','Suhbatlar hali boshlanmagan','Keyingi bosqichda lavozim darajasi bo‘yicha yozishma ochiladi.')}</aside>
+      <section>${communicationEmpty('fa-comments','Shaxsiy xabarlar','Matn va Telegramda saqlanadigan rasmlar keyingi bosqichda shu yerda ishlaydi.')}</section>
+    </div>`;
+  }
+
+  function renderCommunicationContent(){
+    const content=byId('hetk-communication-content');
+    if(!content) return;
+    const items=Object.keys(userNotificationsCache).map(id=>Object.assign({id},userNotificationsCache[id]||{})).sort((a,b)=>Number(b.createdAt||0)-Number(a.createdAt||0));
+    if(communicationTab==='chats') content.innerHTML=renderChatsDesign();
+    else if(communicationTab==='approvals') content.innerHTML=renderNoticeCards(items.filter(item=>item.kind==='approval'),true);
+    else content.innerHTML=renderNoticeCards(items.filter(item=>item.kind!=='approval'),false);
+
+    content.querySelectorAll('[data-notice-id]').forEach(card=>card.addEventListener('click',()=>markNoticeRead(card.dataset.noticeId)));
+    content.querySelectorAll('[data-approve-request],[data-reject-request]').forEach(button=>button.addEventListener('click',async event=>{
+      event.stopPropagation();
+      const requestId=button.dataset.approveRequest || button.dataset.rejectRequest;
+      const action=button.dataset.approveRequest ? 'approve' : 'reject';
+      if(!requestId || !window.HETKElementActions || typeof window.HETKElementActions.resolveDeletionRequest!=='function') return alert('Element tasdiqlash moduli yuklanmadi. Sahifani yangilang.');
+      const question=action==='approve' ? 'Elementni o‘chirishni tasdiqlaysizmi?' : 'O‘chirishni bekor qilib, elementni saqlab qolasizmi?';
+      if(!confirm(question)) return;
+      button.disabled=true;
+      try{await window.HETKElementActions.resolveDeletionRequest(requestId,action);}catch(error){alert(error.message || 'So‘rov bajarilmadi.');button.disabled=false;}
+    }));
+  }
+
+  function renderCommunicationPane(){
+    const pane=document.querySelector('[data-profile-pane="messages"]');
+    if(!pane) return;
+    const items=Object.values(userNotificationsCache).filter(Boolean);
+    const noticeCount=items.filter(item=>item.kind!=='approval' && !item.read).length;
+    const approvalCount=items.filter(item=>item.kind==='approval' && item.status==='pending').length;
+    pane.innerHTML=`<div class="hetk-communication-wrap">
+      <div class="hetk-communication-head"><div><h3>Xabarlar markazi</h3><p>Hududdagi o‘zgarishlar, tasdiqlashlar va shaxsiy yozishmalar.</p></div><button type="button" id="hetk-notices-read-all"><i class="fas fa-check-double"></i> Barchasini o‘qildi qilish</button></div>
+      <div class="hetk-communication-tabs">
+        <button type="button" data-communication-tab="notifications" class="${communicationTab==='notifications'?'active':''}"><i class="fas fa-bell"></i><span>Bildirishnomalar</span>${noticeCount?`<b>${noticeCount}</b>`:''}</button>
+        <button type="button" data-communication-tab="chats" class="${communicationTab==='chats'?'active':''}"><i class="fas fa-comment-alt"></i><span>Xabarlar</span></button>
+        <button type="button" data-communication-tab="approvals" class="${communicationTab==='approvals'?'active':''}"><i class="fas fa-user-check"></i><span>Tasdiqlashlar</span>${approvalCount?`<b>${approvalCount}</b>`:''}</button>
+      </div>
+      <div id="hetk-communication-content" class="hetk-communication-content"></div>
+    </div>`;
+    pane.querySelectorAll('[data-communication-tab]').forEach(button=>button.addEventListener('click',()=>{
+      communicationTab=button.dataset.communicationTab;
+      renderCommunicationPane();
+    }));
+    const readAll=byId('hetk-notices-read-all');if(readAll) readAll.addEventListener('click',markAllNoticesRead);
+    renderCommunicationContent();
+    updateOuterMessageBadge();
+  }
+
+  async function pruneUserNotifications(uid){
+    if(!uid || !databaseRef) return;
+    try{
+      const snap=await databaseRef.ref(`UserNotifications/${uid}`).once('value');
+      const notices=snap.val() || {};
+      const now=Date.now(),updates={};
+      Object.keys(notices).forEach(id=>{
+        const notice=notices[id] || {};
+        if((Number(notice.expiresAt)||Number(notice.createdAt||0)+30*24*60*60*1000)<now) updates[`UserNotifications/${uid}/${id}`]=null;
+      });
+      if(Object.keys(updates).length) await databaseRef.ref().update(updates);
+    }catch(_e){}
+  }
+
+  function stopUserNotifications(){
+    if(userNotificationsRef) userNotificationsRef.off('value');
+    userNotificationsRef=null;userNotificationsUid='';userNotificationsCache={};
+    if(notificationsCleanupTimer){clearInterval(notificationsCleanupTimer);notificationsCleanupTimer=null;}
+    updateOuterMessageBadge();
+  }
+
+  async function startUserNotifications(uid){
+    if(!uid || !databaseRef) return;
+    if(userNotificationsRef && userNotificationsUid===uid) return;
+    stopUserNotifications();
+    userNotificationsUid=uid;
+    await pruneUserNotifications(uid);
+    userNotificationsRef=databaseRef.ref(`UserNotifications/${uid}`);
+    userNotificationsRef.on('value',snap=>{
+      userNotificationsCache=snap.val() || {};
+      renderCommunicationPane();
+      updateOuterMessageBadge();
+    });
+    notificationsCleanupTimer=setInterval(()=>pruneUserNotifications(uid),6*60*60*1000);
+  }
+
   function populateProfile(account){
     const nameEl = byId('profile-name');
     const posEl = byId('profile-position');
@@ -959,6 +1130,7 @@
     renderProfileSafetySummary(account);
     renderPersonalEditor(account);
     renderEmployeesManager(account);
+    renderCommunicationPane();
     installLogoutButton();
   }
 
@@ -2524,6 +2696,7 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
         populateProfile(currentAccount);
         document.dispatchEvent(new CustomEvent('hetk-auth-user-updated',{detail:{user:currentAccount}}));
       });
+      await startUserNotifications(user.uid);
       await databaseRef.ref('users/' + user.uid).update({lastLoginAt:Date.now()});
       if(!currentAccount.telegramEmployeeMessageId || currentAccount.photoData){
         currentAccount=Object.assign({},currentAccount,await safeSyncEmployeeTelegram(user.uid,currentAccount,{showError:false}));
@@ -2562,6 +2735,7 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
         await handleSignedIn(user);
       }else{
         if(currentUserLiveRef){ currentUserLiveRef.off('value'); currentUserLiveRef=null; }
+        stopUserNotifications();
         currentAccount=null;
         window.HETKAuth.currentUser=null;
         document.dispatchEvent(new CustomEvent('hetk-auth-cleared'));
