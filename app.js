@@ -261,13 +261,20 @@ if(saveFolderBtn) {
 
         if (!name) return showToast("Guruh nomini yozing!");
 
-        database.ref('Folders').push({
+        const folderData={
             name: name,
             parentId: parentId,
             hue: hue,
             color: color,
             createdAt: Date.now()
-        }).then(() => {
+        };
+        const createdRef=database.ref('Folders').push();
+        createdRef.set(folderData).then(async () => {
+            const createdId=createdRef.key;
+            if(createdId){
+                currentFolders[createdId]=folderData;
+                await hetkSafeNotifyFolderActivity('create',createdId,null,folderData);
+            }
             showToast("Guruh yaratildi!");
             document.getElementById('new-group-name').value = "";
             addFolderPanel.classList.add('hidden');
@@ -1257,7 +1264,10 @@ window.openEditFolder = function(id, name, hue) {
 document.getElementById('delete-folder-btn').addEventListener('click', () => {
     if(!hetkHasPermission('manageFolders') || !hetkCanAccessFolder(editingFolderId)) return showToast("Bu papkani o'chirish ruxsati yo'q.");
     if (confirm("Ushbu guruhni o'chirmoqchimisiz? Ichidagi barcha ma'lumotlar o'chib ketishi mumkin!")) {
-        database.ref('Folders/' + editingFolderId).remove().then(() => {
+        const deletedFolder=Object.assign({},currentFolders[editingFolderId] || {});
+        const deletedFolderId=editingFolderId;
+        database.ref('Folders/' + deletedFolderId).remove().then(async () => {
+            await hetkSafeNotifyFolderActivity('delete',deletedFolderId,deletedFolder,null);
             showToast("Guruh o'chirildi");
             document.getElementById('edit-folder-panel').classList.add('hidden');
         });
@@ -1276,12 +1286,15 @@ document.getElementById('update-folder-btn').addEventListener('click', () => {
 
     if (newName.trim() === "") return alert("Nomini kiriting");
 
-    database.ref('Folders/' + editingFolderId).update({
+    const oldFolder=Object.assign({},currentFolders[editingFolderId] || {});
+    const changedFolder={
         name: newName,
         parentId: newParentId,
         hue: newHue,
         color: `hsl(${newHue}, 100%, 50%)`
-    }).then(() => {
+    };
+    database.ref('Folders/' + editingFolderId).update(changedFolder).then(async () => {
+        await hetkSafeNotifyFolderActivity('edit',editingFolderId,oldFolder,Object.assign({},oldFolder,changedFolder));
         showToast("Guruh yangilandi!");
         document.getElementById('edit-folder-panel').classList.add('hidden');
     });
@@ -2171,6 +2184,197 @@ function hetkAuditActor(){
     return {uid:me.uid || '',name,role,display:name + ' — ' + role};
 }
 
+// ===== ELEMENT / PAPKA BILDIRISHNOMALARI VA O'CHIRISH TASDIG'I =====
+const HETK_NOTICE_LIFETIME_MS=30*24*60*60*1000;
+
+function hetkElementFolderIds(tp){
+    if(!tp) return [];
+    if(tp.folders) return Object.keys(tp.folders).filter(id=>tp.folders[id]);
+    return [tp.primaryFolderId || tp.folderId].filter(Boolean);
+}
+
+function hetkFolderIsInside(folderId,rootId){
+    if(!folderId || !rootId) return false;
+    if(folderId===rootId) return true;
+    let current=folderId,guard=0;
+    while(current && current!=='root' && currentFolders[current] && guard<120){
+        current=currentFolders[current].parentId;
+        if(current===rootId) return true;
+        guard++;
+    }
+    return false;
+}
+
+function hetkFolderRelated(firstId,secondId){
+    return hetkFolderIsInside(firstId,secondId) || hetkFolderIsInside(secondId,firstId);
+}
+
+function hetkAddBusinessDays(timestamp,days){
+    const date=new Date(timestamp);
+    let left=Number(days)||0;
+    while(left>0){
+        date.setDate(date.getDate()+1);
+        const weekday=date.getDay();
+        if(weekday!==0 && weekday!==6) left--;
+    }
+    return date.getTime();
+}
+
+function hetkStatusText(value){
+    const labels={excellent:"A'lo",good:'Yaxshi',satisfactory:'Qoniqarli',emergency:'Avariya'};
+    return labels[value] || value || '—';
+}
+
+function hetkElementValue(tp,key){
+    tp=tp || {};
+    if(key==='folders') return hetkElementFolderIds(tp).map(id=>getFolderPath(id)).filter(Boolean).join('; ') || '—';
+    if(key==='workZones') return hetkGetTPWorkZoneNames(tp).join(', ') || '—';
+    if(key==='status') return hetkStatusText(tp.status);
+    if(key==='isPrivate') return tp.isPrivate ? 'Xususiy balans' : 'ETK balansi';
+    if(key==='images') return (Array.isArray(tp.images) ? tp.images.length : 0)+' ta rasm';
+    if(key==='coordinates') return `${tp.lat || '—'}, ${tp.lng || '—'}`;
+    const value=tp[key];
+    return value===undefined || value===null || value==='' ? '—' : String(value);
+}
+
+function hetkElementChanges(before,after){
+    const fields=[
+        ['name','Nomi'],['power','Quvvati (kVA)'],['status','Texnik holati'],['note','Izoh'],
+        ['folders','Papka / fider'],['workZones','Ustalik joyi'],['address','Manzil'],
+        ['coordinates','Koordinata'],['isPrivate','Balans'],['ownerFirm','Korxona'],
+        ['ownerName','Korxona vakili'],['ownerPhone','Korxona telefoni'],
+        ['meterNumber','Hisoblagich'],['balanceMeterSerial','Balans hisoblagichi'],
+        ['concentratorSerial','Konsentrator'],['images','Rasmlar']
+    ];
+    return fields.map(([key,label])=>({
+        key,label,before:hetkElementValue(before,key),after:hetkElementValue(after,key)
+    })).filter(change=>change.before!==change.after).slice(0,16);
+}
+
+async function hetkNotificationRecipients(tp,excludeUid){
+    await loadElementWorkZones(true);
+    const usersSnap=await database.ref('users').once('value');
+    const users=usersSnap.val() || {};
+    const recipients=new Set();
+    hetkGetTPWorkZoneIds(tp).forEach(zoneId=>{
+        const zone=elementWorkZonesCache[zoneId];
+        const masterUid=zone && zone.currentMasterUid;
+        if(masterUid && masterUid!==excludeUid && users[masterUid] && users[masterUid].active!==false) recipients.add(masterUid);
+    });
+    const targetFolders=hetkElementFolderIds(tp);
+    Object.keys(elementWorkZonesCache).forEach(zoneId=>{
+        const zone=elementWorkZonesCache[zoneId] || {};
+        const related=Object.keys(zone.folders || {}).some(rootId=>
+            zone.folders[rootId] && targetFolders.some(folderId=>hetkFolderRelated(folderId,rootId))
+        );
+        const masterUid=zone.currentMasterUid;
+        if(related && masterUid && masterUid!==excludeUid && users[masterUid] && users[masterUid].active!==false) recipients.add(masterUid);
+    });
+    if(!recipients.size){
+        Object.keys(users).forEach(uid=>{
+            const user=users[uid] || {};
+            if(uid===excludeUid || user.active===false || !['super_admin','director','chief_engineer'].includes(user.role)) return;
+            if(user.rootAccess || user.role==='super_admin') return recipients.add(uid);
+            const roots=Object.keys(user.folders || {}).filter(id=>user.folders[id]);
+            if(targetFolders.some(folderId=>roots.some(rootId=>hetkFolderIsInside(folderId,rootId)))) recipients.add(uid);
+        });
+    }
+    return Array.from(recipients);
+}
+
+async function hetkFolderNotificationRecipients(folderId,excludeUid){
+    await loadElementWorkZones(true);
+    const usersSnap=await database.ref('users').once('value');
+    const users=usersSnap.val() || {};
+    const recipients=new Set();
+    Object.keys(elementWorkZonesCache).forEach(zoneId=>{
+        const zone=elementWorkZonesCache[zoneId] || {};
+        const related=Object.keys(zone.folders || {}).some(rootId=>zone.folders[rootId] && hetkFolderRelated(folderId,rootId));
+        const masterUid=zone.currentMasterUid;
+        if(related && masterUid && masterUid!==excludeUid && users[masterUid] && users[masterUid].active!==false) recipients.add(masterUid);
+    });
+    if(!recipients.size){
+        Object.keys(users).forEach(uid=>{
+            const user=users[uid] || {};
+            if(uid===excludeUid || user.active===false || !['super_admin','director','chief_engineer'].includes(user.role)) return;
+            if(user.rootAccess || user.role==='super_admin') recipients.add(uid);
+        });
+    }
+    return Array.from(recipients);
+}
+
+async function hetkWriteUserNotices(recipientUids,payload,noticeId){
+    const recipients=Array.from(new Set((recipientUids || []).filter(Boolean)));
+    if(!recipients.length) return '';
+    const id=noticeId || database.ref('UserNotifications').push().key;
+    const updates={};
+    recipients.forEach(uid=>{
+        updates[`UserNotifications/${uid}/${id}`]=Object.assign({id,read:false},payload);
+    });
+    await database.ref().update(updates);
+    return id;
+}
+
+async function hetkNotifyElementActivity(action,tpId,before,after){
+    const actor=hetkAuditActor();
+    const element=after || before || {};
+    const recipientSet=new Set(await hetkNotificationRecipients(element,actor.uid));
+    if(before && after){
+        (await hetkNotificationRecipients(before,actor.uid)).forEach(uid=>recipientSet.add(uid));
+    }
+    const recipients=Array.from(recipientSet);
+    if(!recipients.length) return;
+    const changes=action==='edit' ? hetkElementChanges(before,after) : [];
+    if(action==='edit' && !changes.length) return;
+    const actualAction=action==='edit' && changes.length===1 && changes[0].key==='note' ? 'comment' : action;
+    const verbs={create:'yangi element kiritdi',edit:'elementni tahrirladi',comment:'elementga izoh yozdi'};
+    const folderPaths=hetkElementFolderIds(element).map(id=>getFolderPath(id)).filter(Boolean);
+    await hetkWriteUserNotices(recipients,{
+        kind:'activity',action:actualAction,
+        title:`${actor.name} ${element.name || 'element'} — ${verbs[actualAction] || 'o‘zgartirdi'}`,
+        actorUid:actor.uid,actorName:actor.name,actorRole:actor.role,
+        elementId:tpId,elementName:element.name || 'Element',
+        folderPath:folderPaths.join('; ') || 'Papka biriktirilmagan',
+        workZoneName:hetkGetTPWorkZoneNames(element).join(', ') || 'U/J biriktirilmagan',
+        changes,createdAt:Date.now(),expiresAt:Date.now()+HETK_NOTICE_LIFETIME_MS
+    });
+}
+
+async function hetkNotifyFolderActivity(action,folderId,before,after){
+    const actor=hetkAuditActor();
+    const folder=after || before || {};
+    const recipientSet=new Set(await hetkFolderNotificationRecipients(folderId,actor.uid));
+    const relatedParents=[before && before.parentId,after && after.parentId].filter(id=>id && id!=='root');
+    for(const parentId of relatedParents){
+        (await hetkFolderNotificationRecipients(parentId,actor.uid)).forEach(uid=>recipientSet.add(uid));
+    }
+    const recipients=Array.from(recipientSet);
+    if(!recipients.length) return;
+    const verbs={create:'yangi papka yaratdi',edit:'papkani tahrirladi',delete:'papkani o‘chirdi'};
+    const changes=[];
+    if(action==='edit'){
+        if(String(before.name||'')!==String(after.name||'')) changes.push({label:'Papka nomi',before:before.name||'—',after:after.name||'—'});
+        const oldParent=before.parentId ? getFolderPath(before.parentId) : '—';
+        const newParent=after.parentId ? getFolderPath(after.parentId) : '—';
+        if(oldParent!==newParent) changes.push({label:'Joylashuvi',before:oldParent,after:newParent});
+    }
+    await hetkWriteUserNotices(recipients,{
+        kind:'activity',action:'folder_'+action,
+        title:`${actor.name} ${folder.name || 'papka'} — ${verbs[action] || 'o‘zgartirdi'}`,
+        actorUid:actor.uid,actorName:actor.name,actorRole:actor.role,
+        folderId,folderPath:getFolderPath(folderId) || folder.name || 'Papka',changes,
+        createdAt:Date.now(),expiresAt:Date.now()+HETK_NOTICE_LIFETIME_MS
+    });
+}
+
+async function hetkSafeNotifyElementActivity(action,tpId,before,after){
+    try{await hetkNotifyElementActivity(action,tpId,before,after);}catch(error){console.warn('Bildirishnoma yuborilmadi:',error);}
+}
+
+async function hetkSafeNotifyFolderActivity(action,folderId,before,after){
+    try{await hetkNotifyFolderActivity(action,folderId,before,after);}catch(error){console.warn('Papka bildirishnomasi yuborilmadi:',error);}
+}
+
 async function loadElementWorkZones(force){
     if(!force && Object.keys(elementWorkZonesCache).length) return elementWorkZonesCache;
     const snap=await database.ref('WorkZones').once('value');
@@ -2773,6 +2977,7 @@ const tpId = newRef.key;
          
 try {
     await newRef.set(elementData);
+    await hetkSafeNotifyElementActivity('create',tpId,null,elementData);
     showSaveLoader(100,"Yakunlanmoqda...");
     setTimeout(()=>{
         hideSaveLoader();
@@ -2956,7 +3161,10 @@ rebuildResult
 }
          
     try {
-        await database.ref('TPs/' + editingElementId).update(elementData);
+        const updatedElementId=editingElementId;
+        const beforeUpdate=JSON.parse(JSON.stringify(originalElementData || {}));
+        await database.ref('TPs/' + updatedElementId).update(elementData);
+        await hetkSafeNotifyElementActivity('edit',updatedElementId,beforeUpdate,elementData);
         showSaveLoader(100,"Yakunlanmoqda...");
         setTimeout(()=>{
             hideSaveLoader();
@@ -2983,10 +3191,220 @@ rebuildResult
 }
 
 
+async function hetkRequestElementDeletion(tpId,tp){
+    if(!tpId || !tp) throw new Error('Element topilmadi.');
+    if(tp.deletionPending) throw new Error('Bu element uchun o‘chirish so‘rovi avval yuborilgan.');
+    const actor=hetkAuditActor();
+    const approverUids=await hetkNotificationRecipients(tp,actor.uid);
+    if(!approverUids.length) throw new Error('Bu elementga mas’ul Master topilmadi. Avval U/J Masterini biriktiring.');
+    const now=Date.now();
+    const dueAt=hetkAddBusinessDays(now,3);
+    const requestId=database.ref('ElementDeletionRequests').push().key;
+    const noticeId=database.ref('UserNotifications').push().key;
+    const approvers={};approverUids.forEach(uid=>approvers[uid]=true);
+    const request={
+        id:requestId,tpId,elementName:tp.name || 'Element',elementSnapshot:JSON.parse(JSON.stringify(tp)),
+        requesterUid:actor.uid,requesterName:actor.name,requesterRole:actor.role,
+        approvers,noticeId,status:'pending',createdAt:now,dueAt,
+        expiresAt:now+HETK_NOTICE_LIFETIME_MS
+    };
+    const updates={};
+    updates[`ElementDeletionRequests/${requestId}`]=request;
+    updates[`TPs/${tpId}/deletionPending`]=true;
+    updates[`TPs/${tpId}/deletionRequestId`]=requestId;
+    updates[`TPs/${tpId}/deletionRequestedAt`]=now;
+    updates[`TPs/${tpId}/deletionDueAt`]=dueAt;
+    updates[`TPs/${tpId}/deletionRequestedBy`]=actor.uid;
+    updates[`TPs/${tpId}/deletionRequestedByName`]=actor.name;
+    const folderPath=hetkElementFolderIds(tp).map(id=>getFolderPath(id)).filter(Boolean).join('; ');
+    approverUids.forEach(uid=>{
+        updates[`UserNotifications/${uid}/${noticeId}`]={
+            id:noticeId,kind:'approval',action:'deletion_request',requestId,status:'pending',read:false,
+            title:`${actor.name} ${tp.name || 'element'}ni o‘chirishni so‘radi`,
+            actorUid:actor.uid,actorName:actor.name,actorRole:actor.role,
+            elementId:tpId,elementName:tp.name || 'Element',folderPath:folderPath || 'Papka biriktirilmagan',
+            workZoneName:hetkGetTPWorkZoneNames(tp).join(', ') || 'U/J biriktirilmagan',
+            createdAt:now,dueAt,expiresAt:now+HETK_NOTICE_LIFETIME_MS
+        };
+    });
+    await database.ref().update(updates);
+    elementManagePanel.classList.add('hidden');
+    editingElementId=null;
+    originalElementData=null;
+    if(typeof loadFilteredPoints==='function') loadFilteredPoints();
+    if(typeof refreshSearchResults==='function') refreshSearchResults();
+    const treeRoot=document.getElementById('tree-root');
+    if(treeRoot) renderTree('root',treeRoot);
+}
+
+function hetkDeletedCaption(tpId,tp,request,actor){
+    const folders=hetkElementFolderIds(tp).map(id=>getFolderPath(id)).filter(Boolean).join('\n📂 ');
+    return `❌ ELEMENT O‘CHIRILDI
+
+📍 ${tp.name || '-'}    ⚡ Quvvati: ${tp.power || '-'} kVA
+${tp.isPrivate ? '🔴 XUSUSIY' : '🔵 ETK'}
+📂 ${folders || '-'}
+🛠 U/J: ${hetkGetTPWorkZoneNames(tp).join(', ') || '-'}
+📍 Manzil: ${tp.address || '-'}
+📌 Koordinata: ${tp.lat || '-'}, ${tp.lng || '-'}
+📝 Izoh: ${tp.note || '-'}
+
+🗑 So‘ragan: ${request.requesterName || '-'}
+✅ Tasdiqlagan: ${actor.name || '-'}
+🕒 Tasdiqlangan: ${new Date().toLocaleString('uz-UZ')}
+🆔 Element ID: ${tpId}`;
+}
+
+async function hetkFinalizeApprovedElementDeletion(requestId,request){
+    const actor=hetkAuditActor();
+    if(!(request.approvers && request.approvers[actor.uid]) && actor.role!=='super_admin') throw new Error('Bu so‘rovni tasdiqlashga ruxsatingiz yo‘q.');
+    if(Number(request.dueAt||0)<Date.now()) throw new Error('Tasdiqlash muddati tugagan. Element o‘chirilmaydi.');
+    const statusRef=database.ref(`ElementDeletionRequests/${requestId}/status`);
+    const lock=await statusRef.transaction(status=>status==='pending' ? 'processing' : undefined);
+    if(!lock.committed) throw new Error('Bu so‘rov avval ko‘rib chiqilgan.');
+    try{
+        await database.ref(`ElementDeletionRequests/${requestId}`).update({processingAt:Date.now(),processingBy:actor.uid});
+        const tpSnap=await database.ref(`TPs/${request.tpId}`).once('value');
+        const tp=tpSnap.val();
+        if(!tp) throw new Error('Element bazadan topilmadi.');
+        const deletedCaption=hetkDeletedCaption(request.tpId,tp,request,actor);
+        const deletedMedia=(tp.images || []).filter(img=>img && img.fileId).map(img=>({type:'photo',media:img.fileId}));
+        if(deletedMedia.length){
+            deletedMedia[0].caption=deletedCaption.slice(0,1024);
+            await telegramWorkerFetch('sendMediaGroup','deleted',{
+                method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({media:deletedMedia})
+            });
+        }else{
+            await telegramWorkerFetch('sendMessage','deleted',{
+                method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:deletedCaption})
+            });
+        }
+        if(tp.telegramMainMessageId){
+            await telegramWorkerFetch('deleteMessage','main',{
+                method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message_id:tp.telegramMainMessageId})
+            });
+        }
+        if(tp.telegramArchiveMessageIds && tp.telegramArchiveMessageIds.length) await deleteTelegramMessages(tp.telegramArchiveMessageIds);
+
+        const now=Date.now();
+        const updates={};
+        updates[`DeletedTPs/${request.tpId}`]=Object.assign({},tp,{
+            deletedAt:now,deletedBy:request.requesterUid || '',deletedByName:request.requesterName || '',
+            approvedBy:actor.uid,approvedByName:actor.name,expiresAt:now+HETK_NOTICE_LIFETIME_MS
+        });
+        updates[`TPs/${request.tpId}`]=null;
+        updates[`ElementDeletionRequests/${requestId}/status`]='approved';
+        updates[`ElementDeletionRequests/${requestId}/resolvedAt`]=now;
+        updates[`ElementDeletionRequests/${requestId}/resolvedBy`]=actor.uid;
+        updates[`ElementDeletionRequests/${requestId}/resolvedByName`]=actor.name;
+        Object.keys(request.approvers || {}).forEach(uid=>{
+            updates[`UserNotifications/${uid}/${request.noticeId}/status`]='approved';
+            updates[`UserNotifications/${uid}/${request.noticeId}/read`]=true;
+        });
+        if(request.requesterUid){
+            const resultId=database.ref('UserNotifications').push().key;
+            updates[`UserNotifications/${request.requesterUid}/${resultId}`]={
+                id:resultId,kind:'activity',action:'deletion_approved',read:false,
+                title:`${actor.name} ${tp.name || 'element'}ni o‘chirishni tasdiqladi`,
+                actorUid:actor.uid,actorName:actor.name,actorRole:actor.role,
+                elementId:request.tpId,elementName:tp.name || 'Element',createdAt:now,expiresAt:now+HETK_NOTICE_LIFETIME_MS
+            };
+        }
+        await database.ref().update(updates);
+        showToast('Element o‘chirildi. Master tasdig‘i saqlandi.');
+    }catch(error){
+        await database.ref(`ElementDeletionRequests/${requestId}`).update({status:'pending',processingAt:null,processingBy:null});
+        throw error;
+    }
+}
+
+async function hetkRejectElementDeletion(requestId,request,status){
+    const actor=hetkAuditActor();
+    const resultStatus=status || 'rejected';
+    if(resultStatus==='rejected' && !(request.approvers && request.approvers[actor.uid]) && actor.role!=='super_admin') throw new Error('Bu so‘rovni bekor qilishga ruxsatingiz yo‘q.');
+    const tpSnap=await database.ref(`TPs/${request.tpId}`).once('value');
+    const tp=tpSnap.val() || request.elementSnapshot || {};
+    const now=Date.now();
+    const updates={};
+    if(tp.deletionRequestId===requestId){
+        ['deletionPending','deletionRequestId','deletionRequestedAt','deletionDueAt','deletionRequestedBy','deletionRequestedByName'].forEach(key=>updates[`TPs/${request.tpId}/${key}`]=null);
+    }
+    updates[`ElementDeletionRequests/${requestId}/status`]=resultStatus;
+    updates[`ElementDeletionRequests/${requestId}/resolvedAt`]=now;
+    updates[`ElementDeletionRequests/${requestId}/resolvedBy`]=actor.uid || 'system';
+    updates[`ElementDeletionRequests/${requestId}/resolvedByName`]=resultStatus==='expired' ? 'Muddat tugadi' : actor.name;
+    Object.keys(request.approvers || {}).forEach(uid=>{
+        updates[`UserNotifications/${uid}/${request.noticeId}/status`]=resultStatus;
+        updates[`UserNotifications/${uid}/${request.noticeId}/read`]=true;
+    });
+    if(request.requesterUid){
+        const resultId=database.ref('UserNotifications').push().key;
+        updates[`UserNotifications/${request.requesterUid}/${resultId}`]={
+            id:resultId,kind:'activity',action:'deletion_'+resultStatus,read:false,
+            title:resultStatus==='expired'
+                ? `${tp.name || 'Element'}ni o‘chirish so‘rovi 3 ish kunida tasdiqlanmadi`
+                : `${actor.name} ${tp.name || 'element'}ni o‘chirishni bekor qildi`,
+            actorUid:actor.uid || '',actorName:actor.name || 'Tizim',actorRole:actor.role || '',
+            elementId:request.tpId,elementName:tp.name || 'Element',createdAt:now,expiresAt:now+HETK_NOTICE_LIFETIME_MS
+        };
+    }
+    await database.ref().update(updates);
+    if(resultStatus==='rejected') showToast('O‘chirish bekor qilindi. Element saqlandi.');
+}
+
+async function hetkResolveDeletionRequest(requestId,action){
+    const snap=await database.ref(`ElementDeletionRequests/${requestId}`).once('value');
+    const request=snap.val();
+    if(!request || request.status!=='pending') throw new Error('Bu so‘rov faol emas.');
+    if(action==='approve') await hetkFinalizeApprovedElementDeletion(requestId,request);
+    else await hetkRejectElementDeletion(requestId,request,'rejected');
+    if(typeof loadFilteredPoints==='function') loadFilteredPoints();
+    if(typeof refreshSearchResults==='function') refreshSearchResults();
+    const treeRoot=document.getElementById('tree-root');if(treeRoot) renderTree('root',treeRoot);
+}
+
+async function hetkCleanupDeletionRequests(){
+    try{
+        const now=Date.now();
+        const requestsSnap=await database.ref('ElementDeletionRequests').once('value');
+        const requests=requestsSnap.val() || {};
+        for(const requestId of Object.keys(requests)){
+            const request=requests[requestId] || {};
+            if(request.status==='processing' && Number(request.processingAt||0)>0 && Number(request.processingAt)<now-10*60*1000){
+                await database.ref(`ElementDeletionRequests/${requestId}`).update({status:'pending',processingAt:null,processingBy:null});
+                request.status='pending';
+            }
+            if(request.status==='pending' && Number(request.dueAt||0)>0 && Number(request.dueAt)<now){
+                await hetkRejectElementDeletion(requestId,request,'expired');
+            }else if(request.status!=='pending' && request.status!=='processing' && Number(request.resolvedAt||request.createdAt||0)<now-HETK_NOTICE_LIFETIME_MS){
+                await database.ref(`ElementDeletionRequests/${requestId}`).remove();
+            }
+        }
+        const deletedSnap=await database.ref('DeletedTPs').once('value');
+        const deleted=deletedSnap.val() || {};
+        const oldUpdates={};
+        Object.keys(deleted).forEach(tpId=>{
+            if(Number((deleted[tpId]||{}).expiresAt||0)>0 && Number(deleted[tpId].expiresAt)<now) oldUpdates[`DeletedTPs/${tpId}`]=null;
+        });
+        if(Object.keys(oldUpdates).length) await database.ref().update(oldUpdates);
+    }catch(error){console.warn('Eski o‘chirish so‘rovlari tozalanmadi:',error);}
+}
+
+window.HETKElementActions={resolveDeletionRequest:hetkResolveDeletionRequest};
+
 // Elementni o'chirish tugmasi mantiqi
 if (deleteElementBtn) {
     deleteElementBtn.addEventListener('click', async function() {
+       if(editingElementId && originalElementData){
+           if(!confirm("Element darhol o‘chmaydi. Mas’ul Masterga tasdiqlash uchun yuboriladi va 3 ish kuni kutiladi.\n\nO‘chirish so‘rovi yuborilsinmi?")) return;
+           try{
+               await hetkRequestElementDeletion(editingElementId,originalElementData);
+               showToast("O‘chirish so‘rovi Masterga yuborildi!");
+           }catch(error){showToast(error.message || "O‘chirish so‘rovi yuborilmadi!");}
+           return;
+       }
        if (
+false &&
 editingElementId &&
 confirm(
 "⚠️ DIQQAT!\n\nMa'lumotlar 30 kun davomida arxivda saqlanadi.\n\nTiklash uchun administratorga murojaat qiling!.\n\nElement o'chirilsinmi?"
@@ -3230,7 +3648,7 @@ function renderElementsInTree(folderId, childContainer) {
             if (isBelongsToFolder) {
                 const tpRow = document.createElement('div');
                 tpRow.style.cssText = "display:flex; align-items:center; padding: 6px 8px; margin: 2px 0; cursor:pointer; border-radius:4px; transition: background 0.2s;";
-                tpRow.className = "tp-tree-row-item";
+                tpRow.className = "tp-tree-row-item"+(tp.deletionPending ? " hetk-deletion-pending" : "");
                 
                 // Balans turiga qarab ikonka rangi
                 const iconColor = tp.isPrivate ? "#ff4444" : "#007AFF";
@@ -3298,7 +3716,7 @@ if (tp.folders) {
            ">
         </i>
 
-        <span style="
+        <span class="hetk-element-title" style="
             flex:1;
             min-width:0;
             font-size:14px;
@@ -3597,6 +4015,7 @@ function applyHETKAccessControls(){
 
 document.addEventListener('hetk-auth-ready', function(){
     applyHETKAccessControls();
+    hetkCleanupDeletionRequests();
     loadElementWorkZones(true).then(()=>{
         hetkFilterWorkZones=hetkVisibleWorkZonesForFilter();
         if(responsibleOptions && responsibleOptions.style.display==='block') renderResponsibleWorkZoneFilter();
@@ -3782,7 +4201,7 @@ if (tp.folders) {
 }
 
 html += `
-<div class="search-item"
+<div class="search-item${tp.deletionPending ? ' hetk-deletion-pending' : ''}"
     data-id="${tp.id || ''}"
      data-folder-id="${node.id}"
     onclick="openSearchResult(this)"
@@ -3797,7 +4216,7 @@ justify-content:space-between;
 align-items:center;
 ">
 
-<div>
+<div class="hetk-element-title">
     <i class="fas fa-bolt"
        style="
            color:${tp.isPrivate ? '#ff4444' : '#1e88e5'};
@@ -4388,13 +4807,13 @@ display:flex;
 align-items:flex-end;
 justify-content:center;
 ">
-<i class="fas fa-map-marker-alt"
+<span class="hetk-map-marker-wrap ${point.deletionPending ? 'hetk-map-marker-pending' : ''}"><i class="fas fa-map-marker-alt"
 style="
 font-size:52px;
 color:${primaryColor};
 line-height:52px;
 text-shadow:0 0 6px black;
-"></i>
+"></i>${point.deletionPending ? '<i class="hetk-map-marker-slash"></i>' : ''}</span>
 </div>`;
 
 const mIcon = L.divIcon({
@@ -4456,12 +4875,12 @@ popupHtml += `</div>`;
 
             // Pastki ro'yxat elementini (Tab items) yaratish va bo'yash
             const item = document.createElement('div');
-            item.className = 'tp-item';
+            item.className = 'tp-item'+(point.deletionPending ? ' hetk-deletion-pending' : '');
             item.style.cssText = `padding: 12px; margin: 6px 0; background: #00223a; border-radius: 8px; cursor: pointer; border-left: 4px solid ${primaryColor}; color: white;`;
             
             item.innerHTML = `
                 <div style="font-weight: bold; font-size: 14px; display:flex; justify-content:space-between; align-items:center;">
-                    <span>⚡ ${displayName}</span> 
+                    <span class="hetk-element-title">⚡ ${displayName}</span> 
                     <span style="font-size:10px; opacity:0.6;">${point.isPrivate ? 'Xususiy' : 'ETK'}</span>
                 </div>
                 <div style="color: #88a0b0; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top:2px;">${point.address}</div>
@@ -4762,6 +5181,7 @@ function hetkCreatePanelMapCard(point,tpId){
         <button type="button" class="hetk-panel-map-card-close" aria-label="Yopish">×</button>
       </div>
       <div class="hetk-panel-map-card-path">📂 ${hetkEscapeHtml(folderPath)}</div>
+      ${point.deletionPending ? '<div class="hetk-panel-map-card-pending">⏳ O‘chirish so‘rovi Master tasdig‘ini kutmoqda</div>' : ''}
       <div class="hetk-panel-map-card-body">
         <div class="hetk-panel-map-card-photo">
           <span class="hetk-panel-map-card-photo-empty">📷<br>Rasm mavjud emas</span>
@@ -4939,7 +5359,7 @@ if(requestedElementId && !filteredKeys.length){
                     // Marker dizayni (O'z rangi bilan)
                     const pIcon = L.divIcon({
                         className: 'panel-internal-marker',
-                        html: `<i class="fas fa-map-marker-alt" style="color: ${folderColor}; font-size: 24px; text-shadow: 0 0 3px black;"></i>`,
+                        html: `<span class="hetk-map-marker-wrap ${point.deletionPending ? 'hetk-map-marker-pending' : ''}"><i class="fas fa-map-marker-alt" style="color: ${folderColor}; font-size: 24px; text-shadow: 0 0 3px black;"></i>${point.deletionPending ? '<i class="hetk-map-marker-slash"></i>' : ''}</span>`,
                         iconSize: [24, 24],
                         iconAnchor: [12, 24],
                         popupAnchor: [0, -28]
