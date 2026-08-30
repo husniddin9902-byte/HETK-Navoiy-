@@ -142,7 +142,10 @@
     return shortText(ids.map(id=>folderPath(id) || ((teamFoldersCache[id]||{}).name) || id).join('; '),170);
   }
   function employeePermissionsText(account){
-    const labels={createUsers:'hodim yaratish',deactivateUsers:'bloklash',managePermissions:'ruxsat boshqarish',manageFolders:'papka boshqarish'};
+    const labels={
+      createUsers:'hodim yaratish',deactivateUsers:'bloklash',managePermissions:'ruxsat boshqarish',manageFolders:'papka boshqarish',
+      createElements:'element kiritish',editElements:'element tahrirlash',deleteElements:'element o‘chirish',commentElements:'elementga izoh yozish'
+    };
     const allowed=Object.keys(labels).filter(key=>hasPermission(key,account)).map(key=>labels[key]);
     return allowed.length ? allowed.join(', ') : 'Oddiy foydalanish';
   }
@@ -1024,6 +1027,7 @@
           </div>`;
         }).join('')}
       </div>` : '';
+      const commentHtml=notice.commentText ? `<div class="hetk-notice-comment"><i class="far fa-comment-dots"></i><div><small>Yozilgan izoh</small><p>${escapeHtml(notice.commentText)}</p></div></div>` : '';
       const location=[notice.folderPath,notice.workZoneName].filter(Boolean).map(escapeHtml).join(' · ');
       return `<article class="hetk-notice-card ${notice.read?'':'unread'} ${pending?'approval-pending':''}" data-notice-id="${escapeAttr(notice.id || '')}">
         <div class="hetk-notice-icon"><i class="fas ${noticeIcon(notice)}"></i></div>
@@ -1031,6 +1035,7 @@
           <div class="hetk-notice-title-row"><h4>${escapeHtml(notice.title || 'Bildirishnoma')}</h4>${status}</div>
           <div class="hetk-notice-meta"><span><i class="far fa-clock"></i> ${escapeHtml(noticeTime(notice.createdAt))}</span>${notice.actorRole?`<span>${escapeHtml(notice.actorRole)}</span>`:''}</div>
           ${location?`<div class="hetk-notice-location"><i class="fas fa-map-marker-alt"></i> ${location}</div>`:''}
+          ${commentHtml}
           ${changeHtml}
           ${pending?`<div class="hetk-notice-due"><i class="fas fa-hourglass-half"></i> 3 ish kunlik muddat: ${escapeHtml(noticeTime(notice.dueAt))} gacha</div>
           <div class="hetk-notice-actions"><button type="button" class="approve" data-approve-request="${escapeAttr(notice.requestId || '')}"><i class="fas fa-check"></i> Tasdiqlash</button><button type="button" class="reject" data-reject-request="${escapeAttr(notice.requestId || '')}"><i class="fas fa-times"></i> Bekor qilish</button></div>`:''}
@@ -1205,11 +1210,16 @@
 
   function defaultPermissionsForRole(role){
     const def = roleDef(role);
+    const tbReadOnly=role==='tb_engineer' || role==='regional_tb_engineer';
     return {
       createUsers: !!def.canCreateUsers,
       deactivateUsers: !!def.canDeactivateUsers,
       managePermissions: !!def.canManagePermissions,
-      manageFolders: !!def.canManageFolders
+      manageFolders: !!def.canManageFolders,
+      createElements: !tbReadOnly,
+      editElements: !tbReadOnly,
+      deleteElements: !tbReadOnly,
+      commentElements: true
     };
   }
 
@@ -1217,6 +1227,9 @@
     const acc = account || currentAccount;
     if(!acc) return false;
     if(acc.role === 'super_admin') return true;
+    const tbReadOnly=acc.role==='tb_engineer' || acc.role==='regional_tb_engineer';
+    if(tbReadOnly && ['createElements','editElements','deleteElements'].includes(permission)) return false;
+    if(permission==='commentElements') return true;
     if(acc.permissions && Object.prototype.hasOwnProperty.call(acc.permissions, permission)) return !!acc.permissions[permission];
     const def = roleDef(acc.role);
     const map = {
@@ -1225,6 +1238,7 @@
       managePermissions:'canManagePermissions',
       manageFolders:'canManageFolders'
     };
+    if(['createElements','editElements','deleteElements'].includes(permission)) return !tbReadOnly;
     return !!def[map[permission]];
   }
 
