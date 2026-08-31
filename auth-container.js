@@ -936,7 +936,7 @@
 
   function specialWorksList(record){
     const raw=(record && record.specialWorks) || {};
-    return Object.keys(raw).map(id=>Object.assign({id},raw[id] || {})).filter(item=>item.testDate || item.decision).sort((a,b)=>String(b.testDate||'').localeCompare(String(a.testDate||'')) || Number(b.updatedAt||0)-Number(a.updatedAt||0));
+    return Object.keys(raw).map(id=>Object.assign({id},raw[id] || {})).filter(item=>item.decision).sort((a,b)=>Number(b.updatedAt||0)-Number(a.updatedAt||0));
   }
 
   function parseDateEnd(value){
@@ -1025,6 +1025,7 @@
   function canEditSafetyPermit(target){
     if(!currentAccount || !target || target.uid===currentAccount.uid) return false;
     if(!isTargetWithinScope(target)) return false;
+    if(currentAccount.role==='super_admin') return true;
     if(isRegionalSafetyOfficer(currentAccount)){
       return target.role!=='super_admin' && target.role!=='regional_tb_engineer';
     }
@@ -1069,7 +1070,7 @@
     const items=specialWorksList(record);
     return `<div class="hetk-special-card">
       <div class="hetk-special-title">Maxsus ishlarni bajarishga beriladigan huquqlar bo‘yicha bilimlar sinovi</div>
-      <div class="hetk-special-table-wrap"><table><thead><tr><th>Sinov sanasi</th><th>Qoida nomi</th><th>Komissiya qarori</th><th>Kiritgan</th></tr></thead><tbody>${items.length?items.map(item=>`<tr><td>${escapeHtml(formatDateOnly(item.testDate))}</td><td>Maxsus ishlarga</td><td><b>${escapeHtml(item.decision||'-')}</b></td><td>${escapeHtml(item.updatedByName||'—')}</td></tr>`).join(''):'<tr><td colspan="4" class="hetk-special-empty">Maxsus ishlar bo‘yicha sinov kiritilmagan.</td></tr>'}</tbody></table></div>
+      <div class="hetk-special-table-wrap"><table><thead><tr><th>Qoida nomi</th><th>Komissiya qarori</th><th>Kiritgan</th></tr></thead><tbody>${items.length?items.map(item=>`<tr><td>Maxsus ishlarga</td><td><b>${escapeHtml(item.decision||'-')}</b></td><td>${escapeHtml(item.updatedByName||'—')}</td></tr>`).join(''):'<tr><td colspan="3" class="hetk-special-empty">Maxsus ishlar bo‘yicha ruxsat kiritilmagan.</td></tr>'}</tbody></table></div>
     </div>`;
   }
 
@@ -1080,7 +1081,12 @@
     const group=effectiveSafetyGroup(account);
     const canEdit=!!opts.canEdit;
     const qrReady=rec.publicEnabled && rec.publicCode;
-    const titleActions=`<div class="hetk-safety-title-actions">${qrReady?`<button type="button" class="hetk-safety-qr-btn" data-safety-qr="${escapeAttr(account.uid||'')}"><i class="fas fa-qrcode"></i> QR kod</button>`:''}${canEdit?'<button type="button" class="hetk-safety-edit-btn" data-safety-edit="'+escapeAttr(account.uid||'')+'"><i class="fas fa-pen"></i> Tahrirlash</button>':''}</div>`;
+    const qrAction=qrReady
+      ? `<button type="button" class="hetk-safety-qr-btn" data-safety-qr="${escapeAttr(account.uid||'')}"><i class="fas fa-qrcode"></i> QR kod</button>`
+      : canEdit
+        ? `<button type="button" class="hetk-safety-qr-btn pending" data-safety-edit="${escapeAttr(account.uid||'')}"><i class="fas fa-qrcode"></i> QR yaratish</button>`
+        : '<span class="hetk-safety-qr-state"><i class="fas fa-qrcode"></i> QR yaratilmagan</span>';
+    const titleActions=`<div class="hetk-safety-title-actions">${qrAction}${canEdit?'<button type="button" class="hetk-safety-edit-btn" data-safety-edit="'+escapeAttr(account.uid||'')+'"><i class="fas fa-pen"></i> Tahrirlash</button>':''}</div>`;
     return `<section class="hetk-safety-card">
       <div class="hetk-safety-title"><div><i class="fas fa-id-badge"></i><span>RUXSATNOMA VA IMTIHONLAR</span></div>${titleActions}</div>
       <div class="hetk-safety-identity-row"><div><small>Guvohnoma №</small><b>${escapeHtml(rec.certificateNo||'—')}</b></div><div><small>Belgilangan XTB guruhi</small><b>${escapeHtml(rec.group||'I')} guruh</b></div><div><small>Amaldagi XTB guruhi</small><b class="${group!==(rec.group||'I')?'expired':''}">${escapeHtml(group)} guruh</b></div><div><small>Oxirgi tahrir</small><b>${escapeHtml(rec.updatedByName||'—')}</b></div></div>
@@ -1150,7 +1156,7 @@
 
   function specialEditorRowHtml(item){
     const id=String(item.id || ('new_'+Date.now()+'_'+Math.random().toString(36).slice(2,7)));
-    return `<div class="hetk-special-editor-row" data-special-row="${escapeAttr(id)}"><label><span>Sinov sanasi</span><input type="date" data-special-date value="${escapeAttr(item.testDate||'')}"></label><label><span>Qoida nomi</span><input value="Maxsus ishlarga" readonly></label><label class="decision"><span>Komissiya qarori</span><select data-special-decision>${specialDecisionOptions(item.decision||'-')}</select></label><button type="button" data-special-remove title="Qatorni olib tashlash"><i class="fas fa-trash-alt"></i></button></div>`;
+    return `<div class="hetk-special-editor-row" data-special-row="${escapeAttr(id)}"><label><span>Qoida nomi</span><input value="Maxsus ishlarga" readonly></label><label class="decision"><span>Komissiya qarori</span><select data-special-decision>${specialDecisionOptions(item.decision||'-')}</select></label><button type="button" data-special-remove title="Qatorni olib tashlash"><i class="fas fa-trash-alt"></i></button></div>`;
   }
 
   function bindSpecialEditorRows(overlay){
@@ -1158,7 +1164,7 @@
     const add=overlay.querySelector('#hetk-special-add');
     const bindRemove=()=>list.querySelectorAll('[data-special-remove]').forEach(btn=>{if(btn.dataset.bound==='1') return;btn.dataset.bound='1';btn.addEventListener('click',()=>btn.closest('.hetk-special-editor-row').remove());});
     bindRemove();
-    add.addEventListener('click',()=>{list.insertAdjacentHTML('beforeend',specialEditorRowHtml({decision:'-'}));bindRemove();const rows=list.querySelectorAll('.hetk-special-editor-row');const last=rows[rows.length-1];if(last) last.querySelector('[data-special-date]').focus();});
+    add.addEventListener('click',()=>{list.insertAdjacentHTML('beforeend',specialEditorRowHtml({decision:'-'}));bindRemove();const rows=list.querySelectorAll('.hetk-special-editor-row');const last=rows[rows.length-1];if(last) last.querySelector('[data-special-decision]').focus();});
   }
 
   function openSafetyPermitEditor(uid){
@@ -1182,12 +1188,10 @@
   function readSpecialWorksFromEditor(){
     const result={};
     document.querySelectorAll('#hetk-special-editor-list .hetk-special-editor-row').forEach((row,index)=>{
-      const testDate=String(row.querySelector('[data-special-date]').value||'');
       const decision=String(row.querySelector('[data-special-decision]').value||'-');
-      if(!testDate && decision==='-') return;
       const rawId=String(row.dataset.specialRow||'');
       const id=rawId && !rawId.startsWith('new_') ? rawId : 'sw_'+Date.now()+'_'+index+'_'+Math.random().toString(36).slice(2,6);
-      result[id]={testDate,ruleName:'Maxsus ishlarga',decision};
+      result[id]={ruleName:'Maxsus ishlarga',decision};
     });
     return result;
   }
@@ -1232,7 +1236,7 @@
     const merged=Object.assign({},account,{uid,safety});
     const state=permitState(merged);
     const special={};
-    specialWorksList(safety).forEach(item=>{special[item.id]={testDate:item.testDate||'',ruleName:'Maxsus ishlarga',decision:item.decision||'-'};});
+    specialWorksList(safety).forEach(item=>{special[item.id]={ruleName:'Maxsus ishlarga',decision:item.decision||'-'};});
     return {
       active:safety.publicEnabled===true && account.active!==false,
       code:safety.publicCode||'',fullName:account.fullName||'Hodim',gender:normalizeGender(account.gender),
@@ -1288,8 +1292,8 @@
     const msg=byId('hetk-safety-editor-msg'); const btn=byId('hetk-safety-save');
     const examError=validateSafetyExam(exam1,'1-imtihon') || validateSafetyExam(exam2,'2-imtihon');
     if(examError){msg.className='hetk-user-editor-message show error';msg.textContent=examError;return;}
-    const incompleteSpecial=Object.values(specialWorks).some(item=>!item.testDate || !SPECIAL_WORK_DECISIONS.includes(item.decision));
-    if(incompleteSpecial){msg.className='hetk-user-editor-message show error';msg.textContent='Maxsus ishlar qatorida sinov sanasi va komissiya qarorini to‘liq kiriting.';return;}
+    const incompleteSpecial=Object.values(specialWorks).some(item=>!SPECIAL_WORK_DECISIONS.includes(item.decision));
+    if(incompleteSpecial){msg.className='hetk-user-editor-message show error';msg.textContent='Maxsus ishlar qatorida komissiya qarorini ro‘yxatdan tanlang.';return;}
     setBusy(btn,true,'Saqlanmoqda...');
     try{
       const now=Date.now(); const roleLabel=getRoleLabel(currentAccount);const editorName=currentAccount.fullName||currentAccount.login||'';
@@ -1339,7 +1343,7 @@
   function publicSpecialHtml(record){
     const items=specialWorksList(record);
     if(!items.length) return '<div class="hetk-public-special-empty">Maxsus ishlar bo‘yicha ruxsat kiritilmagan.</div>';
-    return `<div class="hetk-public-special">${items.map(item=>`<div><i class="fas fa-hard-hat"></i><span><b>${escapeHtml(item.decision||'-')}</b><small>Maxsus ishlarga · ${escapeHtml(formatDateOnly(item.testDate))}</small></span></div>`).join('')}</div>`;
+    return `<div class="hetk-public-special">${items.map(item=>`<div><i class="fas fa-hard-hat"></i><span><b>${escapeHtml(item.decision||'-')}</b><small>Maxsus ishlarga</small></span></div>`).join('')}</div>`;
   }
 
   function closePublicPermitViewer(){
