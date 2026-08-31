@@ -2201,8 +2201,11 @@ let hetkCommentCleanupTimer=null;
 
 function hetkElementFolderIds(tp){
     if(!tp) return [];
-    if(tp.folders) return Object.keys(tp.folders).filter(id=>tp.folders[id]);
-    return [tp.primaryFolderId || tp.folderId].filter(Boolean);
+    const ids=[];
+    if(tp.folders) Object.keys(tp.folders).forEach(id=>{if(tp.folders[id]) ids.push(id);});
+    if(tp.primaryFolderId) ids.push(tp.primaryFolderId);
+    if(tp.folderId) ids.push(tp.folderId);
+    return [...new Set(ids)];
 }
 
 function hetkFolderIsInside(folderId,rootId){
@@ -3881,10 +3884,10 @@ function renderTree(parentId, container) {
         
         const childContainer = item.querySelector(`#children-${id}`);
         
-        // Dynamic ravishda shu fiderga tegishli TPlarni bazadan olib daraxt ostiga qo'shish
-        renderElementsInTree(id, childContainer);
-        
+        // Avval ichki papkalarni chizamiz. renderTree konteynerni tozalaydi,
+        // shuning uchun elementlar undan keyin qo'shilishi shart.
         renderTree(id, childContainer);
+        renderElementsInTree(id, childContainer);
     });
 }
 
@@ -3897,9 +3900,9 @@ function renderElementsInTree(folderId, childContainer) {
             const tp = allPoints[tpId];
             
             // Ko'p tomonlama bog'liqlikni tekshirish (folders massivi yoki eski folderId)
-            const isBelongsToFolder = (tp.folders && tp.folders[folderId]) || (tp.folderId === folderId);
+            const isBelongsToFolder = hetkElementFolderIds(tp).includes(folderId);
             
-            if (isBelongsToFolder) {
+            if (isBelongsToFolder && hetkPointAllowedByUser(tp)) {
                 const tpRow = document.createElement('div');
                 tpRow.style.cssText = "display:flex; align-items:center; padding: 6px 8px; margin: 2px 0; cursor:pointer; border-radius:4px; transition: background 0.2s;";
                 tpRow.className = "tp-tree-row-item"+(tp.deletionPending ? " hetk-deletion-pending" : "");
