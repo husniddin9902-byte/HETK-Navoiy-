@@ -26,6 +26,13 @@ let editingFolderId = null;
 let activeMapMarkers = []; // Xaritadagi dinamik markerlarni nazorat qilish uchun massiv
 let isSaving = false;
 
+// Statistika moduli boshqaruv panelidagi amaldagi papkani kuzatishi uchun.
+function hetkNotifyManagementScopeChanged(reason){
+    document.dispatchEvent(new CustomEvent('hetk-management-scope-changed',{
+        detail:{folderId:activeFolderId,reason:reason || 'update'}
+    }));
+}
+
 // ===============================
 // Performance Cache
 // ===============================
@@ -290,6 +297,7 @@ function loadFolders() {
         
         // YANGI QO'SHILGAN FUNKSIYA: Panellar yuklanganda daraxtsimon dropdownlarni ham qayta chizadi
         refreshTreeDropdowns();
+        hetkNotifyManagementScopeChanged('folders');
     });
 }
 
@@ -504,6 +512,7 @@ window.selectFolder = function(id) {
         renderResponsibleWorkZoneFilter();
     }
     showToast(`Tanlandi: ${currentFolders[id].name}`);
+    hetkNotifyManagementScopeChanged('folder');
 };
 
 
@@ -5339,7 +5348,17 @@ function hetkResetManagementPanelState(){
         panelInternalMap.setView(HETK_PANEL_MAP_DEFAULT_CENTER,HETK_PANEL_MAP_DEFAULT_ZOOM);
     }
     showFoldersTab();
+    hetkNotifyManagementScopeChanged('reset');
 }
+
+// Yangi statistika moduli eski ishlayotgan kodga aralashmasdan kerakli
+// kontekstni shu xavfsiz, faqat o'qiladigan interfeys orqali oladi.
+window.HETKManagementStatsContext={
+    getActiveFolderId:function(){return activeFolderId;},
+    getFolders:function(){return currentFolders;},
+    pointAllowed:function(tp){return hetkPointAllowedByUser(tp);},
+    getPointWorkZoneIds:function(tp){return hetkGetTPWorkZoneIds(tp);}
+};
 
 function hetkEnsurePanelMapCardStyles(){
     if(document.getElementById('hetk-panel-map-card-styles')) return;
