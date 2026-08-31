@@ -6,7 +6,7 @@
     activeFolderId:'root',refs:[],started:false,currentUid:'',presenceRef:null,
     connectedRef:null,heartbeat:null,lastActivityAt:Date.now(),usageDay:'',
     selectedYear:String(new Date().getFullYear()),selectedMonth:String(new Date().getMonth()+1).padStart(2,'0'),
-    adminFolderId:'root',selectedTeamUid:''
+    adminFolderId:'root',selectedTeamUid:'',operationalOpen:false
   };
   const ONLINE_LIMIT_MS=150000;
   const ACTIVE_LIMIT_MS=5*60*1000;
@@ -44,10 +44,12 @@
     return false;
   }
   function pointFolderIds(tp){
-    if(tp&&tp.folders)return Object.keys(tp.folders).filter(function(id){return tp.folders[id];});
-    if(tp&&tp.primaryFolderId)return [tp.primaryFolderId];
-    if(tp&&tp.folderId)return [tp.folderId];
-    return [];
+    if(!tp)return [];
+    const ids=[];
+    if(tp.folders)Object.keys(tp.folders).forEach(function(id){if(tp.folders[id])ids.push(id);});
+    if(tp.primaryFolderId)ids.push(tp.primaryFolderId);
+    if(tp.folderId)ids.push(tp.folderId);
+    return Array.from(new Set(ids));
   }
   function pointZoneIds(tp){
     if(tp&&tp.workZones)return Object.keys(tp.workZones).filter(function(id){return tp.workZones[id];});
@@ -119,19 +121,44 @@
   }
 
   function mountOperational(){
-    const search=byId('search-container-box');if(!search)return null;
+    const panel=document.querySelector('#list-container .list-content.full-screen');
+    const header=panel&&panel.querySelector('.list-header');
+    if(!panel||!header)return null;
+    let openButton=byId('hetk-statistics-open');
+    if(!openButton){
+      openButton=document.createElement('button');
+      openButton.id='hetk-statistics-open';
+      openButton.type='button';
+      openButton.className='hetk-statistics-open';
+      openButton.setAttribute('aria-controls','hetk-operational-stats');
+      openButton.setAttribute('aria-expanded','false');
+      openButton.innerHTML='<i class="fas fa-chart-pie"></i><span>Statistika</span>';
+      const close=byId('close-list');
+      header.insertBefore(openButton,close||null);
+      openButton.addEventListener('click',function(){setOperationalOpen(!state.operationalOpen);});
+    }
     let box=byId('hetk-operational-stats');
     if(!box){
-      box=document.createElement('section');box.id='hetk-operational-stats';box.className='hetk-operational-stats';
-      search.parentNode.insertBefore(box,search);
+      box=document.createElement('aside');box.id='hetk-operational-stats';box.className='hetk-operational-stats';
+      box.setAttribute('aria-hidden','true');
+      panel.appendChild(box);
     }
+    box.classList.toggle('open',state.operationalOpen);
+    box.setAttribute('aria-hidden',state.operationalOpen?'false':'true');
+    openButton.classList.toggle('active',state.operationalOpen);
+    openButton.setAttribute('aria-expanded',state.operationalOpen?'true':'false');
     return box;
+  }
+  function setOperationalOpen(open){
+    state.operationalOpen=!!open;
+    renderOperational();
   }
   function renderOperational(){
     const box=mountOperational();if(!box||!me())return;
     const folderId=activeFolderId();state.activeFolderId=folderId;
     const data=summary(folderId),rows=zoneRows(folderId,data.points);
-    box.innerHTML=`<div class="hetk-stats-heading"><div><b><i class="fas fa-chart-pie"></i> Tezkor statistika</b><span>${esc(folderName(folderId))}</span></div><button type="button" id="hetk-stats-refresh" title="Yangilash"><i class="fas fa-sync-alt"></i></button></div>
+    box.innerHTML=`<div class="hetk-stats-heading"><div><b><i class="fas fa-chart-pie"></i> Tezkor statistika</b><span>${esc(folderName(folderId))}</span></div><div class="hetk-stats-heading-actions"><button type="button" id="hetk-stats-refresh" title="Yangilash"><i class="fas fa-sync-alt"></i></button><button type="button" id="hetk-stats-close" title="Statistikani yopish"><i class="fas fa-times"></i></button></div></div>
+      <div class="hetk-stats-drawer-body">
       <div class="hetk-stat-cards">
         <div class="hetk-stat-card total"><i class="fas fa-bolt"></i><span>Jami element</span><strong>${data.total}</strong></div>
         <div class="hetk-stat-card etk"><i class="fas fa-building"></i><span>ETK balansi</span><strong>${data.etk}</strong></div>
@@ -140,8 +167,9 @@
       </div>
       <details class="hetk-zone-stats" ${rows.length&&rows.length<=8?'open':''}><summary><span><i class="fas fa-hard-hat"></i> Ustalik joylari kesimida</span><b>${rows.length} ta U/J</b></summary>
         <div class="hetk-zone-stat-list">${rows.length?rows.map(function(row){return `<div class="hetk-zone-stat-row"><span class="name">${esc(row.name)}</span><span class="all">Jami <b>${row.total}</b></span><span class="etk">ETK <b>${row.etk}</b></span><span class="private">Xususiy <b>${row.privateCount}</b></span></div>`;}).join(''):'<div class="hetk-stats-empty">Bu hududda U/J topilmadi.</div>'}</div>
-      </details>`;
+      </details></div>`;
     const refresh=byId('hetk-stats-refresh');if(refresh)refresh.addEventListener('click',function(){refresh.classList.add('spin');startDataListeners(true);setTimeout(function(){refresh.classList.remove('spin');},700);});
+    const close=byId('hetk-stats-close');if(close)close.addEventListener('click',function(){setOperationalOpen(false);});
     renderOwnZoneCard();
     renderSelectedUserZoneCard(state.selectedTeamUid);
     renderAdminDashboard();
@@ -357,13 +385,19 @@
   function onAuthReady(){state.activeFolderId=activeFolderId();startDataListeners(false);startPresence();ensureAdminTab();renderOperational();}
   document.addEventListener('hetk-auth-ready',onAuthReady);
   document.addEventListener('hetk-auth-user-updated',function(){startPresence();ensureAdminTab();renderOperational();});
-  document.addEventListener('hetk-auth-cleared',function(){stopPresence();stopDataListeners();const tab=document.querySelector('.hetk-profile-tab[data-profile-tab="statistics"]'),pane=document.querySelector('[data-profile-pane="statistics"]');if(tab)tab.remove();if(pane)pane.remove();});
-  document.addEventListener('hetk-management-scope-changed',function(event){state.activeFolderId=(event.detail&&event.detail.folderId)||activeFolderId();renderOperational();});
+  document.addEventListener('hetk-auth-cleared',function(){state.operationalOpen=false;stopPresence();stopDataListeners();const tab=document.querySelector('.hetk-profile-tab[data-profile-tab="statistics"]'),pane=document.querySelector('[data-profile-pane="statistics"]');if(tab)tab.remove();if(pane)pane.remove();});
+  document.addEventListener('hetk-management-scope-changed',function(event){
+    const detail=(event&&event.detail)||{};
+    state.activeFolderId=detail.folderId||activeFolderId();
+    if(detail.reason==='reset')state.operationalOpen=false;
+    renderOperational();
+  });
   document.addEventListener('click',function(event){
     const row=event.target&&event.target.closest?event.target.closest('[data-team-uid]'):null;
     if(!row)return;state.selectedTeamUid=row.dataset.teamUid||'';setTimeout(function(){renderSelectedUserZoneCard(state.selectedTeamUid);},0);
   });
+  document.addEventListener('click',function(event){if(event.target&&event.target.closest&&event.target.closest('#close-list')){state.operationalOpen=false;setOperationalOpen(false);}});
   window.addEventListener('beforeunload',function(){if(state.presenceRef)state.presenceRef.update({online:false,lastSeen:firebase.database.ServerValue.TIMESTAMP});});
-  window.HETKStatistics={refresh:renderOperational,getSummary:function(folderId){return summary(folderId||activeFolderId());}};
+  window.HETKStatistics={refresh:renderOperational,open:function(){setOperationalOpen(true);},close:function(){setOperationalOpen(false);},getSummary:function(folderId){return summary(folderId||activeFolderId());}};
   if(me())onAuthReady();
 })();
