@@ -109,8 +109,15 @@
   let notificationSettingsRef = null;
   let notificationSettingsUid = '';
   let notificationSettingsCache = {};
+  let pushMessaging = null;
+  let pushServiceWorkerRegistration = null;
+  let pushRegistrationPromise = null;
+  let pushRegisteredUid = '';
+  let pushCurrentToken = '';
+  let pushForegroundBound = false;
 
   const TELEGRAM_WORKER_URL = 'https://hetk-telegram.husniddin-99-02.workers.dev';
+  const FCM_VAPID_PUBLIC_KEY = 'BKdSzJyc3RKdUbVxJs7SyMsZ5iQhJOIRfDWba12LsyHuEOOUSiTe3yXLzhMgoNV488kZG56ySOXRTWE6Ha3JgRQ';
   const MESSAGE_LIFETIME_MS = 365 * 24 * 60 * 60 * 1000;
   const MESSAGE_MAX_FILE_BYTES = 20 * 1024 * 1024;
   const MASS_MESSAGE_ROLES = new Set(['super_admin','director','chief_engineer','regional_tb_engineer','tb_engineer','askue_chief_engineer','sales_chief','chief_dispatcher']);
@@ -167,6 +174,171 @@
     if(!response.ok || !result.ok) throw new Error(result.description || result.error || 'Telegram xatosi');
     return result;
   }
+
+  function browserPushSupported(){
+    return typeof window!=='undefined' && 'Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window &&
+      typeof firebase!=='undefined' && typeof firebase.messaging==='function';
+  }
+
+  function pushDeviceId(){
+    const key='hetk_push_device_id';
+    let value='';
+    try{value=localStorage.getItem(key) || '';}catch(_e){}
+    if(!value){
+      value=(window.crypto && typeof window.crypto.randomUUID==='function') ? window.crypto.randomUUID() : `device_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      try{localStorage.setItem(key,value);}catch(_e){}
+    }
+    return value.replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,100);
+  }
+
+  function pushOpenLink(kind){
+    const url=new URL(window.location.href);
+    url.searchParams.set('hetk_push',kind || 'notifications');
+    url.hash='';
+    return url.href;
+  }
+
+  function bindForegroundPush(){
+    if(!pushMessaging || pushForegroundBound) return;
+    pushForegroundBound=true;
+    pushMessaging.onMessage(payload=>{
+      const kind=String((payload && payload.data && payload.data.kind) || 'notifications');
+      if(!notificationPreferenceEnabled(kind)) return;
+      document.dispatchEvent(new CustomEvent('hetk-push-received',{detail:payload || {}}));
+    });
+  }
+
+  async function ensureBrowserPush(requestPermission){
+    if(!currentAccount || !databaseRef) return false;
+    if(!browserPushSupported()) throw new Error('Bu brauzer bildirishnomani qo‘llamaydi.');
+    if(pushRegisteredUid===currentAccount.uid && pushCurrentToken) return true;
+    if(pushRegistrationPromise) return await pushRegistrationPromise;
+    pushRegistrationPromise=(async()=>{
+      let permission=Notification.permission;
+      if(permission!=='granted' && requestPermission) permission=await Notification.requestPermission();
+      if(permission!=='granted'){
+        if(permission==='denied') throw new Error('Brauzer bildirishnomasi bloklangan. Brauzer sozlamasidan ruxsat bering.');
+        return false;
+      }
+      if(typeof firebase.messaging.isSupported==='function'){
+        const supported=await firebase.messaging.isSupported();
+        if(!supported) throw new Error('Bu brauzer Firebase bildirishnomasini qo‘llamaydi.');
+      }
+      if(!pushServiceWorkerRegistration){
+        const workerUrl=new URL('firebase-messaging-sw.js',document.baseURI).href;
+        pushServiceWorkerRegistration=await navigator.serviceWorker.register(workerUrl,{scope:'./'});
+        await navigator.serviceWorker.ready;
+      }
+      if(!pushMessaging) pushMessaging=firebase.messaging();
+      bindForegroundPush();
+      const token=await pushMessaging.getToken({
+        vapidKey:FCM_VAPID_PUBLIC_KEY,
+        serviceWorkerRegistration:pushServiceWorkerRegistration
+      });
+      if(!token) throw new Error('Brauzer bildirishnoma kalitini bermadi.');
+      const uid=currentAccount.uid;
+      const deviceId=pushDeviceId();
+      let previousUid='';
+      try{previousUid=localStorage.getItem('hetk_push_uid') || '';}catch(_e){}
+      if(previousUid && previousUid!==uid){
+        try{await databaseRef.ref(`PushTokens/${previousUid}/${deviceId}`).remove();}catch(_e){}
+      }
+      await databaseRef.ref(`PushTokens/${uid}/${deviceId}`).set({
+        token,deviceId,enabled:true,
+        userAgent:String(navigator.userAgent || '').slice(0,240),
+        updatedAt:Date.now()
+      });
+      try{localStorage.setItem('hetk_push_uid',uid);}catch(_e){}
+      pushRegisteredUid=uid;pushCurrentToken=token;
+      return true;
+    })();
+    try{return await pushRegistrationPromise;}
+    finally{pushRegistrationPromise=null;}
+  }
+
+  async function pushWorkerFetch(payload){
+    if(!auth || !auth.currentUser) throw new Error('Bildirishnoma uchun tizimga qayta kiring.');
+    async function send(forceRefresh){
+      const token=await auth.currentUser.getIdToken(!!forceRefresh);
+      return await fetch(`${TELEGRAM_WORKER_URL}/push/send`,{
+        method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(payload || {})
+      });
+    }
+    let response=await send(false);
+    if(response.status===401) response=await send(true);
+    let result={};
+    try{result=await response.json();}catch(_e){}
+    if(!response.ok || !result.ok) throw new Error(result.error || 'Brauzer bildirishnomasi yuborilmadi.');
+    return result;
+  }
+
+  async function sendBrowserPushToUsers(recipientUids,kind,title,body,data){
+    if(!currentAccount || !databaseRef) return {sent:0};
+    const recipients=Array.from(new Set((recipientUids || []).filter(Boolean)));
+    if(!recipients.length) return {sent:0};
+    const [tokensSnapshot,settingsSnapshot]=await Promise.all([
+      databaseRef.ref('PushTokens').once('value'),
+      databaseRef.ref('UserNotificationSettings').once('value')
+    ]);
+    const allTokens=tokensSnapshot.val() || {};
+    const allSettings=settingsSnapshot.val() || {};
+    const records=[];
+    recipients.forEach(uid=>{
+      if(allSettings[uid] && allSettings[uid][kind]===false) return;
+      const devices=allTokens[uid] || {};
+      Object.keys(devices).forEach(deviceId=>{
+        const record=devices[deviceId] || {};
+        if(record.enabled!==false && record.token) records.push({uid,deviceId,token:String(record.token)});
+      });
+    });
+    const unique=[];const seen=new Set();
+    records.forEach(record=>{if(!seen.has(record.token)){seen.add(record.token);unique.push(record);}});
+    if(!unique.length) return {sent:0};
+    let sent=0;const invalid=new Set();
+    for(let index=0;index<unique.length;index+=25){
+      const batch=unique.slice(index,index+25);
+      const result=await pushWorkerFetch({
+        tokens:batch.map(record=>record.token),
+        title:String(title || 'HETK'),body:String(body || 'Yangi bildirishnoma'),
+        link:pushOpenLink(kind),
+        data:Object.assign({},data || {},{kind})
+      });
+      sent+=Number(result.sent || 0);
+      (result.invalidTokens || []).forEach(token=>invalid.add(token));
+    }
+    if(invalid.size){
+      const updates={};
+      unique.filter(record=>invalid.has(record.token)).forEach(record=>{updates[`PushTokens/${record.uid}/${record.deviceId}`]=null;});
+      if(Object.keys(updates).length) await databaseRef.ref().update(updates);
+    }
+    return {sent};
+  }
+
+  async function safeSendBrowserPush(recipientUids,kind,title,body,data){
+    try{return await sendBrowserPushToUsers(recipientUids,kind,title,body,data);}
+    catch(error){console.warn('HETK push:',error && error.message ? error.message : error);return {sent:0,error:true};}
+  }
+
+  function openPushDestination(){
+    let kind='';
+    try{kind=new URL(window.location.href).searchParams.get('hetk_push') || '';}catch(_e){}
+    if(!['notifications','chats','approvals'].includes(kind)) return;
+    communicationTab=kind;
+    if(typeof window.openProfileModule==='function') window.openProfileModule();
+    const tab=document.querySelector('.hetk-profile-tab[data-profile-tab="messages"]');
+    if(tab) tab.click();
+    renderCommunicationPane();
+    try{
+      const url=new URL(window.location.href);url.searchParams.delete('hetk_push');
+      history.replaceState(null,'',url.pathname+url.search+url.hash);
+    }catch(_e){}
+  }
+
+  window.HETKPush={
+    sendToUsers:sendBrowserPushToUsers,
+    safeSendToUsers:safeSendBrowserPush,
+    enable:()=>ensureBrowserPush(true)
+  };
 
   function shortText(value,max){
     const text=String(value || '').trim();
@@ -1053,8 +1225,19 @@
 
   async function toggleNotificationPreference(kind){
     if(!currentAccount || !['notifications','chats','approvals'].includes(kind)) return;
+    if(notificationPreferenceEnabled(kind) && browserPushSupported() && Notification.permission==='default'){
+      try{
+        const enabled=await ensureBrowserPush(true);
+        if(enabled){
+          await databaseRef.ref(`UserNotificationSettings/${currentAccount.uid}/${kind}`).set(true);
+          renderCommunicationPane();
+        }
+      }catch(error){alert(error.message || 'Brauzer bildirishnomasini yoqib bo‘lmadi.');}
+      return;
+    }
     const next=!notificationPreferenceEnabled(kind);
     try{
+      if(next) await ensureBrowserPush(true);
       await databaseRef.ref(`UserNotificationSettings/${currentAccount.uid}/${kind}`).set(next);
     }catch(error){alert('Bildirishnoma holatini saqlab bo‘lmadi.');}
   }
@@ -1359,6 +1542,11 @@
       recipients.forEach(user=>{updates[`UserMessages/${user.uid}/${ref.key}`]=Object.assign({},base,{direction:'received',read:false});});
       updates[`UserMessages/${currentAccount.uid}/${ref.key}`]=Object.assign({},base,{direction:'sent',read:true});
       await databaseRef.ref().update(updates);
+      await safeSendBrowserPush(
+        recipients.map(user=>user.uid),'chats',senderName,
+        `${title}${textValue ? ': '+shortText(textValue,180) : uploadedFile ? ': Fayl biriktirildi' : ''}`,
+        {messageId:ref.key,category}
+      );
       messageComposerOpen=false;editingMessageId='';
       renderCommunicationContent();
     }catch(error){
@@ -1545,7 +1733,14 @@
     const noticeCount=items.filter(item=>item.kind!=='approval' && !item.read).length;
     const approvalCount=items.filter(item=>item.kind==='approval' && item.status==='pending').length;
     const messageCount=Object.values(userMessagesCache).filter(item=>item && item.direction!=='sent' && !item.read).length;
-    const communicationTabItem=(kind,icon,label,count)=>`<div class="hetk-communication-tab-item ${communicationTab===kind?'active':''}"><button type="button" class="hetk-communication-tab-main" data-communication-tab="${kind}"><i class="fas ${icon}"></i><span>${label}</span>${count?`<b>${count}</b>`:''}</button><button type="button" class="hetk-notification-toggle ${notificationPreferenceEnabled(kind)?'':'muted'}" data-notification-toggle="${kind}" title="${notificationPreferenceEnabled(kind)?'Bildirishnomani o‘chirish':'Bildirishnomani yoqish'}"><i class="fas fa-bell"></i><em></em></button></div>`;
+    const communicationTabItem=(kind,icon,label,count)=>{
+      const preferenceOn=notificationPreferenceEnabled(kind);
+      const browserReady=browserPushSupported() && Notification.permission==='granted';
+      const toggleTitle=preferenceOn
+        ? (browserReady?'Bildirishnomani o‘chirish':'Bosib brauzer bildirishnomasini yoqing')
+        : 'Bildirishnomani yoqish';
+      return `<div class="hetk-communication-tab-item ${communicationTab===kind?'active':''}"><button type="button" class="hetk-communication-tab-main" data-communication-tab="${kind}"><i class="fas ${icon}"></i><span>${label}</span>${count?`<b>${count}</b>`:''}</button><button type="button" class="hetk-notification-toggle ${preferenceOn?'':'muted'}" data-notification-toggle="${kind}" title="${toggleTitle}"><i class="fas fa-bell"></i><em></em></button></div>`;
+    };
     pane.innerHTML=`<div class="hetk-communication-wrap">
       <div class="hetk-communication-head"><div><h3>Xabarlar markazi</h3><p>Hududdagi o‘zgarishlar, tasdiqlashlar va shaxsiy yozishmalar.</p></div><button type="button" id="hetk-notices-read-all"><i class="fas fa-check-double"></i> Barchasini o‘qildi qilish</button></div>
       <div class="hetk-communication-tabs">
@@ -1615,6 +1810,7 @@
     notificationSettingsRef.on('value',snapshot=>{
       notificationSettingsCache=snapshot.val() || {};
       renderCommunicationPane();
+      if(browserPushSupported() && Notification.permission==='granted') ensureBrowserPush(false).catch(()=>{});
     });
   }
 
@@ -3278,6 +3474,7 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
       window.HETKAuth.currentUser = currentAccount;
       setOverlayVisible(false);
       document.dispatchEvent(new CustomEvent('hetk-auth-ready',{detail:{user:currentAccount}}));
+      setTimeout(openPushDestination,0);
     }catch(e){
       setOverlayVisible(true);
       setMessage('error','Foydalanuvchi ma’lumotlarini yuklab bo‘lmadi: ' + friendlyAuthError(e));
