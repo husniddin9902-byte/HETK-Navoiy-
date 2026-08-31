@@ -268,7 +268,10 @@
     if(response.status===401) response=await send(true);
     let result={};
     try{result=await response.json();}catch(_e){}
-    if(!response.ok || !result.ok) throw new Error(result.error || 'Brauzer bildirishnomasi yuborilmadi.');
+    if(!response.ok || !result.ok){
+      const detail=result.errors && result.errors[0] && result.errors[0].error;
+      throw new Error(detail || result.error || 'Brauzer bildirishnomasi yuborilmadi.');
+    }
     return result;
   }
 
@@ -276,47 +279,28 @@
     if(!currentAccount || !databaseRef) return {sent:0};
     const recipients=Array.from(new Set((recipientUids || []).filter(Boolean)));
     if(!recipients.length) return {sent:0};
-    const [tokensSnapshot,settingsSnapshot]=await Promise.all([
-      databaseRef.ref('PushTokens').once('value'),
-      databaseRef.ref('UserNotificationSettings').once('value')
-    ]);
-    const allTokens=tokensSnapshot.val() || {};
-    const allSettings=settingsSnapshot.val() || {};
-    const records=[];
-    recipients.forEach(uid=>{
-      if(allSettings[uid] && allSettings[uid][kind]===false) return;
-      const devices=allTokens[uid] || {};
-      Object.keys(devices).forEach(deviceId=>{
-        const record=devices[deviceId] || {};
-        if(record.enabled!==false && record.token) records.push({uid,deviceId,token:String(record.token)});
-      });
-    });
-    const unique=[];const seen=new Set();
-    records.forEach(record=>{if(!seen.has(record.token)){seen.add(record.token);unique.push(record);}});
-    if(!unique.length) return {sent:0};
-    let sent=0;const invalid=new Set();
-    for(let index=0;index<unique.length;index+=25){
-      const batch=unique.slice(index,index+25);
+    let sent=0;let registeredDevices=false;
+    for(let index=0;index<recipients.length;index+=20){
+      const batch=recipients.slice(index,index+20);
       const result=await pushWorkerFetch({
-        tokens:batch.map(record=>record.token),
+        recipientUids:batch,
         title:String(title || 'HETK'),body:String(body || 'Yangi bildirishnoma'),
         link:pushOpenLink(kind),
         data:Object.assign({},data || {},{kind})
       });
       sent+=Number(result.sent || 0);
-      (result.invalidTokens || []).forEach(token=>invalid.add(token));
+      if(!result.noRegisteredDevices) registeredDevices=true;
     }
-    if(invalid.size){
-      const updates={};
-      unique.filter(record=>invalid.has(record.token)).forEach(record=>{updates[`PushTokens/${record.uid}/${record.deviceId}`]=null;});
-      if(Object.keys(updates).length) await databaseRef.ref().update(updates);
-    }
-    return {sent};
+    return {sent,noRegisteredDevices:!registeredDevices};
   }
 
   async function safeSendBrowserPush(recipientUids,kind,title,body,data){
     try{return await sendBrowserPushToUsers(recipientUids,kind,title,body,data);}
-    catch(error){console.warn('HETK push:',error && error.message ? error.message : error);return {sent:0,error:true};}
+    catch(error){
+      const message=error && error.message ? error.message : String(error || 'Noma’lum xato');
+      console.warn('HETK push:',message);
+      return {sent:0,error:true,message};
+    }
   }
 
   function openPushDestination(){
@@ -1542,11 +1526,12 @@
       recipients.forEach(user=>{updates[`UserMessages/${user.uid}/${ref.key}`]=Object.assign({},base,{direction:'received',read:false});});
       updates[`UserMessages/${currentAccount.uid}/${ref.key}`]=Object.assign({},base,{direction:'sent',read:true});
       await databaseRef.ref().update(updates);
-      await safeSendBrowserPush(
+      const pushResult=await safeSendBrowserPush(
         recipients.map(user=>user.uid),'chats',senderName,
         `${title}${textValue ? ': '+shortText(textValue,180) : uploadedFile ? ': Fayl biriktirildi' : ''}`,
         {messageId:ref.key,category}
       );
+      if(pushResult && pushResult.error) alert(`Xabar saqlandi, lekin brauzer bildirishnomasi yuborilmadi:\n${pushResult.message}`);
       messageComposerOpen=false;editingMessageId='';
       renderCommunicationContent();
     }catch(error){
