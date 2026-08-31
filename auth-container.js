@@ -358,6 +358,9 @@
   function buildEmployeeTelegramCaption(account){
     const rec=safetyRecord(account);
     const state=permitState(account);
+    const exam1=rec.exam1;
+    const exam2=rec.exam2;
+    const special=specialWorksList(rec);
     const lines=[
       '👤 HODIM PROFILI',
       '',
@@ -372,11 +375,13 @@
       `🛡 Tizim huquqlari: ${employeePermissionsText(account)}`,
       '',
       '📜 MALAKA GUVOHNOMASI',
-      `⚡ XTB guruhi: ${rec.group || 'I'}`,
+      `⚡ XTB guruhi: ${effectiveSafetyGroup(account)}${effectiveSafetyGroup(account)!==(rec.group || 'I') ? ' (muddat sabab I guruh)' : ''}`,
       `🔢 Guvohnoma №: ${rec.certificateNo || '—'}`,
-      `🗓 Sinov sanasi: ${formatProfileDate(rec.examDate)}`,
-      `⏳ Amal muddati: ${formatProfileDate(rec.validUntil)}`,
+      `1️⃣ XT va reanimatsiya / XTQ: ${formatProfileDate(exam1.examDate)} · ${exam1.grade || '—'} · keyingi ${formatProfileDate(exam1.nextExamDate)}`,
+      `2️⃣ Elektr qurilmalar / Yong‘in XQ: ${formatProfileDate(exam2.examDate)} · ${exam2.grade || '—'} · keyingi ${formatProfileDate(exam2.nextExamDate)}`,
+      `🧰 Maxsus ishlar: ${special.length ? shortText(special.map(item=>item.decision).join(', '),120) : '—'}`,
       `✅ Ruxsatnoma holati: ${state.text || '—'}`,
+      `🔳 QR ruxsatnoma: ${rec.publicEnabled && rec.publicCode ? rec.publicCode : 'Faollashtirilmagan'}`,
       `📝 Izoh: ${shortText(rec.notes || '—',100)}`,
       `⚠️ Intizomiy holat: ${activeDisciplineText(account)}`,
       '',
@@ -452,11 +457,13 @@
     }
   }
   async function safeSyncEmployeeTelegram(uid, account, options){
-    try{return await syncEmployeeTelegram(uid,account,options);}catch(e){
+    let result=account;
+    try{result=await syncEmployeeTelegram(uid,account,options);}catch(e){
       console.error('Hodim Telegram posti yangilanmadi:',e);
       if(options && options.showError) alert('Hodim saqlandi, lekin Telegram posti yangilanmadi: '+(e.message||e));
-      return account;
     }
+    try{await syncPublicPermit(uid,result);}catch(e){console.warn('QR ruxsatnoma ma’lumoti yangilanmadi:',e);}
+    return result;
   }
 
   function byId(id){ return document.getElementById(id); }
@@ -877,15 +884,59 @@
   }
 
   const SAFETY_GROUPS = ['I','II','III','IV','V'];
+  const SAFETY_GRADES = ['Qoniqarli','Yaxshi','A’lo','Qoniqarsiz'];
+  const SPECIAL_WORK_DECISIONS = [
+    'Yuqorida ishlash huquqi',
+    'Payvandlash',
+    'Yuqori kuchlanish ostida',
+    'Bosim ostida ishlaydigan idishlarga xizmat ko‘rsatish',
+    '-'
+  ];
+  const SAFETY_EXAM_SUBJECTS = {
+    exam1:['XT va reanimatsiya usullari','Xavfsizlik texnikasi qoidalari'],
+    exam2:['Elektr qurilmalariga xizmat ko‘rsatish','Yong‘in xavfsizligi qoidalari']
+  };
   const ONE_DAY_MS = 24 * 60 * 60 * 1000;
   const DISCIPLINE_LIFETIME_MS = 365 * ONE_DAY_MS;
+  const SAFETY_NOTICE_LIFETIME_MS = 180 * ONE_DAY_MS;
+  let publicPermitMode = false;
+
+  function defaultSafetyExam(){
+    return {examDate:'',grade:'',nextExamDate:''};
+  }
 
   function defaultSafetyRecord(){
-    return {group:'I', examDate:'', validUntil:'', certificateNo:'', notes:'', updatedAt:0, updatedBy:'', updatedByName:'', updatedByRole:''};
+    return {
+      group:'I',certificateNo:'',examDate:'',validUntil:'',
+      exam1:defaultSafetyExam(),exam2:defaultSafetyExam(),specialWorks:{},history:{},
+      publicCode:'',publicEnabled:false,publicIssuedAt:0,publicIssuedBy:'',
+      notes:'',updatedAt:0,updatedBy:'',updatedByName:'',updatedByRole:''
+    };
+  }
+
+  function normalizeSafetyExam(value, legacyDate, legacyUntil){
+    const raw=value && typeof value==='object' ? value : {};
+    return {
+      examDate:String(raw.examDate || legacyDate || ''),
+      grade:String(raw.grade || ''),
+      nextExamDate:String(raw.nextExamDate || raw.validUntil || legacyUntil || '')
+    };
   }
 
   function safetyRecord(account){
-    return Object.assign(defaultSafetyRecord(), (account && account.safety) || {});
+    const stored=(account && account.safety) || {};
+    const rec=Object.assign(defaultSafetyRecord(),stored);
+    rec.exam1=normalizeSafetyExam(stored.exam1,stored.examDate,stored.validUntil);
+    rec.exam2=normalizeSafetyExam(stored.exam2,'','');
+    rec.specialWorks=stored.specialWorks && typeof stored.specialWorks==='object' ? stored.specialWorks : {};
+    rec.history=stored.history && typeof stored.history==='object' ? stored.history : {};
+    rec.publicEnabled=stored.publicEnabled===true;
+    return rec;
+  }
+
+  function specialWorksList(record){
+    const raw=(record && record.specialWorks) || {};
+    return Object.keys(raw).map(id=>Object.assign({id},raw[id] || {})).filter(item=>item.testDate || item.decision).sort((a,b)=>String(b.testDate||'').localeCompare(String(a.testDate||'')) || Number(b.updatedAt||0)-Number(a.updatedAt||0));
   }
 
   function parseDateEnd(value){
@@ -905,27 +956,49 @@
     return Number.isFinite(t) ? t : 0;
   }
 
+  function safetyExamExpired(exam){
+    const until=parseDateEnd(exam && exam.nextExamDate);
+    return !!(until && until < Date.now());
+  }
+
+  function safetyExamState(exam){
+    const until=parseDateEnd(exam && exam.nextExamDate);
+    if(!until) return {kind:'none',text:'Muddat kiritilmagan',until:0};
+    const left=until-Date.now();
+    if(left<=0) return {kind:'expired',text:'Muddati tugagan',until};
+    const days=Math.floor(left/ONE_DAY_MS);
+    let kind='ok';
+    if(days<=10) kind='danger'; else if(days<=30) kind='warn';
+    return {kind,text:'Amal qiladi',until,days};
+  }
+
   function effectiveSafetyGroup(account){
     const rec=safetyRecord(account);
-    const until=parseDateEnd(rec.validUntil);
-    if(until && until < Date.now()) return 'I';
+    if(safetyExamExpired(rec.exam1) || safetyExamExpired(rec.exam2)) return 'I';
     return SAFETY_GROUPS.includes(String(rec.group||'').toUpperCase()) ? String(rec.group).toUpperCase() : 'I';
   }
 
   function permitState(account){
     const rec=safetyRecord(account);
-    const until=parseDateEnd(rec.validUntil);
-    const start=parseDateStart(rec.examDate) || (until ? until - 365*ONE_DAY_MS : 0);
-    if(!until) return {kind:'none',days:null,hours:null,text:'Muddat kiritilmagan',percent:0,until:0};
+    const exams=[rec.exam1,rec.exam2];
+    const expired=exams.map((exam,index)=>safetyExamExpired(exam)?index+1:0).filter(Boolean);
+    if(expired.length){
+      const text=expired.length===2 ? 'Ikkala imtihon muddati tugagan' : expired[0]+'-imtihon muddati tugagan';
+      return {kind:'expired',days:0,hours:0,text,percent:0,until:0,expiredExams:expired};
+    }
+    const dated=exams.map(exam=>({exam,until:parseDateEnd(exam.nextExamDate)})).filter(item=>item.until).sort((a,b)=>a.until-b.until);
+    if(!dated.length) return {kind:'none',days:null,hours:null,text:'Imtihon muddatlari kiritilmagan',percent:0,until:0,expiredExams:[]};
+    const nearest=dated[0];
+    const until=nearest.until;
+    const start=parseDateStart(nearest.exam.examDate) || (until ? until - 365*ONE_DAY_MS : 0);
     const left=until-Date.now();
-    if(left<=0) return {kind:'expired',days:0,hours:0,text:'Muddati o‘tgan',percent:0,until};
     const days=Math.floor(left/ONE_DAY_MS);
     const hours=Math.floor((left%ONE_DAY_MS)/(60*60*1000));
     const total=Math.max(ONE_DAY_MS,until-start);
     const percent=Math.max(0,Math.min(100,Math.round((left/total)*100)));
     let kind='ok';
     if(days<=10) kind='danger'; else if(days<=30) kind='warn';
-    return {kind,days,hours,text:days+' kun '+hours+' soat qoldi',percent,until};
+    return {kind,days,hours,text:days+' kun '+hours+' soat qoldi',percent,until,expiredExams:[]};
   }
 
   function formatDateOnly(value){
@@ -980,24 +1053,44 @@
     return days+' kun '+hours+' soat qoldi';
   }
 
+  function safetyExamCardHtml(exam,index){
+    const state=safetyExamState(exam);
+    const subjects=SAFETY_EXAM_SUBJECTS['exam'+index];
+    return `<article class="hetk-safety-exam-card ${state.kind}">
+      <div class="hetk-safety-exam-head"><b>${index}-imtihon</b><span class="${state.kind}">${escapeHtml(state.text)}</span></div>
+      <div class="hetk-safety-exam-date"><i class="far fa-calendar-alt"></i><span>Imtihon vaqti</span><b>${escapeHtml(formatDateOnly(exam.examDate))}</b></div>
+      <ul>${subjects.map(subject=>`<li><i class="fas fa-book-open"></i>${escapeHtml(subject)}</li>`).join('')}</ul>
+      <div class="hetk-safety-exam-result"><span><i class="fas fa-star"></i> Baho</span><b>${escapeHtml(exam.grade||'—')}</b></div>
+      <div class="hetk-safety-exam-result"><span><i class="far fa-clock"></i> Keyingi imtihon</span><b>${escapeHtml(formatDateOnly(exam.nextExamDate))}</b></div>
+    </article>`;
+  }
+
+  function safetySpecialWorksHtml(record){
+    const items=specialWorksList(record);
+    return `<div class="hetk-special-card">
+      <div class="hetk-special-title">Maxsus ishlarni bajarishga beriladigan huquqlar bo‘yicha bilimlar sinovi</div>
+      <div class="hetk-special-table-wrap"><table><thead><tr><th>Sinov sanasi</th><th>Qoida nomi</th><th>Komissiya qarori</th><th>Kiritgan</th></tr></thead><tbody>${items.length?items.map(item=>`<tr><td>${escapeHtml(formatDateOnly(item.testDate))}</td><td>Maxsus ishlarga</td><td><b>${escapeHtml(item.decision||'-')}</b></td><td>${escapeHtml(item.updatedByName||'—')}</td></tr>`).join(''):'<tr><td colspan="4" class="hetk-special-empty">Maxsus ishlar bo‘yicha sinov kiritilmagan.</td></tr>'}</tbody></table></div>
+    </div>`;
+  }
+
   function safetyPermitHtml(account, opts){
     opts=opts||{};
     const rec=safetyRecord(account);
     const state=permitState(account);
     const group=effectiveSafetyGroup(account);
     const canEdit=!!opts.canEdit;
+    const qrReady=rec.publicEnabled && rec.publicCode;
+    const titleActions=`<div class="hetk-safety-title-actions">${qrReady?`<button type="button" class="hetk-safety-qr-btn" data-safety-qr="${escapeAttr(account.uid||'')}"><i class="fas fa-qrcode"></i> QR kod</button>`:''}${canEdit?'<button type="button" class="hetk-safety-edit-btn" data-safety-edit="'+escapeAttr(account.uid||'')+'"><i class="fas fa-pen"></i> Tahrirlash</button>':''}</div>`;
     return `<section class="hetk-safety-card">
-      <div class="hetk-safety-title"><div><i class="fas fa-id-badge"></i><span>MALAKA GUVOHNOMASI</span></div>${canEdit?'<button type="button" class="hetk-safety-edit-btn" data-safety-edit="'+escapeAttr(account.uid||'')+'"><i class="fas fa-pen"></i> Tahrirlash</button>':''}</div>
+      <div class="hetk-safety-title"><div><i class="fas fa-id-badge"></i><span>RUXSATNOMA VA IMTIHONLAR</span></div>${titleActions}</div>
+      <div class="hetk-safety-identity-row"><div><small>Guvohnoma №</small><b>${escapeHtml(rec.certificateNo||'—')}</b></div><div><small>Belgilangan XTB guruhi</small><b>${escapeHtml(rec.group||'I')} guruh</b></div><div><small>Amaldagi XTB guruhi</small><b class="${group!==(rec.group||'I')?'expired':''}">${escapeHtml(group)} guruh</b></div><div><small>Oxirgi tahrir</small><b>${escapeHtml(rec.updatedByName||'—')}</b></div></div>
       <div class="hetk-safety-main">
-        <div class="hetk-safety-group"><small>XTB guruhi</small><strong>${escapeHtml(group)}</strong><span>guruh</span></div>
-        <div class="hetk-safety-expiry"><div class="hetk-safety-expiry-top"><span>Ruxsatnoma muddati</span><b class="${state.kind}">${escapeHtml(state.text)}</b></div><div class="hetk-safety-progress"><i class="${state.kind}" style="width:${state.percent}%"></i></div><small>${state.until ? 'Amal qiladi: '+escapeHtml(new Date(state.until).toLocaleDateString('uz-UZ')) : 'TB muhandisi ma’lumot kiritadi'}</small></div>
+        <div class="hetk-safety-group ${group!==(rec.group||'I')?'expired':''}"><small>XTB guruhi</small><strong>${escapeHtml(group)}</strong><span>guruh</span></div>
+        <div class="hetk-safety-expiry"><div class="hetk-safety-expiry-top"><span>Eng yaqin imtihon muddati</span><b class="${state.kind}">${escapeHtml(state.text)}</b></div><div class="hetk-safety-progress"><i class="${state.kind}" style="width:${state.percent}%"></i></div><small>${state.until ? 'Eng yaqin sana: '+escapeHtml(new Date(state.until).toLocaleDateString('uz-UZ')) : 'TB muhandisi ma’lumot kiritadi'}</small></div>
       </div>
-      <div class="hetk-certificate-table">
-        <div><span>Guvohnoma №</span><b>${escapeHtml(rec.certificateNo||'—')}</b></div>
-        <div><span>Bilimlar sinovi</span><b>${escapeHtml(formatDateOnly(rec.examDate))}</b></div>
-        <div><span>Amal qilish sanasi</span><b>${escapeHtml(formatDateOnly(rec.validUntil))}</b></div>
-        <div><span>Sinov / tahrir qilgan</span><b>${escapeHtml(rec.updatedByName ? rec.updatedByName+' · '+(rec.updatedByRole||'') : '—')}</b></div>
-      </div>
+      ${state.kind==='expired'?'<div class="hetk-safety-expired-rule"><i class="fas fa-exclamation-triangle"></i> Asosiy imtihonlardan bittasining muddati tugagani uchun hodim avtomatik I guruhga tushirildi.</div>':''}
+      <div class="hetk-safety-exams">${safetyExamCardHtml(rec.exam1,1)}${safetyExamCardHtml(rec.exam2,2)}</div>
+      ${safetySpecialWorksHtml(rec)}
       ${rec.notes?`<div class="hetk-safety-note">${escapeHtml(rec.notes)}</div>`:''}
     </section>`;
   }
@@ -1035,43 +1128,250 @@
   function bindSafetyActions(root){
     const scope=root || document;
     scope.querySelectorAll('[data-safety-edit]').forEach(btn=>btn.addEventListener('click',()=>openSafetyPermitEditor(btn.dataset.safetyEdit)));
+    scope.querySelectorAll('[data-safety-qr]').forEach(btn=>btn.addEventListener('click',()=>openSafetyQr(btn.dataset.safetyQr)));
     scope.querySelectorAll('[data-discipline-add]').forEach(btn=>btn.addEventListener('click',()=>openDisciplineEditor(btn.dataset.disciplineAdd)));
     scope.querySelectorAll('[data-discipline-remove]').forEach(btn=>btn.addEventListener('click',()=>removeDisciplinaryAction(btn.dataset.disciplineRemove,btn.dataset.actionId)));
   }
 
   function closeSafetyOverlay(){ const el=byId('hetk-safety-overlay'); if(el) el.remove(); }
 
+  function safetyGradeOptions(selected){
+    return '<option value="">Bahoni tanlang</option>'+SAFETY_GRADES.map(value=>`<option value="${escapeAttr(value)}" ${selected===value?'selected':''}>${escapeHtml(value)}</option>`).join('');
+  }
+
+  function specialDecisionOptions(selected){
+    return SPECIAL_WORK_DECISIONS.map(value=>`<option value="${escapeAttr(value)}" ${selected===value?'selected':''}>${escapeHtml(value)}</option>`).join('');
+  }
+
+  function safetyExamEditorHtml(exam,index){
+    const subjects=SAFETY_EXAM_SUBJECTS['exam'+index];
+    return `<section class="hetk-safety-exam-editor"><h4><span>${index}</span>${index}-imtihon</h4><p>${subjects.map(escapeHtml).join(' · ')}</p><div class="hetk-safety-form-grid three"><label><span>Imtihon vaqti *</span><input id="hetk-safety-exam${index}-date" type="date" value="${escapeAttr(exam.examDate||'')}"></label><label><span>Baho *</span><select id="hetk-safety-exam${index}-grade">${safetyGradeOptions(exam.grade||'')}</select></label><label><span>Keyingi imtihon vaqti *</span><input id="hetk-safety-exam${index}-next" type="date" value="${escapeAttr(exam.nextExamDate||'')}"></label></div></section>`;
+  }
+
+  function specialEditorRowHtml(item){
+    const id=String(item.id || ('new_'+Date.now()+'_'+Math.random().toString(36).slice(2,7)));
+    return `<div class="hetk-special-editor-row" data-special-row="${escapeAttr(id)}"><label><span>Sinov sanasi</span><input type="date" data-special-date value="${escapeAttr(item.testDate||'')}"></label><label><span>Qoida nomi</span><input value="Maxsus ishlarga" readonly></label><label class="decision"><span>Komissiya qarori</span><select data-special-decision>${specialDecisionOptions(item.decision||'-')}</select></label><button type="button" data-special-remove title="Qatorni olib tashlash"><i class="fas fa-trash-alt"></i></button></div>`;
+  }
+
+  function bindSpecialEditorRows(overlay){
+    const list=overlay.querySelector('#hetk-special-editor-list');
+    const add=overlay.querySelector('#hetk-special-add');
+    const bindRemove=()=>list.querySelectorAll('[data-special-remove]').forEach(btn=>{if(btn.dataset.bound==='1') return;btn.dataset.bound='1';btn.addEventListener('click',()=>btn.closest('.hetk-special-editor-row').remove());});
+    bindRemove();
+    add.addEventListener('click',()=>{list.insertAdjacentHTML('beforeend',specialEditorRowHtml({decision:'-'}));bindRemove();const rows=list.querySelectorAll('.hetk-special-editor-row');const last=rows[rows.length-1];if(last) last.querySelector('[data-special-date]').focus();});
+  }
+
   function openSafetyPermitEditor(uid){
     const raw=teamUsersCache[uid]; if(!raw) return;
     const target=Object.assign({uid},raw); if(!canEditSafetyPermit(target)) return;
     closeSafetyOverlay();
     const rec=safetyRecord(target);
+    const specialRows=specialWorksList(rec);
     const overlay=document.createElement('div'); overlay.id='hetk-safety-overlay'; overlay.className='hetk-safety-overlay';
-    overlay.innerHTML=`<div class="hetk-safety-overlay-backdrop" data-close-safety></div><div class="hetk-safety-editor"><header><div><small>${escapeHtml(target.fullName||'Hodim')}</small><h3>MALAKA GUVOHNOMASI</h3></div><button type="button" data-close-safety><i class="fas fa-times"></i></button></header><div class="hetk-safety-editor-body"><div id="hetk-safety-editor-msg" class="hetk-user-editor-message"></div><div class="hetk-safety-form-grid"><label><span>XTB guruhi *</span><select id="hetk-safety-group">${SAFETY_GROUPS.map(g=>`<option value="${g}" ${effectiveSafetyGroup(target)===g?'selected':''}>${g} guruh</option>`).join('')}</select></label><label><span>Guvohnoma raqami</span><input id="hetk-safety-cert" value="${escapeAttr(rec.certificateNo||'')}" placeholder="Masalan: 125/26"></label><label><span>Bilimlar sinovi sanasi *</span><input id="hetk-safety-exam" type="date" value="${escapeAttr(rec.examDate||'')}"></label><label><span>Ruxsatnoma amal qilish muddati *</span><input id="hetk-safety-until" type="date" value="${escapeAttr(rec.validUntil||'')}"></label></div><label class="hetk-safety-notes-label"><span>Izoh</span><textarea id="hetk-safety-notes" rows="3" placeholder="Sinov yoki ruxsatnoma bo‘yicha izoh">${escapeHtml(rec.notes||'')}</textarea></label></div><footer><button type="button" data-close-safety>Bekor qilish</button><button type="button" id="hetk-safety-save"><i class="fas fa-save"></i> Saqlash</button></footer></div>`;
+    overlay.innerHTML=`<div class="hetk-safety-overlay-backdrop" data-close-safety></div><div class="hetk-safety-editor wide"><header><div><small>${escapeHtml(target.fullName||'Hodim')}</small><h3>RUXSATNOMA VA IMTIHONLAR</h3></div><button type="button" data-close-safety><i class="fas fa-times"></i></button></header><div class="hetk-safety-editor-body"><div id="hetk-safety-editor-msg" class="hetk-user-editor-message"></div><div class="hetk-safety-general"><div class="hetk-safety-form-grid"><label><span>Belgilangan XTB guruhi *</span><select id="hetk-safety-group">${SAFETY_GROUPS.map(g=>`<option value="${g}" ${String(rec.group||'I')===g?'selected':''}>${g} guruh</option>`).join('')}</select></label><label><span>Guvohnoma raqami</span><input id="hetk-safety-cert" value="${escapeAttr(rec.certificateNo||'')}" placeholder="Masalan: 125/26"></label></div></div>${safetyExamEditorHtml(rec.exam1,1)}${safetyExamEditorHtml(rec.exam2,2)}<section class="hetk-special-editor"><div class="hetk-special-editor-head"><div><h4>Maxsus ishlar bo‘yicha bilimlar sinovi</h4><p>Qoida nomi: “Maxsus ishlarga”. Komissiya qarori ro‘yxatdan tanlanadi.</p></div><button type="button" id="hetk-special-add"><i class="fas fa-plus"></i> Yangi sinov</button></div><div id="hetk-special-editor-list">${specialRows.map(specialEditorRowHtml).join('')}</div></section><label class="hetk-safety-qr-toggle"><input id="hetk-safety-public" type="checkbox" ${rec.publicEnabled?'checked':''}><span><i class="fas fa-qrcode"></i><b>QR ruxsatnomani faollashtirish</b><small>QR ichida maxfiy login, telefon va parol bo‘lmaydi. Ma’lumot saytdan doim yangilanadi.</small></span></label><label class="hetk-safety-notes-label"><span>Izoh</span><textarea id="hetk-safety-notes" rows="3" placeholder="Sinov yoki ruxsatnoma bo‘yicha izoh">${escapeHtml(rec.notes||'')}</textarea></label></div><footer><button type="button" data-close-safety>Bekor qilish</button><button type="button" id="hetk-safety-save"><i class="fas fa-save"></i> Saqlash</button></footer></div>`;
     document.body.appendChild(overlay);
     overlay.querySelectorAll('[data-close-safety]').forEach(x=>x.addEventListener('click',closeSafetyOverlay));
+    bindSpecialEditorRows(overlay);
     byId('hetk-safety-save').addEventListener('click',()=>saveSafetyPermit(uid));
+  }
+
+  function readSafetyExamFromEditor(index){
+    return {examDate:String(byId('hetk-safety-exam'+index+'-date').value||''),grade:String(byId('hetk-safety-exam'+index+'-grade').value||''),nextExamDate:String(byId('hetk-safety-exam'+index+'-next').value||'')};
+  }
+
+  function readSpecialWorksFromEditor(){
+    const result={};
+    document.querySelectorAll('#hetk-special-editor-list .hetk-special-editor-row').forEach((row,index)=>{
+      const testDate=String(row.querySelector('[data-special-date]').value||'');
+      const decision=String(row.querySelector('[data-special-decision]').value||'-');
+      if(!testDate && decision==='-') return;
+      const rawId=String(row.dataset.specialRow||'');
+      const id=rawId && !rawId.startsWith('new_') ? rawId : 'sw_'+Date.now()+'_'+index+'_'+Math.random().toString(36).slice(2,6);
+      result[id]={testDate,ruleName:'Maxsus ishlarga',decision};
+    });
+    return result;
+  }
+
+  function validateSafetyExam(exam,label){
+    if(!exam.examDate || !exam.grade || !exam.nextExamDate) return label+' uchun sana, baho va keyingi imtihon vaqtini to‘liq kiriting.';
+    if(parseDateEnd(exam.nextExamDate)<parseDateStart(exam.examDate)) return label+'ning keyingi sanasi imtihon sanasidan oldin bo‘lishi mumkin emas.';
+    return '';
+  }
+
+  function safetyExamChanged(before,after){
+    return ['examDate','grade','nextExamDate'].some(key=>String((before&&before[key])||'')!==String((after&&after[key])||''));
+  }
+
+  function addSafetyHistory(history,record,editorName,editorRole,now){
+    if(!record || (!record.exam1.examDate && !record.exam2.examDate)) return history;
+    const id='h_'+now+'_'+Math.random().toString(36).slice(2,6);
+    history[id]={exam1:record.exam1,exam2:record.exam2,group:record.group||'I',savedAt:now,savedByName:editorName,savedByRole:editorRole};
+    return history;
+  }
+
+  function generatePermitCode(){
+    const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    const bytes=new Uint8Array(14);
+    if(window.crypto && window.crypto.getRandomValues) window.crypto.getRandomValues(bytes); else for(let i=0;i<bytes.length;i++) bytes[i]=Math.floor(Math.random()*256);
+    let value='HETK-';
+    for(let i=0;i<bytes.length;i++) value+=alphabet[bytes[i]%alphabet.length];
+    return value;
+  }
+
+  async function uniquePermitCode(existing){
+    if(existing) return existing;
+    for(let i=0;i<5;i++){
+      const code=generatePermitCode();
+      const snap=await databaseRef.ref('PublicPermits/'+code).once('value');
+      if(!snap.exists()) return code;
+    }
+    throw new Error('QR kodi yaratilmadi. Yana bir marta urinib ko‘ring.');
+  }
+
+  function publicPermitPayload(uid,account,safety){
+    const merged=Object.assign({},account,{uid,safety});
+    const state=permitState(merged);
+    const special={};
+    specialWorksList(safety).forEach(item=>{special[item.id]={testDate:item.testDate||'',ruleName:'Maxsus ishlarga',decision:item.decision||'-'};});
+    return {
+      active:safety.publicEnabled===true && account.active!==false,
+      code:safety.publicCode||'',fullName:account.fullName||'Hodim',gender:normalizeGender(account.gender),
+      role:getRoleLabel(account),region:account.workZoneName||account.region||'—',certificateNo:safety.certificateNo||'',
+      assignedGroup:safety.group||'I',effectiveGroup:effectiveSafetyGroup(merged),exam1:safety.exam1,exam2:safety.exam2,
+      specialWorks:special,stateKind:state.kind,stateText:state.text,updatedAt:safety.updatedAt||Date.now(),
+      updatedByName:safety.updatedByName||'',organization:'HETK'
+    };
+  }
+
+  async function syncPublicPermit(uid,account){
+    if(!databaseRef || !account) return;
+    const rec=safetyRecord(account);
+    if(!rec.publicCode) return;
+    await databaseRef.ref('PublicPermits/'+rec.publicCode).set(publicPermitPayload(uid,account,rec));
+  }
+
+  function safetyNoticeChanges(before,after){
+    const rows=[];
+    const add=(label,oldValue,newValue)=>{if(String(oldValue||'')!==String(newValue||'')) rows.push({label,before:oldValue||'—',after:newValue||'—'});};
+    add('XTB guruhi',before.group,after.group);
+    add('1-imtihon sanasi',formatDateOnly(before.exam1.examDate),formatDateOnly(after.exam1.examDate));
+    add('1-imtihon bahosi',before.exam1.grade,after.exam1.grade);
+    add('1-imtihon keyingi sana',formatDateOnly(before.exam1.nextExamDate),formatDateOnly(after.exam1.nextExamDate));
+    add('2-imtihon sanasi',formatDateOnly(before.exam2.examDate),formatDateOnly(after.exam2.examDate));
+    add('2-imtihon bahosi',before.exam2.grade,after.exam2.grade);
+    add('2-imtihon keyingi sana',formatDateOnly(before.exam2.nextExamDate),formatDateOnly(after.exam2.nextExamDate));
+    add('Maxsus ishlar',String(specialWorksList(before).length),String(specialWorksList(after).length));
+    const result={};rows.forEach((row,index)=>{result[index]=row;});return result;
+  }
+
+  async function notifySafetyUpdated(uid,target,before,after){
+    if(!uid || uid===currentAccount.uid) return;
+    const now=Date.now();
+    const noticeId=databaseRef.ref('UserNotifications').push().key;
+    const title=(currentAccount.fullName||'TB muhandisi')+' ruxsatnoma va imtihon ma’lumotlaringizni yangiladi';
+    const payload={id:noticeId,kind:'activity',action:'safety_update',read:false,title,actorUid:currentAccount.uid,actorName:currentAccount.fullName||'',actorRole:getRoleLabel(currentAccount),elementName:target.fullName||'Hodim',folderPath:target.workZoneName||target.region||'—',changes:safetyNoticeChanges(before,after),createdAt:now,expiresAt:now+SAFETY_NOTICE_LIFETIME_MS};
+    await databaseRef.ref('UserNotifications/'+uid+'/'+noticeId).set(payload);
+    await safeSendBrowserPush([uid],'notifications','Ruxsatnoma yangilandi',title,{action:'safety_update'});
   }
 
   async function saveSafetyPermit(uid){
     const raw=teamUsersCache[uid]; if(!raw) return;
     const target=Object.assign({uid},raw); if(!canEditSafetyPermit(target)) return;
+    const before=safetyRecord(target);
     const group=String(byId('hetk-safety-group').value||'I');
     const certificateNo=String(byId('hetk-safety-cert').value||'').trim();
-    const examDate=String(byId('hetk-safety-exam').value||'');
-    const validUntil=String(byId('hetk-safety-until').value||'');
+    const exam1=readSafetyExamFromEditor(1);
+    const exam2=readSafetyExamFromEditor(2);
+    const specialWorks=readSpecialWorksFromEditor();
+    const publicEnabled=!!byId('hetk-safety-public').checked;
     const notes=String(byId('hetk-safety-notes').value||'').trim();
     const msg=byId('hetk-safety-editor-msg'); const btn=byId('hetk-safety-save');
-    if(!examDate || !validUntil){msg.className='hetk-user-editor-message show error';msg.textContent='Bilimlar sinovi sanasi va ruxsatnoma muddatini kiriting.';return;}
-    if(parseDateEnd(validUntil)<parseDateStart(examDate)){msg.className='hetk-user-editor-message show error';msg.textContent='Ruxsatnoma muddati sinov sanasidan oldin bo‘lishi mumkin emas.';return;}
+    const examError=validateSafetyExam(exam1,'1-imtihon') || validateSafetyExam(exam2,'2-imtihon');
+    if(examError){msg.className='hetk-user-editor-message show error';msg.textContent=examError;return;}
+    const incompleteSpecial=Object.values(specialWorks).some(item=>!item.testDate || !SPECIAL_WORK_DECISIONS.includes(item.decision));
+    if(incompleteSpecial){msg.className='hetk-user-editor-message show error';msg.textContent='Maxsus ishlar qatorida sinov sanasi va komissiya qarorini to‘liq kiriting.';return;}
     setBusy(btn,true,'Saqlanmoqda...');
     try{
-      const now=Date.now(); const roleLabel=getRoleLabel(currentAccount);
-      const safety={group,certificateNo,examDate,validUntil,notes,updatedAt:now,updatedBy:currentAccount.uid,updatedByName:currentAccount.fullName||currentAccount.login||'',updatedByRole:roleLabel};
-      await databaseRef.ref('users/'+uid+'/safety').update(safety);
+      const now=Date.now(); const roleLabel=getRoleLabel(currentAccount);const editorName=currentAccount.fullName||currentAccount.login||'';
+      const publicCode=publicEnabled ? await uniquePermitCode(before.publicCode) : (before.publicCode||'');
+      let history=Object.assign({},before.history||{});
+      if(safetyExamChanged(before.exam1,exam1) || safetyExamChanged(before.exam2,exam2)) history=addSafetyHistory(history,before,editorName,roleLabel,now);
+      Object.keys(specialWorks).forEach(id=>{specialWorks[id]=Object.assign({},specialWorks[id],{updatedAt:now,updatedBy:currentAccount.uid,updatedByName:editorName});});
+      const safety={group,certificateNo,examDate:exam1.examDate,validUntil:exam1.nextExamDate,exam1,exam2,specialWorks,history,publicCode,publicEnabled,publicIssuedAt:before.publicIssuedAt||(publicEnabled?now:0),publicIssuedBy:before.publicIssuedBy||(publicEnabled?currentAccount.uid:''),notes,updatedAt:now,updatedBy:currentAccount.uid,updatedByName:editorName,updatedByRole:roleLabel};
+      const updates={};updates['users/'+uid+'/safety']=safety;
+      if(publicCode) updates['PublicPermits/'+publicCode]=publicPermitPayload(uid,target,safety);
+      await databaseRef.ref().update(updates);
       await safeSyncEmployeeTelegram(uid,Object.assign({},target,{safety,updatedAt:now}),{showError:true});
+      try{await notifySafetyUpdated(uid,target,before,safety);}catch(noticeError){console.warn('Ruxsatnoma bildirishnomasi yuborilmadi:',noticeError);}
       closeSafetyOverlay();
     }catch(e){msg.className='hetk-user-editor-message show error';msg.textContent=friendlyAuthError(e);}finally{setBusy(btn,false);}
+  }
+
+  function permitPublicUrl(code){
+    const url=new URL(window.location.href);url.search='';url.hash='';url.searchParams.set('permit',code);return url.href;
+  }
+
+  function closeSafetyQr(){const el=byId('hetk-safety-qr-overlay');if(el) el.remove();}
+
+  function openSafetyQr(uid){
+    const raw=teamUsersCache[uid] || (currentAccount && currentAccount.uid===uid ? currentAccount : null);
+    if(!raw) return;
+    const rec=safetyRecord(raw);
+    if(!rec.publicEnabled || !rec.publicCode) return alert('QR ruxsatnoma TB muhandisi tomonidan hali faollashtirilmagan.');
+    closeSafetyQr();
+    const link=permitPublicUrl(rec.publicCode);
+    const overlay=document.createElement('div');overlay.id='hetk-safety-qr-overlay';overlay.className='hetk-safety-overlay hetk-safety-qr-overlay';
+    overlay.innerHTML=`<div class="hetk-safety-overlay-backdrop" data-close-qr></div><div class="hetk-qr-dialog"><button type="button" class="hetk-qr-close" data-close-qr><i class="fas fa-times"></i></button><div class="hetk-qr-brand"><i class="fas fa-bolt"></i><b>HETK</b></div><h3>Ruxsatnomani tekshirish QR kodi</h3><p>${escapeHtml(raw.fullName||'Hodim')}</p><div id="hetk-safety-qr-image"></div><code>${escapeHtml(rec.publicCode)}</code><small>QR skanerlanganda ruxsatnomaning cheklangan va doimiy yangilanadigan ma’lumoti ochiladi.</small><div class="hetk-qr-actions"><button type="button" id="hetk-qr-copy"><i class="fas fa-link"></i> Havolani nusxalash</button><button type="button" id="hetk-qr-print"><i class="fas fa-print"></i> Chop etish</button></div></div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelectorAll('[data-close-qr]').forEach(btn=>btn.addEventListener('click',closeSafetyQr));
+    const box=byId('hetk-safety-qr-image');
+    if(typeof QRCode==='function') new QRCode(box,{text:link,width:240,height:240,colorDark:'#001f35',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.H});
+    else box.innerHTML='<div class="hetk-qr-error">QR kutubxonasi yuklanmadi. Sahifani internet bilan yangilang.</div>';
+    byId('hetk-qr-copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(link);alert('QR havolasi nusxalandi.');}catch(_e){prompt('Havolani nusxalang:',link);}});
+    byId('hetk-qr-print').addEventListener('click',()=>window.print());
+  }
+
+  function publicPermitExamHtml(exam,index){
+    const state=safetyExamState(exam);
+    return `<article class="hetk-public-exam ${state.kind}"><div><b>${index}-imtihon</b><span>${escapeHtml(state.text)}</span></div><p>${SAFETY_EXAM_SUBJECTS['exam'+index].map(escapeHtml).join(' · ')}</p><dl><div><dt>Imtihon sanasi</dt><dd>${escapeHtml(formatDateOnly(exam.examDate))}</dd></div><div><dt>Baho</dt><dd>${escapeHtml(exam.grade||'—')}</dd></div><div><dt>Keyingi imtihon</dt><dd>${escapeHtml(formatDateOnly(exam.nextExamDate))}</dd></div></dl></article>`;
+  }
+
+  function publicSpecialHtml(record){
+    const items=specialWorksList(record);
+    if(!items.length) return '<div class="hetk-public-special-empty">Maxsus ishlar bo‘yicha ruxsat kiritilmagan.</div>';
+    return `<div class="hetk-public-special">${items.map(item=>`<div><i class="fas fa-hard-hat"></i><span><b>${escapeHtml(item.decision||'-')}</b><small>Maxsus ishlarga · ${escapeHtml(formatDateOnly(item.testDate))}</small></span></div>`).join('')}</div>`;
+  }
+
+  function closePublicPermitViewer(){
+    const el=byId('hetk-public-permit-overlay');if(el) el.remove();publicPermitMode=false;
+    try{const url=new URL(window.location.href);url.searchParams.delete('permit');history.replaceState(null,'',url.pathname+url.search+url.hash);}catch(_e){}
+    if(!auth || !auth.currentUser) setOverlayVisible(true);
+  }
+
+  function publicPermitShell(code,content){
+    let overlay=byId('hetk-public-permit-overlay');
+    if(!overlay){overlay=document.createElement('div');overlay.id='hetk-public-permit-overlay';overlay.className='hetk-public-permit-overlay';document.body.appendChild(overlay);}
+    overlay.innerHTML=`<div class="hetk-public-permit-page"><header><div><i class="fas fa-bolt"></i><b>HETK</b></div><span>Ruxsatnomani tekshirish</span><button type="button" data-close-public><i class="fas fa-times"></i></button></header>${content}<footer>QR kodi: ${escapeHtml(code)} · Ma’lumot HETK tizimidan olindi</footer></div>`;
+    overlay.querySelector('[data-close-public]').addEventListener('click',closePublicPermitViewer);
+  }
+
+  async function openPublicPermitViewer(code){
+    publicPermitMode=true;setOverlayVisible(false);
+    publicPermitShell(code,'<div class="hetk-public-loading"><i class="fas fa-circle-notch fa-spin"></i><p>Ruxsatnoma tekshirilmoqda...</p></div>');
+    try{
+      const snap=await databaseRef.ref('PublicPermits/'+code).once('value');
+      const record=snap.val();
+      if(!record || record.active!==true){publicPermitShell(code,'<div class="hetk-public-invalid"><i class="fas fa-times-circle"></i><h2>Ruxsatnoma faol emas</h2><p>QR kodi topilmadi, hodim bloklangan yoki ruxsatnoma o‘chirilgan.</p></div>');return;}
+      const state={kind:record.stateKind||'none',text:record.stateText||'—'};
+      const rec={specialWorks:record.specialWorks||{}};
+      publicPermitShell(code,`<main class="hetk-public-permit-content"><section class="hetk-public-person"><img src="${escapeAttr(defaultAvatarUrl(record.gender))}" alt=""><div><small>Tasdiqlangan hodim</small><h1>${escapeHtml(record.fullName||'Hodim')}</h1><p>${escapeHtml(record.role||'—')}</p><span><i class="fas fa-map-marker-alt"></i>${escapeHtml(record.region||'—')}</span></div><strong class="${state.kind}"><i class="fas ${state.kind==='expired'?'fa-exclamation-triangle':'fa-check-circle'}"></i>${escapeHtml(state.text)}</strong></section><section class="hetk-public-group"><div><small>Guvohnoma №</small><b>${escapeHtml(record.certificateNo||'—')}</b></div><div><small>Belgilangan guruh</small><b>${escapeHtml(record.assignedGroup||'I')} guruh</b></div><div><small>Amaldagi guruh</small><b class="${record.effectiveGroup!==record.assignedGroup?'expired':''}">${escapeHtml(record.effectiveGroup||'I')} guruh</b></div><div><small>Yangilangan</small><b>${escapeHtml(formatProfileDate(record.updatedAt))}</b></div></section><section class="hetk-public-exams">${publicPermitExamHtml(record.exam1||defaultSafetyExam(),1)}${publicPermitExamHtml(record.exam2||defaultSafetyExam(),2)}</section><section class="hetk-public-special-wrap"><h3>Maxsus ishlarga ruxsatlar</h3>${publicSpecialHtml(rec)}</section><div class="hetk-public-verified"><i class="fas fa-shield-alt"></i><span><b>Haqiqiyligi tasdiqlandi</b><small>Ma’lumot QR kod ichida qotib qolmaydi — Firebase bazasidan yangilanib turadi.</small></span></div></main>`);
+    }catch(error){publicPermitShell(code,`<div class="hetk-public-invalid"><i class="fas fa-wifi"></i><h2>Ma’lumot ochilmadi</h2><p>Internetni yoki Firebase’dagi PublicPermits o‘qish qoidasini tekshiring.</p></div>`);}
+  }
+
+  async function openPublicPermitFromUrl(){
+    let code='';try{code=String(new URL(window.location.href).searchParams.get('permit')||'').trim();}catch(_e){}
+    if(!code) return false;
+    await openPublicPermitViewer(code);return true;
   }
 
   function closeDisciplineOverlay(){ const el=byId('hetk-discipline-overlay'); if(el) el.remove(); }
@@ -1170,6 +1470,7 @@
 
   function noticeIcon(notice){
     if(notice.kind==='approval') return 'fa-trash-alt';
+    if(notice.action==='safety_update') return 'fa-id-badge';
     if(notice.action==='create') return 'fa-plus-circle';
     if(notice.action==='comment') return 'fa-comment-dots';
     if(String(notice.action||'').startsWith('folder_')) return 'fa-folder';
@@ -3481,6 +3782,7 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
     }
     auth = firebase.auth();
     databaseRef = firebase.database();
+    await openPublicPermitFromUrl();
     await checkUsersExist();
 
     auth.onAuthStateChanged(async user => {
@@ -3496,7 +3798,7 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
         currentAccount=null;
         window.HETKAuth.currentUser=null;
         document.dispatchEvent(new CustomEvent('hetk-auth-cleared'));
-        setOverlayVisible(true);
+        setOverlayVisible(!publicPermitMode);
         await checkUsersExist();
       }
     });
