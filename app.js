@@ -2360,6 +2360,36 @@ async function hetkFolderNotificationRecipients(folderId,excludeUid){
     return Array.from(recipients);
 }
 
+function hetkPushNoticeBody(payload){
+    payload=payload || {};
+    const changes=Object.values(payload.changes || {}).filter(Boolean);
+    if(changes.length){
+        const first=changes[0] || {};
+        const extra=changes.length>1 ? ` (+${changes.length-1} ta)` : '';
+        return `${first.label || 'Ma’lumot'}: ${first.before || '—'} → ${first.after || '—'}${extra}`;
+    }
+    if(payload.commentText) return String(payload.commentText).slice(0,220);
+    if(payload.folderPath) return String(payload.folderPath).slice(0,220);
+    if(payload.workZoneName) return `U/J: ${String(payload.workZoneName).slice(0,200)}`;
+    return 'Yangi ma’lumotni ko‘rish uchun saytni oching.';
+}
+
+async function hetkSafeSendPush(recipientUids,kind,payload){
+    try{
+        if(!window.HETKPush || typeof window.HETKPush.safeSendToUsers!=='function') return;
+        await window.HETKPush.safeSendToUsers(
+            recipientUids,kind,
+            payload && payload.title ? payload.title : 'HETK bildirishnomasi',
+            hetkPushNoticeBody(payload),
+            {
+                action:String((payload && payload.action) || ''),
+                elementId:String((payload && payload.elementId) || ''),
+                requestId:String((payload && payload.requestId) || '')
+            }
+        );
+    }catch(error){console.warn('HETK push:',error && error.message ? error.message : error);}
+}
+
 async function hetkWriteUserNotices(recipientUids,payload,noticeId){
     const recipients=Array.from(new Set((recipientUids || []).filter(Boolean)));
     if(!recipients.length) return '';
@@ -2369,6 +2399,7 @@ async function hetkWriteUserNotices(recipientUids,payload,noticeId){
         updates[`UserNotifications/${uid}/${id}`]=Object.assign({id,read:false},payload);
     });
     await database.ref().update(updates);
+    await hetkSafeSendPush(recipients,payload && payload.kind==='approval' ? 'approvals' : 'notifications',payload);
     return id;
 }
 
@@ -3426,6 +3457,11 @@ async function hetkRequestElementDeletion(tpId,tp){
         };
     });
     await database.ref().update(updates);
+    await hetkSafeSendPush(approverUids,'approvals',{
+        kind:'approval',action:'deletion_request',requestId,
+        title:`${actor.name} ${tp.name || 'element'}ni o‘chirishni so‘radi`,
+        elementId:tpId,folderPath:folderPath || 'Papka biriktirilmagan'
+    });
     elementManagePanel.classList.add('hidden');
     editingElementId=null;
     originalElementData=null;
@@ -3503,16 +3539,19 @@ async function hetkFinalizeApprovedElementDeletion(requestId,request){
             updates[`UserNotifications/${uid}/${request.noticeId}/status`]='approved';
             updates[`UserNotifications/${uid}/${request.noticeId}/read`]=true;
         });
+        let requesterNotice=null;
         if(request.requesterUid){
             const resultId=database.ref('UserNotifications').push().key;
-            updates[`UserNotifications/${request.requesterUid}/${resultId}`]={
+            requesterNotice={
                 id:resultId,kind:'activity',action:'deletion_approved',read:false,
                 title:`${actor.name} ${tp.name || 'element'}ni o‘chirishni tasdiqladi`,
                 actorUid:actor.uid,actorName:actor.name,actorRole:actor.role,
                 elementId:request.tpId,elementName:tp.name || 'Element',createdAt:now,expiresAt:now+HETK_NOTICE_LIFETIME_MS
             };
+            updates[`UserNotifications/${request.requesterUid}/${resultId}`]=requesterNotice;
         }
         await database.ref().update(updates);
+        if(request.requesterUid && requesterNotice) await hetkSafeSendPush([request.requesterUid],'notifications',requesterNotice);
         showToast('Element o‘chirildi. Master tasdig‘i saqlandi.');
     }catch(error){
         await database.ref(`ElementDeletionRequests/${requestId}`).update({status:'pending',processingAt:null,processingBy:null});
@@ -3539,9 +3578,10 @@ async function hetkRejectElementDeletion(requestId,request,status){
         updates[`UserNotifications/${uid}/${request.noticeId}/status`]=resultStatus;
         updates[`UserNotifications/${uid}/${request.noticeId}/read`]=true;
     });
+    let requesterNotice=null;
     if(request.requesterUid){
         const resultId=database.ref('UserNotifications').push().key;
-        updates[`UserNotifications/${request.requesterUid}/${resultId}`]={
+        requesterNotice={
             id:resultId,kind:'activity',action:'deletion_'+resultStatus,read:false,
             title:resultStatus==='expired'
                 ? `${tp.name || 'Element'}ni o‘chirish so‘rovi 3 ish kunida tasdiqlanmadi`
@@ -3549,8 +3589,10 @@ async function hetkRejectElementDeletion(requestId,request,status){
             actorUid:actor.uid || '',actorName:actor.name || 'Tizim',actorRole:actor.role || '',
             elementId:request.tpId,elementName:tp.name || 'Element',createdAt:now,expiresAt:now+HETK_NOTICE_LIFETIME_MS
         };
+        updates[`UserNotifications/${request.requesterUid}/${resultId}`]=requesterNotice;
     }
     await database.ref().update(updates);
+    if(request.requesterUid && requesterNotice) await hetkSafeSendPush([request.requesterUid],'notifications',requesterNotice);
     if(resultStatus==='rejected') showToast('O‘chirish bekor qilindi. Element saqlandi.');
 }
 
