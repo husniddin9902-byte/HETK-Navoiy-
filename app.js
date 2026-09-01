@@ -2188,10 +2188,10 @@ function hetkAccountRoleLabel(account){
 
 function hetkAuditActor(){
     const me=hetkCurrentAccount();
-    if(!me) return {uid:'',name:'Noma’lum foydalanuvchi',role:'Foydalanuvchi',display:'Noma’lum foydalanuvchi'};
+    if(!me) return {uid:'',name:'Noma’lum foydalanuvchi',role:'Foydalanuvchi',roleCode:'',display:'Noma’lum foydalanuvchi'};
     const name=me.fullName || me.login || 'Foydalanuvchi';
     const role=hetkAccountRoleLabel(me);
-    return {uid:me.uid || '',name,role,display:name + ' — ' + role};
+    return {uid:me.uid || '',name,role,roleCode:me.role || '',display:name + ' — ' + role};
 }
 
 // ===== ELEMENT / PAPKA BILDIRISHNOMALARI VA O'CHIRISH TASDIG'I =====
@@ -2349,6 +2349,73 @@ async function hetkNotificationRecipients(tp,excludeUid){
         });
     }
     return Array.from(recipients);
+}
+
+function hetkMasterOwnsElement(tp,account){
+    const me=account || hetkCurrentAccount();
+    if(!me || me.role!=='master') return false;
+    const zoneIds=hetkGetTPWorkZoneIds(tp);
+    if(zoneIds.length) return !!me.workZoneId && zoneIds.includes(me.workZoneId);
+    return hetkElementFolderIds(tp).some(folderId=>hetkCanAccessFolder(folderId));
+}
+
+async function hetkChiefEngineerRecipients(tp,excludeUid){
+    await loadElementWorkZones(true);
+    const usersSnap=await database.ref('users').once('value');
+    const users=usersSnap.val() || {};
+    const targetFolders=new Set(hetkElementFolderIds(tp));
+    hetkGetTPWorkZoneIds(tp).forEach(zoneId=>{
+        const zone=elementWorkZonesCache[zoneId] || {};
+        Object.keys(zone.folders || {}).forEach(folderId=>{if(zone.folders[folderId]) targetFolders.add(folderId);});
+    });
+    return Object.keys(users).filter(uid=>{
+        const user=users[uid] || {};
+        if(uid===excludeUid || user.active===false || user.role!=='chief_engineer') return false;
+        if(user.rootAccess) return true;
+        const roots=Object.keys(user.folders || {}).filter(id=>user.folders[id]);
+        return Array.from(targetFolders).some(folderId=>roots.some(rootId=>hetkFolderIsInside(folderId,rootId)));
+    });
+}
+
+async function hetkDeletionApprovers(tp,excludeUid){
+    const zoneIds=hetkGetTPWorkZoneIds(tp);
+    if(!zoneIds.length) return {uids:[],mode:'none'};
+    await loadElementWorkZones(true);
+    const usersSnap=await database.ref('users').once('value');
+    const users=usersSnap.val() || {};
+    const masters=new Set();
+    zoneIds.forEach(zoneId=>{
+        const zone=elementWorkZonesCache[zoneId] || {};
+        const uid=zone.currentMasterUid;
+        if(uid && uid!==excludeUid && users[uid] && users[uid].active!==false) masters.add(uid);
+    });
+    if(masters.size) return {uids:Array.from(masters),mode:'master'};
+    const chiefs=await hetkChiefEngineerRecipients(tp,excludeUid);
+    return {uids:chiefs,mode:chiefs.length ? 'chief_engineer' : 'none'};
+}
+
+async function hetkNotifyChiefEngineerDeletion(tpId,tp,actor,action){
+    const recipients=await hetkChiefEngineerRecipients(tp,actor.uid);
+    if(!recipients.length) return 0;
+    const now=Date.now();
+    const noticeId=database.ref('UserNotifications').push().key;
+    const approved=action==='approved';
+    const title=approved
+        ? `${actor.name} ${tp.name || 'element'}ni o‘chirishni tasdiqladi`
+        : `${actor.name} ${tp.name || 'element'}ni o‘chirdi`;
+    const folderPath=hetkElementFolderIds(tp).map(id=>getFolderPath(id)).filter(Boolean).join('; ');
+    const payload={
+        id:noticeId,kind:'activity',action:approved?'deletion_approved_by_master':'element_deleted_by_master',read:false,
+        title,actorUid:actor.uid,actorName:actor.name,actorRole:actor.role,
+        elementId:tpId,elementName:tp.name || 'Element',folderPath:folderPath || 'Papka biriktirilmagan',
+        workZoneName:hetkGetTPWorkZoneNames(tp).join(', ') || 'U/J biriktirilmagan',
+        createdAt:now,expiresAt:now+HETK_NOTICE_LIFETIME_MS
+    };
+    const updates={};
+    recipients.forEach(uid=>{updates[`UserNotifications/${uid}/${noticeId}`]=payload;});
+    await database.ref().update(updates);
+    await hetkSafeSendPush(recipients,'notifications',payload);
+    return recipients.length;
 }
 
 async function hetkFolderNotificationRecipients(folderId,excludeUid){
@@ -2621,10 +2688,11 @@ async function loadElementWorkZones(force){
 
 function hetkGetTPWorkZoneIds(tp){
     if(!tp) return [];
-    if(tp.workZones) return Object.keys(tp.workZones).filter(id => tp.workZones[id]);
-    if(tp.primaryWorkZoneId) return [tp.primaryWorkZoneId];
-    if(tp.workZoneId) return [tp.workZoneId];
-    return [];
+    const ids=[];
+    if(tp.workZones) Object.keys(tp.workZones).forEach(id=>{if(tp.workZones[id]) ids.push(id);});
+    if(tp.primaryWorkZoneId) ids.push(tp.primaryWorkZoneId);
+    if(tp.workZoneId) ids.push(tp.workZoneId);
+    return [...new Set(ids)];
 }
 
 function hetkWorkZoneName(id,tp){
@@ -3436,8 +3504,9 @@ async function hetkRequestElementDeletion(tpId,tp){
     if(!tpId || !tp) throw new Error('Element topilmadi.');
     if(tp.deletionPending) throw new Error('Bu element uchun o‘chirish so‘rovi avval yuborilgan.');
     const actor=hetkAuditActor();
-    const approverUids=await hetkNotificationRecipients(tp,actor.uid);
-    if(!approverUids.length) throw new Error('Bu elementga mas’ul Master topilmadi. Avval U/J Masterini biriktiring.');
+    const approverResult=await hetkDeletionApprovers(tp,actor.uid);
+    const approverUids=approverResult.uids;
+    if(!approverUids.length) throw new Error('Biriktirilgan U/J uchun faol Master yoki hudud Bosh muhandisi topilmadi.');
     const now=Date.now();
     const dueAt=hetkAddBusinessDays(now,3);
     const requestId=database.ref('ElementDeletionRequests').push().key;
@@ -3446,7 +3515,7 @@ async function hetkRequestElementDeletion(tpId,tp){
     const request={
         id:requestId,tpId,elementName:tp.name || 'Element',elementSnapshot:JSON.parse(JSON.stringify(tp)),
         requesterUid:actor.uid,requesterName:actor.name,requesterRole:actor.role,
-        approvers,noticeId,status:'pending',createdAt:now,dueAt,
+        approvers,approverMode:approverResult.mode,noticeId,status:'pending',createdAt:now,dueAt,
         expiresAt:now+HETK_NOTICE_LIFETIME_MS
     };
     const updates={};
@@ -3481,10 +3550,14 @@ async function hetkRequestElementDeletion(tpId,tp){
     if(typeof refreshSearchResults==='function') refreshSearchResults();
     const treeRoot=document.getElementById('tree-root');
     if(treeRoot) renderTree('root',treeRoot);
+    return approverResult;
 }
 
 function hetkDeletedCaption(tpId,tp,request,actor){
     const folders=hetkElementFolderIds(tp).map(id=>getFolderPath(id)).filter(Boolean).join('\n📂 ');
+    const actionRows=request.directDelete
+        ? `🗑 O‘chirgan: ${actor.name || '-'}\n🕒 O‘chirilgan: ${new Date().toLocaleString('uz-UZ')}`
+        : `🗑 So‘ragan: ${request.requesterName || '-'}\n✅ Tasdiqlagan: ${actor.name || '-'}\n🕒 Tasdiqlangan: ${new Date().toLocaleString('uz-UZ')}`;
     return `❌ ELEMENT O‘CHIRILDI
 
 📍 ${tp.name || '-'}    ⚡ Quvvati: ${tp.power || '-'} kVA
@@ -3495,15 +3568,68 @@ ${tp.isPrivate ? '🔴 XUSUSIY' : '🔵 ETK'}
 📌 Koordinata: ${tp.lat || '-'}, ${tp.lng || '-'}
 📝 Izoh: ${tp.note || '-'}
 
-🗑 So‘ragan: ${request.requesterName || '-'}
-✅ Tasdiqlagan: ${actor.name || '-'}
-🕒 Tasdiqlangan: ${new Date().toLocaleString('uz-UZ')}
+${actionRows}
 🆔 Element ID: ${tpId}`;
+}
+
+async function hetkSendDeletedElementToTelegram(tpId,tp,request,actor){
+    const deletedCaption=hetkDeletedCaption(tpId,tp,request,actor);
+    const deletedMedia=(Array.isArray(tp.images) ? tp.images : []).filter(img=>img && img.fileId).map(img=>({type:'photo',media:img.fileId}));
+    if(deletedMedia.length){
+        deletedMedia[0].caption=deletedCaption.slice(0,1024);
+        await telegramWorkerFetch('sendMediaGroup','deleted',{
+            method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({media:deletedMedia})
+        });
+    }else{
+        await telegramWorkerFetch('sendMessage','deleted',{
+            method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:deletedCaption})
+        });
+    }
+    if(tp.telegramMainMessageId){
+        await telegramWorkerFetch('deleteMessage','main',{
+            method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message_id:tp.telegramMainMessageId})
+        });
+    }
+    if(tp.telegramArchiveMessageIds && tp.telegramArchiveMessageIds.length) await deleteTelegramMessages(tp.telegramArchiveMessageIds);
+}
+
+async function hetkDeleteElementImmediately(tpId,tp){
+    if(!tpId || !tp) throw new Error('Element topilmadi.');
+    if(tp.deletionPending) throw new Error('Bu elementda faol o‘chirish so‘rovi bor. Uni Bildirishnomalar bo‘limidan tasdiqlang yoki bekor qiling.');
+    const me=hetkCurrentAccount();
+    const actor=hetkAuditActor();
+    if(!me) throw new Error('Foydalanuvchi topilmadi.');
+    if(me.role==='master' && !hetkMasterOwnsElement(tp,me)) throw new Error('Master faqat o‘z U/J hududidagi elementni o‘chira oladi.');
+    if(!['master','super_admin'].includes(me.role)) throw new Error('Bu elementni darhol o‘chirishga ruxsat yo‘q.');
+    const request={requesterUid:actor.uid,requesterName:actor.name,requesterRole:actor.role,directDelete:true};
+    await hetkSendDeletedElementToTelegram(tpId,tp,request,actor);
+    const now=Date.now();
+    const updates={};
+    updates[`DeletedTPs/${tpId}`]=Object.assign({},tp,{
+        deletedAt:now,deletedBy:actor.uid,deletedByName:actor.name,
+        approvedBy:actor.uid,approvedByName:actor.name,expiresAt:now+HETK_NOTICE_LIFETIME_MS
+    });
+    updates[`TPs/${tpId}`]=null;
+    updates[`TPComments/${tpId}`]=null;
+    await database.ref().update(updates);
+    let chiefNotified=0;
+    if(me.role==='master'){
+        try{chiefNotified=await hetkNotifyChiefEngineerDeletion(tpId,tp,actor,'deleted');}
+        catch(error){console.warn('Bosh muhandisga o‘chirish bildirishnomasi yuborilmadi:',error);}
+    }
+    elementManagePanel.classList.add('hidden');
+    editingElementId=null;
+    originalElementData=null;
+    if(typeof loadFilteredPoints==='function') loadFilteredPoints();
+    if(typeof refreshSearchResults==='function') refreshSearchResults();
+    const treeRoot=document.getElementById('tree-root');
+    if(treeRoot) renderTree('root',treeRoot);
+    return {chiefNotified};
 }
 
 async function hetkFinalizeApprovedElementDeletion(requestId,request){
     const actor=hetkAuditActor();
-    if(!(request.approvers && request.approvers[actor.uid]) && actor.role!=='super_admin') throw new Error('Bu so‘rovni tasdiqlashga ruxsatingiz yo‘q.');
+    if(!(request.approvers && request.approvers[actor.uid]) && actor.roleCode!=='super_admin') throw new Error('Bu so‘rovni tasdiqlashga ruxsatingiz yo‘q.');
     if(Number(request.dueAt||0)<Date.now()) throw new Error('Tasdiqlash muddati tugagan. Element o‘chirilmaydi.');
     const statusRef=database.ref(`ElementDeletionRequests/${requestId}/status`);
     // Firebase tranzaksiyasi birinchi chaqiriqda kesh hali yuklanmagan bo‘lsa `null`
@@ -3516,24 +3642,7 @@ async function hetkFinalizeApprovedElementDeletion(requestId,request){
         const tpSnap=await database.ref(`TPs/${request.tpId}`).once('value');
         const tp=tpSnap.val();
         if(!tp) throw new Error('Element bazadan topilmadi.');
-        const deletedCaption=hetkDeletedCaption(request.tpId,tp,request,actor);
-        const deletedMedia=(tp.images || []).filter(img=>img && img.fileId).map(img=>({type:'photo',media:img.fileId}));
-        if(deletedMedia.length){
-            deletedMedia[0].caption=deletedCaption.slice(0,1024);
-            await telegramWorkerFetch('sendMediaGroup','deleted',{
-                method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({media:deletedMedia})
-            });
-        }else{
-            await telegramWorkerFetch('sendMessage','deleted',{
-                method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:deletedCaption})
-            });
-        }
-        if(tp.telegramMainMessageId){
-            await telegramWorkerFetch('deleteMessage','main',{
-                method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message_id:tp.telegramMainMessageId})
-            });
-        }
-        if(tp.telegramArchiveMessageIds && tp.telegramArchiveMessageIds.length) await deleteTelegramMessages(tp.telegramArchiveMessageIds);
+        await hetkSendDeletedElementToTelegram(request.tpId,tp,request,actor);
 
         const now=Date.now();
         const updates={};
@@ -3564,7 +3673,11 @@ async function hetkFinalizeApprovedElementDeletion(requestId,request){
         }
         await database.ref().update(updates);
         if(request.requesterUid && requesterNotice) await hetkSafeSendPush([request.requesterUid],'notifications',requesterNotice);
-        showToast('Element o‘chirildi. Master tasdig‘i saqlandi.');
+        if(actor.roleCode==='master'){
+            try{await hetkNotifyChiefEngineerDeletion(request.tpId,tp,actor,'approved');}
+            catch(noticeError){console.warn('Bosh muhandisga tasdiq bildirishnomasi yuborilmadi:',noticeError);}
+        }
+        showToast('Element o‘chirildi. Tasdiq saqlandi.');
     }catch(error){
         await database.ref(`ElementDeletionRequests/${requestId}`).update({status:'pending',processingAt:null,processingBy:null});
         throw error;
@@ -3574,7 +3687,7 @@ async function hetkFinalizeApprovedElementDeletion(requestId,request){
 async function hetkRejectElementDeletion(requestId,request,status){
     const actor=hetkAuditActor();
     const resultStatus=status || 'rejected';
-    if(resultStatus==='rejected' && !(request.approvers && request.approvers[actor.uid]) && actor.role!=='super_admin') throw new Error('Bu so‘rovni bekor qilishga ruxsatingiz yo‘q.');
+    if(resultStatus==='rejected' && !(request.approvers && request.approvers[actor.uid]) && actor.roleCode!=='super_admin') throw new Error('Bu so‘rovni bekor qilishga ruxsatingiz yo‘q.');
     const tpSnap=await database.ref(`TPs/${request.tpId}`).once('value');
     const tp=tpSnap.val() || request.elementSnapshot || {};
     const now=Date.now();
@@ -3653,10 +3766,30 @@ if (deleteElementBtn) {
     deleteElementBtn.addEventListener('click', async function() {
        if(!hetkHasPermission('deleteElements')) return showToast("Siz elementni o‘chira olmaysiz. Faqat izoh yozish mumkin.");
        if(editingElementId && originalElementData){
-           if(!confirm("Element darhol o‘chmaydi. Mas’ul Masterga tasdiqlash uchun yuboriladi va 3 ish kuni kutiladi.\n\nO‘chirish so‘rovi yuborilsinmi?")) return;
            try{
-               await hetkRequestElementDeletion(editingElementId,originalElementData);
-               showToast("O‘chirish so‘rovi Masterga yuborildi!");
+               const me=hetkCurrentAccount();
+               const zoneIds=hetkGetTPWorkZoneIds(originalElementData);
+               if(me && me.role==='master'){
+                   if(!hetkMasterOwnsElement(originalElementData,me)) return showToast("Master faqat o‘z U/J hududidagi elementni o‘chira oladi.");
+                   if(originalElementData.deletionPending) return showToast("Bu elementda o‘chirish so‘rovi bor. Uni Bildirishnomalar bo‘limidan tasdiqlang yoki bekor qiling.");
+                   if(!confirm("Element darhol o‘chiriladi va hudud Bosh muhandisiga bildirishnoma yuboriladi.\n\nElement o‘chirilsinmi?")) return;
+                   const directResult=await hetkDeleteElementImmediately(editingElementId,originalElementData);
+                   showToast(directResult.chiefNotified
+                       ? "Element o‘chirildi. Bosh muhandisga bildirishnoma yuborildi."
+                       : "Element o‘chirildi.");
+                   return;
+               }
+               if(me && me.role==='super_admin' && !zoneIds.length){
+                   if(!confirm("Elementga U/J biriktirilmagan. Element darhol o‘chiriladi.\n\nDavom etilsinmi?")) return;
+                   await hetkDeleteElementImmediately(editingElementId,originalElementData);
+                   showToast("U/J biriktirilmagan element o‘chirildi.");
+                   return;
+               }
+               if(!confirm("Element darhol o‘chmaydi. Biriktirilgan U/J Masteriga tasdiqlash uchun yuboriladi va 3 ish kuni kutiladi.\n\nO‘chirish so‘rovi yuborilsinmi?")) return;
+               const approverResult=await hetkRequestElementDeletion(editingElementId,originalElementData);
+               showToast(approverResult.mode==='master'
+                   ? "O‘chirish so‘rovi U/J Masteriga yuborildi!"
+                   : "U/J Masteri topilmadi. So‘rov hudud Bosh muhandisiga yuborildi!");
            }catch(error){showToast(error.message || "O‘chirish so‘rovi yuborilmadi!");}
            return;
        }
