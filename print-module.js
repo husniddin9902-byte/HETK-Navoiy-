@@ -45,6 +45,13 @@ window.hetkSelectPrintElement=function(tp){
     updateSelectionUI();
 };
 
+window.hetkResetPrintSelection=function(){
+    printSelection={type:null,id:null,name:'',items:[]};
+    printRequestNo++;
+    updateSelectionUI();
+    closeDialog();
+};
+
 window.hetkRefreshPrintSelection=async function(){
     if(!printSelection.type || printSelection.type==='element') return updateSelectionUI();
     const requestNo=++printRequestNo;
@@ -217,8 +224,8 @@ async function passportHtml(tp,opts){
         fact('fa-shield-halved','Texnik holati',statusLabel(tp.status)),fact('fa-house','Mahalla',mahalla),
         fact('fa-helmet-safety','U/J',workZones),fact('fa-location-dot','Manzil',tp.address || '—'),
         fact('fa-crosshairs','Koordinata',tp.lat && tp.lng ? tp.lat+'; '+tp.lng : '—'),
-        fact('fa-calculator','Balans hisoblagich',tp.balanceMeterNumber || tp.meterNumber || '—'),
-        fact('fa-tower-broadcast','Konsentrator',tp.concentratorNumber || tp.concentratorSerial || '—'),
+        fact('fa-calculator','Balans hisoblagich',tp.balanceMeterSerial || tp.balanceMeterNumber || '—'),
+        fact('fa-tower-broadcast','Konsentrator',tp.concentratorSerial || tp.concentratorNumber || '—'),
         fact('fa-calendar-check','Ishga tushirilgan',printDate(tp.commissionedDate,false)),
         fact('fa-screwdriver-wrench','Oxirgi joriy ta’mir',currentRepair ? printDate(currentRepair.date,false) : '—'),
         fact('fa-gears','Oxirgi kapital ta’mir',capitalRepair ? printDate(capitalRepair.date,false) : '—')
@@ -253,8 +260,8 @@ const PRINT_FIELDS={
     coords:{label:'Koordinata',value:tp=>tp.lat && tp.lng ? tp.lat+'; '+tp.lng : '—'},
     commissioned:{label:'Ishga tushirilgan',value:tp=>printDate(tp.commissionedDate,false)},
     repairs:{label:'Oxirgi ta’mir',value:tp=>{const rows=maintenanceRows(tp);const last=rows[rows.length-1];return last ? (last.type==='capital'?'Kapital':'Joriy')+' — '+printDate(last.date,false) : '—';}},
-    balanceMeter:{label:'Balans hisoblagich',value:tp=>tp.balanceMeterNumber || tp.meterNumber || '—'},
-    concentrator:{label:'Konsentrator',value:tp=>tp.concentratorNumber || tp.concentratorSerial || '—'},
+    balanceMeter:{label:'Balans hisoblagich',value:tp=>tp.balanceMeterSerial || tp.balanceMeterNumber || '—'},
+    concentrator:{label:'Konsentrator',value:tp=>tp.concentratorSerial || tp.concentratorNumber || '—'},
     ownerFirm:{label:'Xususiy korxona',value:tp=>tp.ownerFirm || '—'},
     ownerName:{label:'Korxona vakili',value:tp=>tp.ownerName || '—'},
     ownerPhone:{label:'Korxona telefoni',value:tp=>tp.ownerPhone || '—'},
