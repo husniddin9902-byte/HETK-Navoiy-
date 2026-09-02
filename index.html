@@ -7,7 +7,7 @@
     <title>HETK Navoiy</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=6.0">
+    <link rel="stylesheet" href="style.css?v=10.0">
 <style>
     #address {
         word-break: keep-all !important;
@@ -17,7 +17,8 @@
             
 </style> 
     <link rel="stylesheet" href="profile-container.css?v=3.0">
-    <link rel="stylesheet" href="auth-container.css?v=5.0">
+    <link rel="stylesheet" href="auth-container.css?v=8.0">
+    <link rel="stylesheet" href="statistics.css?v=2.0">
 </head>
 <body>
 
@@ -779,9 +780,7 @@ cursor:pointer;
 <div id="hetk-print-overlay" class="hetk-print-overlay" hidden aria-hidden="true">
     <section class="hetk-print-dialog" role="dialog" aria-modal="true" aria-labelledby="hetk-print-title">
         <header class="hetk-print-dialog-header">
-            <button id="hetk-print-back" class="hetk-print-icon-btn hetk-print-mobile-only" type="button" aria-label="Orqaga">
-                <i class="fas fa-arrow-left"></i>
-            </button>
+            <button id="hetk-print-back" class="hetk-print-icon-btn hetk-print-mobile-only" type="button" aria-label="Orqaga"><i class="fas fa-arrow-left"></i></button>
             <i class="fas fa-print hetk-print-heading-icon"></i>
             <h2 id="hetk-print-title">Chop etish</h2>
             <button id="hetk-print-close" class="hetk-print-icon-btn" type="button" aria-label="Yopish">×</button>
@@ -790,11 +789,7 @@ cursor:pointer;
         <div class="hetk-print-dialog-body">
             <div class="hetk-print-source-card">
                 <i id="hetk-print-source-icon" class="fas fa-folder"></i>
-                <div>
-                    <span>Tanlangan manba</span>
-                    <strong id="hetk-print-source-name">—</strong>
-                    <small id="hetk-print-source-count">0 ta element</small>
-                </div>
+                <div><span>Tanlangan manba</span><strong id="hetk-print-source-name">—</strong><small id="hetk-print-source-count">0 ta element</small></div>
             </div>
 
             <div class="hetk-print-columns">
@@ -871,10 +866,7 @@ cursor:pointer;
 </div>
 
 <div id="hetk-print-preview-overlay" class="hetk-print-preview-overlay" hidden>
-    <header>
-        <strong>Chop etishdan oldin ko‘rish</strong>
-        <button id="hetk-print-preview-close" type="button">×</button>
-    </header>
+    <header><strong>Chop etishdan oldin ko‘rish</strong><button id="hetk-print-preview-close" type="button">×</button></header>
     <div id="hetk-print-preview-content"></div>
 </div>
 
@@ -1214,6 +1206,35 @@ margin-bottom:8px;
                 <div id="hetk-repair-empty" class="hetk-repair-empty">Ta’mirlash tarixi hali kiritilmagan.</div>
             </section>
 
+            <div style="background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:12px;">
+                <div style="font-size:14px;font-weight:bold;color:#9fc7ff;margin-bottom:10px;">
+                    📟 Hisoblagich va konsentrator
+                    <span style="font-size:11px;font-weight:normal;color:#88a0b0;">(ixtiyoriy)</span>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;">
+                    <label style="display:block;font-size:13px;color:#88a0b0;">
+                        Balans hisoblagichining zavod raqami
+                        <input
+                            type="text"
+                            id="input-balance-meter-serial"
+                            maxlength="80"
+                            autocomplete="off"
+                            placeholder="Masalan: 01234567"
+                            style="width:100%;padding:11px;margin-top:5px;border-radius:8px;background:#001a2c;color:white;border:1px solid rgba(255,255,255,.08);outline:none;">
+                    </label>
+                    <label style="display:block;font-size:13px;color:#88a0b0;">
+                        Konsentratorning zavod raqami
+                        <input
+                            type="text"
+                            id="input-concentrator-serial"
+                            maxlength="80"
+                            autocomplete="off"
+                            placeholder="Masalan: K-01234567"
+                            style="width:100%;padding:11px;margin-top:5px;border-radius:8px;background:#001a2c;color:white;border:1px solid rgba(255,255,255,.08);outline:none;">
+                    </label>
+                </div>
+            </div>
+
             <div>
 
                  <div id="power-source-mode"
@@ -1297,12 +1318,6 @@ margin-bottom:8px;
                 <div>
                     <input type="text" id="input-meter-number" placeholder="Hisoblagich (Schotchik) raqami" style="width:100%; padding:10px; border-radius:6px; background:#001a2c; color:white; border:none; outline:none; font-size:13px;">
                 </div>
-            </div>
-
-            <div class="hetk-askue-inputs">
-                <div class="hetk-askue-inputs-title"><i class="fas fa-gauge-high"></i> ASKUE qurilmalari <small>(ixtiyoriy)</small></div>
-                <input type="text" id="input-balance-meter-number" placeholder="Balans hisoblagich zavod raqami">
-                <input type="text" id="input-concentrator-number" placeholder="Konsentrator zavod raqami">
             </div>
 
             <div class="sheet-buttons" style="display:flex; gap:10px; margin-top:10px;">
@@ -1491,6 +1506,7 @@ margin-bottom:8px;
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js"></script>
 <div id="save-loader" class="hidden">
     <div class="save-loader-card">
         <div class="save-loader-logo">⚡</div>
@@ -1669,10 +1685,11 @@ gap:8px;
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="app.js?v=6.0"></script>
+    <script src="app.js?v=10.0"></script>
     <script src="profile-container.js?v=3.0"></script>
-    <script src="auth-container.js?v=5.0"></script>
-    <script src="print-module.js?v=1.0"></script>
+    <script src="auth-container.js?v=8.0"></script>
+    <script src="statistics.js?v=2.0"></script>
+    <script src="print-module.js?v=2.0"></script>
     <script src="mahalla.js?v=1.1"></script>
 </body>
                          </html>
