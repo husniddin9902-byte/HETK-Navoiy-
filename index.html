@@ -7,7 +7,7 @@
     <title>HETK Navoiy</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=6.0">
 <style>
     #address {
         word-break: keep-all !important;
@@ -17,8 +17,7 @@
             
 </style> 
     <link rel="stylesheet" href="profile-container.css?v=3.0">
-    <link rel="stylesheet" href="auth-container.css?v=8.0">
-    <link rel="stylesheet" href="statistics.css?v=2.0">
+    <link rel="stylesheet" href="auth-container.css?v=5.0">
 </head>
 <body>
 
@@ -93,7 +92,13 @@ cursor:pointer;
     <div class="list-content full-screen">
         <div class="list-header">
             <h3>Boshqaruv paneli</h3>
-            <button id="close-list" style="background:none; border:none; color:white; font-size:24px;">×</button>
+            <div class="hetk-list-header-actions">
+                <button id="hetk-print-open" class="hetk-print-header-btn" type="button" title="Tanlanganlarni chop etish" hidden>
+                    <i class="fas fa-print"></i>
+                    <span id="hetk-print-count" class="hetk-print-count">0</span>
+                </button>
+                <button id="close-list" style="background:none; border:none; color:white; font-size:24px;">×</button>
+            </div>
         </div>
 
         <div class="tab-control">
@@ -739,6 +744,11 @@ cursor:pointer;
     </div>
 </div>
         </div>
+
+        <div id="hetk-print-selection" class="hetk-print-selection" hidden>
+            <span id="hetk-print-selection-count">0 ta element tanlandi</span>
+            <strong id="hetk-print-selection-name">—</strong>
+        </div>
         
      
              <!-- Qidiruv natijalari -->
@@ -763,6 +773,109 @@ cursor:pointer;
                        </div>
         
     </div>
+</div>
+
+<!-- ELEMENTLARNI CHOP ETISH -->
+<div id="hetk-print-overlay" class="hetk-print-overlay" hidden aria-hidden="true">
+    <section class="hetk-print-dialog" role="dialog" aria-modal="true" aria-labelledby="hetk-print-title">
+        <header class="hetk-print-dialog-header">
+            <button id="hetk-print-back" class="hetk-print-icon-btn hetk-print-mobile-only" type="button" aria-label="Orqaga">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <i class="fas fa-print hetk-print-heading-icon"></i>
+            <h2 id="hetk-print-title">Chop etish</h2>
+            <button id="hetk-print-close" class="hetk-print-icon-btn" type="button" aria-label="Yopish">×</button>
+        </header>
+
+        <div class="hetk-print-dialog-body">
+            <div class="hetk-print-source-card">
+                <i id="hetk-print-source-icon" class="fas fa-folder"></i>
+                <div>
+                    <span>Tanlangan manba</span>
+                    <strong id="hetk-print-source-name">—</strong>
+                    <small id="hetk-print-source-count">0 ta element</small>
+                </div>
+            </div>
+
+            <div class="hetk-print-columns">
+                <div class="hetk-print-column">
+                    <fieldset class="hetk-print-section">
+                        <legend>1. Formatni tanlang</legend>
+                        <div class="hetk-print-format-grid">
+                            <label class="hetk-print-format active"><input type="radio" name="hetk-print-format" value="pdf" checked><i class="fas fa-file-pdf"></i><span>PDF</span></label>
+                            <label class="hetk-print-format"><input type="radio" name="hetk-print-format" value="excel"><i class="fas fa-file-excel"></i><span>Excel</span></label>
+                            <label class="hetk-print-format"><input type="radio" name="hetk-print-format" value="word"><i class="fas fa-file-word"></i><span>Word</span></label>
+                            <label class="hetk-print-format"><input type="radio" name="hetk-print-format" value="printer"><i class="fas fa-print"></i><span>Printer</span></label>
+                        </div>
+                    </fieldset>
+
+                    <fieldset class="hetk-print-section">
+                        <legend>2. Ma’lumotlarni tanlang</legend>
+                        <div class="hetk-print-field-grid">
+                            <label><input type="checkbox" value="feeder" checked> 1-papka (Fider)</label>
+                            <label><input type="checkbox" value="name" checked> Nomi</label>
+                            <label><input type="checkbox" value="power" checked> Quvvati</label>
+                            <label><input type="checkbox" value="mahalla" checked> Mahalla</label>
+                            <label><input type="checkbox" value="workzone"> U/J</label>
+                            <label><input type="checkbox" value="balance"> Balans</label>
+                            <label><input type="checkbox" value="status"> Texnik holati</label>
+                            <label><input type="checkbox" value="address"> Manzil</label>
+                            <label><input type="checkbox" value="coords"> Koordinata</label>
+                            <label><input type="checkbox" value="commissioned"> Ishga tushirilgan</label>
+                            <label><input type="checkbox" value="repairs"> Ta’mirlar</label>
+                            <label><input type="checkbox" value="balanceMeter"> Balans hisoblagich</label>
+                            <label><input type="checkbox" value="concentrator"> Konsentrator</label>
+                            <label><input type="checkbox" value="ownerFirm"> Xususiy korxona</label>
+                            <label><input type="checkbox" value="ownerName"> Korxona vakili</label>
+                            <label><input type="checkbox" value="ownerPhone"> Korxona telefoni</label>
+                            <label><input type="checkbox" value="createdAt"> Yaratilgan sana</label>
+                            <label><input type="checkbox" value="updatedAt"> Oxirgi tahrir</label>
+                            <label><input type="checkbox" value="note"> Izoh</label>
+                        </div>
+                    </fieldset>
+                </div>
+
+                <div class="hetk-print-column">
+                    <fieldset class="hetk-print-section">
+                        <legend>3. Rasmlar</legend>
+                        <label class="hetk-print-radio"><input type="radio" name="hetk-print-images" value="none" checked> Rasmsiz</label>
+                        <label class="hetk-print-radio"><input type="radio" name="hetk-print-images" value="main"> Asosiy rasm</label>
+                        <label class="hetk-print-radio"><input type="radio" name="hetk-print-images" value="all"> Barcha rasmlar</label>
+                    </fieldset>
+
+                    <fieldset class="hetk-print-section">
+                        <legend>4. Qog‘oz</legend>
+                        <div class="hetk-print-paper-row">
+                            <label class="hetk-print-radio"><input type="radio" name="hetk-print-paper" value="portrait" checked> A4 tik</label>
+                            <label class="hetk-print-radio"><input type="radio" name="hetk-print-paper" value="landscape"> A4 yotiq</label>
+                        </div>
+                    </fieldset>
+
+                    <div class="hetk-print-preview-card">
+                        <span>Ko‘rinish oldindan</span>
+                        <div id="hetk-print-mini-preview" class="hetk-print-mini-preview">
+                            <div><strong>HETK</strong><i></i><i></i><i></i></div>
+                            <div class="hetk-print-mini-photo"><i class="fas fa-image"></i></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="hetk-print-dialog-footer">
+            <button id="hetk-print-cancel" type="button" class="hetk-print-secondary">Bekor qilish</button>
+            <button id="hetk-print-preview" type="button" class="hetk-print-outline">Ko‘rib chiqish</button>
+            <button id="hetk-print-generate" type="button" class="hetk-print-primary">Faylni tayyorlash</button>
+        </footer>
+    </section>
+</div>
+
+<div id="hetk-print-preview-overlay" class="hetk-print-preview-overlay" hidden>
+    <header>
+        <strong>Chop etishdan oldin ko‘rish</strong>
+        <button id="hetk-print-preview-close" type="button">×</button>
+    </header>
+    <div id="hetk-print-preview-content"></div>
 </div>
 
     <div id="edit-folder-panel" class="bottom-sheet-folder hidden">
@@ -1085,34 +1198,21 @@ margin-bottom:8px;
                 <textarea id="input-element-note" rows="2" placeholder="Qo'shimcha eslatmalar..." style="width:100%; padding:10px; margin-top:5px; border-radius:8px; background:#001a2c; color:white; border:1px solid rgba(255,255,255,0.05); resize: none; outline: none;"></textarea>
             </div>
 
-            <div style="background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:12px;">
-                <div style="font-size:14px;font-weight:bold;color:#9fc7ff;margin-bottom:10px;">
-                    📟 Hisoblagich va konsentrator
-                    <span style="font-size:11px;font-weight:normal;color:#88a0b0;">(ixtiyoriy)</span>
+            <section id="hetk-maintenance-section" class="hetk-maintenance-section">
+                <div class="hetk-maintenance-title">
+                    <div>
+                        <strong><i class="fas fa-screwdriver-wrench"></i> Ekspluatatsiya va ta’mirlash</strong>
+                        <small id="hetk-maintenance-permission-note">Bu ma’lumotlarni PTO/texnik muhandis kiritadi.</small>
+                    </div>
+                    <button id="hetk-add-repair" type="button"><i class="fas fa-plus"></i> Ta’mir qo‘shish</button>
                 </div>
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;">
-                    <label style="display:block;font-size:13px;color:#88a0b0;">
-                        Balans hisoblagichining zavod raqami
-                        <input
-                            type="text"
-                            id="input-balance-meter-serial"
-                            maxlength="80"
-                            autocomplete="off"
-                            placeholder="Masalan: 01234567"
-                            style="width:100%;padding:11px;margin-top:5px;border-radius:8px;background:#001a2c;color:white;border:1px solid rgba(255,255,255,.08);outline:none;">
-                    </label>
-                    <label style="display:block;font-size:13px;color:#88a0b0;">
-                        Konsentratorning zavod raqami
-                        <input
-                            type="text"
-                            id="input-concentrator-serial"
-                            maxlength="80"
-                            autocomplete="off"
-                            placeholder="Masalan: K-01234567"
-                            style="width:100%;padding:11px;margin-top:5px;border-radius:8px;background:#001a2c;color:white;border:1px solid rgba(255,255,255,.08);outline:none;">
-                    </label>
-                </div>
-            </div>
+                <label class="hetk-maintenance-date-label">
+                    Ishga tushirilgan sana
+                    <input id="input-commissioned-date" type="date">
+                </label>
+                <div id="hetk-repair-list" class="hetk-repair-list"></div>
+                <div id="hetk-repair-empty" class="hetk-repair-empty">Ta’mirlash tarixi hali kiritilmagan.</div>
+            </section>
 
             <div>
 
@@ -1197,6 +1297,12 @@ margin-bottom:8px;
                 <div>
                     <input type="text" id="input-meter-number" placeholder="Hisoblagich (Schotchik) raqami" style="width:100%; padding:10px; border-radius:6px; background:#001a2c; color:white; border:none; outline:none; font-size:13px;">
                 </div>
+            </div>
+
+            <div class="hetk-askue-inputs">
+                <div class="hetk-askue-inputs-title"><i class="fas fa-gauge-high"></i> ASKUE qurilmalari <small>(ixtiyoriy)</small></div>
+                <input type="text" id="input-balance-meter-number" placeholder="Balans hisoblagich zavod raqami">
+                <input type="text" id="input-concentrator-number" placeholder="Konsentrator zavod raqami">
             </div>
 
             <div class="sheet-buttons" style="display:flex; gap:10px; margin-top:10px;">
@@ -1385,7 +1491,6 @@ margin-bottom:8px;
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js"></script>
 <div id="save-loader" class="hidden">
     <div class="save-loader-card">
         <div class="save-loader-logo">⚡</div>
@@ -1562,11 +1667,12 @@ gap:8px;
 </div>
 
     
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="app.js?v=9.0"></script>
+    <script src="app.js?v=6.0"></script>
     <script src="profile-container.js?v=3.0"></script>
-    <script src="auth-container.js?v=8.0"></script>
-    <script src="statistics.js?v=2.0"></script>
+    <script src="auth-container.js?v=5.0"></script>
+    <script src="print-module.js?v=1.0"></script>
     <script src="mahalla.js?v=1.1"></script>
 </body>
                          </html>
