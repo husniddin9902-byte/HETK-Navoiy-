@@ -560,8 +560,222 @@ function excelExport(opts){
         Author:actorName(),
         CreatedDate:new Date()
     };
-    XLSX.writeFile(workbook,fileBase()+'.xlsx',{compression:true});
+    XLSX.writeFile(workbook,fileBase()+'.xlsx',{compression:true,bookSST:true});
     return true;
+}
+
+const PDF_CYRILLIC_MAP={
+    'А':'A','Б':'B','В':'V','Г':'G','Д':'D','Е':'E','Ё':'Yo','Ж':'J','З':'Z','И':'I','Й':'Y','К':'K','Л':'L','М':'M','Н':'N','О':'O','П':'P','Р':'R','С':'S','Т':'T','У':'U','Ф':'F','Х':'X','Ц':'Ts','Ч':'Ch','Ш':'Sh','Щ':'Sh','Ъ':'','Ы':'I','Ь':'','Э':'E','Ю':'Yu','Я':'Ya','Ў':"O'",'Қ':'Q','Ғ':"G'",'Ҳ':'H',
+    'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'yo','ж':'j','з':'z','и':'i','й':'y','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r','с':'s','т':'t','у':'u','ф':'f','х':'x','ц':'ts','ч':'ch','ш':'sh','щ':'sh','ъ':'','ы':'i','ь':'','э':'e','ю':'yu','я':'ya','ў':"o'",'қ':'q','ғ':"g'",'ҳ':'h'
+};
+
+function pdfText(value){
+    return wordValue(value).split('').map(char=>PDF_CYRILLIC_MAP[char]===undefined?char:PDF_CYRILLIC_MAP[char]).join('')
+        .replace(/[ʻʼ‘’`´]/g,"'").replace(/[“”]/g,'"').replace(/[–—]/g,'-').replace(/№/g,'No.')
+        .replace(/…/g,'...').replace(/[^\x09\x0A\x0D\x20-\x7E\xA0-\xFF]/g,'?');
+}
+
+function pdfWrap(text,font,size,maxWidth){
+    const result=[];const paragraphs=pdfText(text).split(/\r?\n/);
+    paragraphs.forEach(paragraph=>{
+        const words=paragraph.split(/\s+/).filter(Boolean);let line='';
+        if(!words.length){result.push('');return;}
+        words.forEach(word=>{
+            let piece=word;
+            while(font.widthOfTextAtSize(piece,size)>maxWidth && piece.length>1){
+                let cut=piece.length-1;
+                while(cut>1 && font.widthOfTextAtSize(piece.slice(0,cut)+'-',size)>maxWidth) cut--;
+                if(line){result.push(line);line='';}
+                result.push(piece.slice(0,cut)+'-');piece=piece.slice(cut);
+            }
+            const candidate=line ? line+' '+piece : piece;
+            if(line && font.widthOfTextAtSize(candidate,size)>maxWidth){result.push(line);line=piece;}
+            else line=candidate;
+        });
+        if(line) result.push(line);
+    });
+    return result.length ? result : ['—'];
+}
+
+function pdfPageSize(landscape){return landscape ? [841.89,595.28] : [595.28,841.89];}
+
+function pdfCenterText(page,text,font,size,y,color){
+    const value=pdfText(text);const width=font.widthOfTextAtSize(value,size);const pageWidth=page.getWidth();
+    page.drawText(value,{x:Math.max(28,(pageWidth-width)/2),y,size,font,color});
+}
+
+function pdfHeader(page,fonts,title,subtitle){
+    const blue=PDFLib.rgb(.035,.184,.408);const muted=PDFLib.rgb(.22,.34,.46);const width=page.getWidth();const height=page.getHeight();
+    page.drawText('HETK',{x:28,y:height-43,size:25,font:fonts.bold,color:blue});
+    page.drawText('HUDUDIY ELEKTR TARMOQLARI KORXONASI',{x:120,y:height-34,size:10,font:fonts.bold,color:blue});
+    page.drawText('TERRITORIAL ELEKTR TARMOQLARI TIZIMI',{x:120,y:height-48,size:8.5,font:fonts.regular,color:muted});
+    page.drawLine({start:{x:28,y:height-58},end:{x:width-28,y:height-58},thickness:2,color:blue});
+    pdfCenterText(page,title,fonts.bold,17,height-84,blue);
+    if(subtitle) pdfCenterText(page,subtitle,fonts.regular,8.5,height-100,muted);
+    return height-114;
+}
+
+function pdfFooter(page,fonts,pageNumber,pageCount){
+    const width=page.getWidth();const muted=PDFLib.rgb(.22,.34,.46);
+    page.drawLine({start:{x:28,y:27},end:{x:width-28,y:27},thickness:.6,color:PDFLib.rgb(.15,.32,.52)});
+    page.drawText(pdfText('Shakllantirdi: '+actorName()),{x:28,y:14,size:6.5,font:fonts.regular,color:muted});
+    const center=pdfText(printDate(Date.now()));page.drawText(center,{x:(width-fonts.regular.widthOfTextAtSize(center,6.5))/2,y:14,size:6.5,font:fonts.regular,color:muted});
+    const right='Sahifa '+pageNumber+' / '+pageCount;page.drawText(right,{x:width-28-fonts.regular.widthOfTextAtSize(right,6.5),y:14,size:6.5,font:fonts.regular,color:muted});
+}
+
+async function pdfRecordImage(pdfDoc,record,maxWidth,maxHeight){
+    if(!record) return null;
+    const source=await fetchPrintImage(record);const converted=await normalizeWordImage(source,maxWidth,maxHeight);
+    if(!converted) return null;
+    try{return await pdfDoc.embedJpg(converted.data);}catch(error){console.warn('PDF IMAGE ERROR:',error);return null;}
+}
+
+function pdfDrawImageFit(page,image,x,y,width,height){
+    if(!image) return;
+    const scale=Math.min(width/image.width,height/image.height);const drawWidth=image.width*scale;const drawHeight=image.height*scale;
+    page.drawImage(image,{x:x+(width-drawWidth)/2,y:y+(height-drawHeight)/2,width:drawWidth,height:drawHeight});
+}
+
+async function pdfReport(pdfDoc,fonts,items,fields,opts,title,subtitle){
+    const landscape=opts.paper==='landscape';const size=pdfPageSize(landscape);const margin=28;const usable=size[0]-margin*2;
+    const includeMain=opts.images==='main';const numberWidth=28;const imageWidth=includeMain?72:0;
+    const dataWidth=usable-numberWidth-imageWidth;const baseWidth=dataWidth/Math.max(1,fields.length);
+    const widths=[numberWidth].concat(fields.map(()=>baseWidth)).concat(includeMain?[imageWidth]:[]);
+    const headers=['No.'].concat(fields.map(key=>PRINT_FIELDS[key].label)).concat(includeMain?['Asosiy rasm']:[]);
+    const fontSize=headers.length>11?5.2:headers.length>8?6.1:headers.length>6?7:8;
+    const lineHeight=fontSize+2.2;const dark=PDFLib.rgb(.04,.16,.29);const blue=PDFLib.rgb(.035,.184,.408);
+    const grid=PDFLib.rgb(.43,.56,.69);const light=PDFLib.rgb(.955,.975,.99);
+    let page=null;let y=0;
+
+    function drawTableHeader(){
+        const height=26;let x=margin;
+        headers.forEach((header,index)=>{
+            page.drawRectangle({x,y:y-height,width:widths[index],height,color:blue,borderColor:grid,borderWidth:.5});
+            const lines=pdfWrap(header,fonts.bold,fontSize,widths[index]-6).slice(0,2);
+            lines.forEach((line,lineIndex)=>page.drawText(line,{x:x+3,y:y-9-lineIndex*lineHeight,size:fontSize,font:fonts.bold,color:PDFLib.rgb(1,1,1)}));
+            x+=widths[index];
+        });
+        y-=height;
+    }
+
+    function newPage(){
+        page=pdfDoc.addPage(size);y=pdfHeader(page,fonts,title,subtitle);drawTableHeader();
+    }
+
+    newPage();
+    for(let index=0;index<items.length;index++){
+        const tp=items[index];const values=[index+1].concat(fields.map(key=>PRINT_FIELDS[key].value(tp)));
+        const wrapped=values.map((value,column)=>pdfWrap(value,fonts.regular,fontSize,widths[column]-6));
+        const textHeight=Math.max(...wrapped.map(lines=>lines.length))*lineHeight+8;
+        const rowHeight=Math.max(21,includeMain?58:0,textHeight);
+        if(y-rowHeight<40) newPage();
+        let x=margin;
+        for(let column=0;column<values.length;column++){
+            page.drawRectangle({x,y:y-rowHeight,width:widths[column],height:rowHeight,color:index%2?light:PDFLib.rgb(1,1,1),borderColor:grid,borderWidth:.45});
+            const maxLines=Math.max(1,Math.floor((rowHeight-7)/lineHeight));
+            wrapped[column].slice(0,maxLines).forEach((line,lineIndex)=>page.drawText(line,{x:x+3,y:y-10-lineIndex*lineHeight,size:fontSize,font:fonts.regular,color:dark}));
+            x+=widths[column];
+        }
+        if(includeMain){
+            page.drawRectangle({x,y:y-rowHeight,width:imageWidth,height:rowHeight,color:index%2?light:PDFLib.rgb(1,1,1),borderColor:grid,borderWidth:.45});
+            const images=Array.isArray(tp.images)?tp.images:Object.values(tp.images||{});const record=images[Number(tp.mainImageIndex)||0]||images[0];
+            const image=await pdfRecordImage(pdfDoc,record,320,240);pdfDrawImageFit(page,image,x+3,y-rowHeight+3,imageWidth-6,rowHeight-6);
+        }
+        y-=rowHeight;
+    }
+}
+
+function pdfFactRow(page,fonts,label,value,x,y,width,height){
+    const labelWidth=width*.39;const grid=PDFLib.rgb(.48,.62,.74);const light=PDFLib.rgb(.93,.96,.99);const dark=PDFLib.rgb(.04,.16,.29);
+    page.drawRectangle({x,y:y-height,width:labelWidth,height,color:light,borderColor:grid,borderWidth:.5});
+    page.drawRectangle({x:x+labelWidth,y:y-height,width:width-labelWidth,height,borderColor:grid,borderWidth:.5});
+    const labelLines=pdfWrap(label,fonts.bold,7.2,labelWidth-8).slice(0,2);const valueLines=pdfWrap(value,fonts.regular,7.2,width-labelWidth-8).slice(0,3);
+    labelLines.forEach((line,index)=>page.drawText(line,{x:x+4,y:y-10-index*8.5,size:7.2,font:fonts.bold,color:dark}));
+    valueLines.forEach((line,index)=>page.drawText(line,{x:x+labelWidth+4,y:y-10-index*8.5,size:7.2,font:fonts.regular,color:dark}));
+}
+
+async function pdfPassport(pdfDoc,fonts,tp,opts){
+    const size=pdfPageSize(false);const page=pdfDoc.addPage(size);const width=size[0];const margin=28;const blue=PDFLib.rgb(.035,.184,.408);
+    let y=pdfHeader(page,fonts,'ELEMENT PASPORTI','10 kV sinf KTP/TP obyektlari');y-=16;
+    pdfCenterText(page,tp.name||'ELEMENT',fonts.bold,21,y,blue);y-=21;
+    pdfCenterText(page,primaryFolderName(tp),fonts.bold,13,y,PDFLib.rgb(.08,.47,.83));y-=18;
+    const primaryId=primaryFolderId(tp);const pathLines=pdfWrap(primaryId?getFolderPath(primaryId):'—',fonts.regular,7.5,width-margin*2);
+    pathLines.slice(0,2).forEach((line,index)=>pdfCenterText(page,line,fonts.regular,7.5,y-index*9,PDFLib.rgb(.22,.34,.46)));y-=pathLines.slice(0,2).length*9+8;
+    const blockHeight=310;const imageWidth=310;const gap=12;const factX=margin+imageWidth+gap;const factWidth=width-margin-factX;
+    page.drawRectangle({x:margin,y:y-blockHeight,width:imageWidth,height:blockHeight,color:PDFLib.rgb(.94,.96,.98),borderColor:blue,borderWidth:1});
+    if(opts.images!=='none'){
+        const images=Array.isArray(tp.images)?tp.images:Object.values(tp.images||{});const record=images[Number(tp.mainImageIndex)||0]||images[0];
+        const image=await pdfRecordImage(pdfDoc,record,1000,900);pdfDrawImageFit(page,image,margin+4,y-blockHeight+4,imageWidth-8,blockHeight-8);
+    }else{
+        const placeholder='Rasm tanlanmagan';page.drawText(placeholder,{x:margin+(imageWidth-fonts.regular.widthOfTextAtSize(placeholder,11))/2,y:y-blockHeight/2,size:11,font:fonts.regular,color:PDFLib.rgb(.5,.58,.65)});
+    }
+    const mahalla=tp.primaryMahalla||(tp.mahallaLinks||[]).map(x=>x.name).filter(Boolean).join(', ')||'—';
+    const mainFacts=[
+        ['Quvvati',tp.power?tp.power+' kVA':'—'],['Balans',tp.isPrivate?'Xususiy'+(tp.ownerFirm?' - '+tp.ownerFirm:''):'ETK'],
+        ['Texnik holati',statusLabel(tp.status)],['Mahalla',mahalla],['U/J',hetkGetTPWorkZoneNames(tp).join(', ')||tp.workZoneName||'—'],
+        ['Manzil',tp.address||'—'],['Koordinata',tp.lat&&tp.lng?tp.lat+'; '+tp.lng:'—'],
+        ['Balans hisoblagich',tp.balanceMeterSerial||tp.balanceMeterNumber||'—'],['Konsentrator',tp.concentratorSerial||tp.concentratorNumber||'—'],
+        ['Ishga tushirilgan',printDate(tp.commissionedDate,false)]
+    ];
+    const factHeight=blockHeight/mainFacts.length;let factY=y;
+    mainFacts.forEach(row=>{pdfFactRow(page,fonts,row[0],row[1],factX,factY,factWidth,factHeight);factY-=factHeight;});
+    y-=blockHeight+12;
+    const currentRepair=lastRepair(tp,'current');const capitalRepair=lastRepair(tp,'capital');
+    const lowerFacts=[
+        ['Oxirgi joriy ta’mir',currentRepair?printDate(currentRepair.date,false):'—'],['Oxirgi kapital ta’mir',capitalRepair?printDate(capitalRepair.date,false):'—'],
+        ['Izoh',tp.note||'—'],['Yaratilgan sana',printDate(tp.createdAt)],['Oxirgi tahrir',printDate(tp.updatedAt)]
+    ];
+    lowerFacts.forEach(row=>{const height=row[0]==='Izoh'?34:25;pdfFactRow(page,fonts,row[0],row[1],margin,y,width-margin*2,height);y-=height;});
+    if(tp.lat&&tp.lng&&y>95){
+        const qr=await qrDataUrl('https://maps.google.com/?q='+tp.lat+','+tp.lng);
+        try{const qrImage=qr?await pdfDoc.embedPng(dataUrlBytes(qr)):null;if(qrImage) page.drawImage(qrImage,{x:width-margin-64,y:y-66,width:64,height:64});}catch(error){console.warn('PDF QR ERROR:',error);}
+        page.drawText('NAVIGATSIYA (QR)',{x:margin,y:y-20,size:10,font:fonts.bold,color:blue});
+        page.drawText('Joylashuvni xaritada ochish uchun skanerlang',{x:margin,y:y-36,size:8,font:fonts.regular,color:PDFLib.rgb(.22,.34,.46)});
+    }
+    const history=maintenanceRows(tp);
+    if(history.length){
+        const repairFields=['repairType','repairDate','repairWork','repairNote','repairActor'];const previous={};
+        const definitions={
+            repairType:{label:'Ta’mir turi',value:row=>row.type==='capital'?'Kapital ta’mir':'Joriy ta’mir'},
+            repairDate:{label:'Sana',value:row=>printDate(row.date,false)},repairWork:{label:'Bajarilgan ishlar',value:row=>row.work||'—'},
+            repairNote:{label:'Izoh',value:row=>row.note||'—'},repairActor:{label:'Kiritgan xodim',value:row=>row.updatedByName||row.createdByName||'—'}
+        };
+        repairFields.forEach(key=>{previous[key]=PRINT_FIELDS[key];PRINT_FIELDS[key]=definitions[key];});
+        await pdfReport(pdfDoc,fonts,history,repairFields,{paper:'landscape',images:'none'},(tp.name||'Element')+' - TA’MIRLASH TARIXI','Ishga tushirilgan: '+printDate(tp.commissionedDate,false));
+        repairFields.forEach(key=>{if(previous[key])PRINT_FIELDS[key]=previous[key];else delete PRINT_FIELDS[key];});
+    }
+}
+
+async function pdfImageAppendix(pdfDoc,fonts,items){
+    const size=pdfPageSize(false);const margin=28;
+    for(const tp of items){
+        const images=Array.isArray(tp.images)?tp.images:Object.values(tp.images||{});
+        for(let index=0;index<images.length;index++){
+            const image=await pdfRecordImage(pdfDoc,images[index],1400,1400);if(!image) continue;
+            const page=pdfDoc.addPage(size);const y=pdfHeader(page,fonts,(tp.name||'Element')+' - RASMLAR','Rasm '+(index+1));
+            pdfDrawImageFit(page,image,margin,50,size[0]-margin*2,y-62);
+        }
+    }
+}
+
+async function pdfExport(opts){
+    if(typeof PDFLib==='undefined'){
+        showToast('PDF moduli yuklanmadi. Sahifani yangilab qayta urinib ko‘ring.');return false;
+    }
+    const pdfDoc=await PDFLib.PDFDocument.create();
+    const fonts={regular:await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica),bold:await pdfDoc.embedFont(PDFLib.StandardFonts.HelveticaBold)};
+    pdfDoc.setTitle(pdfText(printSelection.name||'HETK elementlari'));pdfDoc.setAuthor(pdfText(actorName()));pdfDoc.setSubject('HETK elementlar ma’lumoti');
+    const single=printSelection.type==='element'&&printSelection.items.length===1;
+    if(single) await pdfPassport(pdfDoc,fonts,printSelection.items[0],opts);
+    else{
+        const fields=(opts.fields.length?opts.fields:['feeder','name']).filter(key=>PRINT_FIELDS[key]);
+        await pdfReport(pdfDoc,fonts,printSelection.items,fields,opts,'ELEMENTLAR RO‘YXATI','Manba: '+printSelection.name+'  -  Jami: '+printSelection.items.length+' ta element');
+    }
+    if(opts.images==='all') await pdfImageAppendix(pdfDoc,fonts,printSelection.items);
+    const pages=pdfDoc.getPages();pages.forEach((page,index)=>pdfFooter(page,fonts,index+1,pages.length));
+    const bytes=await pdfDoc.save({useObjectStreams:true});
+    if(!pages.length||bytes.length<1000) throw new Error('PDF_YARATILMADI');
+    downloadBlob(new Blob([bytes],{type:'application/pdf'}),fileBase()+'.pdf');return true;
 }
 
 async function showPreview(){
@@ -588,42 +802,15 @@ async function generateFile(){
             if(await wordExport(opts)) showToast('Word (.docx) fayli tayyorlandi.');
             return;
         }
+        if(opts.format==='pdf'){
+            if(await pdfExport(opts)) showToast('PDF fayli tayyorlandi.');
+            return;
+        }
         const html=await buildDocument(opts);
         const previewContent=document.getElementById('hetk-print-preview-content');
         const previewOverlay=document.getElementById('hetk-print-preview-overlay');
         previewContent.innerHTML=html;
         if(opts.format==='printer'){previewOverlay.hidden=false;setTimeout(()=>window.print(),250);return;}
-        if(typeof html2pdf==='undefined'){
-            previewOverlay.hidden=false;showToast('PDF moduli yuklanmadi. Printer oynasidan “PDF sifatida saqlash”ni tanlang.');setTimeout(()=>window.print(),250);return;
-        }
-        const host=document.createElement('div');
-        host.className='hetk-pdf-export-host';
-        host.style.cssText='position:absolute;left:0;top:0;width:'+(opts.paper==='landscape'?'297mm':'210mm')+';background:#fff;z-index:1;pointer-events:none;';
-        host.innerHTML=html;
-        document.body.appendChild(host);
-        try{
-            await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
-            const pendingImages=Array.from(host.querySelectorAll('img')).filter(img=>!img.complete).map(img=>new Promise(resolve=>{
-                img.addEventListener('load',resolve,{once:true});
-                img.addEventListener('error',resolve,{once:true});
-                setTimeout(resolve,5000);
-            }));
-            if(pendingImages.length) await Promise.all(pendingImages);
-            const exportWidth=Math.max(host.scrollWidth,Math.round((opts.paper==='landscape'?297:210)*96/25.4));
-            const exportHeight=Math.max(host.scrollHeight,Math.round((opts.paper==='landscape'?210:297)*96/25.4));
-            await html2pdf().set({
-                margin:0,filename:fileBase()+'.pdf',image:{type:'jpeg',quality:.97},
-                html2canvas:{
-                    scale:2,useCORS:true,allowTaint:false,backgroundColor:'#ffffff',
-                    scrollX:0,scrollY:0,windowWidth:exportWidth,windowHeight:exportHeight
-                },
-                jsPDF:{unit:'mm',format:'a4',orientation:opts.paper==='landscape'?'landscape':'portrait'},
-                pagebreak:{mode:['css','legacy'],before:'.hetk-document-page + .hetk-document-page'}
-            }).from(host).save();
-            showToast('PDF fayli tayyorlandi.');
-        }finally{
-            host.remove();
-        }
     }catch(error){console.error('PRINT GENERATE ERROR:',error);showToast('Faylni tayyorlashda xatolik yuz berdi.');}
     finally{if(button){button.disabled=false;button.textContent='Faylni tayyorlash';}}
 }
