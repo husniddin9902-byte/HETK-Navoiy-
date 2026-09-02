@@ -508,10 +508,11 @@ window.selectFolder = function(id) {
  loadFilteredPoints();
     searchState.folderId = id;
     refreshSearchResults();
+    if(typeof hetkSelectPrintFolder === 'function') hetkSelectPrintFolder(id);
     if(responsibleOptions && responsibleOptions.style.display==='block'){
         renderResponsibleWorkZoneFilter();
     }
-    showToast(`Tanlandi: ${currentFolders[id].name}`);
+    showToast(`Tanlandi: ${currentFolders[id] ? currentFolders[id].name : "Barcha ruxsat etilgan papkalar"}`);
     hetkNotifyManagementScopeChanged('folder');
 };
 
@@ -1611,6 +1612,15 @@ const inputOwnerName = document.getElementById('input-owner-name');
 const inputOwnerPhone = document.getElementById('input-owner-phone');
 const inputMeterNumber = document.getElementById('input-meter-number');
 
+// Ekspluatatsiya va ta'mirlash ma'lumotlari
+const inputCommissionedDate = document.getElementById('input-commissioned-date');
+const maintenanceSection = document.getElementById('hetk-maintenance-section');
+const maintenancePermissionNote = document.getElementById('hetk-maintenance-permission-note');
+const addRepairBtn = document.getElementById('hetk-add-repair');
+const repairList = document.getElementById('hetk-repair-list');
+const repairEmpty = document.getElementById('hetk-repair-empty');
+let repairDrafts = [];
+
 // Rasm elementlari
 const elementImageInput = document.getElementById('element-image-input');
 const elementImagePreview = document.getElementById('element-image-preview');
@@ -1650,6 +1660,7 @@ document.querySelector('.save-btn').addEventListener('click', function() {
     // Formani tozalab yangi kiritish rejimiga o'tkazamiz
     resetElementForm();
     editingElementId = null;
+    originalElementData = null;
     renderElementWorkZonePicker([]);
     document.getElementById('element-panel-title').innerText = "Добавить местоположение";
     deleteElementBtn.classList.add('hidden');
@@ -1726,6 +1737,136 @@ if (inputCustomPower) {
 function togglePrivateFieldsRequired(isRequired) {
     inputOwnerFirm.required = isRequired;
     inputOwnerName.required = isRequired;
+}
+
+function hetkCanEditMaintenance(){
+    const me=hetkCurrentAccount();
+    return !!(me && me.role === 'pto_engineer');
+}
+
+function hetkRepairId(){
+    return 'repair_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8);
+}
+
+function hetkPrintSimpleDate(value){
+    if(!value) return '—';
+    if(/^\d{4}-\d{2}-\d{2}$/.test(String(value))){
+        const parts=String(value).split('-');
+        return parts[2]+'.'+parts[1]+'.'+parts[0];
+    }
+    const date=new Date(value);
+    return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString('uz-UZ');
+}
+
+function hetkNormalizeRepair(item){
+    const row=item || {};
+    return {
+        id:String(row.id || hetkRepairId()),
+        type:row.type === 'capital' ? 'capital' : 'current',
+        date:String(row.date || ''),
+        work:String(row.work || ''),
+        note:String(row.note || ''),
+        createdAt:Number(row.createdAt || 0),
+        createdByUid:String(row.createdByUid || ''),
+        createdByName:String(row.createdByName || ''),
+        createdByRole:String(row.createdByRole || ''),
+        updatedAt:Number(row.updatedAt || 0),
+        updatedByUid:String(row.updatedByUid || ''),
+        updatedByName:String(row.updatedByName || ''),
+        updatedByRole:String(row.updatedByRole || '')
+    };
+}
+
+function hetkRenderRepairDrafts(){
+    if(!repairList || !repairEmpty || !maintenanceSection) return;
+    const canEdit=hetkCanEditMaintenance();
+    maintenanceSection.classList.toggle('is-readonly',!canEdit);
+    if(inputCommissionedDate) inputCommissionedDate.disabled=!canEdit;
+    if(maintenancePermissionNote){
+        maintenancePermissionNote.textContent=canEdit
+            ? 'Ishga tushirish va ta’mir tarixini kiritishingiz mumkin.'
+            : 'Ma’lumotni faqat PTO/texnik muhandis tahrirlaydi.';
+    }
+    repairList.innerHTML='';
+    repairEmpty.style.display=repairDrafts.length ? 'none' : 'block';
+    repairDrafts.forEach((repair,index)=>{
+        const card=document.createElement('div');
+        card.className='hetk-repair-card';
+        const metaName=repair.updatedByName || repair.createdByName || '';
+        const metaTime=repair.updatedAt || repair.createdAt;
+        card.innerHTML=`
+          ${canEdit ? `<button type="button" class="hetk-repair-remove" aria-label="Ta’mir yozuvini o‘chirish">×</button>` : ''}
+          <div class="hetk-repair-grid">
+            <select data-repair-field="type" ${canEdit ? '' : 'disabled'}>
+              <option value="current" ${repair.type==='current'?'selected':''}>Joriy ta’mir</option>
+              <option value="capital" ${repair.type==='capital'?'selected':''}>Kapital ta’mir</option>
+            </select>
+            <input type="date" data-repair-field="date" value="${hetkEscapeHtml(repair.date)}" ${canEdit ? '' : 'disabled'}>
+            <input type="text" data-repair-field="work" value="${hetkEscapeHtml(repair.work)}" placeholder="Bajarilgan ishlar" ${canEdit ? '' : 'disabled'}>
+          </div>
+          <textarea data-repair-field="note" placeholder="Qo‘shimcha izoh" ${canEdit ? '' : 'disabled'}>${hetkEscapeHtml(repair.note)}</textarea>
+          ${metaName || metaTime ? `<small class="hetk-repair-meta">${hetkEscapeHtml(metaName || 'Noma’lum')} ${metaTime ? '• '+hetkEscapeHtml(formatDate(metaTime)) : ''}</small>` : ''}`;
+        card.querySelectorAll('[data-repair-field]').forEach(input=>{
+            input.addEventListener('input',()=>{ repairDrafts[index][input.dataset.repairField]=input.value; });
+            input.addEventListener('change',()=>{ repairDrafts[index][input.dataset.repairField]=input.value; });
+        });
+        const remove=card.querySelector('.hetk-repair-remove');
+        if(remove) remove.addEventListener('click',()=>{repairDrafts.splice(index,1);hetkRenderRepairDrafts();});
+        repairList.appendChild(card);
+    });
+}
+
+function hetkLoadMaintenanceIntoForm(tp){
+    const source=tp || {};
+    if(inputCommissionedDate) inputCommissionedDate.value=String(source.commissionedDate || '');
+    const history=Array.isArray(source.maintenanceHistory)
+        ? source.maintenanceHistory
+        : Object.values(source.maintenanceHistory || {});
+    repairDrafts=history.filter(Boolean).map(hetkNormalizeRepair).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+    hetkRenderRepairDrafts();
+}
+
+function hetkMaintenanceDataForSave(){
+    if(!hetkCanEditMaintenance()){
+        return {
+            commissionedDate:String((originalElementData && originalElementData.commissionedDate) || ''),
+            maintenanceHistory:originalElementData && originalElementData.maintenanceHistory
+                ? JSON.parse(JSON.stringify(originalElementData.maintenanceHistory))
+                : []
+        };
+    }
+    const actor=hetkAuditActor();
+    const now=Date.now();
+    const originalSource=originalElementData && originalElementData.maintenanceHistory;
+    const originalRows=Array.isArray(originalSource) ? originalSource : Object.values(originalSource || {});
+    const originalById=new Map(originalRows.filter(Boolean).map(row=>[String(row.id || ''),hetkNormalizeRepair(row)]));
+    const clean=repairDrafts.map(hetkNormalizeRepair).filter(row=>row.date || row.work || row.note).map(row=>{
+        const old=originalById.get(row.id);
+        const changed=!old || ['type','date','work','note'].some(key=>String(old[key]||'')!==String(row[key]||''));
+        return {
+            ...row,
+            createdAt:row.createdAt || now,
+            createdByUid:row.createdByUid || actor.uid,
+            createdByName:row.createdByName || actor.name,
+            createdByRole:row.createdByRole || actor.role,
+            updatedAt:changed ? now : (row.updatedAt || row.createdAt || now),
+            updatedByUid:changed ? actor.uid : (row.updatedByUid || row.createdByUid || actor.uid),
+            updatedByName:changed ? actor.name : (row.updatedByName || row.createdByName || actor.name),
+            updatedByRole:changed ? actor.role : (row.updatedByRole || row.createdByRole || actor.role)
+        };
+    });
+    repairDrafts=clean;
+    return {commissionedDate:inputCommissionedDate ? inputCommissionedDate.value : '',maintenanceHistory:clean};
+}
+
+if(addRepairBtn){
+    addRepairBtn.addEventListener('click',()=>{
+        if(!hetkCanEditMaintenance()) return showToast('Ta’mir tarixini faqat PTO/texnik muhandis kiritadi.');
+        repairDrafts.push(hetkNormalizeRepair({type:'current',date:'',work:'',note:''}));
+        hetkRenderRepairDrafts();
+        const cards=repairList.querySelectorAll('.hetk-repair-card');
+        if(cards.length) cards[cards.length-1].scrollIntoView({behavior:'smooth',block:'nearest'});
+    });
 }
 
 // 5. Siz aytgan eng muhim mantiq: Koordinatalar qo'lda o'zgartirilganda dynamic adresni aniqlash
@@ -2258,6 +2399,14 @@ function hetkElementValue(tp,key){
     }
     if(key==='status') return hetkStatusText(tp.status);
     if(key==='isPrivate') return tp.isPrivate ? 'Xususiy balans' : 'ETK balansi';
+    if(key==='commissionedDate') return hetkPrintSimpleDate(tp.commissionedDate);
+    if(key==='maintenanceHistory'){
+        const rows=Array.isArray(tp.maintenanceHistory) ? tp.maintenanceHistory : Object.values(tp.maintenanceHistory || {});
+        const clean=rows.filter(Boolean).map(hetkNormalizeRepair);
+        if(!clean.length) return 'Ta’mir tarixi mavjud emas';
+        const last=clean.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date)))[0];
+        return `${clean.length} ta yozuv; oxirgisi: ${last.type==='capital'?'Kapital':'Joriy'} ta’mir — ${hetkPrintSimpleDate(last.date)}`;
+    }
     if(key==='images') return (Array.isArray(tp.images) ? tp.images.length : 0)+' ta rasm';
     if(key==='mainImageIndex'){
         const count=Array.isArray(tp.images) ? tp.images.length : 0;
@@ -2287,6 +2436,12 @@ function hetkElementCompareValue(tp,key){
         const images=Array.isArray(tp.images) ? tp.images : [];
         return JSON.stringify(images.map(img=>img && (img.fileId || img.telegramFileId || img.url || img.src || img.name || '')));
     }
+    if(key==='maintenanceHistory'){
+        const rows=Array.isArray(tp.maintenanceHistory) ? tp.maintenanceHistory : Object.values(tp.maintenanceHistory || {});
+        return JSON.stringify(rows.filter(Boolean).map(hetkNormalizeRepair).map(row=>({
+            id:row.id,type:row.type,date:row.date,work:row.work,note:row.note
+        })).sort((a,b)=>String(a.id).localeCompare(String(b.id))));
+    }
     if(key==='isPrivate') return tp.isPrivate===true ? '1' : '0';
     const value=tp[key];
     return value===undefined || value===null ? '' : String(value);
@@ -2301,7 +2456,8 @@ function hetkElementChanges(before,after){
         ['coordinates','Koordinata'],['isPrivate','Balans'],['ownerFirm','Korxona'],
         ['ownerName','Korxona vakili'],['ownerPhone','Korxona telefoni'],
         ['meterNumber','Hisoblagich'],['balanceMeterSerial','Balans hisoblagichi'],
-        ['concentratorSerial','Konsentrator'],['images','Rasmlar'],['mainImageIndex','Asosiy rasm']
+        ['concentratorSerial','Konsentrator'],['commissionedDate','Ishga tushirilgan sana'],
+        ['maintenanceHistory','Ta’mirlash tarixi'],['images','Rasmlar'],['mainImageIndex','Asosiy rasm']
     ];
     return fields.filter(([key])=>hetkElementCompareValue(before,key)!==hetkElementCompareValue(after,key)).map(([key,label])=>{
         let oldValue=hetkElementValue(before,key);
@@ -2961,6 +3117,8 @@ ${updatedBy}
 🛠 Biriktirilgan U/J:
 ${workZoneNamesText || "-"}
 
+${inputBalanceMeterSerial && inputBalanceMeterSerial.value.trim() ? `⚖️ Balans hisoblagichi: ${inputBalanceMeterSerial.value.trim()}\n` : ""}${inputConcentratorSerial && inputConcentratorSerial.value.trim() ? `📡 Konsentrator: ${inputConcentratorSerial.value.trim()}\n` : ""}
+
 ${inputBalanceToggle.checked ? `
 
 🏢 Korxona:
@@ -2997,6 +3155,8 @@ body:formData
 const sendResult =
 await sendResponse.json();
 if(!sendResult.ok){
+hideSaveLoader();
+isSaving = false;
 showToast("Telegramga rasm yuborishda xatolik!");
 return;
 }
@@ -3070,6 +3230,7 @@ const allImages = [
 ...existingImages,
 ...uploadedTelegramImages
 ];
+const maintenanceData = hetkMaintenanceDataForSave();
 
 let tpPageLink = "";
 
@@ -3082,6 +3243,7 @@ const mainCaption =
 ${inputBalanceToggle.checked ? '🔴 XUSUSIY' : '🔵 ETK'}
 📂 ${folderPath}${dualText}
 🛠 U/J: ${workZoneNamesText || "-"}
+${inputBalanceMeterSerial && inputBalanceMeterSerial.value.trim() ? `⚖️ Balans hisoblagichi: ${inputBalanceMeterSerial.value.trim()}\n` : ""}${inputConcentratorSerial && inputConcentratorSerial.value.trim() ? `📡 Konsentrator: ${inputConcentratorSerial.value.trim()}\n` : ""}
 📍 Manzil:
 ${inputElementAddress.value || "-"}
 🚗 Navigatsiya:
@@ -3163,6 +3325,8 @@ document.querySelector(
             concentratorSerial: inputConcentratorSerial
                 ? inputConcentratorSerial.value.trim()
                 : (originalElementData?.concentratorSerial || ""),
+            commissionedDate: maintenanceData.commissionedDate,
+            maintenanceHistory: maintenanceData.maintenanceHistory,
           mahallaLinks: selectedMahallas,
           primaryMahalla:
 selectedMahallas.find(x => x.isPrimary)?.name || "",
@@ -3230,6 +3394,8 @@ originalElementData.ownerFirm !== elementData.ownerFirm ||
 originalElementData.ownerName !== elementData.ownerName ||
 originalElementData.ownerPhone !== elementData.ownerPhone ||
 originalElementData.meterNumber !== elementData.meterNumber ||
+originalElementData.balanceMeterSerial !== elementData.balanceMeterSerial ||
+originalElementData.concentratorSerial !== elementData.concentratorSerial ||
 
 originalElementData.note !== elementData.note
 ){
@@ -3258,7 +3424,9 @@ JSON.stringify(hetkGetTPWorkZoneIds(originalElementData).slice().sort()) !== JSO
 originalElementData.ownerFirm !== elementData.ownerFirm ||
 originalElementData.ownerName !== elementData.ownerName ||
 originalElementData.ownerPhone !== elementData.ownerPhone ||
-originalElementData.meterNumber !== elementData.meterNumber
+originalElementData.meterNumber !== elementData.meterNumber ||
+originalElementData.balanceMeterSerial !== elementData.balanceMeterSerial ||
+originalElementData.concentratorSerial !== elementData.concentratorSerial
 ){
 needArchiveCaptionEdit = true;
 }
@@ -3963,12 +4131,16 @@ function resetElementForm() {
     balanceStatusText.innerText = "ЕТК";
     balanceStatusText.style.color = "#007AFF";
     privateOwnerInfoBlock.classList.add('hidden');
+    togglePrivateFieldsRequired(false);
     document.getElementById('element-selected-folders').value = "";
     hetkSetWorkZoneIds([]);
     if(inputWorkZonePicker) inputWorkZonePicker.innerHTML='<div class="hetk-element-uj-warning">U/J ma’lumotlari yuklanmoqda...</div>';
   selectedFiles=[];
   existingImages=[];
 uploadedTelegramImages=[];
+    if(inputCommissionedDate) inputCommissionedDate.value='';
+    repairDrafts=[];
+    hetkRenderRepairDrafts();
 
 document.getElementById('multi-image-preview').innerHTML='';
 
@@ -4039,6 +4211,7 @@ function renderElementsInTree(folderId, childContainer) {
                 const tpRow = document.createElement('div');
                 tpRow.style.cssText = "display:flex; align-items:center; padding: 6px 8px; margin: 2px 0; cursor:pointer; border-radius:4px; transition: background 0.2s;";
                 tpRow.className = "tp-tree-row-item"+(tp.deletionPending ? " hetk-deletion-pending" : "");
+                tpRow.dataset.tpId = tpId;
                 
                 // Balans turiga qarab ikonka rangi
                 const iconColor = tp.isPrivate ? "#ff4444" : "#007AFF";
@@ -4177,6 +4350,7 @@ if (tp.folders) {
                     if(actions){actions.style.opacity='1';actions.style.pointerEvents='auto';}
                     selectedTreeElementRow=tpRow;
                     currentTP=Object.assign({},tp,{id:tpId});
+                    if(typeof hetkSelectPrintElement === 'function') hetkSelectPrintElement(currentTP);
                 });
 
                 childContainer.appendChild(tpRow);
@@ -4209,6 +4383,7 @@ if (tp.folders) {
         inputLatitude.value = tp.lat;
         inputLongitude.value = tp.lng;
         inputElementAddress.value = tp.address || "";
+        hetkLoadMaintenanceIntoForm(tp);
 
 // Quvvatni yuklash
 const standardPowers = [
@@ -4324,6 +4499,7 @@ imageStatusText.style.color = "#34C759";
             inputMeterNumber.value = tp.meterNumber || "";
         } else {
             inputBalanceToggle.checked = false;
+            togglePrivateFieldsRequired(false);
         }
 
         // Guruh daraxtini dropdown ichida qayta chizish (Belgilangan fiderlarni galochka qilish uchun)
@@ -4707,6 +4883,7 @@ window.openSearchResult = function(item){
     selectedSearchItem = item;
     const id = item.dataset.id;
     currentTP = searchState.results.find(tp => tp.id === id) || null;
+    if(currentTP && typeof hetkSelectPrintElement === 'function') hetkSelectPrintElement(currentTP);
 };
 
 function updateSearchHighlight(){
@@ -4804,7 +4981,7 @@ function filterVisiblePoints(allTPs) {
             break;
 
         case "meter":
-            matched = normalizeSearch(tp.meter || "").includes(q);
+            matched = normalizeSearch([tp.meterNumber,tp.balanceMeterSerial,tp.concentratorSerial].filter(Boolean).join(" ")).includes(q);
             break;
 
         case "all":
@@ -4816,7 +4993,9 @@ normalizeSearch(tp.note || "").includes(q) ||
 normalizeSearch(tp.ownerFirm || "").includes(q) ||
 normalizeSearch(tp.ownerPhone || "").includes(q) ||
 normalizeSearch(tp.ownerName || "").includes(q) ||
-normalizeSearch(tp.meterNumber || "").includes(q);
+normalizeSearch(tp.meterNumber || "").includes(q) ||
+normalizeSearch(tp.balanceMeterSerial || "").includes(q) ||
+normalizeSearch(tp.concentratorSerial || "").includes(q);
             break;
     }
 
@@ -4903,6 +5082,7 @@ function refreshSearchResults(){
     resultsBox.innerHTML = "";
    updateSearchLayout();
    showFoldersTab();
+   if(typeof hetkRefreshPrintSelection === 'function') hetkRefreshPrintSelection();
     return;
 }
   
@@ -4962,7 +5142,7 @@ switch (currentSearchType) {
         break;
 
     case "meter":
-        matched = (tp.meterNumber || "").toLowerCase().includes(q);
+        matched = [tp.meterNumber,tp.balanceMeterSerial,tp.concentratorSerial].filter(Boolean).join(" ").toLowerCase().includes(q);
         break;
 
     case "all":
@@ -4975,7 +5155,9 @@ switch (currentSearchType) {
             (tp.ownerFirm || "").toLowerCase().includes(q) ||
             (tp.ownerPhone || "").toLowerCase().includes(q) ||
             (tp.ownerName || "").toLowerCase().includes(q) ||
-            (tp.meterNumber || "").toLowerCase().includes(q);
+            (tp.meterNumber || "").toLowerCase().includes(q) ||
+            (tp.balanceMeterSerial || "").toLowerCase().includes(q) ||
+            (tp.concentratorSerial || "").toLowerCase().includes(q);
         break;
 }
 
@@ -5083,6 +5265,7 @@ searchState.results = found;
 searchState.resultIds = new Set(
     found.map(tp => tp.tpId || tp.id)
 );
+      if(typeof hetkRefreshPrintSelection === 'function') hetkRefreshPrintSelection();
       
         const folderTree = buildFolderTree();
         attachResultsToTree(folderTree, searchState.results);
@@ -5465,6 +5648,7 @@ function hetkResetManagementPanelState(){
     selectedTreeElementRow=null;
     selectedSearchItem=null;
     currentTP=null;
+    if(typeof hetkResetPrintSelection === 'function') hetkResetPrintSelection();
 
     const resultsBox=document.getElementById('search-results');
     if(resultsBox){
@@ -6110,6 +6294,21 @@ border-radius:9px;
 </div>
 
 <div
+id="detail-maintenance-block"
+style="
+display:none;
+margin:14px 0;
+padding:12px;
+background:rgba(11,70,108,.20);
+border:1px solid rgba(33,150,243,.25);
+border-radius:9px;
+">
+<div style="font-weight:bold;margin-bottom:9px;color:#9fd4ff;">🛠 Ekspluatatsiya va ta’mirlash</div>
+<div id="detail-commissioned" style="margin-bottom:8px;"></div>
+<div id="detail-maintenance-list" style="display:flex;flex-direction:column;gap:7px;"></div>
+</div>
+
+<div
 id="detail-other-feeders"
 style="
 display:none;
@@ -6513,6 +6712,25 @@ detailBalanceMeterSerial.textContent=hasBalanceMeterSerial
 detailConcentratorSerial.textContent=hasConcentratorSerial
     ? "📡 Konsentrator: " + currentTP.concentratorSerial
     : "";
+
+// ===== ISHGA TUSHIRISH VA TA'MIRLASH TARIXI =====
+const detailMaintenanceBlock=document.getElementById('detail-maintenance-block');
+const detailCommissioned=document.getElementById('detail-commissioned');
+const detailMaintenanceList=document.getElementById('detail-maintenance-list');
+const maintenanceHistory=Array.isArray(currentTP.maintenanceHistory)
+    ? currentTP.maintenanceHistory.filter(Boolean)
+    : Object.values(currentTP.maintenanceHistory || {}).filter(Boolean);
+if(currentTP.commissionedDate || maintenanceHistory.length){
+    detailMaintenanceBlock.style.display='block';
+    detailCommissioned.textContent='📅 Ishga tushirilgan: '+(currentTP.commissionedDate ? hetkPrintSimpleDate(currentTP.commissionedDate) : '—');
+    detailMaintenanceList.innerHTML=maintenanceHistory
+        .map(hetkNormalizeRepair)
+        .sort((a,b)=>String(b.date).localeCompare(String(a.date)))
+        .map(row=>`<div style="padding:8px;border-radius:7px;background:rgba(255,255,255,.05);font-size:13px;line-height:1.45;"><b>${row.type==='capital'?'Kapital ta’mir':'Joriy ta’mir'}</b> • ${hetkEscapeHtml(hetkPrintSimpleDate(row.date))}<br>${hetkEscapeHtml(row.work || 'Bajarilgan ish ko‘rsatilmagan')}${row.note?`<br><span style="color:#9fb7c8;">${hetkEscapeHtml(row.note)}</span>`:''}</div>`).join('');
+}else{
+    detailMaintenanceBlock.style.display='none';
+    detailMaintenanceList.innerHTML='';
+}
 
  
 // ===== BOSHQA MANBALARI =====
