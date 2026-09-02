@@ -312,17 +312,256 @@ function downloadBlob(blob,fileName){
     setTimeout(()=>URL.revokeObjectURL(url),2000);
 }
 
-function wordExport(html){
-    const style='<style>body{font-family:Arial;color:#0b2851}.hetk-document-page{page-break-after:always}.hetk-doc-brand{border-bottom:4px solid #0d3c7c}.hetk-doc-logo{font-size:36px;font-weight:bold}.hetk-doc-title,.hetk-doc-report-title{text-align:center}.hetk-doc-table{width:100%;border-collapse:collapse}.hetk-doc-table td,.hetk-doc-table th{border:1px solid #567;padding:6px}.hetk-doc-table th{background:#0d3c7c;color:#fff}.hetk-passport-fact{border:1px solid #9cb5cf;padding:5px;margin:3px}.hetk-passport-main-image img,.hetk-doc-photo-card img{max-width:100%}</style>';
-    const doc='<!doctype html><html><head><meta charset="UTF-8">'+style+'</head><body>'+html+'</body></html>';
-    downloadBlob(new Blob(['\ufeff',doc],{type:'application/msword'}),fileBase()+'.doc');
+function wordValue(value){
+    return String(value == null || value==='' ? '—' : value);
+}
+
+function dataUrlBytes(dataUrl){
+    const encoded=String(dataUrl || '').split(',')[1] || '';
+    const raw=atob(encoded);const bytes=new Uint8Array(raw.length);
+    for(let i=0;i<raw.length;i++) bytes[i]=raw.charCodeAt(i);
+    return bytes;
+}
+
+function normalizeWordImage(dataUrl,maxWidth,maxHeight){
+    return new Promise(resolve=>{
+        if(!dataUrl) return resolve(null);
+        const image=new Image();
+        image.onload=()=>{
+            try{
+                const scale=Math.min(1,maxWidth/image.naturalWidth,maxHeight/image.naturalHeight);
+                const width=Math.max(1,Math.round(image.naturalWidth*scale));
+                const height=Math.max(1,Math.round(image.naturalHeight*scale));
+                const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
+                const context=canvas.getContext('2d');context.fillStyle='#ffffff';context.fillRect(0,0,width,height);
+                context.drawImage(image,0,0,width,height);
+                resolve({type:'jpg',data:dataUrlBytes(canvas.toDataURL('image/jpeg',.9)),width,height});
+            }catch(error){console.warn('WORD IMAGE CONVERT ERROR:',error);resolve(null);}
+        };
+        image.onerror=()=>resolve(null);image.src=dataUrl;
+    });
+}
+
+function wordBorders(d,color){
+    const border={style:d.BorderStyle.SINGLE,size:4,color:color || '9CB5CF'};
+    return {top:border,bottom:border,left:border,right:border,insideHorizontal:border,insideVertical:border};
+}
+
+function wordParagraph(d,text,settings){
+    settings=settings || {};
+    const lines=wordValue(text).split(/\r?\n/);const children=[];
+    lines.forEach((line,index)=>{
+        if(index) children.push(new d.TextRun({break:1}));
+        children.push(new d.TextRun({text:line,bold:!!settings.bold,color:settings.color || '0B2851',size:settings.size || 20,font:'Arial'}));
+    });
+    return new d.Paragraph({
+        children,
+        alignment:settings.alignment || d.AlignmentType.LEFT,
+        spacing:{before:settings.before || 0,after:settings.after == null ? 80 : settings.after,line:276},
+        keepNext:!!settings.keepNext,
+        pageBreakBefore:!!settings.pageBreakBefore
+    });
+}
+
+function wordCell(d,text,width,settings){
+    settings=settings || {};
+    return new d.TableCell({
+        width:{size:width,type:d.WidthType.DXA},
+        verticalAlign:d.VerticalAlign.CENTER,
+        margins:{top:100,bottom:100,left:120,right:120},
+        shading:settings.fill ? {fill:settings.fill,color:'auto'} : undefined,
+        children:[wordParagraph(d,text,{
+            bold:settings.bold,color:settings.color,size:settings.size,
+            alignment:settings.alignment || d.AlignmentType.LEFT,after:0
+        })]
+    });
+}
+
+function wordKeyValueTable(d,rows,tableWidth){
+    const labelWidth=Math.round(tableWidth*.34);const valueWidth=tableWidth-labelWidth;
+    return new d.Table({
+        width:{size:tableWidth,type:d.WidthType.DXA},columnWidths:[labelWidth,valueWidth],
+        layout:d.TableLayoutType.FIXED,borders:wordBorders(d),
+        rows:rows.map(row=>new d.TableRow({cantSplit:true,children:[
+            wordCell(d,row[0],labelWidth,{bold:true,fill:'EAF2FB'}),wordCell(d,row[1],valueWidth,{})
+        ]}))
+    });
+}
+
+async function wordReportTable(d,items,fields,tableWidth,includeMainImage){
+    const numberWidth=620;const imageWidth=includeMainImage ? 1800 : 0;
+    const base=Math.floor((tableWidth-numberWidth-imageWidth)/Math.max(1,fields.length));
+    const widths=[numberWidth];
+    for(let i=0;i<fields.length;i++) widths.push(i===fields.length-1 ? tableWidth-widths.reduce((a,b)=>a+b,0) : base);
+    if(includeMainImage){widths[widths.length-1]-=imageWidth;widths.push(imageWidth);}
+    const header=['№'].concat(fields.map(key=>PRINT_FIELDS[key].label)).concat(includeMainImage?['Asosiy rasm']:[]);
+    const rows=[new d.TableRow({tableHeader:true,cantSplit:true,children:header.map((label,index)=>wordCell(d,label,widths[index],{
+        bold:true,fill:'0D3C7C',color:'FFFFFF',size:18,alignment:d.AlignmentType.CENTER
+    }))})];
+    for(let index=0;index<items.length;index++){
+        const tp=items[index];
+        const values=[index+1].concat(fields.map(key=>PRINT_FIELDS[key].value(tp)));
+        const cells=values.map((value,column)=>wordCell(d,value,widths[column],{
+            size:17,alignment:column===0 ? d.AlignmentType.CENTER : d.AlignmentType.LEFT
+        }));
+        if(includeMainImage){
+            const images=Array.isArray(tp.images) ? tp.images : Object.values(tp.images || {});
+            const mainRecord=images[Number(tp.mainImageIndex)||0] || images[0];
+            const picture=await wordImageParagraph(d,mainRecord,95,68,false);
+            cells.push(new d.TableCell({
+                width:{size:imageWidth,type:d.WidthType.DXA},verticalAlign:d.VerticalAlign.CENTER,
+                margins:{top:70,bottom:70,left:70,right:70},
+                children:[picture || wordParagraph(d,'—',{alignment:d.AlignmentType.CENTER,after:0})]
+            }));
+        }
+        rows.push(new d.TableRow({cantSplit:true,children:cells}));
+    }
+    return new d.Table({
+        width:{size:tableWidth,type:d.WidthType.DXA},columnWidths:widths,
+        layout:d.TableLayoutType.FIXED,borders:wordBorders(d,'7893B1'),rows
+    });
+}
+
+async function wordImageParagraph(d,imageRecord,maxWidth,maxHeight,pageBreakBefore){
+    const data=await fetchPrintImage(imageRecord);const converted=await normalizeWordImage(data,maxWidth,maxHeight);
+    if(!converted) return null;
+    return new d.Paragraph({
+        pageBreakBefore:!!pageBreakBefore,alignment:d.AlignmentType.CENTER,spacing:{before:100,after:140},
+        children:[new d.ImageRun({type:converted.type,data:converted.data,transformation:{width:converted.width,height:converted.height}})]
+    });
+}
+
+async function wordExport(opts){
+    if(typeof docx==='undefined'){
+        showToast('Word moduli yuklanmadi. Sahifani yangilab qayta urinib ko‘ring.');
+        return false;
+    }
+    const d=docx;const isSingle=printSelection.type==='element' && printSelection.items.length===1;
+    const landscape=!isSingle && opts.paper==='landscape';
+    const tableWidth=landscape ? 15360 : 10440;const children=[];
+    children.push(wordParagraph(d,'HETK',{bold:true,size:40,color:'0D3C7C',after:40,keepNext:true}));
+    children.push(wordParagraph(d,'HUDUDIY ELEKTR TARMOQLARI KORXONASI',{bold:true,size:20,color:'0D3C7C',after:160,keepNext:true}));
+
+    if(isSingle){
+        const tp=printSelection.items[0];const primaryId=primaryFolderId(tp);
+        children.push(wordParagraph(d,'ELEMENT PASPORTI',{bold:true,size:34,alignment:d.AlignmentType.CENTER,after:120,keepNext:true}));
+        children.push(wordParagraph(d,tp.name || 'ELEMENT',{bold:true,size:30,alignment:d.AlignmentType.CENTER,after:40,keepNext:true}));
+        children.push(wordParagraph(d,primaryFolderName(tp),{bold:true,size:24,color:'1479D3',alignment:d.AlignmentType.CENTER,after:140}));
+        children.push(wordParagraph(d,primaryId ? getFolderPath(primaryId) : '—',{size:18,color:'496781',alignment:d.AlignmentType.CENTER,after:160}));
+        if(opts.images!=='none'){
+            const images=Array.isArray(tp.images) ? tp.images : Object.values(tp.images || {});
+            const mainRecord=images[Number(tp.mainImageIndex)||0] || images[0];
+            const picture=await wordImageParagraph(d,mainRecord,520,330,false);if(picture) children.push(picture);
+        }
+        const currentRepair=lastRepair(tp,'current');const capitalRepair=lastRepair(tp,'capital');
+        const mahalla=tp.primaryMahalla || (tp.mahallaLinks||[]).map(x=>x.name).filter(Boolean).join(', ') || '—';
+        const facts=[
+            ['Quvvati',tp.power ? tp.power+' kVA' : '—'],
+            ['Balans',tp.isPrivate ? 'Xususiy'+(tp.ownerFirm?' — '+tp.ownerFirm:'') : 'ETK'],
+            ['Texnik holati',statusLabel(tp.status)],['Mahalla',mahalla],
+            ['U/J',hetkGetTPWorkZoneNames(tp).join(', ') || tp.workZoneName || '—'],['Manzil',tp.address || '—'],
+            ['Koordinata',tp.lat && tp.lng ? tp.lat+'; '+tp.lng : '—'],
+            ['Balans hisoblagich',tp.balanceMeterSerial || tp.balanceMeterNumber || '—'],
+            ['Konsentrator',tp.concentratorSerial || tp.concentratorNumber || '—'],
+            ['Ishga tushirilgan',printDate(tp.commissionedDate,false)],
+            ['Oxirgi joriy ta’mir',currentRepair ? printDate(currentRepair.date,false) : '—'],
+            ['Oxirgi kapital ta’mir',capitalRepair ? printDate(capitalRepair.date,false) : '—'],
+            ['Izoh',tp.note || '—'],['Yaratilgan sana',printDate(tp.createdAt)],['Oxirgi tahrir',printDate(tp.updatedAt)]
+        ];
+        children.push(wordKeyValueTable(d,facts,tableWidth));
+        const history=maintenanceRows(tp);
+        if(history.length){
+            children.push(wordParagraph(d,'TA’MIRLASH TARIXI',{bold:true,size:26,alignment:d.AlignmentType.CENTER,before:220,after:100,keepNext:true}));
+            const repairFields=[
+                {label:'Ta’mir turi',value:row=>row.type==='capital'?'Kapital ta’mir':'Joriy ta’mir'},
+                {label:'Sana',value:row=>printDate(row.date,false)},
+                {label:'Bajarilgan ishlar',value:row=>row.work || '—'},
+                {label:'Izoh',value:row=>row.note || '—'},
+                {label:'Kiritgan xodim',value:row=>row.updatedByName || row.createdByName || '—'}
+            ];
+            const repairKeys=repairFields.map((_,index)=>'repair'+index);const saved={};
+            repairKeys.forEach((key,index)=>{saved[key]=PRINT_FIELDS[key];PRINT_FIELDS[key]=repairFields[index];});
+            children.push(await wordReportTable(d,history,repairKeys,tableWidth,false));
+            repairKeys.forEach(key=>{if(saved[key]) PRINT_FIELDS[key]=saved[key];else delete PRINT_FIELDS[key];});
+        }
+        if(opts.images==='all'){
+            const images=Array.isArray(tp.images) ? tp.images : Object.values(tp.images || {});
+            for(let i=0;i<images.length;i++){
+                const picture=await wordImageParagraph(d,images[i],520,650,i===0);if(picture) children.push(picture);
+            }
+        }
+    }else{
+        const fields=(opts.fields.length ? opts.fields : ['feeder','name']).filter(key=>PRINT_FIELDS[key]);
+        children.push(wordParagraph(d,'ELEMENTLAR RO‘YXATI',{bold:true,size:30,alignment:d.AlignmentType.CENTER,after:80,keepNext:true}));
+        children.push(wordParagraph(d,'Manba: '+(printSelection.name || '—')+'  •  Jami: '+printSelection.items.length+' ta element',{size:19,alignment:d.AlignmentType.CENTER,after:140,keepNext:true}));
+        children.push(await wordReportTable(d,printSelection.items,fields,tableWidth,opts.images==='main'));
+        if(opts.images==='all'){
+            for(const tp of printSelection.items){
+                const images=Array.isArray(tp.images) ? tp.images : Object.values(tp.images || {});
+                if(!images.length) continue;
+                children.push(wordParagraph(d,(tp.name || 'Element')+' — RASMLAR',{
+                    bold:true,size:28,alignment:d.AlignmentType.CENTER,pageBreakBefore:true,after:120
+                }));
+                for(const image of images){
+                    const picture=await wordImageParagraph(d,image,landscape?720:520,520,false);if(picture) children.push(picture);
+                }
+            }
+        }
+    }
+    children.push(wordParagraph(d,'Fayl shakllantirildi: '+printDate(Date.now())+'     Shakllantirdi: '+actorName(),{
+        size:16,color:'496781',alignment:d.AlignmentType.CENTER,before:180,after:0
+    }));
+    const documentFile=new d.Document({
+        creator:actorName(),title:printSelection.name || 'HETK elementlari',subject:'HETK elementlar ma’lumoti',
+        description:'HETK monitoring tizimida shakllantirilgan hujjat',
+        styles:{default:{document:{run:{font:'Arial',size:20,color:'0B2851'},paragraph:{spacing:{after:80,line:276}}}}},
+        sections:[{properties:{page:{
+            size:{width:11906,height:16838,orientation:landscape ? d.PageOrientation.LANDSCAPE : d.PageOrientation.PORTRAIT},
+            margin:{top:720,right:720,bottom:720,left:720,header:360,footer:360,gutter:0}
+        }},children}]
+    });
+    const blob=await d.Packer.toBlob(documentFile);
+    downloadBlob(blob,fileBase()+'.docx');
+    return true;
 }
 
 function excelExport(opts){
+    if(typeof XLSX==='undefined'){
+        showToast('Excel moduli yuklanmadi. Internetni tekshirib qayta urinib ko‘ring.');
+        return false;
+    }
     const fields=(opts.fields.length ? opts.fields : ['feeder','name']).filter(key=>PRINT_FIELDS[key]);
-    const rows=printSelection.items.map((tp,index)=>'<tr><td>'+(index+1)+'</td>'+fields.map(key=>'<td>'+hetkEscapeHtml(PRINT_FIELDS[key].value(tp))+'</td>').join('')+'</tr>').join('');
-    const html='<!doctype html><html><head><meta charset="UTF-8"></head><body><h2>'+hetkEscapeHtml(printSelection.name)+'</h2><p>Shakllantirdi: '+hetkEscapeHtml(actorName())+' • '+hetkEscapeHtml(printDate(Date.now()))+'</p><table border="1"><tr><th>№</th>'+fields.map(key=>'<th>'+hetkEscapeHtml(PRINT_FIELDS[key].label)+'</th>').join('')+'</tr>'+rows+'</table></body></html>';
-    downloadBlob(new Blob(['\ufeff',html],{type:'application/vnd.ms-excel'}),fileBase()+'.xls');
+    const header=['№'].concat(fields.map(key=>PRINT_FIELDS[key].label));
+    const rows=printSelection.items.map((tp,index)=>[index+1].concat(fields.map(key=>PRINT_FIELDS[key].value(tp))));
+    const generated='Shakllantirdi: '+actorName()+' • '+printDate(Date.now());
+    const data=[
+        [printSelection.name || 'HETK elementlari'],
+        [generated],
+        ['Jami: '+printSelection.items.length+' ta element'],
+        [],
+        header
+    ].concat(rows);
+    const worksheet=XLSX.utils.aoa_to_sheet(data);
+    const lastColumn=Math.max(0,header.length-1);
+    worksheet['!merges']=[
+        {s:{r:0,c:0},e:{r:0,c:lastColumn}},
+        {s:{r:1,c:0},e:{r:1,c:lastColumn}},
+        {s:{r:2,c:0},e:{r:2,c:lastColumn}}
+    ];
+    worksheet['!cols']=header.map((label,index)=>({wch:index===0 ? 7 : Math.min(42,Math.max(14,String(label).length+4))}));
+    if(rows.length){
+        worksheet['!autofilter']={ref:XLSX.utils.encode_range({s:{r:4,c:0},e:{r:4+rows.length,c:lastColumn}})};
+    }
+    const workbook=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook,worksheet,'Elementlar');
+    workbook.Props={
+        Title:printSelection.name || 'HETK elementlari',
+        Subject:'HETK elementlar ro‘yxati',
+        Author:actorName(),
+        CreatedDate:new Date()
+    };
+    XLSX.writeFile(workbook,fileBase()+'.xlsx',{compression:true});
+    return true;
 }
 
 async function showPreview(){
@@ -341,9 +580,15 @@ async function generateFile(){
     const opts=options();const button=document.getElementById('hetk-print-generate');
     if(button){button.disabled=true;button.textContent='Tayyorlanmoqda…';}
     try{
-        if(opts.format==='excel'){excelExport(opts);showToast('Excel fayli tayyorlandi.');return;}
+        if(opts.format==='excel'){
+            if(excelExport(opts)) showToast('Excel (.xlsx) fayli tayyorlandi.');
+            return;
+        }
+        if(opts.format==='word'){
+            if(await wordExport(opts)) showToast('Word (.docx) fayli tayyorlandi.');
+            return;
+        }
         const html=await buildDocument(opts);
-        if(opts.format==='word'){wordExport(html);showToast('Word fayli tayyorlandi.');return;}
         const previewContent=document.getElementById('hetk-print-preview-content');
         const previewOverlay=document.getElementById('hetk-print-preview-overlay');
         previewContent.innerHTML=html;
@@ -351,14 +596,34 @@ async function generateFile(){
         if(typeof html2pdf==='undefined'){
             previewOverlay.hidden=false;showToast('PDF moduli yuklanmadi. Printer oynasidan “PDF sifatida saqlash”ni tanlang.');setTimeout(()=>window.print(),250);return;
         }
-        const host=document.createElement('div');host.style.cssText='position:fixed;left:-20000px;top:0;background:#fff;z-index:-1;';host.innerHTML=html;document.body.appendChild(host);
-        await html2pdf().set({
-            margin:0,filename:fileBase()+'.pdf',image:{type:'jpeg',quality:.96},
-            html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},
-            jsPDF:{unit:'mm',format:'a4',orientation:opts.paper==='landscape'?'landscape':'portrait'},
-            pagebreak:{mode:['css','legacy'],before:'.hetk-document-page + .hetk-document-page'}
-        }).from(host).save();
-        host.remove();showToast('PDF fayli tayyorlandi.');
+        const host=document.createElement('div');
+        host.className='hetk-pdf-export-host';
+        host.style.cssText='position:absolute;left:0;top:0;width:'+(opts.paper==='landscape'?'297mm':'210mm')+';background:#fff;z-index:1;pointer-events:none;';
+        host.innerHTML=html;
+        document.body.appendChild(host);
+        try{
+            await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+            const pendingImages=Array.from(host.querySelectorAll('img')).filter(img=>!img.complete).map(img=>new Promise(resolve=>{
+                img.addEventListener('load',resolve,{once:true});
+                img.addEventListener('error',resolve,{once:true});
+                setTimeout(resolve,5000);
+            }));
+            if(pendingImages.length) await Promise.all(pendingImages);
+            const exportWidth=Math.max(host.scrollWidth,Math.round((opts.paper==='landscape'?297:210)*96/25.4));
+            const exportHeight=Math.max(host.scrollHeight,Math.round((opts.paper==='landscape'?210:297)*96/25.4));
+            await html2pdf().set({
+                margin:0,filename:fileBase()+'.pdf',image:{type:'jpeg',quality:.97},
+                html2canvas:{
+                    scale:2,useCORS:true,allowTaint:false,backgroundColor:'#ffffff',
+                    scrollX:0,scrollY:0,windowWidth:exportWidth,windowHeight:exportHeight
+                },
+                jsPDF:{unit:'mm',format:'a4',orientation:opts.paper==='landscape'?'landscape':'portrait'},
+                pagebreak:{mode:['css','legacy'],before:'.hetk-document-page + .hetk-document-page'}
+            }).from(host).save();
+            showToast('PDF fayli tayyorlandi.');
+        }finally{
+            host.remove();
+        }
     }catch(error){console.error('PRINT GENERATE ERROR:',error);showToast('Faylni tayyorlashda xatolik yuz berdi.');}
     finally{if(button){button.disabled=false;button.textContent='Faylni tayyorlash';}}
 }
