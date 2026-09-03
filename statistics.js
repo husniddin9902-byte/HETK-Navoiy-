@@ -16,6 +16,16 @@
   function db(){return firebase.database();}
   function me(){return window.HETKAuth&&window.HETKAuth.currentUser;}
   function number(value){return Number(value)||0;}
+  function powerNumber(value){
+    if(typeof value==='number')return Number.isFinite(value)&&value>0?value:0;
+    const normalized=String(value==null?'':value).replace(/\s+/g,'').replace(',','.');
+    const match=normalized.match(/\d+(?:\.\d+)?/);
+    if(!match)return 0;
+    const parsed=Number(match[0]);return Number.isFinite(parsed)&&parsed>0?parsed:0;
+  }
+  function formatPower(value){
+    return number(value).toLocaleString('uz-UZ',{maximumFractionDigits:2})+' kVA';
+  }
   function dateKey(date){
     const d=date||new Date();
     return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
@@ -281,7 +291,7 @@
     const privatePct=actual.total?Math.round(actual.privateCount/actual.total*100):0;
     pane.innerHTML=`<div class="hetk-admin-stats">
       <div class="hetk-admin-stats-head"><div><h3><i class="fas fa-chart-line"></i> Bosh administrator statistikasi</h3><p>Elementlar, U/J lar va tizimdan foydalanish ko‘rsatkichlari.</p></div><div class="hetk-stat-filters"><select id="hetk-stat-year">${yearOptions()}</select><select id="hetk-stat-month">${monthOptions()}</select><select id="hetk-stat-folder">${folderOptions()}</select></div></div>
-      <div class="hetk-admin-cards"><div><span>Jami element</span><b>${actual.total}</b><small>Hozirgi aniq son</small></div><div><span>Jami hodim</span><b>${actual.users}</b><small>${actual.activeUsers} ta faol</small></div><div><span>Onlayn</span><b>${actual.online}</b><small>So‘nggi 2,5 daqiqa</small></div><div><span>Faol vaqt</span><b>${esc(formatDuration(period.seconds))}</b><small>${period.users} hodim · ${period.visits} kirish</small></div></div>
+      <div class="hetk-admin-cards"><div><span>Jami element</span><b>${actual.total}</b><small>Hozirgi aniq son</small></div><div class="power"><span>TP/KTP umumiy quvvati</span><b>${esc(formatPower(actual.totalPower))}</b><small>${actual.powerMissing?actual.powerMissing+' ta elementda quvvat kiritilmagan':'Barcha element quvvati kiritilgan'}</small></div><div><span>Jami hodim</span><b>${actual.users}</b><small>${actual.activeUsers} ta faol</small></div><div><span>Onlayn</span><b>${actual.online}</b><small>So‘nggi 2,5 daqiqa</small></div><div><span>Faol vaqt</span><b>${esc(formatDuration(period.seconds))}</b><small>${period.users} hodim · ${period.visits} kirish</small></div></div>
       <div class="hetk-chart-grid">
         <section class="hetk-chart-card"><h4>Balans tarkibi</h4><div class="hetk-donut-wrap"><div class="hetk-donut" style="--private:${privatePct*3.6}deg"><b>${actual.total}</b><span>element</span></div><div class="hetk-donut-legend"><span><i class="etk"></i>ETK <b>${actual.etk}</b></span><span><i class="private"></i>Xususiy <b>${actual.privateCount}</b></span></div></div></section>
         <section class="hetk-chart-card wide"><h4>${esc(state.selectedYear)}-${esc(state.selectedMonth)} faolligi</h4><div class="hetk-activity-chart">${activityBars(period.days)}</div></section>
@@ -295,8 +305,10 @@
   function adminActualSummary(){
     const folderId=state.adminFolderId,points=Object.keys(state.tps).map(function(id){return Object.assign({id:id},state.tps[id]||{});}).filter(function(tp){return folderId==='root'||pointFolderIds(tp).some(function(id){return isInside(id,folderId);});});
     const privateCount=points.filter(function(tp){return tp.isPrivate===true;}).length;
+    const totalPower=points.reduce(function(total,tp){return total+powerNumber(tp.power);},0);
+    const powerMissing=points.filter(function(tp){return powerNumber(tp.power)===0;}).length;
     const users=Object.keys(state.users).filter(function(uid){return folderId==='root'||userInAdminFolder(state.users[uid]||{},folderId);});
-    return {total:points.length,etk:points.length-privateCount,privateCount:privateCount,points:points,users:users.length,activeUsers:users.filter(function(uid){return (state.users[uid]||{}).active!==false;}).length,online:users.filter(uidOnline).length};
+    return {total:points.length,etk:points.length-privateCount,privateCount:privateCount,totalPower:totalPower,powerMissing:powerMissing,points:points,users:users.length,activeUsers:users.filter(function(uid){return (state.users[uid]||{}).active!==false;}).length,online:users.filter(uidOnline).length};
   }
   function userInAdminFolder(user,folderId){
     let roots=userFolderIds(user);if(user.workZoneId&&state.zones[user.workZoneId])roots=roots.concat(zoneFolderIds(state.zones[user.workZoneId]));
