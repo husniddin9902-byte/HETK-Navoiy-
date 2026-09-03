@@ -6,7 +6,7 @@
     activeFolderId:'root',refs:[],started:false,currentUid:'',presenceRef:null,
     connectedRef:null,heartbeat:null,lastActivityAt:Date.now(),usageDay:'',
     selectedYear:String(new Date().getFullYear()),selectedMonth:String(new Date().getMonth()+1).padStart(2,'0'),
-    adminFolderId:'root',selectedTeamUid:''
+    adminFolderId:'root',adminFolderExpanded:{},adminFolderSearch:'',adminFolderDocumentBound:false,selectedTeamUid:''
   };
   const ONLINE_LIMIT_MS=150000;
   const ACTIVE_LIMIT_MS=5*60*1000;
@@ -235,9 +235,60 @@
     const years=new Set([String(new Date().getFullYear())]);Object.keys(state.usage).forEach(function(key){if(/^\d{4}-/.test(key))years.add(key.slice(0,4));});
     return Array.from(years).sort().reverse().map(function(y){return `<option value="${y}" ${state.selectedYear===y?'selected':''}>${y}</option>`;}).join('');
   }
-  function folderOptions(){
-    const items=Object.keys(state.folders).map(function(id){return {id:id,path:folderPath(id)};}).sort(function(a,b){return a.path.localeCompare(b.path);});
-    return '<option value="root">Barcha hududlar</option>'+items.map(function(item){return `<option value="${esc(item.id)}" ${state.adminFolderId===item.id?'selected':''}>${esc(item.path)}</option>`;}).join('');
+  function adminFolderLabel(id){
+    if(id==='root')return 'Barcha hududlar';
+    return folderPath(id)||folderName(id);
+  }
+  function adminFolderChildren(){
+    const children={root:[]};
+    Object.keys(state.folders).forEach(function(id){
+      const folder=state.folders[id]||{};
+      let parent=folder.parentId||'root';
+      if(parent===id||parent!=='root'&&!state.folders[parent])parent='root';
+      if(!children[parent])children[parent]=[];
+      children[parent].push(id);
+      if(!children[id])children[id]=[];
+    });
+    Object.keys(children).forEach(function(parent){children[parent].sort(function(a,b){return folderName(a).localeCompare(folderName(b));});});
+    return children;
+  }
+  function adminFolderTreeHtml(query){
+    const children=adminFolderChildren(),needle=String(query||'').trim().toLocaleLowerCase('uz'),memo={};
+    function branchMatches(id){
+      if(!needle)return true;
+      if(Object.prototype.hasOwnProperty.call(memo,id))return memo[id];
+      memo[id]=false;
+      const own=(folderName(id)+' '+folderPath(id)).toLocaleLowerCase('uz').includes(needle);
+      memo[id]=own||(children[id]||[]).some(branchMatches);
+      return memo[id];
+    }
+    function node(id,depth,trail){
+      if(trail.has(id))return '';
+      if(!branchMatches(id))return '';
+      const nextTrail=new Set(trail);nextTrail.add(id);
+      const childIds=children[id]||[],hasChildren=childIds.length>0;
+      const expanded=!!needle||state.adminFolderExpanded[id]===true;
+      return `<div class="hetk-stat-folder-branch">
+        <div class="hetk-stat-folder-row ${state.adminFolderId===id?'selected':''}" style="--depth:${depth}">
+          ${hasChildren?`<button class="hetk-stat-folder-toggle" type="button" data-stat-folder-toggle="${esc(id)}" aria-label="${expanded?'Yig‘ish':'Ochish'}">${expanded?'−':'+'}</button>`:'<span class="hetk-stat-folder-toggle-spacer"></span>'}
+          <button class="hetk-stat-folder-name" type="button" data-stat-folder-select="${esc(id)}" title="${esc(folderPath(id))}"><i class="fas ${expanded&&hasChildren?'fa-folder-open':'fa-folder'}"></i><span>${esc(folderName(id))}</span>${hasChildren?`<small>${childIds.length}</small>`:''}</button>
+        </div>
+        ${hasChildren&&expanded?`<div class="hetk-stat-folder-children">${childIds.map(function(childId){return node(childId,depth+1,nextTrail);}).join('')}</div>`:''}
+      </div>`;
+    }
+    const roots=(children.root||[]).filter(branchMatches);
+    const rootSelected=state.adminFolderId==='root';
+    const html=`<div class="hetk-stat-folder-row root ${rootSelected?'selected':''}" style="--depth:0"><span class="hetk-stat-folder-toggle-spacer"></span><button class="hetk-stat-folder-name" type="button" data-stat-folder-select="root"><i class="fas fa-globe-asia"></i><span>Barcha hududlar</span><small>${Object.keys(state.folders).length}</small></button></div>`+roots.map(function(id){return node(id,0,new Set());}).join('');
+    return roots.length||!needle?html:`<div class="hetk-stat-folder-empty"><i class="fas fa-search"></i> Papka topilmadi</div>`;
+  }
+  function adminFolderPickerHtml(){
+    return `<div class="hetk-stat-folder-picker">
+      <button id="hetk-stat-folder-trigger" class="hetk-stat-folder-trigger" type="button" aria-expanded="false"><i class="fas fa-sitemap"></i><span>${esc(adminFolderLabel(state.adminFolderId))}</span><i class="fas fa-chevron-down"></i></button>
+      <div id="hetk-stat-folder-menu" class="hetk-stat-folder-menu" hidden>
+        <label class="hetk-stat-folder-search"><i class="fas fa-search"></i><input id="hetk-stat-folder-search" type="search" placeholder="Papka nomini qidiring..." autocomplete="off" value="${esc(state.adminFolderSearch)}"></label>
+        <div id="hetk-stat-folder-tree" class="hetk-stat-folder-tree">${adminFolderTreeHtml(state.adminFolderSearch)}</div>
+      </div>
+    </div>`;
   }
   function periodUsage(){
     const prefix=state.selectedYear+'-'+state.selectedMonth+'-',days=[],userSet=new Set();let seconds=0,visits=0;
@@ -290,7 +341,7 @@
     const actual=adminActualSummary(),period=periodUsage(),created=periodCreatedPoints();
     const privatePct=actual.total?Math.round(actual.privateCount/actual.total*100):0;
     pane.innerHTML=`<div class="hetk-admin-stats">
-      <div class="hetk-admin-stats-head"><div><h3><i class="fas fa-chart-line"></i> Bosh administrator statistikasi</h3><p>Elementlar, U/J lar va tizimdan foydalanish ko‘rsatkichlari.</p></div><div class="hetk-stat-filters"><select id="hetk-stat-year">${yearOptions()}</select><select id="hetk-stat-month">${monthOptions()}</select><select id="hetk-stat-folder">${folderOptions()}</select></div></div>
+      <div class="hetk-admin-stats-head"><div><h3><i class="fas fa-chart-line"></i> Bosh administrator statistikasi</h3><p>Elementlar, U/J lar va tizimdan foydalanish ko‘rsatkichlari.</p></div><div class="hetk-stat-filters"><select id="hetk-stat-year">${yearOptions()}</select><select id="hetk-stat-month">${monthOptions()}</select>${adminFolderPickerHtml()}</div></div>
       <div class="hetk-admin-cards"><div><span>Jami element</span><b>${actual.total}</b><small>Hozirgi aniq son</small></div><div class="power"><span>TP/KTP umumiy quvvati</span><b>${esc(formatPower(actual.totalPower))}</b><small>${actual.powerMissing?actual.powerMissing+' ta elementda quvvat kiritilmagan':'Barcha element quvvati kiritilgan'}</small></div><div><span>Jami hodim</span><b>${actual.users}</b><small>${actual.activeUsers} ta faol</small></div><div><span>Onlayn</span><b>${actual.online}</b><small>So‘nggi 2,5 daqiqa</small></div><div><span>Faol vaqt</span><b>${esc(formatDuration(period.seconds))}</b><small>${period.users} hodim · ${period.visits} kirish</small></div></div>
       <div class="hetk-chart-grid">
         <section class="hetk-chart-card"><h4>Balans tarkibi</h4><div class="hetk-donut-wrap"><div class="hetk-donut" style="--private:${privatePct*3.6}deg"><b>${actual.total}</b><span>element</span></div><div class="hetk-donut-legend"><span><i class="etk"></i>ETK <b>${actual.etk}</b></span><span><i class="private"></i>Xususiy <b>${actual.privateCount}</b></span></div></div></section>
@@ -315,12 +366,39 @@
     return roots.some(function(id){return isInside(id,folderId)||isInside(folderId,id);});
   }
   function bindAdminDashboard(){
-    const year=byId('hetk-stat-year'),month=byId('hetk-stat-month'),folder=byId('hetk-stat-folder');
+    const year=byId('hetk-stat-year'),month=byId('hetk-stat-month');
     if(year)year.addEventListener('change',function(){state.selectedYear=year.value;renderAdminDashboard();});
     if(month)month.addEventListener('change',function(){state.selectedMonth=month.value;renderAdminDashboard();});
-    if(folder)folder.addEventListener('change',function(){state.adminFolderId=folder.value;renderAdminDashboard();});
+    bindAdminFolderPicker();
     const setPin=byId('hetk-stat-set-pin');if(setPin)setPin.addEventListener('click',setResetPin);
     const reset=byId('hetk-stat-reset');if(reset)reset.addEventListener('click',resetUsageStatistics);
+  }
+  function bindAdminFolderPicker(){
+    const picker=document.querySelector('.hetk-stat-folder-picker'),trigger=byId('hetk-stat-folder-trigger'),menu=byId('hetk-stat-folder-menu'),search=byId('hetk-stat-folder-search'),tree=byId('hetk-stat-folder-tree');
+    if(!picker||!trigger||!menu||!tree)return;
+    trigger.addEventListener('click',function(event){
+      event.stopPropagation();const opening=menu.hidden;menu.hidden=!opening;trigger.setAttribute('aria-expanded',opening?'true':'false');
+      if(opening&&search)setTimeout(function(){search.focus();search.select();},0);
+    });
+    if(search){
+      search.addEventListener('click',function(event){event.stopPropagation();});
+      search.addEventListener('input',function(){state.adminFolderSearch=search.value;tree.innerHTML=adminFolderTreeHtml(state.adminFolderSearch);});
+    }
+    tree.addEventListener('click',function(event){
+      event.stopPropagation();
+      const toggle=event.target.closest('[data-stat-folder-toggle]');
+      if(toggle){const id=toggle.dataset.statFolderToggle;state.adminFolderExpanded[id]=state.adminFolderExpanded[id]!==true;tree.innerHTML=adminFolderTreeHtml(state.adminFolderSearch);return;}
+      const select=event.target.closest('[data-stat-folder-select]');
+      if(select){state.adminFolderId=select.dataset.statFolderSelect||'root';state.adminFolderSearch='';renderAdminDashboard();}
+    });
+    if(!state.adminFolderDocumentBound){
+      state.adminFolderDocumentBound=true;
+      document.addEventListener('click',function(event){
+        const currentPicker=document.querySelector('.hetk-stat-folder-picker'),currentMenu=byId('hetk-stat-folder-menu'),currentTrigger=byId('hetk-stat-folder-trigger');
+        if(currentPicker&&currentMenu&&!currentPicker.contains(event.target)){currentMenu.hidden=true;if(currentTrigger)currentTrigger.setAttribute('aria-expanded','false');}
+      });
+      document.addEventListener('keydown',function(event){if(event.key==='Escape'){const currentMenu=byId('hetk-stat-folder-menu'),currentTrigger=byId('hetk-stat-folder-trigger');if(currentMenu&&!currentMenu.hidden){currentMenu.hidden=true;if(currentTrigger)currentTrigger.setAttribute('aria-expanded','false');}}});
+    }
   }
   async function sha256(value){
     const data=new TextEncoder().encode(String(value));const hash=await crypto.subtle.digest('SHA-256',data);
