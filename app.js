@@ -6928,6 +6928,11 @@ top:50%;
 transform:translate(-50%,-50%);
 width:min(96vw,1600px);
 height:min(96vh,950px);
+height:min(96dvh,950px);
+max-width:calc(100vw - 16px);
+max-height:calc(100vh - 16px);
+max-height:calc(100dvh - 16px);
+box-sizing:border-box;
 display:flex;
 flex-direction:column;
 background:#0f2235;
@@ -6942,6 +6947,8 @@ background:#173854;
 padding:12px 18px;
 color:white;
 transition:.3s;
+flex:0 0 auto;
+box-sizing:border-box;
 ">
 
 <div
@@ -6996,18 +7003,25 @@ color:#cfd8dc;
 </div>
 
 <div
+id="gallery-stage"
 style="
 flex:1;
+min-width:0;
+min-height:0;
 display:flex;
 align-items:center;
 justify-content:space-between;
 padding:0 15px;
+overflow:hidden;
+box-sizing:border-box;
 ">
 
 
 <div
 style="
 flex:1;
+min-width:0;
+min-height:0;
 position:relative;
 display:flex;
 align-items:center;
@@ -7046,12 +7060,15 @@ id="gallery-image-container"
 style="
 width:100%;
 height:100%;
+min-width:0;
+min-height:0;
 display:flex;
 align-items:center;
 justify-content:center;
 padding:12px;
 box-sizing:border-box;
 flex:1;
+overflow:hidden;
 ">
 Rasm yuklanmoqda...
 </div>
@@ -7205,11 +7222,12 @@ async function loadGalleryImage(){
 src="${imageUrl}"
 style="
 display:block;
-max-width:100%;
-max-height:100%;
-width:auto;
-height:auto;
+width:100%;
+height:100%;
+max-width:none;
+max-height:none;
 object-fit:contain;
+object-position:center center;
 border-radius:10px;
 ">
 `;
