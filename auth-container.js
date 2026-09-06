@@ -337,6 +337,7 @@
   }
   function employeeFoldersText(account){
     if(account && account.rootAccess) return "O‘zbekiston — barcha hududlar";
+    if(isDispatcherRole(account)) return "Barcha hududlar — dispetcherlik nazorati";
     const ids=Object.keys((account && account.folders) || {}).filter(id=>account.folders[id]);
     if(!ids.length) return 'Biriktirilmagan';
     return shortText(ids.map(id=>folderPath(id) || ((teamFoldersCache[id]||{}).name) || id).join('; '),170);
@@ -2235,17 +2236,22 @@
     return ROLE_DEFS[role] || {label: role || 'Hodim', level: 0, createRoles: [], canCreateUsers:false, canDeactivateUsers:false, canManagePermissions:false, canManageFolders:false};
   }
 
+  function isDispatcherRole(account){
+    return !!account && (account.role === 'chief_dispatcher' || account.role === 'dispatcher');
+  }
+
   function defaultPermissionsForRole(role){
     const def = roleDef(role);
     const tbReadOnly=role==='tb_engineer' || role==='regional_tb_engineer';
+    const dispatcherRole=role==='chief_dispatcher' || role==='dispatcher';
     return {
       createUsers: !!def.canCreateUsers,
       deactivateUsers: !!def.canDeactivateUsers,
       managePermissions: !!def.canManagePermissions,
       manageFolders: !!def.canManageFolders,
-      createElements: !tbReadOnly,
+      createElements: !tbReadOnly && !dispatcherRole,
       editElements: !tbReadOnly,
-      deleteElements: !tbReadOnly,
+      deleteElements: !tbReadOnly && !dispatcherRole,
       commentElements: true
     };
   }
@@ -2256,6 +2262,11 @@
     if(acc.role === 'super_admin') return true;
     const tbReadOnly=acc.role==='tb_engineer' || acc.role==='regional_tb_engineer';
     if(tbReadOnly && ['createElements','editElements','deleteElements'].includes(permission)) return false;
+    // Dispetcher ish stolida barcha mavjud elementlarni ko'radi va tahrirlaydi,
+    // lekin tarmoq tuzilmasi yoki elementlar sonini o'zgartira olmaydi.
+    // Bu qat'iy tekshiruv eski akkauntlarda saqlanib qolgan ruxsatlarni ham bekor qiladi.
+    if(isDispatcherRole(acc) && ['manageFolders','createElements','deleteElements'].includes(permission)) return false;
+    if(isDispatcherRole(acc) && ['editElements','commentElements'].includes(permission)) return true;
     if(permission==='commentElements') return true;
     if(acc.permissions && Object.prototype.hasOwnProperty.call(acc.permissions, permission)) return !!acc.permissions[permission];
     const def = roleDef(acc.role);
@@ -2284,7 +2295,10 @@
     const acc = account || currentAccount;
     const folders = folderMap || teamFoldersCache || {};
     if(!acc) return [];
-    if(acc.rootAccess) return Object.keys(folders);
+    // Bosh dispetcher va dispetcherga tezkor nazorat uchun butun daraxt ochiq.
+    // Bu faqat ko'rish/tahrirlash doirasini kengaytiradi; yaratish va o'chirish
+    // huquqlari hasPermission() ichida alohida bloklangan.
+    if(acc.rootAccess || isDispatcherRole(acc)) return Object.keys(folders);
     const roots = Object.keys(acc.folders || {}).filter(id => acc.folders[id]);
     const set = new Set();
     roots.forEach(id => {
@@ -3307,6 +3321,7 @@
     const gender=normalizeGender(byId('hetk-user-gender').value);
     const login=normalizeLogin(byId('hetk-user-login').value);
     const role=byId('hetk-user-role').value;
+    const dispatcherRole=role==='chief_dispatcher' || role==='dispatcher';
     let selectedRoots=normalizeSelectedFolderRoots(getEditorSelectedFolders(),teamFoldersCache);
     if(fullName.length<3) return editorMessage('error','F.I.Sh ni to‘liq kiriting.');
     if(userEditorMode==='create' && !smsPhone) return editorMessage('error','SMS yuborish uchun hodimning telefon raqamini +998 formatida kiriting.');
@@ -3339,13 +3354,13 @@
     }
 
     const myAccessible=new Set(getAccessibleFolderIds(currentAccount,teamFoldersCache));
-    if(!selectedRoots.length) return editorMessage('error','Kamida bitta papka / hududni tanlang.');
+    if(!selectedRoots.length && !dispatcherRole) return editorMessage('error','Kamida bitta papka / hududni tanlang.');
     if(selectedRoots.some(id => !myAccessible.has(id))) return editorMessage('error','Sizga ruxsat berilmagan papkani biriktirib bo‘lmaydi.');
     const foldersObj={}; selectedRoots.forEach(id => foldersObj[id]=true);
     const def=roleDef(role);
     const patch={
       fullName,phone,gender,role,roleLabel:def.label,level:def.level,
-      region:needsZone ? zoneName : buildRegionFromRoots(selectedRoots),
+      region:needsZone ? zoneName : (dispatcherRole ? 'Barcha hududlar — dispetcherlik' : buildRegionFromRoots(selectedRoots)),
       rootAccess:false,folders:foldersObj,
       permissions:defaultPermissionsForRole(role),updatedAt:Date.now(),updatedBy:currentAccount.uid
     };
