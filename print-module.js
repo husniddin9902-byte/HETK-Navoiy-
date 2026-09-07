@@ -209,7 +209,10 @@ function fact(icon,label,value){
 
 async function passportHtml(tp,opts){
     const images=Array.isArray(tp.images) ? tp.images : Object.values(tp.images || {});
-    const wanted=opts.images==='none' ? [] : (opts.images==='main' ? [images[Number(tp.mainImageIndex)||0] || images[0]].filter(Boolean) : images);
+    const mainIndex=images.length ? Math.min(images.length-1,Math.max(0,Number(tp.mainImageIndex)||0)) : 0;
+    const mainRecord=images[mainIndex] || images[0];
+    const orderedImages=mainRecord ? [mainRecord].concat(images.filter((_,index)=>index!==mainIndex)) : images.slice();
+    const wanted=opts.images==='none' ? [] : (opts.images==='main' ? [mainRecord].filter(Boolean) : orderedImages);
     const imageData=[];for(const image of wanted) imageData.push(await fetchPrintImage(image));
     const main=imageData[0] || '';const thumbs=imageData.slice(1,4);
     const primaryId=primaryFolderId(tp);const path=primaryId ? getFolderPath(primaryId) : '—';
@@ -431,7 +434,88 @@ async function wordImageParagraph(d,imageRecord,maxWidth,maxHeight,pageBreakBefo
     });
 }
 
+function waitForDocumentImages(root){
+    return Promise.all(Array.from(root.querySelectorAll('img')).map(image=>{
+        if(image.complete && image.naturalWidth) return Promise.resolve();
+        return new Promise(resolve=>{
+            const done=()=>resolve();
+            image.addEventListener('load',done,{once:true});
+            image.addEventListener('error',done,{once:true});
+            setTimeout(done,8000);
+        });
+    }));
+}
+
+async function renderDocumentPages(opts){
+    if(typeof html2pdf==='undefined') throw new Error('HTML2PDF_MODULI_YUKLANMADI');
+    const host=document.createElement('div');
+    host.setAttribute('aria-hidden','true');
+    host.style.cssText='position:fixed;left:-15000px;top:0;z-index:-1;width:max-content;background:#fff;pointer-events:none;';
+    host.innerHTML=await buildDocument(opts);
+    document.body.appendChild(host);
+    try{
+        if(document.fonts && document.fonts.ready) await document.fonts.ready;
+        await waitForDocumentImages(host);
+        const pageNodes=Array.from(host.querySelectorAll('.hetk-document-page'));
+        if(!pageNodes.length) throw new Error('HUJJAT_SAHIFASI_TOPILMADI');
+        const result=[];
+        for(const page of pageNodes){
+            page.style.margin='0';
+            page.style.boxShadow='none';
+            page.style.transform='none';
+            const canvas=await html2pdf().set({
+                html2canvas:{scale:2,useCORS:true,allowTaint:false,backgroundColor:'#ffffff',logging:false,scrollX:0,scrollY:0},
+                pagebreak:{mode:['css','legacy']}
+            }).from(page).toCanvas().get('canvas');
+            if(!canvas || !canvas.width || !canvas.height) throw new Error('HUJJAT_RASMI_YARATILMADI');
+            result.push({
+                dataUrl:canvas.toDataURL('image/jpeg',0.94),
+                width:canvas.width,
+                height:canvas.height,
+                landscape:page.classList.contains('landscape')
+            });
+        }
+        return result;
+    }finally{host.remove();}
+}
+
 async function wordExport(opts){
+    if(typeof docx==='undefined'){
+        showToast('Word moduli yuklanmadi. GitHubga docx.iife.js faylini ham joylang.');
+        return false;
+    }
+    try{
+        const pages=await renderDocumentPages(opts);const d=docx;
+        const sections=pages.map((info,index)=>{
+            const landscape=!!info.landscape;
+            const maxWidth=landscape?1035:735;const maxHeight=landscape?735:1035;
+            const ratio=Math.min(maxWidth/info.width,maxHeight/info.height);
+            const imageWidth=Math.max(1,Math.round(info.width*ratio));
+            const imageHeight=Math.max(1,Math.round(info.height*ratio));
+            const properties={page:{
+                size:{width:landscape?16838:11906,height:landscape?11906:16838,orientation:landscape?d.PageOrientation.LANDSCAPE:d.PageOrientation.PORTRAIT},
+                margin:{top:300,right:300,bottom:300,left:300,header:0,footer:0,gutter:0}
+            }};
+            if(index>0 && d.SectionType) properties.type=d.SectionType.NEXT_PAGE;
+            return {properties,children:[new d.Paragraph({
+                alignment:d.AlignmentType.CENTER,spacing:{before:0,after:0,line:240},
+                children:[new d.ImageRun({type:'jpg',data:dataUrlBytes(info.dataUrl),transformation:{width:imageWidth,height:imageHeight}})]
+            })]};
+        });
+        const documentFile=new d.Document({
+            creator:actorName(),title:printSelection.name||'HETK elementlari',subject:'HETK element pasporti',
+            description:'HETK monitoring tizimida shakllantirilgan pasport',sections
+        });
+        const blob=await d.Packer.toBlob(documentFile);
+        if(!blob || blob.size<1000) throw new Error('WORD_YARATILMADI');
+        downloadBlob(blob,fileBase()+'.docx');return true;
+    }catch(error){
+        console.warn('WORD RASTER EXPORT ERROR, LEGACY FALLBACK:',error);
+        return await wordExportLegacy(opts);
+    }
+}
+
+async function wordExportLegacy(opts){
     if(typeof docx==='undefined'){
         showToast('Word moduli yuklanmadi. Sahifani yangilab qayta urinib ko‘ring.');
         return false;
@@ -525,7 +609,7 @@ async function wordExport(opts){
     return true;
 }
 
-function excelExport(opts){
+function excelExportList(opts){
     if(typeof XLSX==='undefined'){
         showToast('Excel moduli yuklanmadi. Internetni tekshirib qayta urinib ko‘ring.');
         return false;
@@ -562,6 +646,81 @@ function excelExport(opts){
     };
     XLSX.writeFile(workbook,fileBase()+'.xlsx',{compression:true,bookSST:true});
     return true;
+}
+
+function xlsxXml(value){
+    return String(value==null?'':value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+}
+
+function xlsxInlineCell(ref,value){
+    return '<c r="'+ref+'" t="inlineStr"><is><t xml:space="preserve">'+xlsxXml(value)+'</t></is></c>';
+}
+
+function xlsxSheetName(index){return index===0?'Element pasporti':'Sahifa '+(index+1);}
+
+function xlsxDrawingXml(imageNumber,rowCount){
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+        '<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'+
+        '<xdr:twoCellAnchor editAs="oneCell"><xdr:from><xdr:col>0</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>'+
+        '<xdr:to><xdr:col>14</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>'+rowCount+'</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>'+
+        '<xdr:pic><xdr:nvPicPr><xdr:cNvPr id="'+(imageNumber+1)+'" name="HETK hujjat sahifasi '+imageNumber+'"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr>'+
+        '<xdr:blipFill><a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="rId1"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill>'+
+        '<xdr:spPr><a:xfrm/><a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:ln><a:noFill/></a:ln></xdr:spPr></xdr:pic><xdr:clientData/></xdr:twoCellAnchor></xdr:wsDr>';
+}
+
+function xlsxWorksheetXml(sheetName,rowCount,landscape){
+    const lastCell='N'+rowCount;
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+        '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'+
+        '<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><dimension ref="A1:'+lastCell+'"/>'+
+        '<sheetViews><sheetView showGridLines="0" zoomScale="75" zoomScaleNormal="75" workbookViewId="0"/></sheetViews>'+
+        '<sheetFormatPr defaultRowHeight="15"/><cols><col min="1" max="14" width="8.43" customWidth="1"/></cols>'+
+        '<sheetData><row r="1">'+xlsxInlineCell('A1',sheetName)+'</row><row r="'+rowCount+'">'+xlsxInlineCell(lastCell,' ')+'</row></sheetData>'+
+        '<printOptions horizontalCentered="1" verticalCentered="0"/><pageMargins left="0.15" right="0.15" top="0.15" bottom="0.15" header="0" footer="0"/>'+
+        '<pageSetup paperSize="9" orientation="'+(landscape?'landscape':'portrait')+'" fitToWidth="1" fitToHeight="1" horizontalDpi="300" verticalDpi="300"/>'+
+        '<drawing r:id="rId1"/></worksheet>';
+}
+
+async function buildPassportXlsx(pageImages){
+    if(typeof JSZip==='undefined') throw new Error('JSZIP_MODULI_YUKLANMADI');
+    const zip=new JSZip();const sheetCount=pageImages.length;
+    const sheetOverrides=[];const drawingOverrides=[];const workbookSheets=[];const workbookRels=[];const printAreas=[];
+    for(let index=0;index<sheetCount;index++){
+        const number=index+1;const info=pageImages[index];const name=xlsxSheetName(index);const rowCount=info.landscape?32:64;
+        sheetOverrides.push('<Override PartName="/xl/worksheets/sheet'+number+'.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>');
+        drawingOverrides.push('<Override PartName="/xl/drawings/drawing'+number+'.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>');
+        workbookSheets.push('<sheet name="'+xlsxXml(name)+'" sheetId="'+number+'" r:id="rId'+(number+1)+'"/>');
+        workbookRels.push('<Relationship Id="rId'+(number+1)+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet'+number+'.xml"/>');
+        printAreas.push('<definedName name="_xlnm.Print_Area" localSheetId="'+index+'">\''+xlsxXml(name)+'\'!$A$1:$N$'+rowCount+'</definedName>');
+        zip.file('xl/worksheets/sheet'+number+'.xml',xlsxWorksheetXml(name,rowCount,info.landscape));
+        zip.file('xl/worksheets/_rels/sheet'+number+'.xml.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing'+number+'.xml"/></Relationships>');
+        zip.file('xl/drawings/drawing'+number+'.xml',xlsxDrawingXml(number,rowCount));
+        zip.file('xl/drawings/_rels/drawing'+number+'.xml.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image'+number+'.jpeg"/></Relationships>');
+        zip.file('xl/media/image'+number+'.jpeg',dataUrlBytes(info.dataUrl));
+    }
+    zip.file('[Content_Types].xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="jpeg" ContentType="image/jpeg"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/><Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>'+sheetOverrides.join('')+drawingOverrides.join('')+'</Types>');
+    zip.file('_rels/.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/></Relationships>');
+    zip.file('xl/workbook.xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><bookViews><workbookView xWindow="0" yWindow="0" windowWidth="24000" windowHeight="12000"/></bookViews><sheets>'+workbookSheets.join('')+'</sheets><definedNames>'+printAreas.join('')+'</definedNames><calcPr calcId="191029" calcMode="auto"/></workbook>');
+    zip.file('xl/_rels/workbook.xml.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'+workbookRels.join('')+'</Relationships>');
+    zip.file('xl/styles.xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="1"><font><sz val="11"/><name val="Calibri"/><family val="2"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>');
+    const now=new Date().toISOString();
+    zip.file('docProps/core.xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:dcmitype="http://purl.org/dc/dcmitype/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>'+xlsxXml(printSelection.name||'HETK element pasporti')+'</dc:title><dc:creator>'+xlsxXml(actorName())+'</dc:creator><dcterms:created xsi:type="dcterms:W3CDTF">'+now+'</dcterms:created><dcterms:modified xsi:type="dcterms:W3CDTF">'+now+'</dcterms:modified></cp:coreProperties>');
+    zip.file('docProps/app.xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes"><Application>HETK Navoiy</Application><DocSecurity>0</DocSecurity><ScaleCrop>false</ScaleCrop><HeadingPairs><vt:vector size="2" baseType="variant"><vt:variant><vt:lpstr>Worksheets</vt:lpstr></vt:variant><vt:variant><vt:i4>'+sheetCount+'</vt:i4></vt:variant></vt:vector></HeadingPairs><TitlesOfParts><vt:vector size="'+sheetCount+'" baseType="lpstr">'+Array.from({length:sheetCount},(_,i)=>'<vt:lpstr>'+xlsxXml(xlsxSheetName(i))+'</vt:lpstr>').join('')+'</vt:vector></TitlesOfParts><Company>HETK Navoiy</Company><AppVersion>16.0300</AppVersion></Properties>');
+    return await zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',compression:'DEFLATE',compressionOptions:{level:6}});
+}
+
+async function excelExport(opts){
+    const isSingle=printSelection.type==='element'&&printSelection.items.length===1;
+    if(!isSingle) return excelExportList(opts);
+    try{
+        const pages=await renderDocumentPages(opts);const blob=await buildPassportXlsx(pages);
+        if(!blob||blob.size<1000) throw new Error('EXCEL_YARATILMADI');
+        downloadBlob(blob,fileBase()+'.xlsx');return true;
+    }catch(error){
+        console.error('EXCEL PASSPORT EXPORT ERROR:',error);
+        showToast('Excel pasportini tayyorlab bo‘lmadi. jszip.min.js fayli GitHubda borligini tekshiring.');
+        return false;
+    }
 }
 
 const PDF_CYRILLIC_MAP={
@@ -758,7 +917,7 @@ async function pdfImageAppendix(pdfDoc,fonts,items){
     }
 }
 
-async function pdfExport(opts){
+async function pdfExportLegacy(opts){
     if(typeof PDFLib==='undefined'){
         showToast('PDF moduli yuklanmadi. Sahifani yangilab qayta urinib ko‘ring.');return false;
     }
@@ -778,6 +937,29 @@ async function pdfExport(opts){
     downloadBlob(new Blob([bytes],{type:'application/pdf'}),fileBase()+'.pdf');return true;
 }
 
+async function pdfExport(opts){
+    if(typeof PDFLib==='undefined'){
+        showToast('PDF moduli yuklanmadi. GitHubga pdf-lib.min.js faylini ham joylang.');
+        return false;
+    }
+    try{
+        const pageImages=await renderDocumentPages(opts);const pdfDoc=await PDFLib.PDFDocument.create();
+        pdfDoc.setTitle(pdfText(printSelection.name||'HETK elementlari'));
+        pdfDoc.setAuthor(pdfText(actorName()));pdfDoc.setSubject('HETK element pasporti');
+        for(const info of pageImages){
+            const size=pdfPageSize(info.landscape);const page=pdfDoc.addPage(size);
+            const image=await pdfDoc.embedJpg(dataUrlBytes(info.dataUrl));
+            page.drawImage(image,{x:0,y:0,width:size[0],height:size[1]});
+        }
+        const bytes=await pdfDoc.save({useObjectStreams:true});
+        if(!pageImages.length||bytes.length<1000) throw new Error('PDF_YARATILMADI');
+        downloadBlob(new Blob([bytes],{type:'application/pdf'}),fileBase()+'.pdf');return true;
+    }catch(error){
+        console.warn('PDF RASTER EXPORT ERROR, LEGACY FALLBACK:',error);
+        return await pdfExportLegacy(opts);
+    }
+}
+
 async function showPreview(){
     if(!printSelection.items.length) return showToast('Chop etiladigan element topilmadi.');
     const button=document.getElementById('hetk-print-preview');
@@ -795,7 +977,7 @@ async function generateFile(){
     if(button){button.disabled=true;button.textContent='Tayyorlanmoqda…';}
     try{
         if(opts.format==='excel'){
-            if(excelExport(opts)) showToast('Excel (.xlsx) fayli tayyorlandi.');
+            if(await excelExport(opts)) showToast('Excel (.xlsx) fayli tayyorlandi.');
             return;
         }
         if(opts.format==='word'){
