@@ -88,3 +88,75 @@
   .hetk-naryad-grid,.hetk-naryad-grid.three{grid-template-columns:1fr}.hetk-naryad-field.full{grid-column:auto}.hetk-naryad-section{padding:13px}.hetk-naryad-check-grid,.hetk-naryad-right-grid,.hetk-naryad-people{grid-template-columns:1fr}.hetk-naryad-measure{grid-template-columns:1fr 38px}.hetk-naryad-measure .hetk-measure-action{grid-column:1/-1;grid-row:2}.hetk-naryad-measure .hetk-naryad-remove{grid-column:2;grid-row:1/3}
   .hetk-naryad-summary{grid-template-columns:1fr}.hetk-naryad-detail-head{align-items:center}.hetk-naryad-detail-title h3{font-size:18px}.hetk-naryad-detail-head .hetk-naryad-status{display:none}.hetk-naryad-form-actions{bottom:-11px;margin:0 -11px -11px;padding:10px 11px}.hetk-naryad-form-actions .hetk-naryad-btn{flex:1;padding:0 10px}.hetk-naryad-action-row .hetk-naryad-btn{width:100%}
 }
+
+/* 1.1 — o‘qilishi oson, hujjat ko‘rinishidagi oq mavzu */
+.hetk-naryad-overlay{background:rgba(5,24,40,.68);color:#183246}
+.hetk-naryad-shell{background:#f4f7fa;border-color:rgba(255,255,255,.42);box-shadow:0 24px 70px rgba(3,24,40,.34)}
+.hetk-naryad-topbar{background:linear-gradient(110deg,#07365c,#0a578b);border-bottom:3px solid #f39200;color:#fff}
+.hetk-naryad-title>i{background:#fff;color:#0a568b;box-shadow:0 4px 14px rgba(0,0,0,.18)}
+.hetk-naryad-title h2{color:#fff}.hetk-naryad-title p{color:#cde5f3}
+.hetk-naryad-close{background:rgba(255,255,255,.13);color:#fff}.hetk-naryad-close:hover{background:#d83f4d}
+.hetk-naryad-nav{background:#fff;border-bottom:1px solid #cbd8e3;box-shadow:0 3px 10px rgba(16,55,82,.06)}
+.hetk-naryad-tab{border-color:#c5d5e1;background:#f6f9fb;color:#3a5870}
+.hetk-naryad-tab:hover{background:#eaf3f9;color:#0a568b}
+.hetk-naryad-tab.active{background:#0b6fae;border-color:#0b6fae;color:#fff;box-shadow:0 5px 14px rgba(11,111,174,.22)}
+.hetk-naryad-body{background-color:#eef3f7;background-image:linear-gradient(rgba(7,71,116,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(7,71,116,.025) 1px,transparent 1px);background-size:24px 24px}
+.hetk-naryad-notice{border-color:#e7c06e;border-left:5px solid #f0a21a;background:#fff8e8;color:#624a1d;box-shadow:0 3px 10px rgba(98,74,29,.06)}
+.hetk-naryad-notice i{color:#c57b00}.hetk-naryad-notice a{color:#075f9c;font-weight:800}
+.hetk-naryad-search,.hetk-naryad-select,.hetk-naryad-input,.hetk-naryad-textarea{border-color:#b9cbd8;background:#fbfdff;color:#162f42;box-shadow:inset 0 1px 2px rgba(15,48,72,.04)}
+.hetk-naryad-search::placeholder,.hetk-naryad-input::placeholder,.hetk-naryad-textarea::placeholder{color:#8497a5}
+.hetk-naryad-search:focus,.hetk-naryad-select:focus,.hetk-naryad-input:focus,.hetk-naryad-textarea:focus{border-color:#1388cf;background:#fff;box-shadow:0 0 0 3px rgba(19,136,207,.14)}
+.hetk-naryad-select option{background:#fff;color:#162f42}
+.hetk-naryad-input[type="date"],.hetk-naryad-input[type="datetime-local"]{color-scheme:light}
+.hetk-naryad-refresh{border-color:#0b6fae;background:#fff;color:#0b629b}.hetk-naryad-refresh:hover{background:#eaf5fc}
+.hetk-naryad-card{border-color:#c9d7e1;border-left:5px solid #0b76b9;background:#fff;box-shadow:0 7px 20px rgba(25,61,87,.09)}
+.hetk-naryad-card:hover{border-color:#68a9d1;background:#fbfdff;box-shadow:0 10px 25px rgba(25,61,87,.14)}
+.hetk-naryad-card-number{color:#073d68}.hetk-naryad-card h3{color:#172f40}.hetk-naryad-card p{color:#526c7d}
+.hetk-naryad-card-meta span{background:#edf4f8;color:#3c5e73;border:1px solid #dbe7ee}
+.hetk-naryad-status{background:#edf2f5;color:#5d6f7a;border:1px solid currentColor}
+.hetk-naryad-status.draft{color:#647783;background:#f1f4f6}.hetk-naryad-status.pending_issue{color:#9a6500;background:#fff5d9}
+.hetk-naryad-status.issued,.hetk-naryad-status.preparation_permitted,.hetk-naryad-status.workplace_ready{color:#086fae;background:#eaf6fd}
+.hetk-naryad-status.active{color:#08743f;background:#e9f8ef}.hetk-naryad-status.performer_completed,.hetk-naryad-status.ready_to_close{color:#764096;background:#f5ecfb}
+.hetk-naryad-status.closed{color:#566a75;background:#eef2f4}.hetk-naryad-status.cancelled,.hetk-naryad-status.rejected{color:#b32f3e;background:#fff0f1}
+.hetk-naryad-empty{border-color:#b8ccd9;background:#fff;color:#617c8d}.hetk-naryad-empty i{color:#0d78b7}.hetk-naryad-empty h3{color:#244357}
+.hetk-naryad-form-head{border-color:#c7d8e4;border-left:5px solid #f39200;background:#fff;box-shadow:0 5px 16px rgba(21,59,85,.08)}
+.hetk-naryad-form-head i{background:#e9f5fc;color:#0874b8}.hetk-naryad-form-head h3{color:#123850}.hetk-naryad-form-head p{color:#607b8c}
+.hetk-naryad-section{border-color:#c7d7e2;background:#fff;box-shadow:0 5px 17px rgba(24,59,83,.07);overflow:hidden}
+.hetk-naryad-section-title{margin:-16px -16px 16px;padding:13px 16px;border-bottom:1px solid #d4e2eb;background:linear-gradient(90deg,#e9f5fc,#f7fbfd);color:#0b4c77}
+.hetk-naryad-section-title i{color:#0b79bc}.hetk-naryad-section>p{color:#314f62;line-height:1.6}
+.hetk-naryad-section>h4:not(.hetk-naryad-section-title){color:#173d56;margin-bottom:8px}
+.hetk-naryad-field label{color:#24495f}.hetk-naryad-field label small,.hetk-naryad-field-help{color:#6d8797}
+.hetk-naryad-check{border-color:#c7d8e3;background:#f7fafc;color:#294b5f}
+.hetk-naryad-check:hover{border-color:#66a9d0;background:#eef8fe}.hetk-naryad-check span small{color:#738b99}
+.hetk-naryad-measure{padding:9px;border:1px solid #d5e1e9;border-radius:10px;background:#f4f8fb}
+.hetk-naryad-remove{border-color:#e4afb5;background:#fff0f1;color:#b63241}
+.hetk-naryad-add-row{border-color:#4d9bc7;background:#f0f8fd;color:#096ba8}.hetk-naryad-add-row:hover{background:#e3f3fc}
+.hetk-naryad-form-actions{background:rgba(255,255,255,.97);border-color:#cad9e3;box-shadow:0 -7px 20px rgba(21,54,77,.08)}
+.hetk-naryad-btn{border-color:#8cabbf;background:#fff;color:#214c66}.hetk-naryad-btn.primary{background:#0b73b5;border-color:#0b73b5;color:#fff}
+.hetk-naryad-btn.success{background:#168150;border-color:#168150;color:#fff}.hetk-naryad-btn.warning{background:#d27a00;border-color:#d27a00;color:#fff}
+.hetk-naryad-btn.danger{background:#ba3544;border-color:#ba3544;color:#fff}.hetk-naryad-btn.ghost{background:#f5f8fa;color:#486477}
+.hetk-naryad-error{background:#fff0f1;border-color:#d97c86;color:#912833}
+.hetk-naryad-detail-title h3{color:#103d5b}.hetk-naryad-detail-title p{color:#607c8d}
+.hetk-naryad-back{border-color:#8eb2c8;background:#fff;color:#0a659f}.hetk-naryad-back:hover{background:#eaf5fb}
+.hetk-naryad-summary>div{border-color:#cbdde8;border-left:4px solid #2b8dc5;background:#f5fafe}
+.hetk-naryad-summary small{color:#688394}.hetk-naryad-summary b{color:#173c53}
+.hetk-naryad-person{border:1px solid #d1dfe7;background:#f8fafc}.hetk-naryad-person i{background:#e2f2fb;color:#0b6ea9}
+.hetk-naryad-person small{color:#6f8796}.hetk-naryad-person b{color:#193b51}
+.hetk-naryad-table-wrap{border-color:#b9cfdd;background:#fff}.hetk-naryad-table th{background:#0a5687;color:#fff}
+.hetk-naryad-table td{border-color:#d6e1e8;color:#294b60}.hetk-naryad-table tbody tr:nth-child(even){background:#f4f8fb}
+.hetk-naryad-history-item{border-color:#1685c5;background:#f4f9fc}.hetk-naryad-history-item::before{background:#1685c5;border-color:#fff}
+.hetk-naryad-history-item b{color:#173e56}.hetk-naryad-history-item span{color:#6d8493}
+.hetk-naryad-action-box{border-color:#e6c574;border-left:5px solid #e69a12;background:#fff9e9}
+.hetk-naryad-action-box h4{color:#704b09}.hetk-naryad-action-box p{color:#705e3b}
+.hetk-naryad-user-list,.hetk-naryad-right-card{border-color:#c7d8e3;background:#fff;box-shadow:0 5px 16px rgba(24,59,83,.07)}
+.hetk-naryad-user-item{color:#284a5f}.hetk-naryad-user-item:hover,.hetk-naryad-user-item.active{background:#e9f5fc;color:#0a4f7b}
+.hetk-naryad-user-item i{background:#dceff9;color:#0b70aa}.hetk-naryad-user-item small{color:#718b9a}
+.hetk-naryad-right-card h3{color:#123d59}.hetk-naryad-right-card>p{color:#667f8f}
+.hetk-naryad-right-warning{border:1px solid #e3c16b;background:#fff7df;color:#6d520f}
+.hetk-naryad-toast{background:#145f8d;color:#fff}
+
+@media (max-width:680px){
+  .hetk-naryad-body{background-size:18px 18px}
+  .hetk-naryad-section-title{margin:-13px -13px 14px;padding:12px 13px}
+  .hetk-naryad-measure{padding:8px}
+}
