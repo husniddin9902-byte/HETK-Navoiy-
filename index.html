@@ -19,6 +19,7 @@
     <link rel="stylesheet" href="profile-container.css?v=3.0">
     <link rel="stylesheet" href="auth-container.css?v=8.0">
     <link rel="stylesheet" href="statistics.css?v=3.2">
+    <link rel="stylesheet" href="naryad-module.css?v=1.0">
 </head>
 <body>
 
@@ -94,6 +95,11 @@ cursor:pointer;
         <div class="list-header">
             <h3>Boshqaruv paneli</h3>
             <div class="hetk-list-header-actions">
+                <button id="hetk-naryad-open" class="hetk-naryad-header-btn" type="button" title="Elektron naryadlar" hidden>
+                    <i class="fas fa-file-signature"></i>
+                    <span>Naryadlar</span>
+                    <b id="hetk-naryad-count" hidden>0</b>
+                </button>
                 <button id="hetk-stats-open" class="hetk-stats-header-btn" type="button" title="Tanlangan hudud statistikasini ko‘rish" aria-expanded="false">
                     <i class="fas fa-chart-pie"></i>
                     <span>Statistika</span>
@@ -1693,6 +1699,7 @@ gap:8px;
     <script src="app.js?v=10.0"></script>
     <script src="profile-container.js?v=3.0"></script>
     <script src="auth-container.js?v=8.0"></script>
+    <script src="naryad-module.js?v=1.0"></script>
     <script src="statistics.js?v=3.2"></script>
     <script src="print-module.js?v=3.0"></script>
     <script src="mahalla.js?v=1.1"></script>
