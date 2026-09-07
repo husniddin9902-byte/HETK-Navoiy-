@@ -674,47 +674,40 @@ async function wordExportLegacy(opts){
     return true;
 }
 
-function excelExportList(opts){
-    if(typeof XLSX==='undefined'){
-        showToast('Excel moduli yuklanmadi. Internetni tekshirib qayta urinib ko‘ring.');
+async function excelExportList(opts){
+    try{
+        const blob=await buildStructuredGroupXlsx(opts);
+        if(!blob||blob.size<1000) throw new Error('EXCEL_GURUH_YARATILMADI');
+        downloadBlob(blob,fileBase()+'.xlsx');return true;
+    }catch(error){
+        console.error('EXCEL GROUP EXPORT ERROR:',error);
+        showToast('Excel ro‘yxatini tayyorlab bo‘lmadi. jszip.min.js fayli GitHubda borligini tekshiring.');
         return false;
     }
-    const fields=(opts.fields.length ? opts.fields : ['feeder','name']).filter(key=>PRINT_FIELDS[key]);
-    const header=['№'].concat(fields.map(key=>PRINT_FIELDS[key].label));
-    const rows=printSelection.items.map((tp,index)=>[index+1].concat(fields.map(key=>PRINT_FIELDS[key].value(tp))));
-    const generated='Shakllantirdi: '+actorName()+' • '+printDate(Date.now());
-    const data=[
-        [printSelection.name || 'HETK elementlari'],
-        [generated],
-        ['Jami: '+printSelection.items.length+' ta element'],
-        [],
-        header
-    ].concat(rows);
-    const worksheet=XLSX.utils.aoa_to_sheet(data);
-    const lastColumn=Math.max(0,header.length-1);
-    worksheet['!merges']=[
-        {s:{r:0,c:0},e:{r:0,c:lastColumn}},
-        {s:{r:1,c:0},e:{r:1,c:lastColumn}},
-        {s:{r:2,c:0},e:{r:2,c:lastColumn}}
-    ];
-    worksheet['!cols']=header.map((label,index)=>({wch:index===0 ? 7 : Math.min(42,Math.max(14,String(label).length+4))}));
-    if(rows.length){
-        worksheet['!autofilter']={ref:XLSX.utils.encode_range({s:{r:4,c:0},e:{r:4+rows.length,c:lastColumn}})};
-    }
-    const workbook=XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook,worksheet,'Elementlar');
-    workbook.Props={
-        Title:printSelection.name || 'HETK elementlari',
-        Subject:'HETK elementlar ro‘yxati',
-        Author:actorName(),
-        CreatedDate:new Date()
-    };
-    XLSX.writeFile(workbook,fileBase()+'.xlsx',{compression:true,bookSST:true});
-    return true;
 }
 
 function xlsxXml(value){
     return String(value==null?'':value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+}
+
+function xlsxSharedStrings(){
+    const values=[];const indexes=new Map();let total=0;
+    return {
+        cell(ref,value,style){
+            const text=String(value==null?'':value);let index=indexes.get(text);total++;
+            if(index===undefined){index=values.length;values.push(text);indexes.set(text,index);}
+            return '<c r="'+ref+'"'+(style==null?'':' s="'+style+'"')+' t="s"><v>'+index+'</v></c>';
+        },
+        xml(){
+            return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="'+total+'" uniqueCount="'+values.length+'">'+values.map(value=>'<si><t xml:space="preserve">'+xlsxXml(value)+'</t></si>').join('')+'</sst>';
+        }
+    };
+}
+
+function xlsxColumnName(index){
+    let value=index+1;let result='';
+    while(value){value--;result=String.fromCharCode(65+(value%26))+result;value=Math.floor(value/26);}
+    return result;
 }
 
 function xlsxInlineCell(ref,value){
@@ -833,7 +826,7 @@ function normalizeExcelImageFrame(dataUrl,targetWidth,targetHeight){
 
 function xlsxStructuredDrawing(images){
     return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'+images.map((item,index)=>
-        '<xdr:twoCellAnchor editAs="oneCell"><xdr:from><xdr:col>'+item.fromCol+'</xdr:col><xdr:colOff>60000</xdr:colOff><xdr:row>'+item.fromRow+'</xdr:row><xdr:rowOff>40000</xdr:rowOff></xdr:from><xdr:to><xdr:col>'+item.toCol+'</xdr:col><xdr:colOff>-60000</xdr:colOff><xdr:row>'+item.toRow+'</xdr:row><xdr:rowOff>-40000</xdr:rowOff></xdr:to>'+
+        '<xdr:twoCellAnchor editAs="oneCell"><xdr:from><xdr:col>'+item.fromCol+'</xdr:col><xdr:colOff>60000</xdr:colOff><xdr:row>'+item.fromRow+'</xdr:row><xdr:rowOff>40000</xdr:rowOff></xdr:from><xdr:to><xdr:col>'+item.toCol+'</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>'+item.toRow+'</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>'+
         '<xdr:pic><xdr:nvPicPr><xdr:cNvPr id="'+(index+1)+'" name="'+xlsxXml(item.name || ('Element rasmi '+(index+1)))+'"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr><xdr:blipFill><a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="rId'+(index+1)+'"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr><a:xfrm/><a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:ln><a:solidFill><a:srgbClr val="5D86B4"/></a:solidFill></a:ln></xdr:spPr></xdr:pic><xdr:clientData/></xdr:twoCellAnchor>'
     ).join('')+'</xdr:wsDr>';
 }
@@ -844,16 +837,77 @@ function xlsxStructuredSheet(rows,merges,lastRow,hasDrawing,breakRows){
     const breaks=breakRows.length?'<rowBreaks count="'+breakRows.length+'" manualBreakCount="'+breakRows.length+'">'+breakRows.map(row=>'<brk id="'+row+'" min="0" max="16383" man="1"/>').join('')+'</rowBreaks>':'';
     return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'+
         '<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><dimension ref="A1:L'+lastRow+'"/><sheetViews><sheetView showGridLines="0" zoomScale="80" zoomScaleNormal="80" workbookViewId="0"/></sheetViews><sheetFormatPr defaultRowHeight="15"/>'+
-        '<cols><col min="1" max="6" width="11" customWidth="1"/><col min="7" max="8" width="12" customWidth="1"/><col min="9" max="12" width="13" customWidth="1"/></cols><sheetData>'+rowXml+'</sheetData>'+mergeXml+breaks+
-        '<printOptions horizontalCentered="1" verticalCentered="0"/><pageMargins left="0.25" right="0.25" top="0.3" bottom="0.3" header="0.1" footer="0.1"/><pageSetup paperSize="9" orientation="portrait" fitToWidth="1" fitToHeight="0" horizontalDpi="300" verticalDpi="300"/>'+(hasDrawing?'<drawing r:id="rId1"/>':'')+'</worksheet>';
+        '<cols><col min="1" max="6" width="7.2" customWidth="1"/><col min="7" max="8" width="8" customWidth="1"/><col min="9" max="12" width="9" customWidth="1"/></cols><sheetData>'+rowXml+'</sheetData>'+mergeXml+breaks+
+        '<printOptions horizontalCentered="1" verticalCentered="0"/><pageMargins left="0.25" right="0.25" top="0.3" bottom="0.3" header="0.1" footer="0.1"/><pageSetup paperSize="9" orientation="portrait" fitToWidth="1" fitToHeight="'+(lastRow===29?'1':'0')+'" horizontalDpi="300" verticalDpi="300"/>'+(hasDrawing?'<drawing r:id="rId1"/>':'')+'</worksheet>';
+}
+
+function xlsxGroupSheet(rows,merges,lastRow,lastColumn,dataLastColumn,columnWidths,hasDrawing,breakRows,landscape){
+    const rowXml=Array.from(rows.entries()).sort((a,b)=>a[0]-b[0]).map(([number,info])=>'<row r="'+number+'"'+(info.height?' ht="'+info.height+'" customHeight="1"':'')+'>'+info.cells.join('')+'</row>').join('');
+    const mergeXml=merges.length?'<mergeCells count="'+merges.length+'">'+merges.map(ref=>'<mergeCell ref="'+ref+'"/>').join('')+'</mergeCells>':'';
+    const breaks=breakRows.length?'<rowBreaks count="'+breakRows.length+'" manualBreakCount="'+breakRows.length+'">'+breakRows.map(row=>'<brk id="'+row+'" min="0" max="16383" man="1"/>').join('')+'</rowBreaks>':'';
+    const cols=columnWidths.map((width,index)=>'<col min="'+(index+1)+'" max="'+(index+1)+'" width="'+width+'" customWidth="1"/>').join('');
+    const footer='&amp;LShakllantirdi: '+xlsxXml(actorName())+'&amp;C'+xlsxXml(printDate(Date.now()))+'&amp;RSahifa &amp;P / &amp;N';
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'+
+        '<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><dimension ref="A1:'+lastColumn+lastRow+'"/><sheetViews><sheetView showGridLines="0" zoomScale="85" zoomScaleNormal="85" workbookViewId="0"><pane ySplit="5" topLeftCell="A6" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft" activeCell="A6" sqref="A6"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="18"/><cols>'+cols+'</cols><sheetData>'+rowXml+'</sheetData><autoFilter ref="A5:'+dataLastColumn+lastRow+'"/>'+mergeXml+breaks+
+        '<printOptions horizontalCentered="1" verticalCentered="0"/><pageMargins left="0.2" right="0.2" top="0.3" bottom="0.45" header="0.1" footer="0.2"/><pageSetup paperSize="9" orientation="'+(landscape?'landscape':'portrait')+'" fitToWidth="1" fitToHeight="0" horizontalDpi="300" verticalDpi="300"/><headerFooter><oddFooter>'+footer+'</oddFooter></headerFooter>'+(hasDrawing?'<drawing r:id="rId1"/>':'')+'</worksheet>';
+}
+
+async function buildStructuredGroupXlsx(opts){
+    if(typeof JSZip==='undefined') throw new Error('JSZIP_MODULI_YUKLANMADI');
+    const zip=new JSZip();const strings=xlsxSharedStrings();const rows=new Map();const merges=[];const drawings=[];const breakRows=[];
+    const fields=(opts.fields.length?opts.fields:['feeder','name']).filter(key=>PRINT_FIELDS[key]);
+    const includeMain=opts.images==='main';
+    const columns=[{label:'№',key:'number',width:5}].concat(fields.map(key=>({label:PRINT_FIELDS[key].label,key,width:({feeder:16,name:14,power:9,mahalla:12,workzone:13,status:12,address:24,coords:16}[key]||13)})));
+    if(includeMain) columns.push({label:'Asosiy rasm',key:'image',width:18});
+    const dataLastColumn=xlsxColumnName(columns.length-1);const layoutColumnCount=Math.max(6,columns.length);const lastColumn=xlsxColumnName(layoutColumnCount-1);
+    const columnWidths=columns.map(item=>item.width);while(columnWidths.length<layoutColumnCount) columnWidths.push(14);
+    const setRow=(number,cells,height)=>rows.set(number,{cells,height});const cell=(ref,value,style)=>strings.cell(ref,value,style);
+    const companyStart=Math.min(2,layoutColumnCount-1);const rightStart=Math.max(companyStart+1,layoutColumnCount-2);const firstEnd=xlsxColumnName(companyStart-1);
+    setRow(1,[cell('A1','HETK',1),cell(xlsxColumnName(companyStart)+'1','HUDUDIY ELEKTR TARMOQLARI KORXONASI\nTERRITORIAL ELEKTR TARMOQLARI TIZIMI',2),cell(xlsxColumnName(rightStart)+'1','10 kV sinf KTP/TP obyektlari',3)],44);
+    merges.push('A1:'+firstEnd+'1');
+    merges.push(xlsxColumnName(companyStart)+'1:'+xlsxColumnName(rightStart-1)+'1');
+    merges.push(xlsxColumnName(rightStart)+'1:'+lastColumn+'1');
+    setRow(2,[cell('A2',' ',11)],6);merges.push('A2:'+lastColumn+'2');
+    setRow(3,[cell('A3','ELEMENTLAR RO‘YXATI',4)],30);merges.push('A3:'+lastColumn+'3');
+    setRow(4,[cell('A4','Manba: '+(printSelection.name||'—')+'  •  Jami: '+printSelection.items.length+' ta element',6)],23);merges.push('A4:'+lastColumn+'4');
+    setRow(5,columns.map((column,index)=>cell(xlsxColumnName(index)+'5',column.label,12)),28);
+    for(let index=0;index<printSelection.items.length;index++){
+        const tp=printSelection.items[index];const row=6+index;const style=index%2?9:13;const cells=[cell('A'+row,index+1,style)];
+        fields.forEach((key,columnIndex)=>cells.push(cell(xlsxColumnName(columnIndex+1)+row,PRINT_FIELDS[key].value(tp),style)));
+        if(includeMain){
+            const imageColumn=columns.length-1;cells.push(cell(xlsxColumnName(imageColumn)+row,' ',style));
+            const images=Array.isArray(tp.images)?tp.images:Object.values(tp.images||{});const mainIndex=images.length?Math.min(images.length-1,Math.max(0,Number(tp.mainImageIndex)||0)):0;
+            const data=await fetchPrintImage(images[mainIndex]||images[0]);const bytes=await normalizeExcelImageFrame(data,360,270);
+            if(bytes) drawings.push({bytes,name:(tp.name||'Element')+' asosiy rasmi',fromCol:imageColumn,fromRow:row-1,toCol:imageColumn+1,toRow:row});
+        }
+        const longValue=fields.some(key=>['address','workzone'].includes(key)&&String(PRINT_FIELDS[key].value(tp)).length>42);
+        setRow(row,cells,includeMain?62:(longValue?38:24));
+        if(opts.paper!=='landscape'&&index>0&&index%19===18&&index<printSelection.items.length-1) breakRows.push(row);
+    }
+    const lastRow=Math.max(6,5+printSelection.items.length);const hasDrawing=drawings.length>0;const sheetName='Elementlar';const now=new Date().toISOString();
+    zip.file('[Content_Types].xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="jpeg" ContentType="image/jpeg"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'+(hasDrawing?'<Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>':'')+'<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/><Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/></Types>');
+    zip.file('_rels/.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/></Relationships>');
+    zip.file('xl/workbook.xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><bookViews><workbookView xWindow="0" yWindow="0" windowWidth="24000" windowHeight="12000"/></bookViews><sheets><sheet name="'+sheetName+'" sheetId="1" r:id="rId2"/></sheets><definedNames><definedName name="_xlnm.Print_Area" localSheetId="0">\''+sheetName+'\'!$A$1:$'+lastColumn+'$'+lastRow+'</definedName><definedName name="_xlnm.Print_Titles" localSheetId="0">\''+sheetName+'\'!$5:$5</definedName></definedNames><calcPr calcId="191029" calcMode="auto"/></workbook>');
+    zip.file('xl/_rels/workbook.xml.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/></Relationships>');
+    zip.file('xl/styles.xml',xlsxStructuredStyles());zip.file('xl/sharedStrings.xml',strings.xml());
+    zip.file('xl/worksheets/sheet1.xml',xlsxGroupSheet(rows,merges,lastRow,lastColumn,dataLastColumn,columnWidths,hasDrawing,breakRows,opts.paper==='landscape'));
+    if(hasDrawing){
+        zip.file('xl/worksheets/_rels/sheet1.xml.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml"/></Relationships>');
+        zip.file('xl/drawings/drawing1.xml',xlsxStructuredDrawing(drawings));
+        zip.file('xl/drawings/_rels/drawing1.xml.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+drawings.map((item,index)=>'<Relationship Id="rId'+(index+1)+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image'+(index+1)+'.jpeg"/>').join('')+'</Relationships>');
+        drawings.forEach((item,index)=>zip.file('xl/media/image'+(index+1)+'.jpeg',item.bytes));
+    }
+    zip.file('docProps/core.xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:dcmitype="http://purl.org/dc/dcmitype/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>'+xlsxXml(printSelection.name||'HETK elementlari')+'</dc:title><dc:creator>'+xlsxXml(actorName())+'</dc:creator><dcterms:created xsi:type="dcterms:W3CDTF">'+now+'</dcterms:created><dcterms:modified xsi:type="dcterms:W3CDTF">'+now+'</dcterms:modified></cp:coreProperties>');
+    zip.file('docProps/app.xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes"><Application>Microsoft Excel</Application><DocSecurity>0</DocSecurity><ScaleCrop>false</ScaleCrop><HeadingPairs><vt:vector size="2" baseType="variant"><vt:variant><vt:lpstr>Worksheets</vt:lpstr></vt:variant><vt:variant><vt:i4>1</vt:i4></vt:variant></vt:vector></HeadingPairs><TitlesOfParts><vt:vector size="1" baseType="lpstr"><vt:lpstr>'+sheetName+'</vt:lpstr></vt:vector></TitlesOfParts><Company>HETK Navoiy</Company><AppVersion>16.0300</AppVersion></Properties>');
+    return await zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',compression:'DEFLATE',compressionOptions:{level:6}});
 }
 
 async function buildStructuredPassportXlsx(tp,opts){
     if(typeof JSZip==='undefined') throw new Error('JSZIP_MODULI_YUKLANMADI');
-    const zip=new JSZip();const rows=new Map();const merges=[];const drawings=[];const breakRows=[];
+    const zip=new JSZip();const strings=xlsxSharedStrings();const rows=new Map();const merges=[];const drawings=[];const breakRows=[];
     const setRow=(number,cells,height)=>rows.set(number,{cells,height});
     const addMerge=ref=>merges.push(ref);
-    const cell=(ref,value,style)=>xlsxStyledCell(ref,value,style);
+    const cell=(ref,value,style)=>strings.cell(ref,value,style);
     setRow(1,[cell('A1','HETK',1),cell('D1','HUDUDIY ELEKTR TARMOQLARI KORXONASI\nTERRITORIAL ELEKTR TARMOQLARI TIZIMI',2),cell('I1','10 kV sinf KTP/TP obyektlari',3)],44);
     addMerge('A1:C1');addMerge('D1:H1');addMerge('I1:L1');
     setRow(2,[cell('A2',' ',11)],6);addMerge('A2:L2');
@@ -897,8 +951,8 @@ async function buildStructuredPassportXlsx(tp,opts){
     addMerge('A18:B22');addMerge('C18:D22');addMerge('E18:F22');
     setRow(23,[cell('A23','IZOHLAR\n'+(tp.note || 'Izoh mavjud emas'),9)],22);addMerge('A23:L25');
     setRow(25,[],18);
-    setRow(26,[cell('A26','YARATILGAN / OXIRGI TAHRIR\nYaratilgan: '+printDate(tp.createdAt)+'\nOxirgi tahrir: '+printDate(tp.updatedAt),9),cell('H26','NAVIGATSIYA (QR)\nJoylashuvni xaritada ochish uchun skanerlang',9)],28);
-    addMerge('A26:G28');addMerge('H26:L28');setRow(28,[],22);
+    setRow(26,[cell('A26','YARATILGAN / OXIRGI TAHRIR\nYaratilgan: '+printDate(tp.createdAt)+'\nOxirgi tahrir: '+printDate(tp.updatedAt),9),cell('H26',' ',9),cell('J26','NAVIGATSIYA (QR)\nJoylashuvni xaritada ochish uchun skanerlang',9)],28);
+    addMerge('A26:G28');addMerge('H26:I28');addMerge('J26:L28');setRow(28,[],22);
     if(tp.lat && tp.lng){
         const qr=await qrDataUrl('https://maps.google.com/?q='+tp.lat+','+tp.lng);const qrBytes=await normalizeExcelImageFrame(qr,300,300);
         if(qrBytes) drawings.push({bytes:qrBytes,name:'Navigatsiya QR',fromCol:7,fromRow:25,toCol:9,toRow:28});
@@ -932,11 +986,11 @@ async function buildStructuredPassportXlsx(tp,opts){
     }
     const lastRow=Math.max(29,nextRow-1);
     const hasDrawing=drawings.length>0;
-    zip.file('[Content_Types].xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="jpeg" ContentType="image/jpeg"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'+(hasDrawing?'<Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>':'')+'<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/><Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/></Types>');
+    zip.file('[Content_Types].xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="jpeg" ContentType="image/jpeg"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'+(hasDrawing?'<Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>':'')+'<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/><Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/></Types>');
     zip.file('_rels/.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/></Relationships>');
     zip.file('xl/workbook.xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><bookViews><workbookView xWindow="0" yWindow="0" windowWidth="24000" windowHeight="12000"/></bookViews><sheets><sheet name="Element pasporti" sheetId="1" r:id="rId2"/></sheets><definedNames><definedName name="_xlnm.Print_Area" localSheetId="0">\'Element pasporti\'!$A$1:$L$'+lastRow+'</definedName></definedNames><calcPr calcId="191029" calcMode="auto"/></workbook>');
-    zip.file('xl/_rels/workbook.xml.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>');
-    zip.file('xl/styles.xml',xlsxStructuredStyles());
+    zip.file('xl/_rels/workbook.xml.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/></Relationships>');
+    zip.file('xl/styles.xml',xlsxStructuredStyles());zip.file('xl/sharedStrings.xml',strings.xml());
     zip.file('xl/worksheets/sheet1.xml',xlsxStructuredSheet(rows,merges,lastRow,hasDrawing,breakRows));
     if(hasDrawing){
         zip.file('xl/worksheets/_rels/sheet1.xml.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml"/></Relationships>');
@@ -946,7 +1000,7 @@ async function buildStructuredPassportXlsx(tp,opts){
     }
     const now=new Date().toISOString();
     zip.file('docProps/core.xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:dcmitype="http://purl.org/dc/dcmitype/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>'+xlsxXml(tp.name || 'HETK element pasporti')+'</dc:title><dc:creator>'+xlsxXml(actorName())+'</dc:creator><dcterms:created xsi:type="dcterms:W3CDTF">'+now+'</dcterms:created><dcterms:modified xsi:type="dcterms:W3CDTF">'+now+'</dcterms:modified></cp:coreProperties>');
-    zip.file('docProps/app.xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes"><Application>HETK Navoiy</Application><DocSecurity>0</DocSecurity><ScaleCrop>false</ScaleCrop><HeadingPairs><vt:vector size="2" baseType="variant"><vt:variant><vt:lpstr>Worksheets</vt:lpstr></vt:variant><vt:variant><vt:i4>1</vt:i4></vt:variant></vt:vector></HeadingPairs><TitlesOfParts><vt:vector size="1" baseType="lpstr"><vt:lpstr>Element pasporti</vt:lpstr></vt:vector></TitlesOfParts><Company>HETK Navoiy</Company><AppVersion>16.0300</AppVersion></Properties>');
+    zip.file('docProps/app.xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes"><Application>Microsoft Excel</Application><DocSecurity>0</DocSecurity><ScaleCrop>false</ScaleCrop><HeadingPairs><vt:vector size="2" baseType="variant"><vt:variant><vt:lpstr>Worksheets</vt:lpstr></vt:variant><vt:variant><vt:i4>1</vt:i4></vt:variant></vt:vector></HeadingPairs><TitlesOfParts><vt:vector size="1" baseType="lpstr"><vt:lpstr>Element pasporti</vt:lpstr></vt:vector></TitlesOfParts><Company>HETK Navoiy</Company><AppVersion>16.0300</AppVersion></Properties>');
     return await zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',compression:'DEFLATE',compressionOptions:{level:6}});
 }
 
