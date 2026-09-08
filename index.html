@@ -19,6 +19,7 @@
     <link rel="stylesheet" href="profile-container.css?v=3.0">
     <link rel="stylesheet" href="auth-container.css?v=8.0">
     <link rel="stylesheet" href="statistics.css?v=3.2">
+    <link rel="stylesheet" href="safety-equipment.css?v=1.0">
     <link rel="stylesheet" href="naryad-module.css?v=1.1">
 </head>
 <body>
@@ -95,6 +96,11 @@ cursor:pointer;
         <div class="list-header">
             <h3>Boshqaruv paneli</h3>
             <div class="hetk-list-header-actions">
+                <button id="hetk-safety-equipment-open" class="hetk-safety-equipment-header-btn" type="button" title="Himoya vositalari nazorati" hidden>
+                    <i class="fas fa-shield-alt"></i>
+                    <span>Himoya vositalari</span>
+                    <b id="hetk-safety-equipment-count" hidden>0</b>
+                </button>
                 <button id="hetk-naryad-open" class="hetk-naryad-header-btn" type="button" title="Elektron naryadlar" hidden>
                     <i class="fas fa-file-signature"></i>
                     <span>Naryadlar</span>
@@ -1699,12 +1705,13 @@ gap:8px;
     <script src="app.js?v=10.0"></script>
     <script src="profile-container.js?v=3.0"></script>
     <script src="auth-container.js?v=8.0"></script>
+    <script src="safety-equipment.js?v=1.0"></script>
     <script src="naryad-module.js?v=1.0"></script>
     <script src="statistics.js?v=3.2"></script>
     <script src="pdf-lib.min.js?v=1.0"></script>
     <script src="docx.iife.js?v=1.0"></script>
     <script src="jszip.min.js?v=1.0"></script>
-    <script src="print-module.js?v=9.0"></script>
+    <script src="print-module.js?v=10.0"></script>
     <script src="mahalla.js?v=1.1"></script>
 </body>
                          </html>
