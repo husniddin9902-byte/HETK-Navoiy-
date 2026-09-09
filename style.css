@@ -327,16 +327,22 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    height: 38px !important;
-    margin-bottom: 5px !important;
+    min-height: 58px;
+    height: auto !important;
+    margin-bottom: 0 !important;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 0 16px !important;
+    padding: 8px 16px !important;
     flex-shrink: 0;
+    gap: 10px;
+    overflow: visible;
+    box-sizing: border-box;
 }
 
 .list-header h3 {
     font-size: 15px !important;
     margin: 0 !important;
+    line-height: 1.15;
+    flex: 0 1 auto;
 }
 
 
@@ -1009,6 +1015,9 @@ min-width:max-content;
     display:flex;
     align-items:center;
     gap:12px;
+    min-width:0;
+    flex-shrink:0;
+    overflow:visible;
 }
 
 .hetk-print-header-btn{
@@ -1026,8 +1035,8 @@ min-width:max-content;
 
 .hetk-print-count{
     position:absolute;
-    top:-7px;
-    right:-7px;
+    top:2px;
+    right:2px;
     min-width:19px;
     height:19px;
     padding:0 4px;
@@ -1036,6 +1045,8 @@ min-width:max-content;
     color:#fff;
     font:700 11px/19px Arial,sans-serif;
     box-sizing:border-box;
+    z-index:2;
+    pointer-events:none;
 }
 
 .hetk-print-selection{
@@ -1313,6 +1324,12 @@ min-width:max-content;
 .hetk-doc-photo-card img{width:100%;height:72mm;object-fit:cover;border-radius:5px;}.hetk-doc-photo-card strong{display:block;margin-bottom:6px;}
 
 @media (max-width:700px){
+    .list-header{min-height:62px;padding:8px 8px!important;gap:7px;overflow:visible;}
+    .list-header h3{min-width:76px;max-width:105px;font-size:14px!important;line-height:1.12;overflow-wrap:normal;}
+    .hetk-list-header-actions{gap:6px;justify-content:flex-end;overflow:visible;}
+    .hetk-print-header-btn{width:42px;height:42px;flex:0 0 42px;overflow:hidden;}
+    .hetk-print-count{top:2px;right:2px;min-width:18px;height:18px;font-size:10px;line-height:18px;}
+    #close-list{width:34px;height:42px;flex:0 0 34px;padding:0!important;display:grid;place-items:center;}
     .hetk-print-overlay{padding:0;align-items:stretch;justify-content:flex-end;background:rgba(0,10,18,.67);}
     .hetk-print-dialog{width:calc(100% - 30px);max-height:100vh;margin-left:auto;border-radius:0;border-top:0;border-bottom:0;}
     .hetk-print-dialog-header{padding:0 14px;}.hetk-print-mobile-only{display:block;}.hetk-print-heading-icon{display:none;}
