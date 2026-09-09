@@ -4,7 +4,7 @@
   color:#fff;background:#0b4266;cursor:pointer;font:700 14px/1.2 inherit;transition:.18s ease;
 }
 .hetk-naryad-header-btn:hover{background:#0d5685;transform:translateY(-1px)}
-.hetk-naryad-header-btn b{position:absolute;right:-7px;top:-7px;min-width:21px;height:21px;padding:0 6px;border-radius:12px;background:#ff8a00;color:#fff;display:grid;place-items:center;font-size:12px}
+.hetk-naryad-header-btn b{position:absolute;right:2px;top:2px;z-index:2;min-width:19px;height:19px;padding:0 5px;border-radius:11px;background:#ff8a00;color:#fff;display:grid;place-items:center;font-size:11px;line-height:19px;box-sizing:border-box;pointer-events:none}
 .hetk-naryad-header-btn[hidden]{display:none!important}
 
 .hetk-naryad-overlay{position:fixed;inset:0;z-index:100050;display:none;background:rgba(0,9,18,.82);backdrop-filter:blur(5px);font-family:inherit;color:#eaf7ff}
@@ -82,7 +82,7 @@
   .hetk-naryad-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.hetk-naryad-rights-layout{grid-template-columns:1fr}.hetk-naryad-user-list{max-height:280px}.hetk-naryad-grid.three{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media (max-width:680px){
-  .hetk-naryad-header-btn{width:42px;padding:0}.hetk-naryad-header-btn>span{display:none}
+  .hetk-naryad-header-btn{width:42px;height:42px;min-height:42px;flex:0 0 42px;padding:0;overflow:hidden}.hetk-naryad-header-btn>span{display:none}
   .hetk-naryad-topbar{min-height:60px;padding:9px 12px}.hetk-naryad-title>i{width:38px;height:38px}.hetk-naryad-title h2{font-size:18px}.hetk-naryad-title p{display:none}.hetk-naryad-body{padding:11px}.hetk-naryad-nav{padding:8px 10px}.hetk-naryad-tab{min-height:39px;padding:0 13px}
   .hetk-naryad-toolbar{grid-template-columns:1fr 1fr}.hetk-naryad-toolbar .hetk-naryad-search{grid-column:1/-1}.hetk-naryad-list{grid-template-columns:1fr}.hetk-naryad-card{padding:13px}
   .hetk-naryad-grid,.hetk-naryad-grid.three{grid-template-columns:1fr}.hetk-naryad-field.full{grid-column:auto}.hetk-naryad-section{padding:13px}.hetk-naryad-check-grid,.hetk-naryad-right-grid,.hetk-naryad-people{grid-template-columns:1fr}.hetk-naryad-measure{grid-template-columns:1fr 38px}.hetk-naryad-measure .hetk-measure-action{grid-column:1/-1;grid-row:2}.hetk-naryad-measure .hetk-naryad-remove{grid-column:2;grid-row:1/3}
