@@ -34,6 +34,10 @@
             pane.hidden = !active;
             pane.style.display = active ? '' : 'none';
         });
+
+        document.dispatchEvent(new CustomEvent('hetk-profile-tab-changed', {
+            detail:{tab:tabName}
+        }));
     }
 
     function bindProfileEvents(){
