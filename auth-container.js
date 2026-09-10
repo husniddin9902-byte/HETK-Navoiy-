@@ -119,8 +119,17 @@
   let pushRegisteredUid = '';
   let pushCurrentToken = '';
   let pushForegroundBound = false;
+  let loginSessionId = '';
+  let loginSessionToken = '';
+  let loginHeartbeatTimer = null;
+  let loginHistoryTimer = null;
+  let loginHistoryRows = [];
+  let loginHistoryLoadedAt = 0;
+  let loginHistoryLoading = false;
 
   const TELEGRAM_WORKER_URL = 'https://hetk-telegram.husniddin-99-02.workers.dev';
+  const SESSION_WORKER_URL = 'https://hetk-consumer-bot.husniddin-99-02.workers.dev';
+  const LOGIN_HEARTBEAT_MS = 60 * 1000;
   const FCM_VAPID_PUBLIC_KEY = 'BKdSzJyc3RKdUbVxJs7SyMsZ5iQhJOIRfDWba12LsyHuEOOUSiTe3yXLzhMgoNV488kZG56ySOXRTWE6Ha3JgRQ';
   const MESSAGE_LIFETIME_MS = 365 * 24 * 60 * 60 * 1000;
   const MESSAGE_MAX_FILE_BYTES = 20 * 1024 * 1024;
@@ -2176,6 +2185,242 @@
     messagesCleanupTimer=setInterval(()=>pruneUserMessages(uid),6*60*60*1000);
   }
 
+  function createClientId(prefix){
+    const raw=(window.crypto && typeof window.crypto.randomUUID==='function')
+      ? window.crypto.randomUUID()
+      : `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    return `${prefix || 'id'}_${raw}`.replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,100);
+  }
+
+  function loginDeviceId(){
+    const key='hetk_device_id';
+    let value='';
+    try{value=localStorage.getItem(key) || '';}catch(_e){}
+    if(!value){
+      value=pushDeviceId() || createClientId('device');
+      try{localStorage.setItem(key,value);}catch(_e){}
+    }
+    return String(value).replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,100);
+  }
+
+  function detectLoginDevice(){
+    const ua=String(navigator.userAgent || '');
+    let browser='Brauzer';
+    if(/Edg\//i.test(ua)) browser='Microsoft Edge';
+    else if(/OPR\//i.test(ua)) browser='Opera';
+    else if(/Firefox\//i.test(ua)) browser='Firefox';
+    else if(/Chrome\//i.test(ua) || /CriOS\//i.test(ua)) browser='Google Chrome';
+    else if(/Safari\//i.test(ua)) browser='Safari';
+    let os='Noma’lum tizim';
+    if(/Android/i.test(ua)) os='Android';
+    else if(/iPhone|iPad|iPod/i.test(ua)) os='iOS';
+    else if(/Windows/i.test(ua)) os='Windows';
+    else if(/Mac OS X/i.test(ua)) os='macOS';
+    else if(/Linux/i.test(ua)) os='Linux';
+    let deviceType='Kompyuter';
+    if(/iPad|Tablet/i.test(ua)) deviceType='Planshet';
+    else if(/Mobi|Android|iPhone|iPod/i.test(ua)) deviceType='Telefon';
+    return {
+      deviceId:loginDeviceId(),deviceType,browser,os,
+      screenSize:(window.screen && window.screen.width) ? `${window.screen.width}×${window.screen.height}` : '—',
+      language:String(navigator.language || '').slice(0,20),
+      clientTimezone:(Intl.DateTimeFormat().resolvedOptions().timeZone || '').slice(0,80)
+    };
+  }
+
+  async function sessionWorkerRequest(path,options){
+    options=options || {};
+    if(!auth || !auth.currentUser) throw new Error('AUTH_REQUIRED');
+    async function send(forceRefresh){
+      const token=await auth.currentUser.getIdToken(!!forceRefresh);
+      loginSessionToken=token;
+      const init={
+        method:options.method || 'POST',
+        headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'}
+      };
+      if(options.body!==undefined) init.body=JSON.stringify(options.body || {});
+      const response=await fetch(`${SESSION_WORKER_URL}${path}`,init);
+      return {response,token};
+    }
+    let sent=await send(false);
+    if(sent.response.status===401) sent=await send(true);
+    let result={};
+    try{result=await sent.response.json();}catch(_e){}
+    if(!sent.response.ok || !result.ok) throw new Error(result.error || 'Kirish nazorati xizmati javob bermadi.');
+    return result;
+  }
+
+  async function sendLoginHeartbeat(state){
+    if(!loginSessionId || !auth || !auth.currentUser) return;
+    try{
+      await sessionWorkerRequest('/session/heartbeat',{body:{sessionId:loginSessionId,state:state || (document.hidden ? 'away' : 'online')}});
+    }catch(error){console.warn('HETK login heartbeat:',error && error.message ? error.message : error);}
+  }
+
+  async function startLoginTracking(){
+    if(!currentAccount || !auth || !auth.currentUser) return;
+    if(loginHeartbeatTimer) clearInterval(loginHeartbeatTimer);
+    loginSessionId=createClientId('session');
+    try{
+      await sessionWorkerRequest('/session/start',{body:Object.assign({sessionId:loginSessionId},detectLoginDevice())});
+      loginHeartbeatTimer=setInterval(()=>sendLoginHeartbeat(document.hidden ? 'away' : 'online'),LOGIN_HEARTBEAT_MS);
+    }catch(error){
+      console.warn('HETK login tracking:',error && error.message ? error.message : error);
+    }
+  }
+
+  function endLoginTracking(keepalive){
+    if(loginHeartbeatTimer){clearInterval(loginHeartbeatTimer);loginHeartbeatTimer=null;}
+    const sessionId=loginSessionId;
+    const token=loginSessionToken;
+    loginSessionId='';loginSessionToken='';
+    if(!sessionId || !token) return Promise.resolve();
+    const request=fetch(`${SESSION_WORKER_URL}/session/end`,{
+      method:'POST',keepalive:!!keepalive,
+      headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+      body:JSON.stringify({sessionId})
+    }).catch(()=>null);
+    return keepalive ? Promise.resolve() : request;
+  }
+
+  function loginAuditState(row){
+    const now=Date.now();
+    if(row.endedAt) return {key:'offline',label:'Chiqdi'};
+    if(now-Number(row.lastSeenAt || 0)>130000) return {key:'offline',label:'Aloqa uzilgan'};
+    if(row.state==='away') return {key:'away',label:'Tanaffusda'};
+    return {key:'online',label:'Hozir saytda'};
+  }
+
+  function formatLoginDate(value){
+    if(!value) return '—';
+    try{return new Date(Number(value)).toLocaleString('uz-UZ',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});}catch(_e){return '—';}
+  }
+
+  function formatLoginDuration(seconds){
+    seconds=Math.max(0,Math.round(Number(seconds || 0)));
+    if(seconds<60) return seconds ? `${seconds} soniya` : '1 daq.dan kam';
+    const minutes=Math.floor(seconds/60);
+    if(minutes<60) return `${minutes} daqiqa`;
+    const hours=Math.floor(minutes/60);const rest=minutes%60;
+    return rest ? `${hours} soat ${rest} daq.` : `${hours} soat`;
+  }
+
+  function ensureLoginAuditUI(){
+    const host=byId('hetk-login-security-pane');
+    if(!host || host.dataset.ready==='1') return;
+    host.dataset.ready='1';
+    host.innerHTML=`
+      <div class="hetk-login-audit">
+        <div class="hetk-login-audit-head">
+          <div><h3><i class="fas fa-shield-alt"></i> Kirish va qurilmalar nazorati</h3><p>Kim, qachon, qaysi qurilma va taxminiy hududdan kirganini kuzatish.</p></div>
+          <button id="hetk-login-audit-refresh" class="hetk-login-audit-refresh" type="button"><i class="fas fa-sync-alt"></i> Yangilash</button>
+        </div>
+        <div class="hetk-login-audit-summary">
+          <div class="hetk-login-audit-stat green"><i class="fas fa-signal"></i><div><span>Hozir saytda</span><b id="hetk-audit-online">0</b></div></div>
+          <div class="hetk-login-audit-stat"><i class="fas fa-sign-in-alt"></i><div><span>Bugungi kirishlar</span><b id="hetk-audit-today">0</b></div></div>
+          <div class="hetk-login-audit-stat violet"><i class="fas fa-users"></i><div><span>Foydalanuvchilar</span><b id="hetk-audit-users">0</b></div></div>
+          <div class="hetk-login-audit-stat amber"><i class="fas fa-mobile-alt"></i><div><span>Qurilmalar</span><b id="hetk-audit-devices">0</b></div></div>
+        </div>
+        <div class="hetk-login-audit-filters">
+          <label class="hetk-login-audit-search"><i class="fas fa-search"></i><input id="hetk-login-audit-search" placeholder="Hodim, login, hudud yoki qurilma..."></label>
+          <select id="hetk-login-audit-days"><option value="1">Oxirgi 24 soat</option><option value="7">Oxirgi 7 kun</option><option value="30" selected>Oxirgi 30 kun</option><option value="90">Oxirgi 90 kun</option><option value="36500">Barcha tarix</option></select>
+          <select id="hetk-login-audit-status"><option value="all">Barcha holatlar</option><option value="online">Hozir saytda</option><option value="away">Tanaffusda</option><option value="offline">Chiqib ketgan</option></select>
+        </div>
+        <div id="hetk-login-audit-list" class="hetk-login-audit-list"><div class="hetk-login-audit-empty">Kirishlar yuklanmoqda...</div></div>
+        <div class="hetk-login-audit-privacy"><i class="fas fa-info-circle"></i> Hudud internet manzili bo‘yicha taxminan aniqlanadi. Maxfiylik uchun to‘liq IP manzil saqlanmaydi.</div>
+      </div>`;
+    byId('hetk-login-audit-refresh').addEventListener('click',()=>loadLoginHistory(true));
+    byId('hetk-login-audit-days').addEventListener('change',()=>loadLoginHistory(true));
+    byId('hetk-login-audit-search').addEventListener('input',renderLoginHistory);
+    byId('hetk-login-audit-status').addEventListener('change',renderLoginHistory);
+  }
+
+  function renderLoginHistory(){
+    const list=byId('hetk-login-audit-list');if(!list) return;
+    const query=String((byId('hetk-login-audit-search')||{}).value || '').trim().toLowerCase();
+    const wanted=String((byId('hetk-login-audit-status')||{}).value || 'all');
+    const rows=loginHistoryRows.filter(row=>{
+      const state=loginAuditState(row).key;
+      if(wanted!=='all' && wanted!==state) return false;
+      const haystack=[row.fullName,row.login,row.roleLabel,row.deviceType,row.browser,row.os,row.city,row.region,row.country,row.maskedIp].join(' ').toLowerCase();
+      return !query || haystack.includes(query);
+    });
+    const todayStart=new Date();todayStart.setHours(0,0,0,0);
+    const online=new Set(loginHistoryRows.filter(row=>loginAuditState(row).key==='online').map(row=>row.uid).filter(Boolean)).size;
+    const today=loginHistoryRows.filter(row=>Number(row.startedAt || 0)>=todayStart.getTime()).length;
+    const users=new Set(loginHistoryRows.map(row=>row.uid).filter(Boolean)).size;
+    const devices=new Set(loginHistoryRows.map(row=>`${row.uid || ''}:${row.deviceId || ''}`).filter(value=>!value.endsWith(':'))).size;
+    if(byId('hetk-audit-online')) byId('hetk-audit-online').textContent=online;
+    if(byId('hetk-audit-today')) byId('hetk-audit-today').textContent=today;
+    if(byId('hetk-audit-users')) byId('hetk-audit-users').textContent=users;
+    if(byId('hetk-audit-devices')) byId('hetk-audit-devices').textContent=devices;
+    if(!rows.length){list.innerHTML='<div class="hetk-login-audit-empty"><i class="fas fa-search"></i><br>Tanlangan filtr bo‘yicha kirish topilmadi.</div>';return;}
+    list.innerHTML=`<div class="hetk-login-audit-row header"><div>Hodim</div><div>Kirgan vaqt</div><div>Qurilma</div><div>Taxminiy joy</div><div>Saytda bo‘lgan</div><div>Holati</div></div>`+rows.map(row=>{
+      const state=loginAuditState(row);
+      const location=[row.city,row.region,row.country].filter(Boolean).filter((value,index,array)=>array.indexOf(value)===index).join(', ') || 'Aniqlanmadi';
+      const device=[row.deviceType,row.os].filter(Boolean).join(' · ') || 'Noma’lum qurilma';
+      const detail=[row.browser,row.screenSize].filter(Boolean).join(' · ');
+      let duration=Number(row.activeSeconds || 0);
+      if(state.key==='online') duration+=Math.min(90,Math.max(0,(Date.now()-Number(row.lastSeenAt || Date.now()))/1000));
+      return `<div class="hetk-login-audit-row">
+        <div class="hetk-login-audit-person"><span class="hetk-login-audit-avatar"><i class="fas fa-user"></i></span><span><b>${escapeHtml(row.fullName || row.login || 'Foydalanuvchi')}</b><small>${escapeHtml(row.roleLabel || row.login || '—')}</small></span></div>
+        <div class="hetk-login-audit-cell" data-label="Kirgan vaqt"><b>${escapeHtml(formatLoginDate(row.startedAt))}</b><small>Oxirgi faollik: ${escapeHtml(formatLoginDate(row.lastSeenAt))}</small></div>
+        <div class="hetk-login-audit-cell" data-label="Qurilma"><b>${escapeHtml(device)}</b><small>${escapeHtml(detail || '—')}</small></div>
+        <div class="hetk-login-audit-cell" data-label="Taxminiy joy"><b>${escapeHtml(location)}</b><small>IP: ${escapeHtml(row.maskedIp || 'yashirilgan')}</small></div>
+        <div class="hetk-login-audit-cell" data-label="Davomiylik"><b>${escapeHtml(formatLoginDuration(duration))}</b><small>${row.endedAt ? `Chiqdi: ${escapeHtml(formatLoginDate(row.endedAt))}` : 'Faol vaqt'}</small></div>
+        <div data-label="Holati"><span class="hetk-login-audit-status ${state.key}"><i class="fas fa-circle"></i>${state.label}</span></div>
+      </div>`;
+    }).join('');
+  }
+
+  async function loadLoginHistory(force){
+    if(!currentAccount || currentAccount.role!=='super_admin' || loginHistoryLoading) return;
+    if(!force && loginHistoryLoadedAt && Date.now()-loginHistoryLoadedAt<30000){renderLoginHistory();return;}
+    ensureLoginAuditUI();
+    const btn=byId('hetk-login-audit-refresh');const list=byId('hetk-login-audit-list');
+    loginHistoryLoading=true;if(btn) btn.disabled=true;
+    if(list && !loginHistoryLoadedAt) list.innerHTML='<div class="hetk-login-audit-empty">Kirishlar yuklanmoqda...</div>';
+    try{
+      const days=String((byId('hetk-login-audit-days')||{}).value || '30');
+      const result=await sessionWorkerRequest(`/session/list?days=${encodeURIComponent(days)}`,{method:'GET'});
+      loginHistoryRows=Array.isArray(result.sessions) ? result.sessions : [];
+      loginHistoryLoadedAt=Date.now();renderLoginHistory();
+    }catch(error){
+      if(list) list.innerHTML=`<div class="hetk-login-audit-error"><b>Kirish tarixini yuklab bo‘lmadi.</b><br>${escapeHtml(error && error.message ? error.message : 'Worker kodini tekshiring.')}</div>`;
+    }finally{loginHistoryLoading=false;if(btn) btn.disabled=false;}
+  }
+
+  function configureLoginAudit(account){
+    const tab=document.querySelector('[data-profile-tab="security"]');
+    const pane=document.querySelector('[data-profile-pane="security"]');
+    const tabs=tab && tab.closest('.hetk-profile-tabs');
+    const allowed=!!(account && account.role==='super_admin');
+    if(tab) tab.hidden=!allowed;
+    if(tabs) tabs.classList.toggle('has-security',allowed);
+    if(!allowed){
+      if(tab && tab.classList.contains('active') && window.activateProfileTab) window.activateProfileTab('employees');
+      if(pane){pane.hidden=true;pane.style.display='none';}
+      if(loginHistoryTimer){clearInterval(loginHistoryTimer);loginHistoryTimer=null;}
+      return;
+    }
+    ensureLoginAuditUI();
+  }
+
+  function bindLoginAuditEvents(){
+    if(document.documentElement.dataset.loginAuditBound==='1') return;
+    document.documentElement.dataset.loginAuditBound='1';
+    document.addEventListener('hetk-profile-tab-changed',event=>{
+      if(!event.detail || event.detail.tab!=='security' || !currentAccount || currentAccount.role!=='super_admin') return;
+      loadLoginHistory(false);
+      if(!loginHistoryTimer) loginHistoryTimer=setInterval(()=>loadLoginHistory(true),LOGIN_HEARTBEAT_MS);
+    });
+    document.addEventListener('visibilitychange',()=>{
+      if(!loginSessionId) return;
+      sendLoginHeartbeat(document.hidden ? 'away' : 'online');
+    });
+    window.addEventListener('pagehide',()=>endLoginTracking(true));
+  }
+
   function populateProfile(account){
     const nameEl = byId('profile-name');
     const posEl = byId('profile-position');
@@ -2194,6 +2439,7 @@
     renderEmployeesManager(account);
     renderCommunicationPane();
     renderSavedFilesPane();
+    configureLoginAudit(account);
     installLogoutButton();
   }
 
@@ -3605,6 +3851,7 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
     btn.innerHTML = '<i class="fas fa-sign-out-alt"></i> Tizimdan chiqish';
     btn.addEventListener('click', async () => {
       if(window.closeProfileModule) window.closeProfileModule();
+      await endLoginTracking(false);
       await auth.signOut();
     });
     menu.appendChild(btn);
@@ -3795,6 +4042,7 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
       populateProfile(currentAccount);
       window.HETKAuth.currentUser = currentAccount;
       setOverlayVisible(false);
+      await startLoginTracking();
       document.dispatchEvent(new CustomEvent('hetk-auth-ready',{detail:{user:currentAccount}}));
       setTimeout(openPushDestination,0);
     }catch(e){
@@ -3806,6 +4054,7 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
   async function init(){
     buildAuthUI();
     bindAuthUI();
+    bindLoginAuditEvents();
     setOverlayVisible(true);
 
     if(typeof firebase === 'undefined' || !firebase.apps || !firebase.apps.length){
@@ -3827,10 +4076,13 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
         if(creatingFirstAdmin) return;
         await handleSignedIn(user);
       }else{
+        endLoginTracking(false);
         if(currentUserLiveRef){ currentUserLiveRef.off('value'); currentUserLiveRef=null; }
         stopUserNotifications();
         stopUserMessages();
         stopNotificationSettings();
+        if(loginHistoryTimer){clearInterval(loginHistoryTimer);loginHistoryTimer=null;}
+        loginHistoryRows=[];loginHistoryLoadedAt=0;
         currentAccount=null;
         window.HETKAuth.currentUser=null;
         document.dispatchEvent(new CustomEvent('hetk-auth-cleared'));
