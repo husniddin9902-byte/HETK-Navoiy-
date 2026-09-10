@@ -113,6 +113,31 @@
   cursor:pointer;font-weight:700;margin-top:4px;
 }
 
+/* Bosh admin: kirish va qurilmalar nazorati */
+.hetk-login-audit{max-width:1240px;margin:0 auto;color:#173047;}
+.hetk-login-audit-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:14px;}
+.hetk-login-audit-head h3{margin:0 0 4px;font-size:19px;color:#102c43;}
+.hetk-login-audit-head p{margin:0;color:#72879a;font-size:12px;line-height:1.45;}
+.hetk-login-audit-refresh{border:0;border-radius:10px;min-height:42px;padding:0 15px;background:#e7f2ff;color:#0875d8;font-weight:800;cursor:pointer;white-space:nowrap;}
+.hetk-login-audit-refresh:disabled{opacity:.6;cursor:wait;}
+.hetk-login-audit-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:12px;}
+.hetk-login-audit-stat{min-height:82px;border:1px solid #dce7f0;border-radius:13px;background:#fff;padding:13px 14px;display:flex;align-items:center;gap:11px;box-shadow:0 3px 13px rgba(21,55,81,.05);}
+.hetk-login-audit-stat i{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:#e6f2ff;color:#0879e4;font-size:18px;flex:0 0 auto;}
+.hetk-login-audit-stat.green i{background:#e8f8ef;color:#19945a;}.hetk-login-audit-stat.amber i{background:#fff5d9;color:#b47b00;}.hetk-login-audit-stat.violet i{background:#f0eaff;color:#7046c7;}
+.hetk-login-audit-stat span{display:block;font-size:11px;color:#73889a;margin-bottom:3px;}.hetk-login-audit-stat b{font-size:23px;color:#17354d;}
+.hetk-login-audit-filters{display:grid;grid-template-columns:minmax(220px,1fr) 170px 150px;gap:10px;padding:12px;background:#fff;border:1px solid #dce7f0;border-radius:13px 13px 0 0;}
+.hetk-login-audit-search{height:42px;border:1px solid #d8e4ed;border-radius:10px;background:#f8fbfd;display:flex;align-items:center;gap:9px;padding:0 12px;color:#7790a4;}
+.hetk-login-audit-search input{width:100%;border:0;outline:0;background:transparent;color:#203c52;font-size:13px;}
+.hetk-login-audit-filters select{height:42px;border:1px solid #d8e4ed;border-radius:10px;background:#f8fbfd;color:#29465d;padding:0 10px;font-size:13px;outline:0;}
+.hetk-login-audit-list{background:#fff;border:1px solid #dce7f0;border-top:0;border-radius:0 0 13px 13px;overflow:hidden;}
+.hetk-login-audit-row{display:grid;grid-template-columns:minmax(180px,1.35fr) minmax(135px,.9fr) minmax(175px,1.1fr) minmax(145px,1fr) 105px 92px;gap:12px;align-items:center;padding:12px 14px;border-top:1px solid #edf2f6;font-size:12px;}
+.hetk-login-audit-row:first-child{border-top:0;}.hetk-login-audit-row.header{min-height:38px;padding-top:8px;padding-bottom:8px;background:#edf4f9;color:#587086;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;}
+.hetk-login-audit-person{min-width:0;display:flex;align-items:center;gap:10px;}.hetk-login-audit-avatar{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;background:#e6f2ff;color:#0878df;flex:0 0 auto;}
+.hetk-login-audit-person b,.hetk-login-audit-cell b{display:block;color:#1f3a50;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}.hetk-login-audit-person small,.hetk-login-audit-cell small{display:block;color:#8193a2;font-size:10px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.hetk-login-audit-status{display:inline-flex;align-items:center;justify-content:center;gap:5px;border-radius:20px;padding:6px 9px;font-size:10px;font-weight:800;white-space:nowrap;}.hetk-login-audit-status.online{background:#e6f8ef;color:#188653;}.hetk-login-audit-status.offline{background:#eef2f5;color:#63798b;}.hetk-login-audit-status.away{background:#fff3d7;color:#a66e00;}
+.hetk-login-audit-empty,.hetk-login-audit-error{padding:38px 20px;text-align:center;color:#7b8f9f;font-size:13px;line-height:1.5;}.hetk-login-audit-error{color:#b64040;background:#fff7f7;}
+.hetk-login-audit-privacy{margin-top:9px;color:#8596a5;font-size:10px;line-height:1.4;}
+
 @media(max-width:720px){
   #hetk-auth-overlay{padding:14px;align-items:center;}
   .hetk-auth-card{border-radius:17px;}
@@ -123,6 +148,10 @@
   .hetk-account-body{padding:15px;}
   .hetk-account-actions{flex-direction:column-reverse;}
   .hetk-account-btn{width:100%;}
+  .hetk-login-audit-head{align-items:stretch;flex-direction:column;}.hetk-login-audit-refresh{width:100%;}
+  .hetk-login-audit-summary{grid-template-columns:repeat(2,minmax(0,1fr));}.hetk-login-audit-stat{padding:10px;min-height:70px;}.hetk-login-audit-stat i{width:36px;height:36px;}.hetk-login-audit-stat b{font-size:20px;}
+  .hetk-login-audit-filters{grid-template-columns:1fr 1fr;}.hetk-login-audit-search{grid-column:1/-1;}
+  .hetk-login-audit-row.header{display:none;}.hetk-login-audit-row{grid-template-columns:1fr 1fr;gap:10px;padding:14px;}.hetk-login-audit-person{grid-column:1/-1;padding-bottom:9px;border-bottom:1px solid #edf2f6;}.hetk-login-audit-row>div:nth-child(4){grid-column:1/-1;}.hetk-login-audit-row>div:before{content:attr(data-label);display:block;margin-bottom:3px;color:#8a9aa8;font-size:9px;font-weight:800;text-transform:uppercase;}.hetk-login-audit-person:before{display:none!important;}
 }
 
 /* ===============================
