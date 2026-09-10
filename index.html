@@ -16,8 +16,8 @@
     }
             
 </style> 
-    <link rel="stylesheet" href="profile-container.css?v=3.0">
-    <link rel="stylesheet" href="auth-container.css?v=8.0">
+    <link rel="stylesheet" href="profile-container.css?v=3.1">
+    <link rel="stylesheet" href="auth-container.css?v=8.2">
     <link rel="stylesheet" href="statistics.css?v=3.2">
     <link rel="stylesheet" href="safety-equipment.css?v=2.1">
     <link rel="stylesheet" href="naryad-module.css?v=1.2">
@@ -1417,6 +1417,10 @@ margin-bottom:8px;
                     <i class="fas fa-id-card"></i>
                     <span>Shaxsiy ma'lumotlar</span>
                 </button>
+                <button class="hetk-profile-tab" type="button" data-profile-tab="security" role="tab" aria-selected="false" hidden>
+                    <i class="fas fa-shield-alt"></i>
+                    <span>Kirish nazorati</span>
+                </button>
             </nav>
 
             <main id="profile-content" class="hetk-profile-content">
@@ -1522,6 +1526,10 @@ margin-bottom:8px;
                             <div><span>Tizimga kirgan vaqti</span><b>—</b></div>
                         </div>
                     </div>
+                </section>
+
+                <section class="hetk-profile-pane" data-profile-pane="security" hidden>
+                    <div id="hetk-login-security-pane"></div>
                 </section>
             </main>
         </div>
@@ -1713,8 +1721,8 @@ gap:8px;
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="app.js?v=10.1"></script>
-    <script src="profile-container.js?v=3.0"></script>
-    <script src="auth-container.js?v=8.1"></script>
+    <script src="profile-container.js?v=3.1"></script>
+    <script src="auth-container.js?v=8.2"></script>
     <script src="safety-equipment.js?v=2.1"></script>
     <script src="naryad-module.js?v=1.0"></script>
     <script src="statistics.js?v=3.2"></script>
