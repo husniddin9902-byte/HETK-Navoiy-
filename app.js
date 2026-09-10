@@ -599,6 +599,32 @@ const searchState = {
     results: []
 };
 
+// Brauzer parol menejeri saqlangan loginni qidiruv maydoniga yozmasligi uchun
+// maydon foydalanuvchi tegmaguncha readonly turadi. Birinchi bosish yoki klaviatura
+// harakatida tozalanib, oddiy qidiruv maydoniga aylanadi.
+if (elementSearchInput) {
+    elementSearchInput.setAttribute('autocomplete', 'off');
+    elementSearchInput.setAttribute('data-form-type', 'other');
+    elementSearchInput.readOnly = true;
+    let searchActivatedByUser = false;
+    const activateElementSearch = () => {
+        if (searchActivatedByUser) return;
+        searchActivatedByUser = true;
+        elementSearchInput.value = '';
+        searchState.text = '';
+        elementSearchInput.readOnly = false;
+    };
+    elementSearchInput.addEventListener('pointerdown', activateElementSearch, { once: true });
+    elementSearchInput.addEventListener('touchstart', activateElementSearch, { once: true, passive: true });
+    elementSearchInput.addEventListener('keydown', activateElementSearch, { once: true });
+    [100, 500, 1500].forEach(delay => setTimeout(() => {
+        if (!searchActivatedByUser && elementSearchInput.value) {
+            elementSearchInput.value = '';
+            searchState.text = '';
+        }
+    }, delay));
+}
+
 const filterState = {
     balance: "none",
     responsible: "none",
