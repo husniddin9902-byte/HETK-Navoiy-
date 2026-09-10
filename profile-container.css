@@ -175,6 +175,8 @@
     top:0;
     z-index:2;
 }
+.hetk-profile-tabs.has-security{grid-template-columns:repeat(5,minmax(0,1fr));}
+.hetk-profile-tab[hidden]{display:none!important;}
 .hetk-profile-tab{
     min-height:66px;
     border:0;
@@ -313,7 +315,8 @@ body.hetk-profile-open{overflow:hidden;}
     .hetk-profile-avatar{font-size:28px;}
     .hetk-profile-identity h1{font-size:18px;}
     .hetk-profile-training{grid-column:1/-1;width:100%;}
-    .hetk-profile-tabs{overflow-x:auto;grid-template-columns:repeat(4,minmax(96px,1fr));}
+    .hetk-profile-tabs{overflow-x:auto;grid-template-columns:repeat(4,minmax(104px,1fr));}
+    .hetk-profile-tabs.has-security{grid-template-columns:repeat(5,minmax(104px,1fr));}
     .hetk-profile-content{padding:10px;}
     .hetk-profile-employees-layout{grid-template-columns:1fr;}
     .hetk-profile-personal-grid{grid-template-columns:1fr;}
