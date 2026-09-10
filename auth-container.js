@@ -1278,12 +1278,21 @@
 
   async function notifySafetyUpdated(uid,target,before,after){
     if(!uid || uid===currentAccount.uid) return;
-    const now=Date.now();
-    const noticeId=databaseRef.ref('UserNotifications').push().key;
-    const title=(currentAccount.fullName||'TB muhandisi')+' ruxsatnoma va imtihon ma’lumotlaringizni yangiladi';
-    const payload={id:noticeId,kind:'activity',action:'safety_update',read:false,title,actorUid:currentAccount.uid,actorName:currentAccount.fullName||'',actorRole:getRoleLabel(currentAccount),elementName:target.fullName||'Hodim',folderPath:target.workZoneName||target.region||'—',changes:safetyNoticeChanges(before,after),createdAt:now,expiresAt:now+SAFETY_NOTICE_LIFETIME_MS};
-    await databaseRef.ref('UserNotifications/'+uid+'/'+noticeId).set(payload);
-    await safeSendBrowserPush([uid],'notifications','Ruxsatnoma yangilandi',title,{action:'safety_update'});
+    const now=Date.now(),changes=safetyNoticeChanges(before,after),updates={};
+    const employeeTitle=(currentAccount.fullName||'TB muhandisi')+' ruxsatnoma va imtihon ma’lumotlaringizni yangiladi';
+    const editorTitle=(target.fullName||'Hodim')+' ruxsatnoma va imtihon ma’lumotlari muvaffaqiyatli yangilandi';
+    [
+      {recipientUid:uid,title:employeeTitle},
+      {recipientUid:currentAccount.uid,title:editorTitle}
+    ].forEach(row=>{
+      const noticeId=databaseRef.ref('UserNotifications/'+row.recipientUid).push().key;
+      updates['UserNotifications/'+row.recipientUid+'/'+noticeId]={id:noticeId,kind:'activity',action:'safety_update',read:false,title:row.title,actorUid:currentAccount.uid,actorName:currentAccount.fullName||'',actorRole:getRoleLabel(currentAccount),elementName:target.fullName||'Hodim',folderPath:target.workZoneName||target.region||'—',changes,createdAt:now,expiresAt:now+SAFETY_NOTICE_LIFETIME_MS};
+    });
+    await databaseRef.ref().update(updates);
+    await Promise.all([
+      safeSendBrowserPush([uid],'notifications','Ruxsatnoma yangilandi',employeeTitle,{action:'safety_update'}),
+      safeSendBrowserPush([currentAccount.uid],'notifications','Ruxsatnoma saqlandi',editorTitle,{action:'safety_update'})
+    ]);
   }
 
   async function saveSafetyPermit(uid){
