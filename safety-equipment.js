@@ -197,7 +197,17 @@
     const urgent=coveredItems().filter(it=>['soon','expired','out_of_cycle'].includes(itemState(it).key)).length;
     badge.textContent=String(urgent);badge.hidden=!urgent;
   }
-  function open(){if(!canView())return;buildShell();byId('hetk-se-overlay').classList.add('open');byId('hetk-se-overlay').setAttribute('aria-hidden','false');document.body.style.overflow='hidden';render();scheduleReminderScan();}
+  function syncCurrentAccount(){
+    const account=window.HETKAuth&&window.HETKAuth.currentUser;
+    if(account&&(!me||me.uid!==account.uid||me.role!==account.role)){
+      start(account);
+      return true;
+    }
+    if(account&&me)me=Object.assign({},me,account);
+    setButton();
+    return !!me;
+  }
+  function open(){syncCurrentAccount();if(!canView())return;buildShell();const overlay=byId('hetk-se-overlay');if(!overlay)return;overlay.classList.add('open');overlay.setAttribute('aria-hidden','false');document.body.style.overflow='hidden';render();scheduleReminderScan();}
   function close(){const el=byId('hetk-se-overlay');if(el){el.classList.remove('open');el.setAttribute('aria-hidden','true');}closeModal();document.body.style.overflow='';}
   function render(){
     if(isMaster()){
@@ -624,7 +634,7 @@
     me=account;if(!window.firebase||!firebase.apps||!firebase.apps.length)return;db=firebase.database();buildShell();unbind();bindRef('users',v=>{users=v;if(me&&users[me.uid]){me=Object.assign({uid:me.uid},users[me.uid]);if(window.HETKAuth)window.HETKAuth.currentUser=me;}});bindRef('Folders',v=>folders=v);bindRef('WorkZones',v=>zones=v);bindRef('SafetyConstructionBrigades',v=>brigades=v);bindRef('SafetyEquipmentCatalog',v=>catalog=v);bindRef('SafetyEquipmentItems',v=>items=v);bindRef('SafetyEquipmentReceipts',v=>receipts=v);bindRef('SafetyEquipmentNorms',v=>norms=v);bindRef('SafetyEquipmentSettings',v=>settings=v);bindRef('SafetyEquipmentAudit',v=>audits=v);bindRef('SafetyEquipmentBackups',v=>backups=v);reminderInterval=setInterval(scanReminders,6*60*60*1000);setButton();
   }
   function clear(){unbind();me=null;users={};folders={};zones={};brigades={};catalog={};items={};receipts={};norms={};settings={};audits={};backups={};stockSearch='';stockRegion='all';reportCatalogId='all';reportRegion='all';reportDistrict='all';setButton();close();}
-  function init(){buildShell();const btn=byId('hetk-safety-equipment-open');if(btn)btn.addEventListener('click',open);document.addEventListener('hetk-auth-ready',e=>start(e.detail&&e.detail.user));document.addEventListener('hetk-auth-user-updated',e=>start(e.detail&&e.detail.user));document.addEventListener('hetk-auth-cleared',clear);if(window.HETKAuth&&window.HETKAuth.currentUser)start(window.HETKAuth.currentUser);}
+  function init(){buildShell();const btn=byId('hetk-safety-equipment-open');if(btn)btn.addEventListener('click',open);document.addEventListener('hetk-auth-ready',e=>start(e.detail&&e.detail.user));document.addEventListener('hetk-auth-user-updated',e=>start(e.detail&&e.detail.user));document.addEventListener('hetk-auth-cleared',clear);if(window.HETKAuth&&window.HETKAuth.currentUser)start(window.HETKAuth.currentUser);setTimeout(syncCurrentAccount,250);setTimeout(syncCurrentAccount,1500);}
   window.HETKSafetyEquipment={open,close,scanReminders};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
