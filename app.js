@@ -7285,6 +7285,7 @@ async function previousGalleryImage(){
     showGalleryControls();
 }
 
+
 function updateSearchLayout() {
     const resultsBox = document.getElementById("search-results");
     const foldersBox = document.getElementById("folders-section");
