@@ -4594,7 +4594,19 @@ function hetkPointAllowedByUser(tp){
     const tpFolders=tp && tp.folders
         ? Object.keys(tp.folders)
         : (tp && tp.primaryFolderId ? [tp.primaryFolderId] : (tp && tp.folderId ? [tp.folderId] : []));
-    return tpFolders.some(id => allowed.has(id));
+    const folderAllowed=tpFolders.some(id => allowed.has(id));
+    if(!folderAllowed) return false;
+
+    // Bitta fiderga bir nechta U/J xizmat ko'rsatishi mumkin. Master va
+    // elektromontyor uchun papka ruxsatining o'zi yetarli emas: element aynan
+    // ularning U/J iga biriktirilgan bo'lishi shart. Yuqori lavozimlar esa
+    // o'zlariga ruxsat berilgan papkadagi barcha elementlarni ko'rishda davom etadi.
+    if(me.role==='master' || me.role==='electrician'){
+        const pointWorkZoneIds=hetkGetTPWorkZoneIds(tp);
+        return !!me.workZoneId && pointWorkZoneIds.includes(me.workZoneId);
+    }
+
+    return true;
 }
 
 function applyHETKAccessControls(){
