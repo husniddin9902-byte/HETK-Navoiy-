@@ -2513,14 +2513,9 @@ async function hetkNotificationRecipients(tp,excludeUid){
         if(masterUid && masterUid!==excludeUid && users[masterUid] && users[masterUid].active!==false) recipients.add(masterUid);
     });
     const targetFolders=hetkElementFolderIds(tp);
-    Object.keys(elementWorkZonesCache).forEach(zoneId=>{
-        const zone=elementWorkZonesCache[zoneId] || {};
-        const related=Object.keys(zone.folders || {}).some(rootId=>
-            zone.folders[rootId] && targetFolders.some(folderId=>hetkFolderRelated(folderId,rootId))
-        );
-        const masterUid=zone.currentMasterUid;
-        if(related && masterUid && masterUid!==excludeUid && users[masterUid] && users[masterUid].active!==false) recipients.add(masterUid);
-    });
+    // Bitta papkaga bir nechta U/J xizmat qilishi mumkin. Element haqidagi
+    // bildirishnoma papka bo'yicha barcha Masterlarga emas, faqat elementning
+    // o'zida aniq biriktirilgan U/J Masterlariga yuboriladi.
     if(!recipients.size){
         Object.keys(users).forEach(uid=>{
             const user=users[uid] || {};
