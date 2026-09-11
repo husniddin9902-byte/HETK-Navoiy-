@@ -2513,8 +2513,14 @@ async function hetkNotificationRecipients(tp,excludeUid){
         if(masterUid && masterUid!==excludeUid && users[masterUid] && users[masterUid].active!==false) recipients.add(masterUid);
     });
     const targetFolders=hetkElementFolderIds(tp);
-    // Element bildirishnomasi faqat elementga aniq biriktirilgan U/J
-    // Masterlariga yuboriladi; umumiy papkadagi boshqa U/Jlarga yuborilmaydi.
+    Object.keys(elementWorkZonesCache).forEach(zoneId=>{
+        const zone=elementWorkZonesCache[zoneId] || {};
+        const related=Object.keys(zone.folders || {}).some(rootId=>
+            zone.folders[rootId] && targetFolders.some(folderId=>hetkFolderRelated(folderId,rootId))
+        );
+        const masterUid=zone.currentMasterUid;
+        if(related && masterUid && masterUid!==excludeUid && users[masterUid] && users[masterUid].active!==false) recipients.add(masterUid);
+    });
     if(!recipients.size){
         Object.keys(users).forEach(uid=>{
             const user=users[uid] || {};
@@ -4590,10 +4596,16 @@ function hetkPointAllowedByUser(tp){
         : (tp && tp.primaryFolderId ? [tp.primaryFolderId] : (tp && tp.folderId ? [tp.folderId] : []));
     const folderAllowed=tpFolders.some(id => allowed.has(id));
     if(!folderAllowed) return false;
+
+    // Bitta fiderga bir nechta U/J xizmat ko'rsatishi mumkin. Master va
+    // elektromontyor uchun papka ruxsatining o'zi yetarli emas: element aynan
+    // ularning U/J iga biriktirilgan bo'lishi shart. Yuqori lavozimlar esa
+    // o'zlariga ruxsat berilgan papkadagi barcha elementlarni ko'rishda davom etadi.
     if(me.role==='master' || me.role==='electrician'){
         const pointWorkZoneIds=hetkGetTPWorkZoneIds(tp);
         return !!me.workZoneId && pointWorkZoneIds.includes(me.workZoneId);
     }
+
     return true;
 }
 
