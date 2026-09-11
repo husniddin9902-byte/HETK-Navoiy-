@@ -2257,6 +2257,25 @@
     }catch(error){console.warn('HETK login heartbeat:',error && error.message ? error.message : error);}
   }
 
+  function requestPreciseLoginLocation(targetSessionId){
+    if(!targetSessionId || !navigator.geolocation){
+      if(targetSessionId) sessionWorkerRequest('/session/location',{body:{sessionId:targetSessionId,status:'unavailable'}}).catch(()=>null);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(position=>{
+      const coords=position && position.coords;
+      if(!coords) return;
+      sessionWorkerRequest('/session/location',{body:{
+        sessionId:targetSessionId,status:'granted',
+        latitude:Number(coords.latitude),longitude:Number(coords.longitude),
+        accuracy:Math.max(0,Math.round(Number(coords.accuracy || 0))),capturedAt:Date.now()
+      }}).catch(error=>console.warn('HETK GPS:',error && error.message ? error.message : error));
+    },error=>{
+      const status=error && error.code===1 ? 'denied' : (error && error.code===3 ? 'timeout' : 'unavailable');
+      sessionWorkerRequest('/session/location',{body:{sessionId:targetSessionId,status}}).catch(()=>null);
+    },{enableHighAccuracy:true,timeout:20000,maximumAge:60000});
+  }
+
   async function startLoginTracking(){
     if(!currentAccount || !auth || !auth.currentUser) return;
     if(loginHeartbeatTimer) clearInterval(loginHeartbeatTimer);
@@ -2264,6 +2283,7 @@
     try{
       await sessionWorkerRequest('/session/start',{body:Object.assign({sessionId:loginSessionId},detectLoginDevice())});
       loginHeartbeatTimer=setInterval(()=>sendLoginHeartbeat(document.hidden ? 'away' : 'online'),LOGIN_HEARTBEAT_MS);
+      requestPreciseLoginLocation(loginSessionId);
     }catch(error){
       console.warn('HETK login tracking:',error && error.message ? error.message : error);
     }
@@ -2312,7 +2332,7 @@
     host.innerHTML=`
       <div class="hetk-login-audit">
         <div class="hetk-login-audit-head">
-          <div><h3><i class="fas fa-shield-alt"></i> Kirish va qurilmalar nazorati</h3><p>Kim, qachon, qaysi qurilma va taxminiy hududdan kirganini kuzatish.</p></div>
+          <div><h3><i class="fas fa-shield-alt"></i> Kirish va qurilmalar nazorati</h3><p>Kim, qachon, qaysi qurilma va GPS joylashuvdan kirganini kuzatish.</p></div>
           <button id="hetk-login-audit-refresh" class="hetk-login-audit-refresh" type="button"><i class="fas fa-sync-alt"></i> Yangilash</button>
         </div>
         <div class="hetk-login-audit-summary">
@@ -2327,7 +2347,7 @@
           <select id="hetk-login-audit-status"><option value="all">Barcha holatlar</option><option value="online">Hozir saytda</option><option value="away">Tanaffusda</option><option value="offline">Chiqib ketgan</option></select>
         </div>
         <div id="hetk-login-audit-list" class="hetk-login-audit-list"><div class="hetk-login-audit-empty">Kirishlar yuklanmoqda...</div></div>
-        <div class="hetk-login-audit-privacy"><i class="fas fa-info-circle"></i> Hudud internet manzili bo‘yicha taxminan aniqlanadi. Maxfiylik uchun to‘liq IP manzil saqlanmaydi.</div>
+        <div class="hetk-login-audit-privacy"><i class="fas fa-info-circle"></i> Ruxsat berilganda GPS koordinata shifrlanib saqlanadi va faqat Bosh adminda ochiladi. GPS ishlamasa IP bo‘yicha taxminiy hudud ko‘rsatiladi; to‘liq IP saqlanmaydi.</div>
       </div>`;
     byId('hetk-login-audit-refresh').addEventListener('click',()=>loadLoginHistory(true));
     byId('hetk-login-audit-days').addEventListener('change',()=>loadLoginHistory(true));
@@ -2342,7 +2362,7 @@
     const rows=loginHistoryRows.filter(row=>{
       const state=loginAuditState(row).key;
       if(wanted!=='all' && wanted!==state) return false;
-      const haystack=[row.fullName,row.login,row.roleLabel,row.deviceType,row.browser,row.os,row.city,row.region,row.country,row.maskedIp].join(' ').toLowerCase();
+      const haystack=[row.fullName,row.login,row.roleLabel,row.deviceType,row.browser,row.os,row.workRegion,row.city,row.region,row.country,row.maskedIp].join(' ').toLowerCase();
       return !query || haystack.includes(query);
     });
     const todayStart=new Date();todayStart.setHours(0,0,0,0);
@@ -2355,9 +2375,17 @@
     if(byId('hetk-audit-users')) byId('hetk-audit-users').textContent=users;
     if(byId('hetk-audit-devices')) byId('hetk-audit-devices').textContent=devices;
     if(!rows.length){list.innerHTML='<div class="hetk-login-audit-empty"><i class="fas fa-search"></i><br>Tanlangan filtr bo‘yicha kirish topilmadi.</div>';return;}
-    list.innerHTML=`<div class="hetk-login-audit-row header"><div>Hodim</div><div>Kirgan vaqt</div><div>Qurilma</div><div>Taxminiy joy</div><div>Saytda bo‘lgan</div><div>Holati</div></div>`+rows.map(row=>{
+    list.innerHTML=`<div class="hetk-login-audit-row header"><div>Hodim</div><div>Kirgan vaqt</div><div>Qurilma</div><div>Kirish joyi</div><div>Saytda bo‘lgan</div><div>Holati</div></div>`+rows.map(row=>{
       const state=loginAuditState(row);
       const location=[row.city,row.region,row.country].filter(Boolean).filter((value,index,array)=>array.indexOf(value)===index).join(', ') || 'Aniqlanmadi';
+      const gps=row.gps && Number.isFinite(Number(row.gps.latitude)) && Number.isFinite(Number(row.gps.longitude)) ? row.gps : null;
+      const gpsAccuracy=gps ? Math.max(0,Math.round(Number(gps.accuracy || 0))) : 0;
+      const gpsMapUrl=gps ? `https://www.google.com/maps?q=${encodeURIComponent(Number(gps.latitude).toFixed(6)+','+Number(gps.longitude).toFixed(6))}` : '';
+      const gpsFallbackLabel=row.gpsStatus==='denied' ? 'GPS ruxsati berilmadi' : (row.gpsStatus==='timeout' ? 'GPS javobi kechikdi' : (row.gpsStatus==='unavailable' ? 'GPS aniqlanmadi' : 'GPS ruxsati kutilmoqda'));
+      const placeTitle=gps ? 'GPS orqali aniqlandi' : location;
+      const placeDetail=gps
+        ? `${row.workRegion ? escapeHtml(row.workRegion)+' · ' : ''}<a class="hetk-login-map-link" href="${gpsMapUrl}" target="_blank" rel="noopener noreferrer"><i class="fas fa-map-marker-alt"></i> Xaritada ko‘rish</a>${gpsAccuracy ? ` · ±${gpsAccuracy} metr` : ''}`
+        : `${escapeHtml(gpsFallbackLabel)} · IP: ${escapeHtml(row.maskedIp || 'yashirilgan')}`;
       const device=[row.deviceType,row.os].filter(Boolean).join(' · ') || 'Noma’lum qurilma';
       const detail=[row.browser,row.screenSize].filter(Boolean).join(' · ');
       let duration=Number(row.activeSeconds || 0);
@@ -2366,7 +2394,7 @@
         <div class="hetk-login-audit-person"><span class="hetk-login-audit-avatar"><i class="fas fa-user"></i></span><span><b>${escapeHtml(row.fullName || row.login || 'Foydalanuvchi')}</b><small>${escapeHtml(row.roleLabel || row.login || '—')}</small></span></div>
         <div class="hetk-login-audit-cell" data-label="Kirgan vaqt"><b>${escapeHtml(formatLoginDate(row.startedAt))}</b><small>Oxirgi faollik: ${escapeHtml(formatLoginDate(row.lastSeenAt))}</small></div>
         <div class="hetk-login-audit-cell" data-label="Qurilma"><b>${escapeHtml(device)}</b><small>${escapeHtml(detail || '—')}</small></div>
-        <div class="hetk-login-audit-cell" data-label="Taxminiy joy"><b>${escapeHtml(location)}</b><small>IP: ${escapeHtml(row.maskedIp || 'yashirilgan')}</small></div>
+        <div class="hetk-login-audit-cell" data-label="Kirish joyi"><b>${escapeHtml(placeTitle)}</b><small>${placeDetail}</small></div>
         <div class="hetk-login-audit-cell" data-label="Davomiylik"><b>${escapeHtml(formatLoginDuration(duration))}</b><small>${row.endedAt ? `Chiqdi: ${escapeHtml(formatLoginDate(row.endedAt))}` : 'Faol vaqt'}</small></div>
         <div data-label="Holati"><span class="hetk-login-audit-status ${state.key}"><i class="fas fa-circle"></i>${state.label}</span></div>
       </div>`;
