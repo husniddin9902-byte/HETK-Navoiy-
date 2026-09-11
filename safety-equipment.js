@@ -69,7 +69,6 @@
   function accountCoversZone(user,zoneId){
     if(!user)return false;const zone=zones[zoneId]||{};
     if(user.rootAccess||user.role==='super_admin'||user.role==='republic_tb_engineer')return true;
-    if(user.role==='master')return !!user.workZoneId&&user.workZoneId===zoneId;
     if(user.workZoneId&&user.workZoneId===zoneId)return true;
     const roots=zoneRoots(zone),allowed=accountFolderSet(user);return !!(roots.length&&roots.every(id=>allowed.has(id)));
   }
@@ -86,7 +85,7 @@
   }
   function visibleZones(){
     return Object.keys(zones).map(id=>Object.assign({id},zones[id]||{})).filter(z=>z.active!==false).filter(z=>{
-      if(isMaster())return z.id===me.workZoneId;
+      if(isMaster())return z.id===me.workZoneId||z.currentMasterUid===me.uid;
       return accountCoversZone(me,z.id);
     }).sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'uz'));
   }
@@ -142,7 +141,6 @@
   }
   function unitOptionRows(){
     const result=[];visibleZones().forEach(z=>{const geo=itemGeography({workZoneId:z.id});result.push({key:unitKey('work_zone',z.id),type:'work_zone',id:z.id,name:z.name||'Nomsiz U/J',region:geo.region,district:geo.district});});
-    if(isMaster())return result;
     visibleFolderRows().forEach(f=>{const geo=geographyFromFolder(f.id);result.push({key:unitKey('dispatcher',f.id),type:'dispatcher',id:f.id,name:/dispetcher/i.test(f.name)?f.name:`${f.name} dispetcherligi`,region:geo.region,district:geo.district,path:f.path});});
     Object.keys(brigades).map(id=>Object.assign({id},brigades[id]||{})).filter(row=>row.active!==false&&(me&&((me.rootAccess||role()==='super_admin'||role()==='republic_tb_engineer')||accountCoversFolder(me,row.folderId)))).sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'uz')).forEach(row=>{const geo=itemGeography({unitType:'construction',constructionBrigadeId:row.id});result.push({key:unitKey('construction',row.id),type:'construction',id:row.id,name:row.name||'Qurilish brigadasi',region:geo.region,district:geo.district});});
     return result;
@@ -167,7 +165,7 @@
   }
   function rowVisible(item){
     if(!item||!accountCoversItem(me,item))return false;
-    if(isMaster()&&(itemUnitType(item)!=='work_zone'||itemUnitId(item)!==me.workZoneId))return false;
+    if(isMaster()&&(itemUnitType(item)==='dispatcher'||(itemUnitId(item)!==me.workZoneId&&zones[itemUnitId(item)]&&zones[itemUnitId(item)].currentMasterUid!==me.uid)))return false;
     if(zoneFilter!=='all'&&itemUnitKey(item)!==zoneFilter&&itemUnitId(item)!==zoneFilter)return false;
     const st=itemState(item);
     if(statusFilter==='active'&&['archived','returned'].includes(st.key))return false;
@@ -175,7 +173,7 @@
     const q=searchText.trim().toLocaleLowerCase('uz');if(!q)return true;
     return `${item.inventoryNo||''} ${itemName(item)} ${itemUnitName(item)} ${item.notes||''}`.toLocaleLowerCase('uz').includes(q);
   }
-  function coveredItems(){return Object.keys(items).map(id=>Object.assign({id},items[id]||{})).filter(item=>{if(!item||!accountCoversItem(me,item))return false;if(!isMaster())return true;return itemUnitType(item)==='work_zone'&&itemUnitId(item)===me.workZoneId;});}
+  function coveredItems(){return Object.keys(items).map(id=>Object.assign({id},items[id]||{})).filter(item=>{if(!item||!accountCoversItem(me,item))return false;if(!isMaster())return true;const id=itemUnitId(item);return itemUnitType(item)==='work_zone'&&(id===me.workZoneId||(zones[id]&&zones[id].currentMasterUid===me.uid));});}
   function visibleItems(){return coveredItems().filter(rowVisible).sort((a,b)=>String(itemUnitName(a)).localeCompare(itemUnitName(b),'uz')||String(itemName(a)).localeCompare(itemName(b),'uz')||String(a.inventoryNo||'').localeCompare(String(b.inventoryNo||''),'uz'));}
 
   function buildShell(){
@@ -191,54 +189,32 @@
   function setButton(){
     const btn=byId('hetk-safety-equipment-open');if(!btn)return;btn.hidden=!canView();
     const stockTab=document.querySelector('[data-se-tab="stock"]');if(stockTab)stockTab.hidden=!canViewStock();
-    const normTab=document.querySelector('[data-se-tab="norm"]');if(normTab)normTab.textContent=isMaster()?'Me’yor va kamchilik':'Me’yor';
-    const reportTab=document.querySelector('[data-se-tab="report"]');if(reportTab)reportTab.textContent=isMaster()?'U/J hisoboti':'Hisobot';
     const badge=byId('hetk-safety-equipment-count');if(!badge)return;
     const urgent=coveredItems().filter(it=>['soon','expired','out_of_cycle'].includes(itemState(it).key)).length;
     badge.textContent=String(urgent);badge.hidden=!urgent;
   }
-  function syncCurrentAccount(){
-    const account=window.HETKAuth&&window.HETKAuth.currentUser;
-    if(account&&(!me||me.uid!==account.uid||me.role!==account.role)){
-      start(account);
-      return true;
-    }
-    if(account&&me)me=Object.assign({},me,account);
-    setButton();
-    return !!me;
-  }
-  function open(){syncCurrentAccount();if(!canView())return;buildShell();const overlay=byId('hetk-se-overlay');if(!overlay)return;overlay.classList.add('open');overlay.setAttribute('aria-hidden','false');document.body.style.overflow='hidden';render();scheduleReminderScan();}
+  function open(){if(!canView())return;buildShell();byId('hetk-se-overlay').classList.add('open');byId('hetk-se-overlay').setAttribute('aria-hidden','false');document.body.style.overflow='hidden';render();scheduleReminderScan();}
   function close(){const el=byId('hetk-se-overlay');if(el){el.classList.remove('open');el.setAttribute('aria-hidden','true');}closeModal();document.body.style.overflow='';}
   function render(){
-    if(isMaster()){
-      if(!['items','norm','report'].includes(tab))tab='items';
-      zoneFilter='all';reportRegion='all';reportDistrict='all';
-    }
     if(tab==='stock'&&!canViewStock())tab='items';
     document.querySelectorAll('[data-se-tab]').forEach(b=>b.classList.toggle('active',b.dataset.seTab===tab));
     if(tab==='catalog')renderCatalog();else if(tab==='stock')renderStock();else if(tab==='history')renderHistory();else if(tab==='norm')renderNorm();else if(tab==='report')renderReport();else renderItems();
   }
   function summaryHtml(){
-    const all=coveredItems();
+    const all=coveredItems(),stock=stockTotals(stockRows('all'));
     const count=k=>all.filter(it=>itemState(it).key===k).length;
-    if(isMaster())return `<section class="hetk-se-summary compact"><div class="hetk-se-summary-card usage"><b>${all.filter(it=>!['archived','returned'].includes(itemState(it).key)).length}</b><span>O‘z U/Jda foydalanishda</span></div><div class="hetk-se-summary-card warn attention"><b>${count('soon')}</b><span>10 kun ichida</span></div><div class="hetk-se-summary-card danger"><b>${count('expired')}</b><span>Muddati o‘tgan</span></div><div class="hetk-se-summary-card danger archive"><b>${count('archived')}</b><span>O‘z U/J arxivida</span></div></section>`;
-    const stock=stockTotals(stockRows('all'));
     return `<section class="hetk-se-summary compact"><div class="hetk-se-summary-card usage"><b>${all.filter(it=>!['archived','returned'].includes(itemState(it).key)).length}</b><span>Foydalanishda</span></div><div class="hetk-se-summary-card warehouse"><b>${stock.balance}</b><span>Viloyat omborida</span></div><div class="hetk-se-summary-card warn attention"><b>${count('soon')}</b><span>10 kun ichida</span></div><div class="hetk-se-summary-card danger archive"><b>${count('archived')}</b><span>Arxivda</span></div></section>`;
   }
-  function quickActionsHtml(){if(isMaster())return '';return `<section class="hetk-se-quick-actions">${canManageItems()?'<button class="assign" data-se-add><i class="fas fa-shield-halved"></i><b>Vosita biriktirish</b><small>Ko‘p vositani birdan berish</small></button>':''}${canManageStock()?'<button class="stock" data-se-quick-stock><i class="fas fa-box-open"></i><b>Omborga kirim</b><small>Viloyat omboriga kirim</small></button>':''}${canManageTests()?'<button class="test" data-se-quick-test><i class="fas fa-flask-vial"></i><b>Sinov natijasi</b><small>Uzaytirish yoki almashtirish</small></button>':''}</section>`;}
+  function quickActionsHtml(){return `<section class="hetk-se-quick-actions">${canManageItems()?'<button class="assign" data-se-add><i class="fas fa-shield-halved"></i><b>Vosita biriktirish</b><small>Ko‘p vositani birdan berish</small></button>':''}${canManageStock()?'<button class="stock" data-se-quick-stock><i class="fas fa-box-open"></i><b>Omborga kirim</b><small>Viloyat omboriga kirim</small></button>':''}${canManageTests()?'<button class="test" data-se-quick-test><i class="fas fa-flask-vial"></i><b>Sinov natijasi</b><small>Uzaytirish yoki almashtirish</small></button>':''}</section>`;}
   function shortageBannerHtml(){
-    const allRows=analyticsUnitRows().filter(x=>x.type!=='construction');
-    if(isMaster()&&allRows[0]&&!allRows[0].configured)return `<div class="hetk-se-shortage-banner"><b>${esc(allRows[0].name)} uchun umumiy me’yor hali kiritilmagan</b><span>Me’yorni vakolatli TB muhandisi kiritadi.</span></div>`;
-    const row=allRows.filter(x=>x.shortage>0).sort((a,b)=>b.shortage-a.shortage)[0];
-    if(!row)return `<div class="hetk-se-shortage-banner complete"><b>${isMaster()?'O‘z U/Jingizda me’yoriy kamchilik topilmadi':'Me’yoriy ta’minot bo‘yicha faol kamchilik topilmadi'}</b></div>`;
-    const shortages=isMaster()?row.shortages:row.shortages.slice(0,4);
-    return `<div class="hetk-se-shortage-banner"><b>${esc(row.name)} — ${row.shortages.length} turdagi vosita kam</b><span>${shortages.map(x=>`${esc(x.name)}: me’yor ${x.required} ta, mavjud ${x.actual} ta, ${x.missing} ta kam`).join(' · ')}</span></div>`;
+    const row=analyticsUnitRows().filter(x=>x.type!=='construction'&&x.shortage>0).sort((a,b)=>b.shortage-a.shortage)[0];
+    if(!row)return '<div class="hetk-se-shortage-banner complete"><b>Me’yoriy ta’minot bo‘yicha faol kamchilik topilmadi</b></div>';
+    return `<div class="hetk-se-shortage-banner"><b>${esc(row.name)} — ${row.shortages.length} turdagi vosita kam</b><span>${row.shortages.slice(0,4).map(x=>`${esc(x.name)}: −${x.missing}`).join(' · ')}</span></div>`;
   }
-  function itemUtilityButtons(){if(isMaster())return '';return `<div class="hetk-se-utility-row"><button class="hetk-se-mini-btn" data-se-open-catalog><i class="fas fa-book"></i>Umumiy ro‘yxat</button><button class="hetk-se-mini-btn" data-se-open-history><i class="fas fa-clock-rotate-left"></i>O‘zgarishlar tarixi</button>${canManageConstructionBrigades()?'<button class="hetk-se-mini-btn" data-se-brigades><i class="fas fa-person-digging"></i>Qurilish brigadalari</button>':''}${isSuperAdmin()?'<button class="hetk-se-mini-btn danger" data-se-reset><i class="fas fa-rotate-left"></i>Test ma’lumotlarini tozalash</button>':''}</div>`;}
+  function itemUtilityButtons(){return `<div class="hetk-se-utility-row"><button class="hetk-se-mini-btn" data-se-open-catalog><i class="fas fa-book"></i>Umumiy ro‘yxat</button><button class="hetk-se-mini-btn" data-se-open-history><i class="fas fa-clock-rotate-left"></i>O‘zgarishlar tarixi</button>${canManageConstructionBrigades()?'<button class="hetk-se-mini-btn" data-se-brigades><i class="fas fa-person-digging"></i>Qurilish brigadalari</button>':''}${isSuperAdmin()?'<button class="hetk-se-mini-btn danger" data-se-reset><i class="fas fa-rotate-left"></i>Test ma’lumotlarini tozalash</button>':''}</div>`;}
   function renderItems(){
     const rows=visibleItems();const main=byId('hetk-se-main');if(!main)return;
-    const zonePicker=isMaster()?`<span class="hetk-se-type-tag work_zone">${esc(zoneName(me.workZoneId))}</span>`:`<select id="hetk-se-zone-filter" class="hetk-se-select">${unitOptions(zoneFilter,'Barcha bo‘linmalar')}</select>`;
-    main.innerHTML=`${quickActionsHtml()}${summaryHtml()}${shortageBannerHtml()}${itemUtilityButtons()}<div class="hetk-se-toolbar"><div class="hetk-se-search"><i class="fas fa-search"></i><input id="hetk-se-search" value="${attr(searchText)}" placeholder="Vosita yoki inventar raqami"></div>${zonePicker}<select id="hetk-se-status-filter" class="hetk-se-select"><option value="active"${statusFilter==='active'?' selected':''}>Faol vositalar</option><option value="all"${statusFilter==='all'?' selected':''}>Barcha holatlar</option><option value="ok"${statusFilter==='ok'?' selected':''}>Amalda</option><option value="soon"${statusFilter==='soon'?' selected':''}>10 kun ichida</option><option value="expired"${statusFilter==='expired'?' selected':''}>Muddati o‘tgan</option><option value="out_of_cycle"${statusFilter==='out_of_cycle'?' selected':''}>Navbatdan tashqari</option><option value="testing"${statusFilter==='testing'?' selected':''}>Sinovda</option><option value="returned"${statusFilter==='returned'?' selected':''}>Omborga qaytarilgan</option><option value="archived"${statusFilter==='archived'?' selected':''}>Yaroqsiz / arxiv</option></select></div>
+    main.innerHTML=`${quickActionsHtml()}${summaryHtml()}${shortageBannerHtml()}${itemUtilityButtons()}<div class="hetk-se-toolbar"><div class="hetk-se-search"><i class="fas fa-search"></i><input id="hetk-se-search" value="${attr(searchText)}" placeholder="Vosita yoki inventar raqami"></div><select id="hetk-se-zone-filter" class="hetk-se-select">${unitOptions(zoneFilter,'Barcha bo‘linmalar')}</select><select id="hetk-se-status-filter" class="hetk-se-select"><option value="active"${statusFilter==='active'?' selected':''}>Faol vositalar</option><option value="all"${statusFilter==='all'?' selected':''}>Barcha holatlar</option><option value="ok"${statusFilter==='ok'?' selected':''}>Amalda</option><option value="soon"${statusFilter==='soon'?' selected':''}>10 kun ichida</option><option value="expired"${statusFilter==='expired'?' selected':''}>Muddati o‘tgan</option><option value="out_of_cycle"${statusFilter==='out_of_cycle'?' selected':''}>Navbatdan tashqari</option><option value="testing"${statusFilter==='testing'?' selected':''}>Sinovda</option><option value="returned"${statusFilter==='returned'?' selected':''}>Omborga qaytarilgan</option><option value="archived"${statusFilter==='archived'?' selected':''}>Yaroqsiz / arxiv</option></select></div>
       ${rows.length?itemsTable(rows):`<div class="hetk-se-empty"><i class="fas fa-shield-halved"></i><h3>Vosita topilmadi</h3><p>Tanlangan bo‘linma yoki filtr bo‘yicha himoya vositasi mavjud emas.</p>${canManageItems()?'<button class="hetk-se-btn primary" data-se-add><i class="fas fa-plus"></i>Birinchi vositani qo‘shish</button>':''}</div>`}`;
   }
   function itemsTable(rows){
@@ -379,7 +355,6 @@
   }
 
   function renderNorm(){
-    if(isMaster())return renderMasterNorm();
     const main=byId('hetk-se-main');if(!main)return;const base=analyticsUnitRows().filter(row=>row.type!=='construction'),regions=uniqueNames(base,'region');if(analyticsRegion!=='all'&&!regions.includes(analyticsRegion))analyticsRegion='all';const districtSource=analyticsRegion==='all'?base:base.filter(row=>row.region===analyticsRegion),districts=uniqueNames(districtSource,'district');if(analyticsDistrict!=='all'&&!districts.includes(analyticsDistrict))analyticsDistrict='all';const units=base.filter(row=>(analyticsType==='all'||row.type===analyticsType)&&(analyticsRegion==='all'||row.region===analyticsRegion)&&(analyticsDistrict==='all'||row.district===analyticsDistrict)),rows=groupedAnalyticsRows(units),shortageRows=rows.filter(row=>row.shortage>0),missing=units.reduce((sum,row)=>sum+row.shortage,0),complete=units.filter(row=>!row.shortage&&row.configured).length;
     main.innerHTML=`<section class="hetk-se-simple-head"><div><h3>Me’yoriy ta’minot nazorati</h3><p>U/J va dispetcherliklar respublika bo‘yicha belgilangan ikkita yagona me’yor bilan solishtiriladi. Qurilish brigadasiga me’yor qo‘llanmaydi.</p></div>${canManageCatalog()?'<button class="hetk-se-btn primary" data-se-norm-add><i class="fas fa-sliders"></i>Umumiy me’yorlar</button>':''}</section>
       <div class="hetk-se-analytics-toolbar"><select id="hetk-se-analytics-level" class="hetk-se-select"><option value="unit"${analyticsLevel==='unit'?' selected':''}>Bo‘linmalar kesimi</option><option value="district"${analyticsLevel==='district'?' selected':''}>Tumanlar kesimi</option><option value="region"${analyticsLevel==='region'?' selected':''}>Viloyatlar kesimi</option></select><select id="hetk-se-analytics-type" class="hetk-se-select"><option value="all"${analyticsType==='all'?' selected':''}>U/J va dispetcherlik</option><option value="work_zone"${analyticsType==='work_zone'?' selected':''}>Faqat U/J</option><option value="dispatcher"${analyticsType==='dispatcher'?' selected':''}>Faqat dispetcherlik</option></select><select id="hetk-se-analytics-region" class="hetk-se-select"><option value="all">Barcha viloyatlar</option>${regions.map(name=>`<option value="${attr(name)}"${name===analyticsRegion?' selected':''}>${esc(name)}</option>`).join('')}</select><select id="hetk-se-analytics-district" class="hetk-se-select"><option value="all">Barcha tumanlar</option>${districts.map(name=>`<option value="${attr(name)}"${name===analyticsDistrict?' selected':''}>${esc(name)}</option>`).join('')}</select></div>
@@ -387,39 +362,15 @@
       <section class="hetk-se-shortage-list">${shortageRows.length?shortageRows.map(row=>`<article><b>${esc(row.name)} — ${row.shortages.length} turdagi vosita kam</b><span>${row.shortages.slice(0,7).map(x=>`${esc(x.name)}: −${x.missing}`).join(' · ')}</span></article>`).join(''):'<article class="complete"><b>Tanlangan hududda me’yoriy yetishmovchilik topilmadi</b><span>Barcha kiritilgan vositalar belgilangan me’yorni qoplaydi.</span></article>'}</section>`;
   }
 
-  function renderMasterNorm(){
-    const main=byId('hetk-se-main');if(!main)return;
-    if(!me.workZoneId||!zones[me.workZoneId]){main.innerHTML='<div class="hetk-se-empty"><i class="fas fa-triangle-exclamation"></i><h3>Sizga U/J biriktirilmagan</h3><p>Me’yor va kamchilikni ko‘rish uchun profilingizga U/J biriktirilishi kerak.</p></div>';return;}
-    const meta=unitMeta('work_zone',me.workZoneId,zones[me.workZoneId]),stats=unitStats(meta),norm=normRecordForType('work_zone'),quantities=norm&&norm.quantities||{};
-    const rows=Object.keys(quantities).map(catalogId=>{const required=Math.max(0,Number(quantities[catalogId])||0),actual=Number(stats.activeBy[catalogId])||0;return {catalogId,name:(catalog[catalogId]&&catalog[catalogId].name)||'Nomsiz vosita',required,actual,missing:Math.max(0,required-actual)};}).filter(row=>row.required>0).sort((a,b)=>b.missing-a.missing||a.name.localeCompare(b.name,'uz'));
-    const missing=rows.reduce((sum,row)=>sum+row.missing,0),missingTypes=rows.filter(row=>row.missing>0).length;
-    main.innerHTML=`<section class="hetk-se-simple-head"><div><h3>${esc(meta.name)} — me’yor va kamchilik</h3><p>Faqat o‘z U/Jingizga biriktirilgan vositalar umumiy U/J me’yori bilan solishtirilmoqda.</p></div></section>
-      <section class="hetk-se-norm-summary"><div><b>${stats.active}</b><span>Mavjud faol vosita</span></div><div class="good"><b>${stats.normTotal}</b><span>Belgilangan me’yor</span></div><div class="bad"><b>${missing}</b><span>${missingTypes} turdan yetishmaydi</span></div></section>
-      ${rows.length?`<div class="hetk-se-tablewrap analytics"><table class="hetk-se-table"><thead><tr><th>№</th><th>Himoya vositasi</th><th>Me’yor</th><th>Mavjud</th><th>Kam</th></tr></thead><tbody>${rows.map((row,i)=>`<tr class="${row.missing?'has-shortage':''}"><td class="num">${i+1}</td><td class="hetk-se-name"><b>${esc(row.name)}</b></td><td><b class="hetk-se-number green">${row.required}</b></td><td><b class="hetk-se-number blue">${row.actual}</b></td><td><b class="hetk-se-number ${row.missing?'red':'green'}">${row.missing}</b></td></tr>`).join('')}</tbody></table></div>`:'<div class="hetk-se-empty"><i class="fas fa-clipboard-list"></i><h3>U/J uchun umumiy me’yor kiritilmagan</h3><p>Me’yorni vakolatli TB muhandisi kiritadi.</p></div>'}`;
-  }
-
   function reportCatalogOptions(selected){const rows=Object.keys(catalog).map(id=>Object.assign({id},catalog[id]||{})).filter(row=>row.active!==false).sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'uz'));return rows.map(row=>`<option value="${attr(row.id)}"${row.id===selected?' selected':''}>${esc(row.name||'Nomsiz vosita')}</option>`).join('');}
   function reportItems(){return coveredItems().filter(item=>(reportCatalogId==='all'||item.catalogId===reportCatalogId)&&(reportRegion==='all'||itemGeography(item).region===reportRegion)&&(reportDistrict==='all'||itemGeography(item).district===reportDistrict));}
   function renderReport(){
-    if(isMaster())return renderMasterReport();
     const main=byId('hetk-se-main');if(!main)return;const catalogIds=Object.keys(catalog).filter(id=>catalog[id]&&catalog[id].active!==false);if(reportCatalogId==='all'||!catalogIds.includes(reportCatalogId))reportCatalogId=catalogIds[0]||'all';const allUnits=analyticsUnitRows(),regions=uniqueNames(allUnits,'region');if(reportRegion!=='all'&&!regions.includes(reportRegion))reportRegion='all';const districtSource=reportRegion==='all'?allUnits:allUnits.filter(row=>row.region===reportRegion),districts=uniqueNames(districtSource,'district');if(reportDistrict!=='all'&&!districts.includes(reportDistrict))reportDistrict='all';const selectedCatalog=catalog[reportCatalogId]||{},filtered=reportItems(),activeItems=filtered.filter(item=>!['archived','returned'].includes(itemState(item).key)),archivedItems=filtered.filter(item=>itemState(item).key==='archived'),soon=filtered.filter(item=>['soon','expired','out_of_cycle'].includes(itemState(item).key)).length,warehouseRegion=reportRegion,stock=stockRow(reportCatalogId,warehouseRegion),byUnit={};activeItems.forEach(item=>{const key=itemUnitKey(item);byUnit[key]||(byUnit[key]={name:itemUnitName(item),type:itemUnitType(item),active:0,expired:0,archive:0});byUnit[key].active++;if(['expired','soon','out_of_cycle'].includes(itemState(item).key))byUnit[key].expired++;});archivedItems.forEach(item=>{const key=itemUnitKey(item);byUnit[key]||(byUnit[key]={name:itemUnitName(item),type:itemUnitType(item),active:0,expired:0,archive:0});byUnit[key].archive++;});const rows=Object.values(byUnit).sort((a,b)=>b.active-a.active||a.name.localeCompare(b.name,'uz')),max=Math.max(1,...rows.map(row=>row.active));
     main.innerHTML=`<section class="hetk-se-simple-head"><div><h3>Vosita turi bo‘yicha alohida statistika</h3><p>Tanlangan bitta himoya vositasining kirimi, ombor qoldig‘i, foydalanilishi va arxivi ko‘rsatiladi.</p></div><div class="hetk-se-utility-row"><button class="hetk-se-mini-btn" data-se-open-catalog><i class="fas fa-book"></i>Umumiy ro‘yxat</button><button class="hetk-se-mini-btn" data-se-open-history><i class="fas fa-clock-rotate-left"></i>Tarix</button></div></section>
       <div class="hetk-se-report-filters"><select id="hetk-se-report-catalog" class="hetk-se-select">${reportCatalogOptions(reportCatalogId)}</select><select id="hetk-se-report-region" class="hetk-se-select"><option value="all">Barcha viloyatlar</option>${regions.map(name=>`<option value="${attr(name)}"${name===reportRegion?' selected':''}>${esc(name)}</option>`).join('')}</select><select id="hetk-se-report-district" class="hetk-se-select"><option value="all">Barcha tumanlar</option>${districts.map(name=>`<option value="${attr(name)}"${name===reportDistrict?' selected':''}>${esc(name)}</option>`).join('')}</select></div>
       <section class="hetk-se-summary compact report-summary"><div class="hetk-se-summary-card received"><b>${stock.received}</b><span>Jami kirim</span></div><div class="hetk-se-summary-card usage"><b>${activeItems.length}</b><span>Foydalanishda</span></div><div class="hetk-se-summary-card warehouse"><b>${stock.balance}</b><span>Viloyat omborida</span></div><div class="hetk-se-summary-card danger archive"><b>${archivedItems.length}</b><span>Arxivda</span></div></section>
       <section class="hetk-se-report-chart"><header><div><h4>${esc(selectedCatalog.name||'Himoya vositasi')}</h4><p>${esc(intervalText(selectedCatalog))} · nazorat talab qiladigan: ${soon} ta</p></div></header><div class="hetk-se-report-bars">${rows.length?rows.slice(0,14).map(row=>`<div><span>${esc(row.name)}</span><i><b style="width:${Math.max(3,row.active/max*100)}%"></b></i><em>${row.active} ta</em></div>`).join(''):'<p class="hetk-se-chart-empty">Tanlangan kesimda bu vosita biriktirilmagan.</p>'}</div></section>
       <section class="hetk-se-stock-list"><header><div><h4>Bo‘linmalar kesimi</h4><p>Qurilish brigadasi statistikada bor, lekin me’yoriy kamchilikka qo‘shilmaydi.</p></div><span>${rows.length} ta bo‘linma</span></header><div class="hetk-se-tablewrap report"><table class="hetk-se-table"><thead><tr><th>Bo‘linma</th><th>Turi</th><th>Foydalanishda</th><th>Nazorat talab qiladi</th><th>Arxiv</th></tr></thead><tbody>${rows.map(row=>`<tr><td class="hetk-se-name"><b>${esc(row.name)}</b></td><td><span class="hetk-se-type-tag ${row.type}">${esc(unitTypeLabel(row.type))}</span></td><td>${row.active}</td><td>${row.expired}</td><td>${row.archive}</td></tr>`).join('')}</tbody></table></div></section>`;
-  }
-
-  function renderMasterReport(){
-    const main=byId('hetk-se-main');if(!main)return;
-    const catalogIds=Object.keys(catalog).filter(id=>catalog[id]&&catalog[id].active!==false);
-    if(reportCatalogId==='all'||!catalogIds.includes(reportCatalogId))reportCatalogId=catalogIds[0]||'all';
-    const selectedCatalog=catalog[reportCatalogId]||{},filtered=coveredItems().filter(item=>itemState(item).key!=='returned'&&(reportCatalogId==='all'||item.catalogId===reportCatalogId)),activeItems=filtered.filter(item=>itemState(item).key!=='archived'),archivedItems=filtered.filter(item=>itemState(item).key==='archived'),attention=activeItems.filter(item=>['soon','expired','out_of_cycle'].includes(itemState(item).key)).length;
-    const ordered=filtered.sort((a,b)=>String(itemName(a)).localeCompare(String(itemName(b)),'uz')||String(a.inventoryNo||'').localeCompare(String(b.inventoryNo||''),'uz'));
-    main.innerHTML=`<section class="hetk-se-simple-head"><div><h3>${esc(zoneName(me.workZoneId))} hisoboti</h3><p>Hisobotda faqat o‘z U/Jingizga biriktirilgan himoya vositalari ko‘rsatiladi.</p></div></section>
-      <div class="hetk-se-report-filters"><select id="hetk-se-report-catalog" class="hetk-se-select">${reportCatalogOptions(reportCatalogId)}</select></div>
-      <section class="hetk-se-summary compact report-summary"><div class="hetk-se-summary-card usage"><b>${activeItems.length}</b><span>Foydalanishda</span></div><div class="hetk-se-summary-card warn attention"><b>${attention}</b><span>Nazorat talab qiladi</span></div><div class="hetk-se-summary-card danger archive"><b>${archivedItems.length}</b><span>Arxivda</span></div></section>
-      <section class="hetk-se-stock-list"><header><div><h4>${esc(selectedCatalog.name||'Himoya vositasi')}</h4><p>${esc(intervalText(selectedCatalog))}</p></div><span>${ordered.length} ta vosita</span></header>${ordered.length?itemsTable(ordered):'<div class="hetk-se-empty"><i class="fas fa-shield-halved"></i><h3>Bu turdagi vosita biriktirilmagan</h3><p>O‘z U/Jingiz uchun tanlangan turdagi vosita topilmadi.</p></div>'}</section>`;
   }
 
   function normQuantitiesHtml(type){
@@ -508,11 +459,10 @@
   }
 
   function outOfCycleForm(item){
-    if(!isMaster()||itemUnitType(item)!=='work_zone'||itemUnitId(item)!==me.workZoneId)return;
     const action=requiresTest(catalogRow(item.catalogId))?'sinov':'ko‘rik';const content=`<header><i class="fas fa-triangle-exclamation"></i><div><h3>Navbatdan tashqari ${action}ga yuborish</h3><p>${esc(itemName(item))} · ${esc(item.inventoryNo||'')}</p></div><button data-se-modal-close>×</button></header><div class="hetk-se-dialog-body"><div id="hetk-se-formerror" class="hetk-se-formerror"></div><p class="hetk-se-note warning">Tasdiqlangach vosita satri sariq rangga o‘tadi, TB va Bosh muhandisga bildirishnoma yuboriladi.</p><div class="hetk-se-field"><span>Aniqlangan nuqson yoki sabab *</span><textarea id="hetk-se-out-reason" placeholder="Masalan: vositada shikastlanish aniqlandi"></textarea></div></div><footer><button class="cancel" data-se-modal-close>Bekor qilish</button><button id="hetk-se-out-save" class="save">${action[0].toLocaleUpperCase('uz')+action.slice(1)}ga yuborish</button></footer>`;openModal(content);byId('hetk-se-out-save').addEventListener('click',()=>saveOutOfCycle(item));
   }
   async function saveOutOfCycle(item){
-    if(!isMaster()||itemUnitType(item)!=='work_zone'||itemUnitId(item)!==me.workZoneId)return;const reason=fieldValue('hetk-se-out-reason'),btn=byId('hetk-se-out-save');if(!reason)return modalMessage('Aniqlangan nuqson yoki sababni yozing.');const before=Object.assign({},item),stamp=now(),after=Object.assign({},item,{status:'out_of_cycle',outOfCycleReason:reason,outOfCycleRequestedAt:stamp,outOfCycleRequestedBy:me.uid,outOfCycleRequestedByName:userName(me.uid),updatedAt:stamp,updatedBy:me.uid,updatedByName:userName(me.uid)});setBusy(btn,true);
+    if(!isMaster()||!accountCoversZone(me,item.workZoneId))return;const reason=fieldValue('hetk-se-out-reason'),btn=byId('hetk-se-out-save');if(!reason)return modalMessage('Aniqlangan nuqson yoki sababni yozing.');const before=Object.assign({},item),stamp=now(),after=Object.assign({},item,{status:'out_of_cycle',outOfCycleReason:reason,outOfCycleRequestedAt:stamp,outOfCycleRequestedBy:me.uid,outOfCycleRequestedByName:userName(me.uid),updatedAt:stamp,updatedBy:me.uid,updatedByName:userName(me.uid)});setBusy(btn,true);
     try{const check=requiresTest(catalogRow(item.catalogId))?'sinov':'ko‘rik',updates={};updates[`SafetyEquipmentItems/${item.id}`]=after;appendAudit(updates,'item',item.id,'out_of_cycle',`Vosita navbatdan tashqari ${check}ga yuborildi`,before,after,itemUnitType(item)==='work_zone'?itemUnitId(item):'',null,{unitType:itemUnitType(item),unitName:itemUnitName(item)});await db.ref().update(updates);await notifyUsers(recipientUidsForItem(new Set(['tb_engineer','regional_tb_engineer','republic_tb_engineer','chief_engineer']),item),{action:'safety_equipment_out_of_cycle',title:`${itemUnitName(item)}: ${itemName(item)} navbatdan tashqari ${check}ga yuborildi`,item:after,changes:diff(before,after)});closeModal();toast(`Vosita ${check}ga yuborildi.`,'success');}catch(e){modalMessage(e.message||String(e));}finally{setBusy(btn,false);}
   }
 
@@ -617,8 +567,8 @@
   }
 
   function handleClick(e){
-    if(e.target.closest('[data-se-close]'))return close();const tabBtn=e.target.closest('[data-se-tab]');if(tabBtn){const nextTab=tabBtn.dataset.seTab;if(isMaster()&&!['items','norm','report'].includes(nextTab))return;tab=nextTab;return render();}
-    if(e.target.closest('[data-se-add]'))return bulkAssignmentForm();if(e.target.closest('[data-se-quick-stock]')){tab='stock';render();return receiptForm('');}if(e.target.closest('[data-se-quick-test]')){const urgent=coveredItems().find(item=>['expired','soon','out_of_cycle'].includes(itemState(item).key));return urgent?testForm(urgent):toast('Hozir sinov natijasi kiritilishi kerak bo‘lgan vosita topilmadi.','success');}if(e.target.closest('[data-se-open-catalog]')){if(isMaster())return;tab='catalog';return render();}if(e.target.closest('[data-se-open-history]')){if(isMaster())return;tab='history';return render();}if(e.target.closest('[data-se-return-items]')){tab='items';return render();}if(e.target.closest('[data-se-brigades]'))return constructionBrigadeForm('');if(e.target.closest('[data-se-reset]'))return resetProvinceForm();const edit=e.target.closest('[data-se-edit]');if(edit)return itemForm(Object.assign({id:edit.dataset.seEdit},items[edit.dataset.seEdit]||{}));const reissue=e.target.closest('[data-se-reissue]');if(reissue)return reissueForm(Object.assign({id:reissue.dataset.seReissue},items[reissue.dataset.seReissue]||{}));const out=e.target.closest('[data-se-out]');if(out)return outOfCycleForm(Object.assign({id:out.dataset.seOut},items[out.dataset.seOut]||{}));const test=e.target.closest('[data-se-test]');if(test)return testForm(Object.assign({id:test.dataset.seTest},items[test.dataset.seTest]||{}));
+    if(e.target.closest('[data-se-close]'))return close();const tabBtn=e.target.closest('[data-se-tab]');if(tabBtn){tab=tabBtn.dataset.seTab;return render();}
+    if(e.target.closest('[data-se-add]'))return bulkAssignmentForm();if(e.target.closest('[data-se-quick-stock]')){tab='stock';render();return receiptForm('');}if(e.target.closest('[data-se-quick-test]')){const urgent=coveredItems().find(item=>['expired','soon','out_of_cycle'].includes(itemState(item).key));return urgent?testForm(urgent):toast('Hozir sinov natijasi kiritilishi kerak bo‘lgan vosita topilmadi.','success');}if(e.target.closest('[data-se-open-catalog]')){tab='catalog';return render();}if(e.target.closest('[data-se-open-history]')){tab='history';return render();}if(e.target.closest('[data-se-return-items]')){tab='items';return render();}if(e.target.closest('[data-se-brigades]'))return constructionBrigadeForm('');if(e.target.closest('[data-se-reset]'))return resetProvinceForm();const edit=e.target.closest('[data-se-edit]');if(edit)return itemForm(Object.assign({id:edit.dataset.seEdit},items[edit.dataset.seEdit]||{}));const reissue=e.target.closest('[data-se-reissue]');if(reissue)return reissueForm(Object.assign({id:reissue.dataset.seReissue},items[reissue.dataset.seReissue]||{}));const out=e.target.closest('[data-se-out]');if(out)return outOfCycleForm(Object.assign({id:out.dataset.seOut},items[out.dataset.seOut]||{}));const test=e.target.closest('[data-se-test]');if(test)return testForm(Object.assign({id:test.dataset.seTest},items[test.dataset.seTest]||{}));
     if(e.target.closest('[data-se-catalog-add]'))return catalogForm(null);if(e.target.closest('[data-se-catalog-archive]'))return catalogArchiveAccessForm();const ce=e.target.closest('[data-se-catalog-edit]');if(ce)return catalogForm(Object.assign({id:ce.dataset.seCatalogEdit},catalog[ce.dataset.seCatalogEdit]||{}));const cd=e.target.closest('[data-se-catalog-disable]');if(cd)return catalogStatusForm(Object.assign({id:cd.dataset.seCatalogDisable},catalog[cd.dataset.seCatalogDisable]||{}),false);const cr=e.target.closest('[data-se-catalog-restore]');if(cr)return catalogStatusForm(Object.assign({id:cr.dataset.seCatalogRestore},catalog[cr.dataset.seCatalogRestore]||{}),true);if(e.target.closest('[data-se-code]'))return codeForm();
     const receipt=e.target.closest('[data-se-receipt]');if(receipt)return receiptForm(receipt.dataset.seReceipt||'');
     if(e.target.closest('[data-se-norm-add]'))return normForm('work_zone');
@@ -634,7 +584,7 @@
     me=account;if(!window.firebase||!firebase.apps||!firebase.apps.length)return;db=firebase.database();buildShell();unbind();bindRef('users',v=>{users=v;if(me&&users[me.uid]){me=Object.assign({uid:me.uid},users[me.uid]);if(window.HETKAuth)window.HETKAuth.currentUser=me;}});bindRef('Folders',v=>folders=v);bindRef('WorkZones',v=>zones=v);bindRef('SafetyConstructionBrigades',v=>brigades=v);bindRef('SafetyEquipmentCatalog',v=>catalog=v);bindRef('SafetyEquipmentItems',v=>items=v);bindRef('SafetyEquipmentReceipts',v=>receipts=v);bindRef('SafetyEquipmentNorms',v=>norms=v);bindRef('SafetyEquipmentSettings',v=>settings=v);bindRef('SafetyEquipmentAudit',v=>audits=v);bindRef('SafetyEquipmentBackups',v=>backups=v);reminderInterval=setInterval(scanReminders,6*60*60*1000);setButton();
   }
   function clear(){unbind();me=null;users={};folders={};zones={};brigades={};catalog={};items={};receipts={};norms={};settings={};audits={};backups={};stockSearch='';stockRegion='all';reportCatalogId='all';reportRegion='all';reportDistrict='all';setButton();close();}
-  function init(){buildShell();const btn=byId('hetk-safety-equipment-open');if(btn)btn.addEventListener('click',open);document.addEventListener('hetk-auth-ready',e=>start(e.detail&&e.detail.user));document.addEventListener('hetk-auth-user-updated',e=>start(e.detail&&e.detail.user));document.addEventListener('hetk-auth-cleared',clear);if(window.HETKAuth&&window.HETKAuth.currentUser)start(window.HETKAuth.currentUser);setTimeout(syncCurrentAccount,250);setTimeout(syncCurrentAccount,1500);}
+  function init(){buildShell();const btn=byId('hetk-safety-equipment-open');if(btn)btn.addEventListener('click',open);document.addEventListener('hetk-auth-ready',e=>start(e.detail&&e.detail.user));document.addEventListener('hetk-auth-user-updated',e=>start(e.detail&&e.detail.user));document.addEventListener('hetk-auth-cleared',clear);if(window.HETKAuth&&window.HETKAuth.currentUser)start(window.HETKAuth.currentUser);}
   window.HETKSafetyEquipment={open,close,scanReminders};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
