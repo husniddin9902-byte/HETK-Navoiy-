@@ -521,12 +521,33 @@ window.selectFolder = function(id) {
 window.toggleFolderView = function(id) {
     const childDiv = document.getElementById(`children-${id}`);
     const btn = document.querySelector(`#folder-${id} .toggle-btn`);
-    if (childDiv.style.display === "none") {
+    if(!childDiv || !btn) return;
+
+    function closeFolderBranch(branch){
+        if(!branch) return;
+        branch.style.display = "none";
+        branch.querySelectorAll('.folder-children').forEach(children=>{
+            children.style.display = "none";
+        });
+        branch.querySelectorAll('.toggle-btn').forEach(toggle=>{
+            toggle.innerText = "+";
+        });
+        const ownerToggle = branch.parentElement && branch.parentElement.querySelector(':scope > .folder-header .toggle-btn');
+        if(ownerToggle) ownerToggle.innerText = "+";
+    }
+
+    if (childDiv.style.display === "none" || childDiv.style.display === "") {
+        // Bir darajadagi faqat bitta tarmoq ochiq turadi. Ota tarmoq yopilmaydi.
+        const siblingsContainer = childDiv.parentElement && childDiv.parentElement.parentElement;
+        if(siblingsContainer){
+            siblingsContainer.querySelectorAll(':scope > .folder-item > .folder-children').forEach(sibling=>{
+                if(sibling !== childDiv) closeFolderBranch(sibling);
+            });
+        }
         childDiv.style.display = "block";
         btn.innerText = "-";
     } else {
-        childDiv.style.display = "none";
-        btn.innerText = "+";
+        closeFolderBranch(childDiv);
     }
 };
 
@@ -4692,12 +4713,24 @@ function buildFolderTree(){
     return tree;
 }
 
+function hetkSearchResultFolderId(tp){
+    const folderIds=hetkElementFolderIds(tp).filter(id=>currentFolders[id] && hetkCanSeeFolder(id));
+    if(!folderIds.length) return '';
+
+    if(activeFolderId && activeFolderId!=='root'){
+        if(folderIds.includes(activeFolderId)) return activeFolderId;
+        const primaryId=tp.primaryFolderId || tp.folderId;
+        if(primaryId && folderIds.includes(primaryId) && hetkFolderIsInside(primaryId,activeFolderId)) return primaryId;
+        const insideSelected=folderIds.find(id=>hetkFolderIsInside(id,activeFolderId));
+        if(insideSelected) return insideSelected;
+    }
+
+    return tp.primaryFolderId || tp.folderId || folderIds[0];
+}
+
 function attachResultsToTree(tree, results){
     results.forEach(tp=>{
-        const folderId =
-            tp.primaryFolderId ||
-            tp.folderId ||
-            Object.keys(tp.folders || {})[0];
+        const folderId=hetkSearchResultFolderId(tp);
         if(tree[folderId]){
             tree[folderId].items.push(tp);
         }
@@ -4706,15 +4739,14 @@ function attachResultsToTree(tree, results){
 
 function renderSearchTree(tree){
     let html = "";
-  const renderedTPs = new Set();
+    const renderedTPs = new Set();
+
+    function nodeHasResults(node){
+        return !!(node && (node.items.length || node.children.some(nodeHasResults)));
+    }
   
     function renderNode(node, level, treePrefix = "", isLast = true){
-        const hasChildren = node.children.some(child =>
-            child.items.length || child.children.length
-        );
-        if(node.items.length===0 && !hasChildren){
-            return;
-        }
+        if(!nodeHasResults(node)) return;
 
         const countText =
             node.items.length > 0
@@ -4769,48 +4801,8 @@ if (renderedTPs.has(tpId)) {
     return;
 }
 renderedTPs.add(tpId);
-          
-           let otherFoldersHtml = "";
 
-const isMobile = window.innerWidth < 768;
-const otherFoldersIndent = isMobile ? "22px" : "30px";
-const otherFoldersFontSize = isMobile ? "12px" : "13px";
-const otherFoldersGap = isMobile ? "2px" : "3px";
-
-if (tp.folders) {
-    Object.keys(tp.folders).forEach(otherFolderId => {
-
-        // Qidiruv natijasida chiqarilgan papkani takrorlamaymiz
-        if (otherFolderId === node.id) return;
-
-        const folder = currentFolders[otherFolderId];
-        if (!folder) return;
-
-        otherFoldersHtml += `
-<div style="
-    display:flex;
-    align-items:flex-start;
-    gap:6px;
-    margin-top:${otherFoldersGap};
-    margin-left:${otherFoldersIndent};
-    font-size:${otherFoldersFontSize};
-    color:${folder.color};
-    line-height:1.35;
-    max-width:100%;
-">
-    <span style="flex-shrink:0;margin-top:1px;">↳</span>
-
-    <span style="
-        flex:1;
-        min-width:0;
-        overflow-wrap:anywhere;
-        word-break:break-word;
-    ">
-        ${getFolderPath(otherFolderId)}
-    </span>
-</div>`;
-    });
-}
+// Qidiruvda faqat topilgan elementga olib boruvchi bitta tanlangan papka yo'li ko'rsatiladi.
 
 html += `
 <div class="search-item${tp.deletionPending ? ' hetk-deletion-pending' : ''}"
@@ -4871,15 +4863,11 @@ transition:.2s;
 
 </div>
 
-    ${
-        otherFoldersHtml
-            ? `<div style="margin-top:4px;">${otherFoldersHtml}</div>`
-            : ""
-    }
 </div>`;
         });
-        node.children.forEach((child,index)=>{
-            const last = index === node.children.length - 1;
+        const visibleChildren=node.children.filter(nodeHasResults);
+        visibleChildren.forEach((child,index)=>{
+            const last = index === visibleChildren.length - 1;
             const nextPrefix =
                 treePrefix +
                 (level===0 ? "" : (isLast ? "    " : "│   "));
@@ -4894,7 +4882,7 @@ transition:.2s;
     }
 
     Object.values(tree)
-        .filter(n => n.parentId === "root")
+        .filter(n => n.parentId === "root" && nodeHasResults(n))
         .forEach(root => {
             if(root.items.length===0 && root.children.length===0){
                 return;
@@ -4969,6 +4957,49 @@ function isPointInSelectedFolder(tp) {
                 )
         );
     return tpFolders.some(id => allowedFolderIds.includes(id));
+}
+
+function hetkFolderBranchUnderSelected(folderId,selectedFolderId){
+    if(!folderId || !currentFolders[folderId]) return '';
+    if(!selectedFolderId || selectedFolderId==='root'){
+        let current=folderId,guard=0;
+        while(currentFolders[current] && currentFolders[current].parentId!=='root' && guard<120){
+            current=currentFolders[current].parentId;
+            guard++;
+        }
+        return current;
+    }
+    if(folderId===selectedFolderId) return selectedFolderId;
+    if(!hetkFolderIsInside(folderId,selectedFolderId)) return '';
+    let current=folderId,guard=0;
+    while(currentFolders[current] && currentFolders[current].parentId!==selectedFolderId && guard<120){
+        current=currentFolders[current].parentId;
+        guard++;
+    }
+    return currentFolders[current] ? current : selectedFolderId;
+}
+
+function hetkMapMarkerPalette(point,selectedFolderId){
+    const allFolderIds=hetkElementFolderIds(point).filter(id=>currentFolders[id]);
+    const primaryId=(point && (point.primaryFolderId || point.folderId)) || allFolderIds[0] || '';
+    const orderedFolderIds=[primaryId,...allFolderIds].filter((id,index,list)=>id && list.indexOf(id)===index);
+    const branchIds=[];
+
+    orderedFolderIds.forEach(folderId=>{
+        const branchId=hetkFolderBranchUnderSelected(folderId,selectedFolderId);
+        if(branchId && !branchIds.includes(branchId)) branchIds.push(branchId);
+    });
+
+    const fallbackId=primaryId || branchIds[0];
+    const firstId=branchIds[0] || fallbackId;
+    const firstColor=(currentFolders[firstId] && currentFolders[firstId].color) || '#007AFF';
+    const isDual=allFolderIds.length>1;
+    const secondId=branchIds.length>1 ? branchIds[1] : '';
+    const secondColor=isDual
+        ? ((secondId && currentFolders[secondId] && currentFolders[secondId].color) || '#000000')
+        : '';
+
+    return {firstColor,secondColor,isDual,branchIds};
 }
 
 // Natijalarni yangilash
@@ -5401,9 +5432,11 @@ if (!useSearchResults && !isPointInSelectedFolder(point)) {
             bounds.push([lat, lng]);
             const displayName = point.name || point.address.split(',')[0] || "TP";
 
-            // Markerning standart fider rangini aniqlash
-            const primaryFolderId = tpFoldersArr[0];
-            const primaryColor = (currentFolders[primaryFolderId] && currentFolders[primaryFolderId].color) ? currentFolders[primaryFolderId].color : '#007AFF';
+            // Rang tanlangan ota papkaning bevosita ichki tarmog'idan olinadi.
+            const markerPalette=hetkMapMarkerPalette(point,activeFolderId);
+            const primaryColor=markerPalette.firstColor;
+            const secondaryColor=markerPalette.secondColor;
+            const isBlinking=markerPalette.isDual;
 
             // Xususiy yoki ETK ekanligiga qarab sarlavha tayyorlash
             const balanceBadge = point.isPrivate ? `<span style="color:#ff4444; font-weight:bold;">[Xususiy - ${point.ownerFirm || ''}]</span>` : `<span style="color:#007AFF; font-weight:bold;">[ЕТК balansi]</span>`;
@@ -5411,12 +5444,6 @@ if (!useSearchResults && !isPointInSelectedFolder(point)) {
             // Maxsus divIcon marker yaratish
           const markerDiv = document.createElement('div');
 markerDiv.className = 'custom-tp-marker';
-
-if (isBlinking) {
-    markerDiv.classList.add('blinking-marker-icon');
-    markerDiv.style.setProperty('--fider-color-1', primaryColor);
-    markerDiv.style.setProperty('--fider-color-2', secondaryColor);
-}
 
 markerDiv.innerHTML = `
 <div style="
@@ -5426,10 +5453,12 @@ display:flex;
 align-items:flex-end;
 justify-content:center;
 ">
-<span class="hetk-map-marker-wrap ${point.deletionPending ? 'hetk-map-marker-pending' : ''}"><i class="fas fa-map-marker-alt"
+<span class="hetk-map-marker-wrap ${point.deletionPending ? 'hetk-map-marker-pending' : ''}"><i class="fas fa-map-marker-alt ${isBlinking ? 'hetk-dual-source-marker' : ''}"
 style="
 font-size:52px;
 color:${primaryColor};
+--marker-color-1:${primaryColor};
+--marker-color-2:${secondaryColor || primaryColor};
 line-height:52px;
 text-shadow:0 0 6px black;
 "></i>${point.deletionPending ? '<i class="hetk-map-marker-slash"></i>' : ''}</span>
@@ -5982,14 +6011,16 @@ if(requestedElementId && !filteredKeys.length){
                 if (!isNaN(lat) && !isNaN(lng)) {
                     bounds.push([lat, lng]);
                     
-                    // Guruh rangini aniqlash
-                    const markerFolderId=hetkPanelMapPrimaryFolderId(point);
-                    const folderColor = (currentFolders[markerFolderId] && currentFolders[markerFolderId].color) ? currentFolders[markerFolderId].color : '#ff4444';
+                    // Tanlangan papka darajasiga mos tarmoq rangi va ikki manbali animatsiya.
+                    const markerPalette=hetkMapMarkerPalette(point,activeFolderId);
+                    const folderColor=markerPalette.firstColor;
+                    const secondFolderColor=markerPalette.secondColor || folderColor;
+                    const dualMarkerClass=markerPalette.isDual ? ' hetk-dual-source-marker' : '';
 
                     // Marker dizayni (O'z rangi bilan)
                     const pIcon = L.divIcon({
                         className: 'panel-internal-marker',
-                        html: `<span class="hetk-map-marker-wrap ${point.deletionPending ? 'hetk-map-marker-pending' : ''}"><i class="fas fa-map-marker-alt" style="color: ${folderColor}; font-size: 24px; text-shadow: 0 0 3px black;"></i>${point.deletionPending ? '<i class="hetk-map-marker-slash"></i>' : ''}</span>`,
+                        html: `<span class="hetk-map-marker-wrap ${point.deletionPending ? 'hetk-map-marker-pending' : ''}"><i class="fas fa-map-marker-alt${dualMarkerClass}" style="color:${folderColor};--marker-color-1:${folderColor};--marker-color-2:${secondFolderColor};font-size:24px;text-shadow:0 0 3px black;"></i>${point.deletionPending ? '<i class="hetk-map-marker-slash"></i>' : ''}</span>`,
                         iconSize: [24, 24],
                         iconAnchor: [12, 24],
                         popupAnchor: [0, -28]
