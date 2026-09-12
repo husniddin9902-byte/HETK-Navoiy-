@@ -4,12 +4,12 @@
   const ROLE_DEFS = {
     super_admin: {
       label: 'Bosh administrator', level: 100,
-      createRoles: ['director','republic_tb_engineer','chief_engineer','regional_tb_engineer','tb_engineer','askue_chief_engineer','sales_chief','pto_engineer','chief_dispatcher','master','adli_kard_engineer','dispatcher','electrician','employee'],
+      createRoles: ['director','republic_tb_engineer','chief_engineer','regional_tb_chief','regional_tb_operations_engineer','regional_tb_engineer','regional_fire_safety_engineer','tb_engineer','askue_chief_engineer','sales_chief','pto_engineer','chief_dispatcher','master','adli_kard_engineer','dispatcher','electrician','employee'],
       canCreateUsers: true, canDeactivateUsers: true, canManagePermissions: true, canManageFolders: true
     },
     director: {
       label: 'Direktor', level: 90,
-      createRoles: ['chief_engineer','tb_engineer','askue_chief_engineer','sales_chief','pto_engineer','chief_dispatcher','master','adli_kard_engineer','dispatcher','electrician','employee'],
+      createRoles: ['chief_engineer','regional_tb_chief','regional_tb_operations_engineer','regional_tb_engineer','regional_fire_safety_engineer','tb_engineer','askue_chief_engineer','sales_chief','pto_engineer','chief_dispatcher','master','adli_kard_engineer','dispatcher','electrician','employee'],
       canCreateUsers: true, canDeactivateUsers: true, canManagePermissions: true, canManageFolders: true
     },
     republic_tb_engineer: {
@@ -18,11 +18,23 @@
     },
     chief_engineer: {
       label: 'Bosh / Asosiy muhandis', level: 85,
-      createRoles: ['tb_engineer','askue_chief_engineer','sales_chief','pto_engineer','chief_dispatcher','master','adli_kard_engineer','dispatcher','electrician','employee'],
+      createRoles: ['regional_tb_chief','regional_tb_operations_engineer','regional_tb_engineer','regional_fire_safety_engineer','tb_engineer','askue_chief_engineer','sales_chief','pto_engineer','chief_dispatcher','master','adli_kard_engineer','dispatcher','electrician','employee'],
       canCreateUsers: true, canDeactivateUsers: true, canManagePermissions: true, canManageFolders: true
     },
+    regional_tb_chief: {
+      label: 'MMQ va XTX boshlig‘i', level: 82,
+      createRoles: ['regional_tb_operations_engineer','regional_tb_engineer','regional_fire_safety_engineer','tb_engineer'], canCreateUsers: true, canDeactivateUsers: true, canManagePermissions: true, canManageFolders: false
+    },
+    regional_tb_operations_engineer: {
+      label: 'MMQ va XTX “Ekspluatatsiya” muhandisi', level: 80,
+      createRoles: [], canCreateUsers: false, canDeactivateUsers: false, canManagePermissions: false, canManageFolders: false
+    },
     regional_tb_engineer: {
-      label: 'MMQXT va E muhandisi (viloyat)', level: 80,
+      label: 'MMQ va XT muhandisi', level: 80,
+      createRoles: [], canCreateUsers: false, canDeactivateUsers: false, canManagePermissions: false, canManageFolders: false
+    },
+    regional_fire_safety_engineer: {
+      label: 'MMQ va XTX “Yong‘in xavfsizligi” muhandisi', level: 80,
       createRoles: [], canCreateUsers: false, canDeactivateUsers: false, canManagePermissions: false, canManageFolders: false
     },
     tb_engineer: {
@@ -86,6 +98,11 @@
   let userEditorMode = 'create';
   let editingTeamUid = null;
   let currentUserLiveRef = null;
+  let currentDelegationsRef = null;
+  let baseCurrentAccount = null;
+  let activeDelegationsCache = {};
+  let effectiveDelegation = null;
+  let delegationsTeamRef = null;
   let teamTreeExpanded = new Set(['__root__']);
   let teamTreeAutoInitialized = false;
   let editorSelectedFolderIds = new Set();
@@ -133,7 +150,7 @@
   const FCM_VAPID_PUBLIC_KEY = 'BKdSzJyc3RKdUbVxJs7SyMsZ5iQhJOIRfDWba12LsyHuEOOUSiTe3yXLzhMgoNV488kZG56ySOXRTWE6Ha3JgRQ';
   const MESSAGE_LIFETIME_MS = 365 * 24 * 60 * 60 * 1000;
   const MESSAGE_MAX_FILE_BYTES = 20 * 1024 * 1024;
-  const MASS_MESSAGE_ROLES = new Set(['super_admin','director','republic_tb_engineer','chief_engineer','regional_tb_engineer','tb_engineer','askue_chief_engineer','sales_chief','chief_dispatcher']);
+  const MASS_MESSAGE_ROLES = new Set(['super_admin','director','republic_tb_engineer','chief_engineer','regional_tb_chief','regional_tb_operations_engineer','regional_tb_engineer','regional_fire_safety_engineer','tb_engineer','askue_chief_engineer','sales_chief','chief_dispatcher']);
   const DEFAULT_MALE_AVATAR = 'profile-default-male.png';
   const DEFAULT_FEMALE_AVATAR = 'profile-default-female.png';
 
@@ -892,7 +909,7 @@
     if(!account) return 'Hodim';
     if(account.role === 'master' && account.workZoneName) return account.workZoneName + ' Masteri';
     if(account.role === 'electrician' && account.workZoneName) return account.workZoneName + ' Elektromontyori';
-    if(account.role === 'tb_engineer' || account.role === 'regional_tb_engineer' || account.role === 'republic_tb_engineer') return ROLE_DEFS[account.role].label;
+    if(isSafetyOfficer(account)) return ROLE_DEFS[account.role].label;
     if(account.roleLabel) return account.roleLabel;
     return ROLE_DEFS[account.role] ? ROLE_DEFS[account.role].label : (account.role || 'Hodim');
   }
@@ -1023,11 +1040,12 @@
 
   function isSafetyOfficer(account){
     const role=(account||currentAccount||{}).role;
-    return role==='tb_engineer' || role==='regional_tb_engineer' || role==='republic_tb_engineer';
+    return ['tb_engineer','regional_tb_chief','regional_tb_operations_engineer','regional_tb_engineer','regional_fire_safety_engineer','republic_tb_engineer'].includes(role);
   }
 
   function isDistrictSafetyOfficer(account){return !!account && account.role==='tb_engineer';}
-  function isRegionalSafetyOfficer(account){return !!account && account.role==='regional_tb_engineer';}
+  function isRegionalSafetyOfficer(account){return !!account && ['regional_tb_chief','regional_tb_operations_engineer','regional_tb_engineer','regional_fire_safety_engineer'].includes(account.role);}
+  function isRegionalSafetyChief(account){return !!account && account.role==='regional_tb_chief';}
   function isRepublicSafetyOfficer(account){return !!account && account.role==='republic_tb_engineer';}
 
   function isDistrictPermitCategory(target){
@@ -1043,7 +1061,8 @@
     if(currentAccount.role==='super_admin') return true;
     if(isRepublicSafetyOfficer(currentAccount)) return target.role!=='super_admin' && target.role!=='republic_tb_engineer';
     if(isRegionalSafetyOfficer(currentAccount)){
-      return target.role!=='super_admin' && target.role!=='regional_tb_engineer';
+      if(isRegionalSafetyChief(currentAccount)) return !['super_admin','director','republic_tb_engineer','chief_engineer','regional_tb_chief'].includes(target.role);
+      return !['super_admin','director','republic_tb_engineer','chief_engineer','regional_tb_chief','regional_tb_operations_engineer','regional_tb_engineer','regional_fire_safety_engineer'].includes(target.role);
     }
     if(isDistrictSafetyOfficer(currentAccount)) return isDistrictPermitCategory(target);
     return false;
@@ -1053,7 +1072,7 @@
     if(!currentAccount || !target || target.uid===currentAccount.uid) return false;
     if(!isSafetyOfficer(currentAccount)) return false;
     if(!isTargetWithinScope(target)) return false;
-    if(isDistrictSafetyOfficer(currentAccount) && (target.role==='regional_tb_engineer' || target.role==='republic_tb_engineer')) return false;
+    if(isDistrictSafetyOfficer(currentAccount) && (isRegionalSafetyOfficer(target) || target.role==='republic_tb_engineer')) return false;
     if(isRegionalSafetyOfficer(currentAccount) && target.role==='republic_tb_engineer') return false;
     return target.role!=='super_admin';
   }
@@ -1290,18 +1309,22 @@
     const now=Date.now(),changes=safetyNoticeChanges(before,after),updates={};
     const employeeTitle=(currentAccount.fullName||'TB muhandisi')+' ruxsatnoma va imtihon ma’lumotlaringizni yangiladi';
     const editorTitle=(target.fullName||'Hodim')+' ruxsatnoma va imtihon ma’lumotlari muvaffaqiyatli yangilandi';
-    [
+    let rows=[
       {recipientUid:uid,title:employeeTitle},
       {recipientUid:currentAccount.uid,title:editorTitle}
-    ].forEach(row=>{
+    ];
+    if(REGIONAL_SAFETY_ROLES.has(currentAccount.role)){
+      const snap=await databaseRef.ref('users').once('value'),all=snap.val()||{},targetRoots=accountFolderRoots(target);
+      Object.keys(all).forEach(headUid=>{const head=all[headUid]||{};if(head.active===false||head.role!=='regional_tb_chief')return;const allowed=new Set(getAccessibleFolderIds(Object.assign({uid:headUid},head),teamFoldersCache));if(head.rootAccess||targetRoots.some(id=>allowed.has(id)))rows.push({recipientUid:headUid,title:editorTitle});});
+    }
+    const expanded=await expandDelegatedRecipients(rows.map(row=>row.recipientUid));
+    expanded.forEach(recipientUid=>{
+      const row=rows.find(x=>x.recipientUid===recipientUid)||{recipientUid,title:editorTitle};
       const noticeId=databaseRef.ref('UserNotifications/'+row.recipientUid).push().key;
       updates['UserNotifications/'+row.recipientUid+'/'+noticeId]={id:noticeId,kind:'activity',action:'safety_update',read:false,title:row.title,actorUid:currentAccount.uid,actorName:currentAccount.fullName||'',actorRole:getRoleLabel(currentAccount),elementName:target.fullName||'Hodim',folderPath:target.workZoneName||target.region||'—',changes,createdAt:now,expiresAt:now+SAFETY_NOTICE_LIFETIME_MS};
     });
     await databaseRef.ref().update(updates);
-    await Promise.all([
-      safeSendBrowserPush([uid],'notifications','Ruxsatnoma yangilandi',employeeTitle,{action:'safety_update'}),
-      safeSendBrowserPush([currentAccount.uid],'notifications','Ruxsatnoma saqlandi',editorTitle,{action:'safety_update'})
-    ]);
+    await safeSendBrowserPush(expanded,'notifications','Ruxsatnoma yangilandi',editorTitle,{action:'safety_update'});
   }
 
   async function saveSafetyPermit(uid){
@@ -2533,7 +2556,7 @@
 
   function defaultPermissionsForRole(role){
     const def = roleDef(role);
-    const tbReadOnly=role==='tb_engineer' || role==='regional_tb_engineer' || role==='republic_tb_engineer';
+    const tbReadOnly=['tb_engineer','regional_tb_chief','regional_tb_operations_engineer','regional_tb_engineer','regional_fire_safety_engineer','republic_tb_engineer'].includes(role);
     const dispatcherRole=role==='chief_dispatcher' || role==='dispatcher';
     return {
       createUsers: !!def.canCreateUsers,
@@ -2551,7 +2574,7 @@
     const acc = account || currentAccount;
     if(!acc) return false;
     if(acc.role === 'super_admin') return true;
-    const tbReadOnly=acc.role==='tb_engineer' || acc.role==='regional_tb_engineer' || acc.role==='republic_tb_engineer';
+    const tbReadOnly=['tb_engineer','regional_tb_chief','regional_tb_operations_engineer','regional_tb_engineer','regional_fire_safety_engineer','republic_tb_engineer'].includes(acc.role);
     if(tbReadOnly && ['createElements','editElements','deleteElements'].includes(permission)) return false;
     // Dispetcher ish stolida barcha mavjud elementlarni ko'radi va tahrirlaydi,
     // lekin tarmoq tuzilmasi yoki elementlar sonini o'zgartira olmaydi.
@@ -2709,6 +2732,101 @@
     return (roleDef(currentAccount.role).createRoles || []).filter(r => ROLE_DEFS[r]);
   }
 
+  const DELEGATION_REASONS={
+    labor_leave:'Mehnat ta’tili',maternity_leave:'Homiladorlik va tug‘ish ta’tili',
+    childcare_leave:'Bola parvarishlash ta’tili',medical_leave:'Davolanish / vaqtincha mehnatga layoqatsizlik',
+    unpaid_leave:'Ish haqi saqlanmaydigan ta’til',business_trip:'Xizmat safari',other:'Boshqa sabab'
+  };
+  const REGIONAL_SAFETY_ROLES=new Set(['regional_tb_operations_engineer','regional_tb_engineer','regional_fire_safety_engineer','tb_engineer']);
+
+  function dateKey(value){
+    const d=value instanceof Date?value:new Date(value||Date.now());
+    return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
+  }
+  function delegationActive(row){
+    if(!row||row.status!=='active') return false;
+    const today=dateKey();
+    return (!row.startDate||row.startDate<=today)&&(!row.endDate||row.endDate>=today);
+  }
+  function activeDelegationForAbsent(uid){
+    const id=Object.keys(activeDelegationsCache).find(key=>activeDelegationsCache[key]&&activeDelegationsCache[key].status==='active'&&activeDelegationsCache[key].absentUid===uid);
+    return id?Object.assign({id},activeDelegationsCache[id]):null;
+  }
+  function activeDelegationForDelegate(uid){
+    const id=Object.keys(activeDelegationsCache).find(key=>activeDelegationsCache[key]&&activeDelegationsCache[key].status==='active'&&activeDelegationsCache[key].delegateUid===uid);
+    return id?Object.assign({id},activeDelegationsCache[id]):null;
+  }
+  function actualManagerAccount(){
+    return baseCurrentAccount&&currentAccount&&baseCurrentAccount.uid===currentAccount.uid?baseCurrentAccount:currentAccount;
+  }
+  function isShiftWorker(account){
+    if(!account)return false;
+    if(['dispatcher','chief_dispatcher','electrician'].includes(account.role))return true;
+    const text=(String(account.roleLabel||'')+' '+String(account.position||'')).toLocaleLowerCase('uz');
+    return /dispetch|montyor|mantyor|elektromont|tchb|tchb|shofyor|haydovchi/.test(text);
+  }
+  function canAssignDelegation(target){
+    const manager=actualManagerAccount();
+    if(!manager||!target||manager.uid===target.uid||target.active===false||isShiftWorker(target)) return false;
+    if(manager.role==='super_admin') return true;
+    if(!isTargetWithinScope(target)) return false;
+    if(manager.role==='director'||manager.role==='chief_engineer') return Number(target.level||roleDef(target.role).level)<Number(manager.level||roleDef(manager.role).level);
+    return manager.role==='regional_tb_chief'&&REGIONAL_SAFETY_ROLES.has(target.role);
+  }
+  function delegationCandidates(target){
+    return Object.keys(teamUsersCache).map(uid=>Object.assign({uid},teamUsersCache[uid]||{})).filter(user=>{
+      if(user.uid===target.uid||user.active===false||isShiftWorker(user)||activeDelegationForAbsent(user.uid)||activeDelegationForDelegate(user.uid)) return false;
+      if(['super_admin','director'].includes(user.role)) return false;
+      if(!isTargetWithinScope(user)) return false;
+      if(actualManagerAccount().role==='regional_tb_chief'&&!REGIONAL_SAFETY_ROLES.has(user.role)) return false;
+      return true;
+    }).sort((a,b)=>String(a.fullName||'').localeCompare(String(b.fullName||''),'uz'));
+  }
+  function delegationCardHtml(user){
+    const row=activeDelegationForAbsent(user.uid);
+    const incoming=activeDelegationForDelegate(user.uid);
+    const canAssign=canAssignDelegation(user)&&!row;
+    if(!row&&!incoming&&!canAssign) return '';
+    const status=row?`<div class="hetk-delegation-current"><i class="fas fa-user-clock"></i><div><b>${escapeHtml(row.delegateName||'O‘rinbosar')}</b><span>${escapeHtml(row.reasonLabel||DELEGATION_REASONS[row.reason]||'Vaqtinchalik topshiriq')} · ${escapeHtml(row.startDate||'—')} — ${escapeHtml(row.endDate||'—')}</span><p>${escapeHtml(row.justification||'')}</p></div></div>`:'';
+    const incomingHtml=incoming?`<div class="hetk-delegation-current incoming"><i class="fas fa-people-arrows"></i><div><b>${escapeHtml(incoming.absentName||'Hodim')} vazifasini vaqtincha bajarmoqda</b><span>${escapeHtml(incoming.reasonLabel||DELEGATION_REASONS[incoming.reason]||'Vaqtinchalik topshiriq')} · ${escapeHtml(incoming.startDate||'—')} — ${escapeHtml(incoming.endDate||'—')}</span></div></div>`:'';
+    const canEnd=row&&(canAssignDelegation(user)||(baseCurrentAccount&&baseCurrentAccount.uid===user.uid));
+    return `<div class="hetk-team-detail-section hetk-delegation-card"><h4>Vaqtinchalik vazifa topshirish</h4>${status}${incomingHtml}<div class="hetk-delegation-actions">${canAssign?`<button type="button" data-delegation-assign="${escapeAttr(user.uid)}"><i class="fas fa-person-circle-plus"></i> O‘rinbosar biriktirish</button>`:''}${canEnd?`<button type="button" class="end" data-delegation-end="${escapeAttr(row.id)}"><i class="fas fa-person-circle-check"></i> ${baseCurrentAccount&&baseCurrentAccount.uid===user.uid?'Ishga qaytdim':'Vakolatni yakunlash'}</button>`:''}</div></div>`;
+  }
+  function closeDelegationDialog(){const el=byId('hetk-delegation-editor');if(el)el.remove();}
+  function delegationMessage(type,text){const el=byId('hetk-delegation-message');if(el){el.className='hetk-user-editor-message '+(text?`show ${type}`:'');el.textContent=text||'';}}
+  function openDelegationDialog(uid){
+    const target=teamUsersCache[uid]&&Object.assign({uid},teamUsersCache[uid]);
+    if(!target||!canAssignDelegation(target)) return;
+    const candidates=delegationCandidates(target);
+    if(!candidates.length) return alert('Vakolatni qabul qiladigan mos faol hodim topilmadi.');
+    closeDelegationDialog();
+    const tomorrow=new Date();tomorrow.setDate(tomorrow.getDate()+1);
+    document.body.insertAdjacentHTML('beforeend',`<div id="hetk-delegation-editor" class="hetk-user-editor"><div class="hetk-user-editor-backdrop" data-close-delegation></div><div class="hetk-user-editor-sheet"><div class="hetk-user-editor-head"><div><h3>Vaqtinchalik o‘rinbosar</h3><p>${escapeHtml(target.fullName||'Hodim')}ning vazifa va bildirishnomalarini vaqtincha topshirish.</p></div><button type="button" class="hetk-user-editor-close" data-close-delegation><i class="fas fa-times"></i></button></div><div class="hetk-user-editor-body"><div id="hetk-delegation-message" class="hetk-user-editor-message"></div><div class="hetk-user-form-grid"><div class="hetk-user-field"><label>O‘rinbosar *</label><select id="hetk-delegation-user">${candidates.map(u=>`<option value="${escapeAttr(u.uid)}">${escapeHtml(u.fullName||u.login)} — ${escapeHtml(getRoleLabel(u))}</option>`).join('')}</select></div><div class="hetk-user-field"><label>Asos *</label><select id="hetk-delegation-reason">${Object.keys(DELEGATION_REASONS).map(key=>`<option value="${key}">${escapeHtml(DELEGATION_REASONS[key])}</option>`).join('')}</select></div><div class="hetk-user-field"><label>Boshlanish sanasi *</label><input id="hetk-delegation-start" type="date" value="${dateKey()}"></div><div class="hetk-user-field"><label>Tugash sanasi *</label><input id="hetk-delegation-end" type="date" value="${dateKey(tomorrow)}"></div></div><div class="hetk-user-field hetk-delegation-justification"><label>Asoslovchi izoh / hujjat *</label><textarea id="hetk-delegation-justification" placeholder="Buyruq raqami, tibbiy ma’lumotnoma yoki boshqa aniq asos"></textarea></div></div><div class="hetk-user-editor-foot"><button type="button" class="hetk-user-cancel" data-close-delegation>Bekor qilish</button><button type="button" id="hetk-delegation-save" class="hetk-user-save"><i class="fas fa-save"></i> Vaqtincha topshirish</button></div></div></div>`);
+    document.querySelectorAll('[data-close-delegation]').forEach(el=>el.addEventListener('click',closeDelegationDialog));
+    byId('hetk-delegation-save').addEventListener('click',()=>saveDelegation(target));
+  }
+  async function saveDelegation(target){
+    const delegateUid=byId('hetk-delegation-user').value,reason=byId('hetk-delegation-reason').value,startDate=byId('hetk-delegation-start').value,endDate=byId('hetk-delegation-end').value,justification=String(byId('hetk-delegation-justification').value||'').trim();
+    if(!delegateUid||!reason||!startDate||!endDate||!justification) return delegationMessage('error','Barcha majburiy maydonlarni to‘ldiring.');
+    if(endDate<startDate) return delegationMessage('error','Tugash sanasi boshlanish sanasidan oldin bo‘lishi mumkin emas.');
+    if(activeDelegationForAbsent(target.uid)||activeDelegationForDelegate(delegateUid)) return delegationMessage('error','Tanlangan hodimlardan birida faol vaqtinchalik topshiriq mavjud.');
+    const delegate=teamUsersCache[delegateUid]||{},manager=actualManagerAccount(),ref=databaseRef.ref('TemporaryDelegations').push(),row={id:ref.key,absentUid:target.uid,absentName:target.fullName||target.login||'Hodim',delegateUid,delegateName:delegate.fullName||delegate.login||'Hodim',reason,reasonLabel:DELEGATION_REASONS[reason],justification,startDate,endDate,status:'active',assignedByUid:manager.uid,assignedByName:manager.fullName||manager.login||'Rahbar',assignedByRole:manager.role,createdAt:Date.now()};
+    const btn=byId('hetk-delegation-save');setBusy(btn,true,'Saqlanmoqda...');
+    try{await ref.set(row);await notifyDelegationUsers(row,'delegation_started');closeDelegationDialog();}
+    catch(e){delegationMessage('error','Saqlab bo‘lmadi: '+friendlyAuthError(e));setBusy(btn,false);}
+  }
+  async function endDelegation(id){
+    const row=activeDelegationsCache[id];if(!row)return;
+    const target=teamUsersCache[row.absentUid]&&Object.assign({uid:row.absentUid},teamUsersCache[row.absentUid]);
+    if(!(target&&(canAssignDelegation(target)||(baseCurrentAccount&&baseCurrentAccount.uid===row.absentUid)))) return;
+    if(!confirm('Vaqtinchalik vakolatni yakunlaysizmi?')) return;
+    const actor=actualManagerAccount();await databaseRef.ref('TemporaryDelegations/'+id).update({status:'ended',endedAt:Date.now(),endedByUid:actor.uid,endedByName:actor.fullName||actor.login||'Hodim'});await notifyDelegationUsers(row,'delegation_ended');
+  }
+  async function notifyDelegationUsers(row,action){
+    const id=databaseRef.ref('UserNotifications').push().key,started=action==='delegation_started',payload={id,kind:'activity',action,read:false,title:started?`${row.absentName} vazifasi vaqtincha topshirildi`:`${row.absentName} bo‘yicha vaqtinchalik vakolat yakunlandi`,commentText:`O‘rinbosar: ${row.delegateName}. Asos: ${row.reasonLabel}. ${row.justification||''}`,createdAt:Date.now(),expiresAt:Date.now()+180*24*60*60*1000};
+    const recipients=Array.from(new Set([row.absentUid,row.delegateUid,row.assignedByUid].filter(Boolean))),updates={};recipients.forEach(uid=>updates[`UserNotifications/${uid}/${id}`]=payload);await databaseRef.ref().update(updates);if(window.HETKPush&&typeof window.HETKPush.safeSendToUsers==='function')await window.HETKPush.safeSendToUsers(recipients,'notifications',payload.title,payload.commentText,{action});
+  }
+
   function renderEmployeesManager(account){
     const pane=document.querySelector('[data-profile-pane="employees"]');
     if(!pane) return;
@@ -2819,9 +2937,11 @@
     if(usersTeamRef) usersTeamRef.off('value');
     if(foldersTeamRef) foldersTeamRef.off('value');
     if(workZonesTeamRef) workZonesTeamRef.off('value');
+    if(delegationsTeamRef) delegationsTeamRef.off('value');
     usersTeamRef=databaseRef.ref('users');
     foldersTeamRef=databaseRef.ref('Folders');
     workZonesTeamRef=databaseRef.ref('WorkZones');
+    delegationsTeamRef=databaseRef.ref('TemporaryDelegations');
     usersTeamRef.on('value', snap => {
       teamUsersCache=snap.val() || {};
       if(selectedTeamUid && !teamUsersCache[selectedTeamUid]) selectedTeamUid=null;
@@ -2843,6 +2963,11 @@
       if(selectedTeamUid) renderTeamDetail(selectedTeamUid);
       if(!byId('hetk-user-editor').hidden) refreshWorkZoneEditor();
       if(communicationTab==='chats') renderCommunicationContent();
+    });
+    delegationsTeamRef.on('value',snap=>{
+      activeDelegationsCache=snap.val()||{};
+      renderTeamList();
+      if(selectedTeamUid)renderTeamDetail(selectedTeamUid);
     });
     const search=byId('hetk-team-search');
     if(search) search.addEventListener('input', renderTeamList);
@@ -3072,6 +3197,7 @@
       </div>
       ${safetyPermitHtml(u,{canEdit:canSafetyEdit})}
       ${disciplineHtml(u,{canManage:canDiscipline})}
+      ${delegationCardHtml(u)}
       <div class="hetk-team-detail-section"><h4>Ruxsat etilgan hududlar</h4><div class="hetk-scope-chips">${chips}</div></div>
       <div class="hetk-team-detail-grid">
         <div><span>Telefon</span><b>${escapeHtml(u.phone || '—')}</b></div>
@@ -3087,6 +3213,8 @@
     const edit=byId('hetk-edit-team-user'); if(edit) edit.addEventListener('click', () => openEditUserEditor(uid));
     const toggle=byId('hetk-toggle-team-user'); if(toggle) toggle.addEventListener('click', () => toggleUserActive(uid));
     const del=byId('hetk-delete-team-user'); if(del) del.addEventListener('click', () => deleteUserPermanently(uid));
+    const assign=box.querySelector('[data-delegation-assign]');if(assign)assign.addEventListener('click',()=>openDelegationDialog(assign.dataset.delegationAssign));
+    const end=box.querySelector('[data-delegation-end]');if(end)end.addEventListener('click',()=>endDelegation(end.dataset.delegationEnd));
     bindSafetyActions(box);
   }
 
@@ -4031,6 +4159,30 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
   function escapeHtml(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
   function escapeAttr(v){return escapeHtml(v);}
 
+  async function buildEffectiveAccount(base){
+    effectiveDelegation=activeDelegationForDelegate(base&&base.uid);
+    if(effectiveDelegation&&!delegationActive(effectiveDelegation))effectiveDelegation=null;
+    if(!effectiveDelegation) return base;
+    const snap=await databaseRef.ref('users/'+effectiveDelegation.absentUid).once('value'),absent=snap.val();
+    if(!absent||absent.active===false){effectiveDelegation=null;return base;}
+    const identity={uid:base.uid,fullName:base.fullName,login:base.login,phone:base.phone,gender:base.gender,photoUrl:base.photoUrl,photoData:base.photoData,authEmail:base.authEmail,active:base.active};
+    return Object.assign({},base,absent,identity,{actingForUid:effectiveDelegation.absentUid,actingForName:effectiveDelegation.absentName||absent.fullName,delegationId:effectiveDelegation.id,baseRole:base.role,baseRoleLabel:getRoleLabel(base),isTemporaryDelegate:true});
+  }
+  async function refreshEffectiveAccount(dispatchEvent){
+    if(!baseCurrentAccount)return;
+    currentAccount=await buildEffectiveAccount(baseCurrentAccount);
+    window.HETKAuth.currentUser=currentAccount;
+    window.HETKAuth.baseUser=baseCurrentAccount;
+    window.HETKAuth.effectiveDelegation=effectiveDelegation;
+    populateProfile(currentAccount);
+    if(dispatchEvent)document.dispatchEvent(new CustomEvent('hetk-auth-user-updated',{detail:{user:currentAccount,baseUser:baseCurrentAccount,delegation:effectiveDelegation}}));
+  }
+  async function expandDelegatedRecipients(uids){
+    const set=new Set((uids||[]).filter(Boolean));
+    Object.keys(activeDelegationsCache).forEach(id=>{const row=activeDelegationsCache[id];if(delegationActive(row)&&set.has(row.absentUid))set.add(row.delegateUid);});
+    return Array.from(set);
+  }
+
   async function handleSignedIn(user){
     try{
       currentAccount = await loadAccount(user);
@@ -4041,13 +4193,18 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
         return;
       }
       currentAccount = await ensureLoginIndex(currentAccount, user);
-      if(currentAccount.active === false){
+      baseCurrentAccount=currentAccount;
+      if(baseCurrentAccount.active === false){
         await auth.signOut();
         setOverlayVisible(true);
         setMessage('error','Bu foydalanuvchi bloklangan.');
         return;
       }
+      const delegationSnap=await databaseRef.ref('TemporaryDelegations').once('value');
+      activeDelegationsCache=delegationSnap.val()||{};
+      await refreshEffectiveAccount(false);
       if(currentUserLiveRef) currentUserLiveRef.off('value');
+      if(currentDelegationsRef) currentDelegationsRef.off('value');
       currentUserLiveRef=databaseRef.ref('users/' + user.uid);
       currentUserLiveRef.on('value', async snap => {
         const live=snap.val();
@@ -4055,11 +4212,11 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
           if(auth.currentUser && auth.currentUser.uid === user.uid) await auth.signOut();
           return;
         }
-        currentAccount=Object.assign({uid:user.uid},live);
-        window.HETKAuth.currentUser=currentAccount;
-        populateProfile(currentAccount);
-        document.dispatchEvent(new CustomEvent('hetk-auth-user-updated',{detail:{user:currentAccount}}));
+        baseCurrentAccount=Object.assign({uid:user.uid},live);
+        await refreshEffectiveAccount(true);
       });
+      currentDelegationsRef=databaseRef.ref('TemporaryDelegations');
+      currentDelegationsRef.on('value',async snap=>{activeDelegationsCache=snap.val()||{};await refreshEffectiveAccount(true);});
       await startUserNotifications(user.uid);
       await startUserMessages(user.uid);
       startNotificationSettings(user.uid);
@@ -4106,13 +4263,15 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
       }else{
         endLoginTracking(false);
         if(currentUserLiveRef){ currentUserLiveRef.off('value'); currentUserLiveRef=null; }
+        if(currentDelegationsRef){currentDelegationsRef.off('value');currentDelegationsRef=null;}
         stopUserNotifications();
         stopUserMessages();
         stopNotificationSettings();
         if(loginHistoryTimer){clearInterval(loginHistoryTimer);loginHistoryTimer=null;}
         loginHistoryRows=[];loginHistoryLoadedAt=0;
-        currentAccount=null;
+        currentAccount=null;baseCurrentAccount=null;effectiveDelegation=null;activeDelegationsCache={};
         window.HETKAuth.currentUser=null;
+        window.HETKAuth.baseUser=null;window.HETKAuth.effectiveDelegation=null;
         document.dispatchEvent(new CustomEvent('hetk-auth-cleared'));
         setOverlayVisible(!publicPermitMode);
         await checkUsersExist();
@@ -4122,6 +4281,8 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
 
   window.HETKAuth = {
     currentUser:null,
+    baseUser:null,
+    effectiveDelegation:null,
     roles:ROLE_DEFS,
     async getIdToken(forceRefresh){
       if(!auth || !auth.currentUser) throw new Error('AUTH_REQUIRED');
@@ -4142,6 +4303,7 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
     getVisibleFolderIds(folderMap){return getVisibleFolderIds(this.currentUser,folderMap || teamFoldersCache);},
     canAccessFolder(folderId,folderMap){return canAccessFolder(folderId,folderMap || teamFoldersCache,this.currentUser);},
     canSeeFolder(folderId,folderMap){return canSeeFolder(folderId,folderMap || teamFoldersCache,this.currentUser);},
+    expandRecipientUids(uids){return expandDelegatedRecipients(uids);},
     normalizeLogin,
     loginToEmail
   };
