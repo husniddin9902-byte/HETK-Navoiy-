@@ -2534,13 +2534,10 @@ async function hetkNotificationRecipients(tp,excludeUid){
         if(masterUid && masterUid!==excludeUid && users[masterUid] && users[masterUid].active!==false) recipients.add(masterUid);
     });
     const targetFolders=hetkElementFolderIds(tp);
-    Object.keys(elementWorkZonesCache).forEach(zoneId=>{
-        const zone=elementWorkZonesCache[zoneId] || {};
-        const related=Object.keys(zone.folders || {}).some(rootId=>
-            zone.folders[rootId] && targetFolders.some(folderId=>hetkFolderRelated(folderId,rootId))
-        );
-        const masterUid=zone.currentMasterUid;
-        if(related && masterUid && masterUid!==excludeUid && users[masterUid] && users[masterUid].active!==false) recipients.add(masterUid);
+    const actor=hetkCurrentAccount()||{};
+    if(['regional_tb_operations_engineer','regional_tb_engineer','regional_fire_safety_engineer','tb_engineer'].includes(actor.role))Object.keys(users).forEach(uid=>{
+        const user=users[uid]||{};if(uid===excludeUid||user.active===false||user.role!=='regional_tb_chief')return;
+        if(user.rootAccess||Object.keys(user.folders||{}).some(rootId=>user.folders[rootId]&&targetFolders.some(folderId=>hetkFolderIsInside(folderId,rootId))))recipients.add(uid);
     });
     if(!recipients.size){
         Object.keys(users).forEach(uid=>{
@@ -2592,13 +2589,13 @@ async function hetkDeletionApprovers(tp,excludeUid){
         const uid=zone.currentMasterUid;
         if(uid && uid!==excludeUid && users[uid] && users[uid].active!==false) masters.add(uid);
     });
-    if(masters.size) return {uids:Array.from(masters),mode:'master'};
+    if(masters.size){let uids=Array.from(masters);if(window.HETKAuth&&window.HETKAuth.expandRecipientUids)uids=await window.HETKAuth.expandRecipientUids(uids);return {uids,mode:'master'};}
     const chiefs=await hetkChiefEngineerRecipients(tp,excludeUid);
     return {uids:chiefs,mode:chiefs.length ? 'chief_engineer' : 'none'};
 }
 
 async function hetkNotifyChiefEngineerDeletion(tpId,tp,actor,action){
-    const recipients=await hetkChiefEngineerRecipients(tp,actor.uid);
+    let recipients=await hetkChiefEngineerRecipients(tp,actor.uid);if(window.HETKAuth&&window.HETKAuth.expandRecipientUids)recipients=await window.HETKAuth.expandRecipientUids(recipients);
     if(!recipients.length) return 0;
     const now=Date.now();
     const noticeId=database.ref('UserNotifications').push().key;
@@ -2673,7 +2670,13 @@ async function hetkSafeSendPush(recipientUids,kind,payload){
 }
 
 async function hetkWriteUserNotices(recipientUids,payload,noticeId){
-    const recipients=Array.from(new Set((recipientUids || []).filter(Boolean)));
+    let recipients=Array.from(new Set((recipientUids || []).filter(Boolean)));
+    if(payload&&payload.actorUid){
+        const snap=await database.ref('users').once('value'),all=snap.val()||{},actor=all[payload.actorUid]||{},actorRoots=Object.keys(actor.folders||{}).filter(id=>actor.folders[id]);
+        if(['regional_tb_operations_engineer','regional_tb_engineer','regional_fire_safety_engineer','tb_engineer'].includes(actor.role))Object.keys(all).forEach(uid=>{const head=all[uid]||{};if(head.active===false||head.role!=='regional_tb_chief')return;const roots=Object.keys(head.folders||{}).filter(id=>head.folders[id]);if(head.rootAccess||actorRoots.some(id=>roots.some(root=>hetkFolderIsInside(id,root))))recipients.push(uid);});
+    }
+    if(window.HETKAuth&&window.HETKAuth.expandRecipientUids)recipients=await window.HETKAuth.expandRecipientUids(recipients);
+    recipients=Array.from(new Set(recipients.filter(Boolean)));
     if(!recipients.length) return '';
     const id=noticeId || database.ref('UserNotifications').push().key;
     const updates={};
