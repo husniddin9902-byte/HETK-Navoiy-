@@ -735,21 +735,22 @@ body {
     display: none !important;
 }
 
-/* 🔄 MAP MARKERLARI UCHUN MILTILLASH (BLINKING) ANIMATSIYASI */
-/* Ikki fiderga ulangan TP ona papkada ochilganda shu klass orqali dynamic miltillaydi */
-.blinking-marker-icon {
-    animation: markerBlink 2s infinite steps(1, end);
+/* Ikki manbali element: tanlangan tarmoqlar ranglari orasida, bitta tarmoqqa
+   yig'ilganda esa shu tarmoq rangi bilan qora orasida miltillaydi. */
+.hetk-dual-source-marker {
+    animation: hetkDualSourceBlink 1.6s infinite steps(1, end);
 }
 
-@keyframes markerBlink {
-    0%, 100% {
-        filter: drop-shadow(0 0 6px var(--fider-color-1, #007AFF)) hue-rotate(0deg);
+@keyframes hetkDualSourceBlink {
+    0%, 49%, 100% {
+        color: var(--marker-color-1, #007AFF);
+        filter: drop-shadow(0 0 5px var(--marker-color-1, #007AFF));
     }
-    50% {
-        /* JS orqali ikkinchi fiderning rangiga mos o'zgarishi mantiqi kiritiladi */
-        filter: drop-shadow(0 0 6px var(--fider-color-2, #34C759)) saturate(2);
+    50%, 99% {
+        color: var(--marker-color-2, #000000);
+        filter: drop-shadow(0 0 5px var(--marker-color-2, #000000));
     }
-       }
+}
 
 .multi-image-remove{
   position:absolute;
