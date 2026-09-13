@@ -337,6 +337,9 @@ if(saveFolderBtn) {
             const createdId=createdRef.key;
             if(createdId){
                 currentFolders[createdId]=folderData;
+                hetkRebuildFolderChildrenIndex();
+                hetkRenderFolderTreePreservingState();
+                updateParentSelect('parent-folder-select');
                 await hetkSafeNotifyFolderActivity('create',createdId,null,folderData);
             }
             showToast("Guruh yaratildi!");
@@ -347,19 +350,45 @@ if(saveFolderBtn) {
 }
 
 let hetkFoldersValueRef = null;
+function hetkRenderFolderTreePreservingState() {
+    const treeRoot = document.getElementById('tree-root');
+    if(!treeRoot) return;
+
+    // Papka o'zgarganda ochiq tarmoqlar yopilib ketmasin.
+    const openedIds = Array.from(treeRoot.querySelectorAll('.folder-children'))
+        .filter(box => box.style.display === 'block')
+        .map(box => String(box.id || '').replace(/^children-/, ''))
+        .filter(Boolean);
+
+    renderTree('root', treeRoot);
+    openedIds.forEach(id => {
+        const childDiv = document.getElementById(`children-${id}`);
+        const btn = document.querySelector(`#folder-${id} .toggle-btn`);
+        if(!childDiv || !btn || !currentFolders[id]) return;
+        renderTree(id, childDiv);
+        renderElementsInTree(id, childDiv);
+        childDiv.dataset.loaded = 'true';
+        childDiv.style.display = 'block';
+        btn.innerText = '-';
+    });
+    hetkRefreshTreeFocus();
+}
+
 function loadFolders() {
     if(hetkFoldersValueRef) {
         const treeRoot = document.getElementById('tree-root');
-        if(treeRoot) renderTree('root', treeRoot);
+        if(treeRoot) hetkRenderFolderTreePreservingState();
         return;
     }
     hetkFoldersValueRef = database.ref('Folders');
     hetkFoldersValueRef.on('value', (snapshot) => {
         currentFolders = snapshot.val() || {};
         hetkRebuildFolderChildrenIndex();
-        const treeRoot = document.getElementById('tree-root');
-        if(treeRoot) renderTree('root', treeRoot);
+        hetkRenderFolderTreePreservingState();
         hetkNotifyManagementScopeChanged('folders');
+    }, (error) => {
+        console.error('FOLDERS LISTENER ERROR:', error);
+        hetkFoldersValueRef = null;
     });
 }
 
@@ -1434,6 +1463,9 @@ document.getElementById('delete-folder-btn').addEventListener('click', () => {
         const deletedFolder=Object.assign({},currentFolders[editingFolderId] || {});
         const deletedFolderId=editingFolderId;
         database.ref('Folders/' + deletedFolderId).remove().then(async () => {
+            delete currentFolders[deletedFolderId];
+            hetkRebuildFolderChildrenIndex();
+            hetkRenderFolderTreePreservingState();
             await hetkSafeNotifyFolderActivity('delete',deletedFolderId,deletedFolder,null);
             showToast("Guruh o'chirildi");
             document.getElementById('edit-folder-panel').classList.add('hidden');
@@ -1461,6 +1493,10 @@ document.getElementById('update-folder-btn').addEventListener('click', () => {
         color: `hsl(${newHue}, 100%, 50%)`
     };
     database.ref('Folders/' + editingFolderId).update(changedFolder).then(async () => {
+        currentFolders[editingFolderId]=Object.assign({},oldFolder,changedFolder);
+        hetkRebuildFolderChildrenIndex();
+        hetkRenderFolderTreePreservingState();
+        updateParentSelect('parent-folder-select');
         await hetkSafeNotifyFolderActivity('edit',editingFolderId,oldFolder,Object.assign({},oldFolder,changedFolder));
         showToast("Guruh yangilandi!");
         document.getElementById('edit-folder-panel').classList.add('hidden');
@@ -4428,6 +4464,21 @@ if (tp.folders) {
 `;
     });
 }
+
+// Element yaratish, tahrirlash yoki o'chirishdan keyin ochiq papkalardagi
+// elementlarni sahifani yangilamasdan darhol qayta chizamiz.
+document.addEventListener('hetk-scoped-data-changed', event => {
+    if(!event.detail || event.detail.type !== 'tps') return;
+    const treeRoot=document.getElementById('tree-root');
+    if(!treeRoot) return;
+    treeRoot.querySelectorAll('.folder-children').forEach(childDiv => {
+        if(childDiv.style.display !== 'block') return;
+        const folderId=String(childDiv.id || '').replace(/^children-/, '');
+        if(!folderId || !currentFolders[folderId]) return;
+        childDiv.querySelectorAll(':scope > .tp-tree-row-item').forEach(row=>row.remove());
+        renderElementsInTree(folderId,childDiv);
+    });
+});
               
                 tpRow.innerHTML = `
     <div style="
