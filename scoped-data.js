@@ -75,8 +75,8 @@
     tpFolderIds(value).forEach(function(folderId){updates['TPsByFolder/'+folderId+'/'+id]=value;});
     await db().ref().update(updates);tpCache[id]=value;document.dispatchEvent(new CustomEvent('hetk-scoped-data-changed',{detail:{type:'tps',id:id}}));
   }
-  async function removeTP(id,before){
-    const updates={};updates['TPs/'+id]=null;tpFolderIds(before).forEach(function(folderId){updates['TPsByFolder/'+folderId+'/'+id]=null;});
+  async function removeTP(id,before,additionalUpdates){
+    const updates=Object.assign({},additionalUpdates||{});updates['TPs/'+id]=null;tpFolderIds(before).forEach(function(folderId){updates['TPsByFolder/'+folderId+'/'+id]=null;});
     await db().ref().update(updates);delete tpCache[id];document.dispatchEvent(new CustomEvent('hetk-scoped-data-changed',{detail:{type:'tps',id:id}}));
   }
   function descendants(rootId,folders){
