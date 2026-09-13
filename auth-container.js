@@ -642,19 +642,34 @@
 
   async function ensureLoginIndex(account, user){
     if(!account || !user || !account.login) return account;
+    const storedAuthEmail = String(account.authEmail || '');
     const authEmail = String(user.email || account.authEmail || loginToEmail(account.login));
-    const key = loginIndexKey(account.login);
-    const updates = {};
-    updates['users/' + user.uid + '/authEmail'] = authEmail;
-    updates['loginIndex/' + key] = {
-      uid:user.uid,
-      login:normalizeLogin(account.login),
-      authEmail,
-      active:account.active !== false,
-      updatedAt:Date.now()
-    };
-    await databaseRef.ref().update(updates);
     account.authEmail = authEmail;
+
+    // Kirish loginIndex yozuvini yangilash huquqiga bog‘liq bo‘lmasligi kerak.
+    // Oddiy hodimlar loginIndex'ga yoza olmaydi; avvalgi umumiy update shu sabab
+    // ularning muvaffaqiyatli Authentication kirishini PERMISSION_DENIED bilan
+    // bekor qilardi. Profilning o‘z authEmail maydonini alohida sinxronlaymiz,
+    // indeksni esa faqat bunga vakolati bor rollar yangilaydi.
+    if(storedAuthEmail !== authEmail){
+      try{
+        await databaseRef.ref('users/' + user.uid + '/authEmail').set(authEmail);
+      }catch(_e){}
+    }
+
+    const canMaintainIndex = account.role === 'super_admin' ||
+      !!(account.permissions && account.permissions.createUsers === true);
+    if(canMaintainIndex){
+      try{
+        await databaseRef.ref('loginIndex/' + loginIndexKey(account.login)).set({
+          uid:user.uid,
+          login:normalizeLogin(account.login),
+          authEmail,
+          active:account.active !== false,
+          updatedAt:Date.now()
+        });
+      }catch(_e){}
+    }
     return account;
   }
 
