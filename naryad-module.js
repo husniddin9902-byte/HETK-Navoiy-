@@ -351,9 +351,14 @@
 
   function bindRef(ref,event,handler){ref.on(event,handler);refs.push([ref,event,handler]);}
   function unbindAll(){refs.forEach(([ref,event,handler])=>ref.off(event,handler));refs=[];users={};folders={};tps={};naryads={};}
-  function start(account){
+  async function start(account){
     me=account;if(!window.firebase||!firebase.apps||!firebase.apps.length)return;db=firebase.database();buildShell();unbindAll();
-    const maps=[['users',v=>{users=v||{};if(me&&users[me.uid]){me=Object.assign({uid:me.uid},users[me.uid]);if(window.HETKAuth)window.HETKAuth.currentUser=me;}setButton();if(byId('hetk-naryad-overlay').classList.contains('open'))render();}],['Folders',v=>{folders=v||{};if(byId('hetk-naryad-overlay').classList.contains('open'))render();}],['TPs',v=>{tps=v||{};if(byId('hetk-naryad-overlay').classList.contains('open'))render();}],['Naryads',v=>{naryads=v||{};setButton();if(byId('hetk-naryad-overlay').classList.contains('open'))render();}]];
+    if(window.HETKData){
+      const scoped=await Promise.all([window.HETKData.readUsers(true),window.HETKData.readTPs(true)]);
+      users=scoped[0].val()||{};tps=scoped[1].val()||{};
+    }
+    const maps=(window.HETKData?[]:[['users',v=>{users=v||{};if(me&&users[me.uid]){me=Object.assign({uid:me.uid},users[me.uid]);if(window.HETKAuth)window.HETKAuth.currentUser=me;}setButton();if(byId('hetk-naryad-overlay').classList.contains('open'))render();}],['TPs',v=>{tps=v||{};if(byId('hetk-naryad-overlay').classList.contains('open'))render();}]])
+      .concat([['Folders',v=>{folders=v||{};if(byId('hetk-naryad-overlay').classList.contains('open'))render();}],['Naryads',v=>{naryads=v||{};setButton();if(byId('hetk-naryad-overlay').classList.contains('open'))render();}]]);
     maps.forEach(([path,setter])=>{const ref=db.ref(path);bindRef(ref,'value',snap=>setter(snap.val()));});setButton();
   }
   function clear(){unbindAll();me=null;setButton();close();}
