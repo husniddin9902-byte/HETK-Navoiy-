@@ -60,7 +60,7 @@ window.hetkRefreshPrintSelection=async function(){
         points=searchState.results.filter(tp=>pointWithinFolder(tp,printSelection.id)).map(tp=>Object.assign({},tp,{id:tp.id || tp.tpId || ''}));
     }else{
         try{
-            const snapshot=await database.ref('TPs').once('value');
+            const snapshot=window.HETKData ? await window.HETKData.readTPs(true) : await database.ref('TPs').once('value');
             points=Object.entries(snapshot.val() || {}).map(([id,tp])=>Object.assign({},tp,{id})).filter(tp=>pointWithinFolder(tp,printSelection.id));
         }catch(error){
             console.error('PRINT ITEMS LOAD ERROR:',error);
