@@ -13,6 +13,19 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
+// Hududiy indeks tayyor bo‘lganda elementlarning faqat joriy hodimga ruxsat
+// etilgan nusxalarini oladi. Eski baza migratsiya qilinmaguncha xavfsiz
+// moslashuv uchun odatiy o‘qish saqlanadi.
+function hetkScopedTPsOnce(){
+    return window.HETKData ? window.HETKData.readTPs(true) : database.ref('TPs').once('value');
+}
+function hetkScopedTPOnce(tpId){
+    return window.HETKData ? window.HETKData.readTP(tpId) : database.ref('TPs/'+tpId).once('value');
+}
+function hetkScopedUsersOnce(){
+    return window.HETKData ? window.HETKData.readUsers(true) : database.ref('users').once('value');
+}
+
 // 2. O'zgaruvchilar
 var map = L.map('map', { zoomControl: false }).setView([40.10, 65.81], 16);
 var userMarker = null; 
@@ -2525,7 +2538,7 @@ function hetkChangesForDatabase(changes){
 
 async function hetkNotificationRecipients(tp,excludeUid){
     await loadElementWorkZones(true);
-    const usersSnap=await database.ref('users').once('value');
+    const usersSnap=await hetkScopedUsersOnce();
     const users=usersSnap.val() || {};
     const recipients=new Set();
     hetkGetTPWorkZoneIds(tp).forEach(zoneId=>{
@@ -2561,7 +2574,7 @@ function hetkMasterOwnsElement(tp,account){
 
 async function hetkChiefEngineerRecipients(tp,excludeUid){
     await loadElementWorkZones(true);
-    const usersSnap=await database.ref('users').once('value');
+    const usersSnap=await hetkScopedUsersOnce();
     const users=usersSnap.val() || {};
     const targetFolders=new Set(hetkElementFolderIds(tp));
     hetkGetTPWorkZoneIds(tp).forEach(zoneId=>{
@@ -2581,7 +2594,7 @@ async function hetkDeletionApprovers(tp,excludeUid){
     const zoneIds=hetkGetTPWorkZoneIds(tp);
     if(!zoneIds.length) return {uids:[],mode:'none'};
     await loadElementWorkZones(true);
-    const usersSnap=await database.ref('users').once('value');
+    const usersSnap=await hetkScopedUsersOnce();
     const users=usersSnap.val() || {};
     const masters=new Set();
     zoneIds.forEach(zoneId=>{
@@ -2620,7 +2633,7 @@ async function hetkNotifyChiefEngineerDeletion(tpId,tp,actor,action){
 
 async function hetkFolderNotificationRecipients(folderId,excludeUid){
     await loadElementWorkZones(true);
-    const usersSnap=await database.ref('users').once('value');
+    const usersSnap=await hetkScopedUsersOnce();
     const users=usersSnap.val() || {};
     const recipients=new Set();
     Object.keys(elementWorkZonesCache).forEach(zoneId=>{
@@ -2672,7 +2685,7 @@ async function hetkSafeSendPush(recipientUids,kind,payload){
 async function hetkWriteUserNotices(recipientUids,payload,noticeId){
     let recipients=Array.from(new Set((recipientUids || []).filter(Boolean)));
     if(payload&&payload.actorUid){
-        const snap=await database.ref('users').once('value'),all=snap.val()||{},actor=all[payload.actorUid]||{},actorRoots=Object.keys(actor.folders||{}).filter(id=>actor.folders[id]);
+        const snap=await hetkScopedUsersOnce(),all=snap.val()||{},actor=all[payload.actorUid]||{},actorRoots=Object.keys(actor.folders||{}).filter(id=>actor.folders[id]);
         if(['regional_tb_operations_engineer','regional_tb_engineer','regional_fire_safety_engineer','tb_engineer'].includes(actor.role))Object.keys(all).forEach(uid=>{const head=all[uid]||{};if(head.active===false||head.role!=='regional_tb_chief')return;const roots=Object.keys(head.folders||{}).filter(id=>head.folders[id]);if(head.rootAccess||actorRoots.some(id=>roots.some(root=>hetkFolderIsInside(id,root))))recipients.push(uid);});
     }
     if(window.HETKAuth&&window.HETKAuth.expandRecipientUids)recipients=await window.HETKAuth.expandRecipientUids(recipients);
@@ -3503,7 +3516,8 @@ const tpId = newRef.key;
        elementData.tpId = tpId;
          
 try {
-    await newRef.set(elementData);
+    if(window.HETKData) await window.HETKData.saveTP(tpId,elementData,null);
+    else await newRef.set(elementData);
     await hetkSafeNotifyElementActivity('create',tpId,null,elementData);
     showSaveLoader(100,"Yakunlanmoqda...");
     setTimeout(()=>{
@@ -3690,7 +3704,8 @@ rebuildResult
     try {
         const updatedElementId=editingElementId;
         const beforeUpdate=JSON.parse(JSON.stringify(originalElementData || {}));
-        await database.ref('TPs/' + updatedElementId).update(elementData);
+        if(window.HETKData) await window.HETKData.saveTP(updatedElementId,elementData,beforeUpdate);
+        else await database.ref('TPs/' + updatedElementId).update(elementData);
         await hetkSafeNotifyElementActivity('edit',updatedElementId,beforeUpdate,elementData);
         showSaveLoader(100,"Yakunlanmoqda...");
         setTimeout(()=>{
@@ -4159,7 +4174,11 @@ originalElementData.telegramArchiveMessageIds
 );
 }
          
-            database.ref('TPs/' + editingElementId).remove().then(() => {
+            const deletingElementId=editingElementId;
+            const removePromise=window.HETKData
+                ? window.HETKData.removeTP(deletingElementId,originalElementData)
+                : database.ref('TPs/' + deletingElementId).remove();
+            removePromise.then(() => {
                 showToast("Element o'chirib tashlandi!");
                 elementManagePanel.classList.add('hidden');
                 editingElementId = null;
@@ -4249,7 +4268,7 @@ function renderTree(parentId, container) {
 // Guruhlar ichida TPlarni chiroyli ketma-ketlikda qalamcha (✏️) bilan chizish funksiyasi
 function renderElementsInTree(folderId, childContainer) {
     if(!hetkCanAccessFolder(folderId)) return;
-    database.ref('TPs').once('value', (snapshot) => {
+    hetkScopedTPsOnce().then((snapshot) => {
         const allPoints = snapshot.val() || {};
         Object.keys(allPoints).forEach(tpId => {
             const tp = allPoints[tpId];
@@ -4412,7 +4431,7 @@ if (tp.folders) {
 // 2. Elementni tahrirlash uchun oynani ochish funksiyasi (✏️ Bosilganda hamma ma'lumot yuklanadi)
  window.openEditElement = function(tpId) {
     if(!hetkHasPermission('editElements')) return showToast("Siz elementni tahrirlay olmaysiz. Faqat izoh yozish mumkin.");
-    database.ref('TPs/' + tpId).once('value', (snapshot) => {
+    hetkScopedTPOnce(tpId).then((snapshot) => {
         const tp = snapshot.val();
         if (!tp) return;
         const editMe=hetkCurrentAccount();
@@ -5169,7 +5188,7 @@ function refreshSearchResults(){
         return;
     }
 
-    database.ref("TPs").once("value",(snapshot)=>{
+    hetkScopedTPsOnce().then((snapshot)=>{
         const allTPs = snapshot.val() || {};
         const found = [];
       
@@ -5371,7 +5390,7 @@ function loadFilteredPoints() {
     activeMapMarkers.forEach(m => map.removeLayer(m));
     activeMapMarkers = [];
 
-    database.ref('TPs').once('value', (snapshot) => {
+    hetkScopedTPsOnce().then((snapshot) => {
 
 const useSearchResults =
     searchState.text.trim() !== "" ||
@@ -5945,7 +5964,7 @@ if (panelTabItems) {
         panelInternalMarkers = [];
 
         // Bazadan faqat tanlangan guruh ma'lumotlarini filtrlash
-        database.ref('TPs').once('value', async (snapshot) => {
+        hetkScopedTPsOnce().then(async (snapshot) => {
             const allPoints = snapshot.val() || {};
             try{await loadElementWorkZones(false);}catch(_e){}
 
@@ -6596,8 +6615,8 @@ async function hetkShowPersonProfile(uid, fallback){
     let person=null,deleted=false;
     try{
         if(uid){
-            let snap=await database.ref('users/'+uid).once('value');
-            person=snap.val();
+            let snap=await hetkScopedUsersOnce();
+            person=(snap.val()||{})[uid]||null;
             if(!person){
                 snap=await database.ref('DeletedUsers/'+uid).once('value');
                 person=snap.val();
@@ -6638,8 +6657,8 @@ async function hetkShowCurrentMaster(workZoneId, target){
         return;
     }
     try{
-        const snap=await database.ref('users/'+zone.currentMasterUid).once('value');
-        const master=snap.val();
+        const snap=await hetkScopedUsersOnce();
+        const master=(snap.val()||{})[zone.currentMasterUid]||null;
         if(!master){
             if(target) target.innerHTML='<div class="hetk-element-uj-warning">Master profili topilmadi.</div>';
             return;
