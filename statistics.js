@@ -149,12 +149,19 @@
     return overlay;
   }
   function mountOperational(){ensureOperationalPanel();return byId('hetk-operational-stats');}
-  function openOperationalPanel(){
+  async function openOperationalPanel(){
     const overlay=ensureOperationalPanel(),button=byId('hetk-stats-open');
     state.activeFolderId=activeFolderId();
-    renderOperational();
     overlay.hidden=false;overlay.setAttribute('aria-hidden','false');
     if(button)button.setAttribute('aria-expanded','true');
+    if(!state.started){
+      const box=mountOperational();
+      if(box)box.innerHTML='<div class="hetk-stats-empty"><i class="fas fa-spinner fa-spin"></i> Statistika yuklanmoqda...</div>';
+      try{await startDataListeners(false);}catch(error){
+        console.error('STATISTICS LOAD ERROR:',error);
+        if(box)box.innerHTML='<div class="hetk-stats-empty">Statistikani yuklab bo‘lmadi.</div>';
+      }
+    }else renderOperational();
   }
   function closeOperationalPanel(){
     const overlay=byId('hetk-stats-overlay'),button=byId('hetk-stats-open');
@@ -485,14 +492,17 @@
     ['click','keydown','touchstart','mousemove','scroll'].forEach(function(name){document.removeEventListener(name,markActivity);});state.currentUid='';
   }
 
-  function onAuthReady(){state.activeFolderId=activeFolderId();bindOperationalPanel();startDataListeners(false);startPresence();ensureAdminTab();renderOperational();}
+  function onAuthReady(){state.activeFolderId=activeFolderId();bindOperationalPanel();startPresence();ensureAdminTab();}
   document.addEventListener('hetk-auth-ready',onAuthReady);
-  document.addEventListener('hetk-auth-user-updated',function(){startPresence();ensureAdminTab();renderOperational();});
+  document.addEventListener('hetk-auth-user-updated',function(){startPresence();ensureAdminTab();if(state.started)renderOperational();});
   document.addEventListener('hetk-auth-cleared',function(){closeOperationalPanel();stopPresence();stopDataListeners();const tab=document.querySelector('.hetk-profile-tab[data-profile-tab="statistics"]'),pane=document.querySelector('[data-profile-pane="statistics"]');if(tab)tab.remove();if(pane)pane.remove();});
-  document.addEventListener('hetk-management-scope-changed',function(event){state.activeFolderId=(event.detail&&event.detail.folderId)||activeFolderId();renderOperational();});
+  document.addEventListener('hetk-management-scope-changed',function(event){state.activeFolderId=(event.detail&&event.detail.folderId)||activeFolderId();if(state.started)renderOperational();});
+  document.addEventListener('hetk-profile-tab-changed',function(event){
+    if(event.detail&&event.detail.tab==='statistics'&&!state.started)startDataListeners(false).catch(error=>console.error('STATISTICS LOAD ERROR:',error));
+  });
   document.addEventListener('click',function(event){
     const row=event.target&&event.target.closest?event.target.closest('[data-team-uid]'):null;
-    if(!row)return;state.selectedTeamUid=row.dataset.teamUid||'';setTimeout(function(){renderSelectedUserZoneCard(state.selectedTeamUid);},0);
+    if(!row)return;state.selectedTeamUid=row.dataset.teamUid||'';if(state.started)setTimeout(function(){renderSelectedUserZoneCard(state.selectedTeamUid);},0);
   });
   window.addEventListener('beforeunload',function(){if(state.presenceRef)state.presenceRef.update({online:false,lastSeen:firebase.database.ServerValue.TIMESTAMP});});
   window.HETKStatistics={refresh:renderOperational,open:openOperationalPanel,close:closeOperationalPanel,getSummary:function(folderId){return summary(folderId||activeFolderId());}};
