@@ -1314,7 +1314,7 @@
       {recipientUid:currentAccount.uid,title:editorTitle}
     ];
     if(REGIONAL_SAFETY_ROLES.has(currentAccount.role)){
-      const snap=await databaseRef.ref('users').once('value'),all=snap.val()||{},targetRoots=accountFolderRoots(target);
+      const snap=window.HETKData ? await window.HETKData.readUsers(true) : await databaseRef.ref('users').once('value'),all=snap.val()||{},targetRoots=accountFolderRoots(target);
       Object.keys(all).forEach(headUid=>{const head=all[headUid]||{};if(head.active===false||head.role!=='regional_tb_chief')return;const allowed=new Set(getAccessibleFolderIds(Object.assign({uid:headUid},head),teamFoldersCache));if(head.rootAccess||targetRoots.some(id=>allowed.has(id)))rows.push({recipientUid:headUid,title:editorTitle});});
     }
     const expanded=await expandDelegatedRecipients(rows.map(row=>row.recipientUid));
@@ -2815,7 +2815,7 @@
     if(activeDelegationForAbsent(target.uid)||activeDelegationForDelegate(delegateUid)) return delegationMessage('error','Tanlangan hodimlardan birida faol vaqtinchalik topshiriq mavjud.');
     const delegate=teamUsersCache[delegateUid]||{},manager=actualManagerAccount(),ref=databaseRef.ref('TemporaryDelegations').push(),row={id:ref.key,absentUid:target.uid,absentName:target.fullName||target.login||'Hodim',delegateUid,delegateName:delegate.fullName||delegate.login||'Hodim',reason,reasonLabel:DELEGATION_REASONS[reason],justification,startDate,endDate,endDateUnknown:endUnknown,status:'active',assignedByUid:manager.uid,assignedByName:manager.fullName||manager.login||'Rahbar',assignedByRole:manager.role,createdAt:Date.now()};
     const btn=byId('hetk-delegation-save');setBusy(btn,true,'Saqlanmoqda...');
-    try{await ref.set(row);await notifyDelegationUsers(row,'delegation_started');closeDelegationDialog();}
+    try{await ref.set(row);if(window.HETKData)await window.HETKData.syncDelegation(row,true);await notifyDelegationUsers(row,'delegation_started');closeDelegationDialog();}
     catch(e){delegationMessage('error','Saqlab bo‘lmadi: '+friendlyAuthError(e));setBusy(btn,false);}
   }
   async function endDelegation(id){
@@ -2823,11 +2823,23 @@
     const target=teamUsersCache[row.absentUid]&&Object.assign({uid:row.absentUid},teamUsersCache[row.absentUid]);
     if(!(target&&(canAssignDelegation(target)||(baseCurrentAccount&&baseCurrentAccount.uid===row.absentUid)))) return;
     if(!confirm('Vaqtinchalik vakolatni yakunlaysizmi?')) return;
-    const actor=actualManagerAccount();await databaseRef.ref('TemporaryDelegations/'+id).update({status:'ended',endedAt:Date.now(),endedByUid:actor.uid,endedByName:actor.fullName||actor.login||'Hodim'});await notifyDelegationUsers(row,'delegation_ended');
+    const actor=actualManagerAccount();await databaseRef.ref('TemporaryDelegations/'+id).update({status:'ended',endedAt:Date.now(),endedByUid:actor.uid,endedByName:actor.fullName||actor.login||'Hodim'});if(window.HETKData)await window.HETKData.syncDelegation(row,false);await notifyDelegationUsers(row,'delegation_ended');
   }
   async function notifyDelegationUsers(row,action){
     const id=databaseRef.ref('UserNotifications').push().key,started=action==='delegation_started',payload={id,kind:'activity',action,read:false,title:started?`${row.absentName} vazifasi vaqtincha topshirildi`:`${row.absentName} bo‘yicha vaqtinchalik vakolat yakunlandi`,commentText:`O‘rinbosar: ${row.delegateName}. Asos: ${row.reasonLabel}. ${row.justification||''}`,createdAt:Date.now(),expiresAt:Date.now()+180*24*60*60*1000};
     const recipients=Array.from(new Set([row.absentUid,row.delegateUid,row.assignedByUid].filter(Boolean))),updates={};recipients.forEach(uid=>updates[`UserNotifications/${uid}/${id}`]=payload);await databaseRef.ref().update(updates);if(window.HETKPush&&typeof window.HETKPush.safeSendToUsers==='function')await window.HETKPush.safeSendToUsers(recipients,'notifications',payload.title,payload.commentText,{action});
+  }
+
+  async function runAccessIndexMigration(){
+    const btn=byId('hetk-build-access-index');
+    if(!window.HETKData)return alert('Hududiy indeks moduli yuklanmadi. Sahifani yangilang.');
+    if(!confirm('Mavjud hodimlar va elementlar uchun hududiy xavfsizlik indeksini yangilaysizmi? Ma’lumotlar o‘chmaydi. Jarayon tugaguncha sahifani yopmang.'))return;
+    setBusy(btn,true,'Indeks tayyorlanmoqda...');
+    try{
+      const result=await window.HETKData.migrate((done,total)=>{const span=btn&&btn.querySelector('span');if(span)span.textContent=`Indeks: ${done}/${total}`;});
+      alert(`Hududiy indeks tayyor. ${result.userCount} ta hodim va ${result.tpCount} ta element qayta indekslandi. Endi database.rules.json qoidalarini Firebase Console’da nashr qilish mumkin.`);
+    }catch(error){alert('Indeks yaratilmadi: '+friendlyAuthError(error));}
+    finally{setBusy(btn,false);const span=btn&&btn.querySelector('span');if(span)span.textContent='Hududiy xavfsizlik indeksini yangilash';}
   }
 
   function renderEmployeesManager(account){
@@ -2844,6 +2856,7 @@
             <p>Lavozim, hudud va papkalarga kirish huquqlarini boshqarish.</p>
           </div>
           <div style="display:flex;gap:10px;flex-wrap:wrap">
+            ${(account.rootAccess||account.role==='super_admin') ? '<button id="hetk-build-access-index" class="hetk-team-add" type="button"><i class="fas fa-shield-alt"></i><span>Hududiy xavfsizlik indeksini yangilash</span></button>' : ''}
             ${canManageZones ? '<button id="hetk-manage-workzones" class="hetk-team-add" type="button"><i class="fas fa-hard-hat"></i><span>U/J larni boshqarish</span></button>' : ''}
             ${canCreate ? '<button id="hetk-add-user" class="hetk-team-add" type="button"><i class="fas fa-user-plus"></i><span>Yangi hodim / admin</span></button>' : ''}
           </div>
@@ -2941,17 +2954,17 @@
     if(foldersTeamRef) foldersTeamRef.off('value');
     if(workZonesTeamRef) workZonesTeamRef.off('value');
     if(delegationsTeamRef) delegationsTeamRef.off('value');
-    usersTeamRef=databaseRef.ref('users');
+    usersTeamRef=window.HETKData ? null : databaseRef.ref('users');
     foldersTeamRef=databaseRef.ref('Folders');
     workZonesTeamRef=databaseRef.ref('WorkZones');
     delegationsTeamRef=databaseRef.ref('TemporaryDelegations');
-    usersTeamRef.on('value', snap => {
+    const applyTeamUsers=snap=>{
       teamUsersCache=snap.val() || {};
       if(selectedTeamUid && !teamUsersCache[selectedTeamUid]) selectedTeamUid=null;
-      renderTeamList();
-      if(selectedTeamUid) renderTeamDetail(selectedTeamUid);
-      if(communicationTab==='chats') renderCommunicationContent();
-    });
+      renderTeamList();if(selectedTeamUid)renderTeamDetail(selectedTeamUid);if(communicationTab==='chats')renderCommunicationContent();
+    };
+    if(window.HETKData)window.HETKData.readUsers(true).then(applyTeamUsers).catch(error=>{console.error('SCOPED USERS LOAD ERROR',error);});
+    else usersTeamRef.on('value',applyTeamUsers);
     foldersTeamRef.on('value', snap => {
       teamFoldersCache=snap.val() || {};
       renderTeamList();
@@ -2978,6 +2991,8 @@
     const safetyGroupFilter=byId('hetk-safety-group-filter'); if(safetyGroupFilter) safetyGroupFilter.addEventListener('change',renderTeamList);
     const add=byId('hetk-add-user');
     if(add) add.addEventListener('click', openCreateUserEditor);
+    const buildIndex=byId('hetk-build-access-index');
+    if(buildIndex)buildIndex.addEventListener('click',runAccessIndexMigration);
     const manageZones=byId('hetk-manage-workzones');
     if(manageZones) manageZones.addEventListener('click',openWorkZoneManager);
     document.querySelectorAll('[data-close-user-editor]').forEach(el => el.addEventListener('click', closeUserEditor));
@@ -3659,6 +3674,10 @@
         affected[uid]=Object.assign({uid},user,{folders:userFolders,workZoneName:name,region:name,updatedAt:now,updatedBy:currentAccount.uid});
       });
       await databaseRef.ref().update(updates);
+      if(window.HETKData){
+        for(const uid of Object.keys(affected))await window.HETKData.syncUserAccess(uid,affected[uid],teamUsersCache[uid]||null);
+      }
+      Object.keys(affected).forEach(uid=>{teamUsersCache[uid]=affected[uid];});
       for(const uid of Object.keys(affected)) await safeSyncEmployeeTelegram(uid,affected[uid],{showError:false});
       workZoneManagerMessage('success','U/J ma’lumotlari, papkalari va Masteri saqlandi.');
       setTimeout(()=>closeWorkZoneManager(),500);
@@ -3837,6 +3856,8 @@
           updates['users/'+uid]=account;
           updates['loginIndex/'+loginIndexKey(login)]={uid,login,authEmail:internalEmail,active:true,updatedAt:now};
           await databaseRef.ref().update(updates);
+          if(window.HETKData)await window.HETKData.syncUserAccess(uid,account,null);
+          teamUsersCache[uid]=account;
           Object.assign(account,await safeSyncEmployeeTelegram(uid,account,{replaceDefaultPhoto:true,showError:true}));
           for(const oldUid of Object.keys(replacementAffected)) await safeSyncEmployeeTelegram(oldUid,replacementAffected[oldUid],{showError:false});
           try{ await cred.user.updateProfile({displayName:fullName}); }catch(_e){}
@@ -3925,6 +3946,8 @@
         Object.keys(patch).forEach(key => { updates['users/'+editingTeamUid+'/'+key]=patch[key]; });
         await databaseRef.ref().update(updates);
         const updatedTarget=Object.assign({},target,patch,{uid:editingTeamUid});
+        if(window.HETKData)await window.HETKData.syncUserAccess(editingTeamUid,updatedTarget,target);
+        teamUsersCache[editingTeamUid]=updatedTarget;
         const genderChanged=normalizeGender(target.gender)!==normalizeGender(updatedTarget.gender);
         await safeSyncEmployeeTelegram(editingTeamUid,updatedTarget,{replaceDefaultPhoto:genderChanged && updatedTarget.telegramPhotoKind!=='custom',showError:true});
         for(const oldUid of Object.keys(replacementAffected)) await safeSyncEmployeeTelegram(oldUid,replacementAffected[oldUid],{showError:false});
@@ -3958,7 +3981,10 @@
       }
     }
     await databaseRef.ref().update(updates);
-    await safeSyncEmployeeTelegram(uid,Object.assign({},u,{active:next,updatedAt:updates['users/'+uid+'/updatedAt']}),{showError:true});
+    const changed=Object.assign({},u,{active:next,updatedAt:updates['users/'+uid+'/updatedAt']});
+    if(window.HETKData)await window.HETKData.syncUserAccess(uid,changed,u);
+    teamUsersCache[uid]=changed;
+    await safeSyncEmployeeTelegram(uid,changed,{showError:true});
   }
 
   async function deleteUserPermanently(uid){
@@ -3993,6 +4019,8 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
     });
     await deleteEmployeePost(u.telegramEmployeeMessageId);
     await databaseRef.ref().update(updates);
+    if(window.HETKData)await window.HETKData.syncUserAccess(uid,null,u);
+    delete teamUsersCache[uid];
     if(selectedTeamUid===uid){
       selectedTeamUid=null;
       const box=byId('hetk-team-detail');
