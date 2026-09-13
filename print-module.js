@@ -3,6 +3,39 @@
 
 let printSelection={type:null,id:null,name:'',items:[]};
 let printRequestNo=0;
+let printAssetsPromise=null;
+
+function loadPrintScript(src,globalName){
+    if(window[globalName]) return Promise.resolve();
+    const existing=document.querySelector(`script[data-hetk-print-asset="${globalName}"]`);
+    if(existing){
+        return new Promise((resolve,reject)=>{
+            existing.addEventListener('load',()=>window[globalName]?resolve():reject(new Error(globalName+' yuklanmadi')),{once:true});
+            existing.addEventListener('error',()=>reject(new Error(src+' yuklanmadi')),{once:true});
+        });
+    }
+    return new Promise((resolve,reject)=>{
+        const script=document.createElement('script');
+        script.src=src;
+        script.async=true;
+        script.dataset.hetkPrintAsset=globalName;
+        script.onload=()=>window[globalName]?resolve():reject(new Error(globalName+' topilmadi'));
+        script.onerror=()=>reject(new Error(src+' yuklanmadi'));
+        document.head.appendChild(script);
+    });
+}
+
+function ensurePrintAssets(){
+    if(window.JSZip&&window.docx&&window.PDFLib) return Promise.resolve();
+    if(!printAssetsPromise){
+        printAssetsPromise=(async()=>{
+            await loadPrintScript('jszip.min.js?v=1.0','JSZip');
+            await loadPrintScript('docx.iife.js?v=1.0','docx');
+            await loadPrintScript('pdf-lib.min.js?v=1.0','PDFLib');
+        })().catch(error=>{printAssetsPromise=null;throw error;});
+    }
+    return printAssetsPromise;
+}
 
 function hasActiveSearchOrFilter(){
     return !!(
@@ -101,6 +134,10 @@ function openDialog(){
     if(printSelection.type==='element' && portrait) portrait.checked=true;
     overlay.hidden=false;
     overlay.setAttribute('aria-hidden','false');
+    ensurePrintAssets().catch(error=>{
+        console.error('PRINT ASSETS LOAD ERROR:',error);
+        showToast('Pechat modullarini yuklab bo‘lmadi. Internetni tekshiring.');
+    });
 }
 
 function closeDialog(){
@@ -1274,6 +1311,7 @@ async function generateFile(){
     const opts=options();const button=document.getElementById('hetk-print-generate');
     if(button){button.disabled=true;button.textContent='Tayyorlanmoqda…';}
     try{
+        await ensurePrintAssets();
         if(opts.format==='excel'){
             if(await excelExport(opts)) showToast('Excel (.xlsx) fayli tayyorlandi.');
             return;
