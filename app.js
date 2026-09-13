@@ -16,9 +16,38 @@ const database = firebase.database();
 // Hududiy indeks tayyor bo‘lganda elementlarning faqat joriy hodimga ruxsat
 // etilgan nusxalarini oladi. Eski baza migratsiya qilinmaguncha xavfsiz
 // moslashuv uchun odatiy o‘qish saqlanadi.
-function hetkScopedTPsOnce(){
-    return window.HETKData ? window.HETKData.readTPs(true) : database.ref('TPs').once('value');
+let hetkScopedTPsSnapshot = null;
+let hetkScopedTPsLoadedAt = 0;
+let hetkScopedTPsRequest = null;
+const HETK_SCOPED_TPS_CACHE_MS = 10000;
+
+// Bir vaqtda daraxt, qidiruv va xarita bir xil elementlarni so‘rasa Firebase'ga
+// faqat bitta so‘rov yuboriladi. 10 soniyadan keyin navbatdagi amal yangi
+// ma’lumotni oladi, shuning uchun boshqa hodim kiritgan element ham yo‘qolmaydi.
+function hetkScopedTPsOnce(forceRefresh = false){
+    const fresh = hetkScopedTPsSnapshot && (Date.now() - hetkScopedTPsLoadedAt < HETK_SCOPED_TPS_CACHE_MS);
+    if(!forceRefresh && fresh) return Promise.resolve(hetkScopedTPsSnapshot);
+    if(hetkScopedTPsRequest) return hetkScopedTPsRequest;
+    const request = window.HETKData ? window.HETKData.readTPs(true) : database.ref('TPs').once('value');
+    hetkScopedTPsRequest = Promise.resolve(request).then(snapshot => {
+        hetkScopedTPsSnapshot = snapshot;
+        hetkScopedTPsLoadedAt = Date.now();
+        return snapshot;
+    }).finally(() => {
+        hetkScopedTPsRequest = null;
+    });
+    return hetkScopedTPsRequest;
 }
+
+function hetkInvalidateScopedTPs(){
+    hetkScopedTPsSnapshot = null;
+    hetkScopedTPsLoadedAt = 0;
+}
+
+document.addEventListener('hetk-scoped-data-changed', hetkInvalidateScopedTPs);
+document.addEventListener('hetk-auth-ready', hetkInvalidateScopedTPs);
+document.addEventListener('hetk-auth-user-updated', hetkInvalidateScopedTPs);
+document.addEventListener('hetk-auth-cleared', hetkInvalidateScopedTPs);
 function hetkScopedTPOnce(tpId){
     return window.HETKData ? window.HETKData.readTP(tpId) : database.ref('TPs/'+tpId).once('value');
 }
@@ -34,10 +63,25 @@ var lastPos = null;
 var isUserInteracting = false; 
 var isManualSelection = false; 
 let currentFolders = {}; 
+let hetkFolderChildrenIndex = {};
 let activeFolderId = 'root'; 
 let editingFolderId = null;
 let activeMapMarkers = []; // Xaritadagi dinamik markerlarni nazorat qilish uchun massiv
 let isSaving = false;
+
+function hetkRebuildFolderChildrenIndex(){
+    const next={};
+    Object.keys(currentFolders).forEach(id=>{
+        const parentId=currentFolders[id]&&currentFolders[id].parentId||'root';
+        if(!next[parentId])next[parentId]=[];
+        next[parentId].push(id);
+    });
+    hetkFolderChildrenIndex=next;
+}
+
+function hetkChildFolderIds(parentId){
+    return (hetkFolderChildrenIndex[parentId]||[]).filter(id=>hetkCanSeeFolder(id));
+}
 
 // Statistika moduli boshqaruv panelidagi amaldagi papkani kuzatishi uchun.
 function hetkNotifyManagementScopeChanged(reason){
@@ -302,21 +346,26 @@ if(saveFolderBtn) {
     });
 }
 
+let hetkFoldersValueRef = null;
 function loadFolders() {
-    database.ref('Folders').on('value', (snapshot) => {
-        currentFolders = snapshot.val() || {};
+    if(hetkFoldersValueRef) {
         const treeRoot = document.getElementById('tree-root');
         if(treeRoot) renderTree('root', treeRoot);
-        
-        // YANGI QO'SHILGAN FUNKSIYA: Panellar yuklanganda daraxtsimon dropdownlarni ham qayta chizadi
-        refreshTreeDropdowns();
+        return;
+    }
+    hetkFoldersValueRef = database.ref('Folders');
+    hetkFoldersValueRef.on('value', (snapshot) => {
+        currentFolders = snapshot.val() || {};
+        hetkRebuildFolderChildrenIndex();
+        const treeRoot = document.getElementById('tree-root');
+        if(treeRoot) renderTree('root', treeRoot);
         hetkNotifyManagementScopeChanged('folders');
     });
 }
 
 function renderTree(parentId, container) {
     container.innerHTML = "";
-    const children = Object.keys(currentFolders).filter(id => currentFolders[id].parentId === parentId && hetkCanSeeFolder(id));
+    const children = hetkChildFolderIds(parentId);
     
     children.forEach(id => {
         const folder = currentFolders[id];
@@ -531,6 +580,44 @@ window.selectFolder = function(id) {
 
 
 
+function hetkSetTreeFocus(folderId){
+    const treeRoot=document.getElementById('tree-root');
+    if(!treeRoot)return;
+    treeRoot.querySelectorAll('.hetk-tree-focus-branch,.hetk-tree-focus-ancestor').forEach(item=>{
+        item.classList.remove('hetk-tree-focus-branch','hetk-tree-focus-ancestor');
+    });
+    if(!folderId){
+        treeRoot.classList.remove('hetk-tree-focus-active');
+        return;
+    }
+    const header=document.getElementById(`folder-${folderId}`);
+    const branch=header&&header.closest('.folder-item');
+    if(!branch){treeRoot.classList.remove('hetk-tree-focus-active');return;}
+    treeRoot.classList.add('hetk-tree-focus-active');
+    branch.classList.add('hetk-tree-focus-branch');
+    let ancestor=branch.parentElement&&branch.parentElement.closest('.folder-item');
+    while(ancestor){
+        ancestor.classList.add('hetk-tree-focus-ancestor');
+        ancestor=ancestor.parentElement&&ancestor.parentElement.closest('.folder-item');
+    }
+}
+
+function hetkRefreshTreeFocus(){
+    const treeRoot=document.getElementById('tree-root');
+    if(!treeRoot)return;
+    const opened=Array.from(treeRoot.querySelectorAll('.folder-children')).filter(box=>box.style.display==='block');
+    if(!opened.length){hetkSetTreeFocus(null);return;}
+    const branchDepth=box=>{
+        let depth=0,item=box&&box.closest('.folder-item');
+        while(item){depth++;item=item.parentElement&&item.parentElement.closest('.folder-item');}
+        return depth;
+    };
+    const deepest=opened.reduce((best,box)=>branchDepth(box)>=branchDepth(best)?box:best,null);
+    const item=deepest&&deepest.closest('.folder-item');
+    const header=item&&item.querySelector(':scope > .folder-header');
+    hetkSetTreeFocus(header ? header.id.replace(/^folder-/,'') : null);
+}
+
 window.toggleFolderView = function(id) {
     const childDiv = document.getElementById(`children-${id}`);
     const btn = document.querySelector(`#folder-${id} .toggle-btn`);
@@ -557,10 +644,20 @@ window.toggleFolderView = function(id) {
                 if(sibling !== childDiv) closeFolderBranch(sibling);
             });
         }
+        // Yopiq tarmoqning minglab ichki DOM elementlarini oldindan chizmaymiz.
+        // Birinchi marta [+] bosilgandagina shu papkaning bevosita bolalari va
+        // elementlari yaratiladi; keyingi ochishda tayyor holati ishlatiladi.
+        if(childDiv.dataset.loaded !== 'true'){
+            renderTree(id, childDiv);
+            renderElementsInTree(id, childDiv);
+            childDiv.dataset.loaded = 'true';
+        }
         childDiv.style.display = "block";
         btn.innerText = "-";
+        hetkSetTreeFocus(id);
     } else {
         closeFolderBranch(childDiv);
+        hetkRefreshTreeFocus();
     }
 };
 
@@ -692,7 +789,7 @@ if (elementSearchInput) {
         clearTimeout(searchTimer);
         searchTimer = setTimeout(() => {
             refreshSearchResults();
-        }, 120);
+        }, 300);
     });
 }
 
@@ -1405,13 +1502,13 @@ function buildTreeInDiv(treeContainerId, nativeSelectId, excludeId = null) {
 
     // 2. To'g'ri ierarxik rekursiya funksiyasi
     function appendChildrenNodes(parentId, level, targetBox) {
-        const children = Object.keys(currentFolders).filter(id => currentFolders[id].parentId === parentId && hetkCanSeeFolder(id));
+        const children = hetkChildFolderIds(parentId);
         
         children.forEach(id => {
             if (excludeId && id === excludeId) return; // O'zini o'ziga ichki guruh qilishni cheklash
 
             const folder = currentFolders[id];
-            const hasSubFolders = Object.keys(currentFolders).some(childId => currentFolders[childId].parentId === id && hetkCanSeeFolder(childId));
+            const hasSubFolders = hetkChildFolderIds(id).length>0;
             
             const rowWrapper = document.createElement('div');
             rowWrapper.style.margin = "2px 0";
@@ -2230,12 +2327,12 @@ function refreshPrimaryFolderList() {
     let selectedArray = selectedFoldersInput.value ? selectedFoldersInput.value.split(',') : [];
 
     function buildNode(parentId, level, targetBox) {
-        const folders = Object.keys(currentFolders).filter(id => currentFolders[id].parentId === parentId && hetkCanSeeFolder(id));
+        const folders = hetkChildFolderIds(parentId);
         
         folders.forEach(id => {
             const folder = currentFolders[id];
             const isChecked = selectedArray.includes(id) ? "checked" : "";
-            const hasSubFolders = Object.keys(currentFolders).some(childId => currentFolders[childId].parentId === id && hetkCanSeeFolder(childId));
+            const hasSubFolders = hetkChildFolderIds(id).length>0;
             
             // Har bir element va uning bolalari uchun umumiy wrapper quti
             const nodeWrapper = document.createElement('div');
@@ -4239,8 +4336,9 @@ let selectedTreeElementRow = null;
 // 1. ESKI renderTree funksiyasini tahrirlash (✏️ Qalamcha bosilganda TP elementlarini ham ochish imkoni)
 // Guruhlar bo'limida har bir fiderning ostiga unga biriktirilgan TPlarni ketma-ket joylashtiramiz.
 function renderTree(parentId, container) {
+    if(parentId==='root')hetkSetTreeFocus(null);
     container.innerHTML = "";
-    const children = Object.keys(currentFolders).filter(id => currentFolders[id].parentId === parentId && hetkCanSeeFolder(id));
+    const children = hetkChildFolderIds(parentId);
     
     children.forEach(id => {
         const folder = currentFolders[id];
@@ -4258,12 +4356,8 @@ function renderTree(parentId, container) {
         `;
         container.appendChild(item);
         
-        const childContainer = item.querySelector(`#children-${id}`);
-        
-        // Avval ichki papkalarni chizamiz. renderTree konteynerni tozalaydi,
-        // shuning uchun elementlar undan keyin qo'shilishi shart.
-        renderTree(id, childContainer);
-        renderElementsInTree(id, childContainer);
+        // Ichki papkalar va elementlar toggleFolderView ichida, foydalanuvchi
+        // aynan shu tarmoqni ochgan paytda yuklanadi.
     });
 }
 
