@@ -431,11 +431,21 @@
   function listen(path,key){
     const ref=db().ref(path);ref.on('value',function(snap){state[key]=snap.val()||{};renderOperational();});state.refs.push(ref);
   }
-  function startDataListeners(force){
+  async function startDataListeners(force){
     if(state.started&&!force)return;
     if(force){state.refs.forEach(function(ref){ref.off('value');});state.refs=[];state.started=false;}
     state.started=true;
-    listen('TPs','tps');listen('Folders','folders');listen('WorkZones','zones');listen('users','users');listen('UserPresence','presence');listen('UsageDaily','usage');listen('SystemSettings','settings');
+    if(window.HETKData){
+      const scoped=await Promise.all([window.HETKData.readTPs(true),window.HETKData.readUsers(true)]);
+      state.tps=scoped[0].val()||{};state.users=scoped[1].val()||{};state.presence={};
+      Object.keys(state.users).forEach(function(uid){
+        const ref=db().ref('UserPresence/'+uid);ref.on('value',function(snap){state.presence[uid]=snap.val()||{};renderOperational();});state.refs.push(ref);
+      });
+      if(window.HETKData.isGlobal())listen('UsageDaily','usage');
+    }else{
+      listen('TPs','tps');listen('users','users');listen('UserPresence','presence');listen('UsageDaily','usage');
+    }
+    listen('Folders','folders');listen('WorkZones','zones');listen('SystemSettings','settings');renderOperational();
   }
   function stopDataListeners(){state.refs.forEach(function(ref){ref.off('value');});state.refs=[];state.started=false;}
 
