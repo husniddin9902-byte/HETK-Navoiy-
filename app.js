@@ -5471,19 +5471,19 @@ markerDiv.className = 'custom-tp-marker';
 
 markerDiv.innerHTML = `
 <div style="
-width:52px;
-height:52px;
+width:78px;
+height:78px;
 display:flex;
 align-items:flex-end;
 justify-content:center;
 ">
 <span class="hetk-map-marker-wrap ${point.deletionPending ? 'hetk-map-marker-pending' : ''}"><i class="fas fa-map-marker-alt ${isBlinking ? 'hetk-dual-source-marker' : ''}"
 style="
-font-size:52px;
+font-size:78px;
 color:${primaryColor};
 --marker-color-1:${primaryColor};
 --marker-color-2:${secondaryColor || primaryColor};
-line-height:52px;
+line-height:78px;
 text-shadow:0 0 6px black;
 "></i>${point.deletionPending ? '<i class="hetk-map-marker-slash"></i>' : ''}</span>
 </div>`;
@@ -5491,8 +5491,8 @@ text-shadow:0 0 6px black;
 const mIcon = L.divIcon({
     className: 'custom-leaflet-tp-wrapper',
     html: markerDiv,
-    iconSize: [52,52],
-    iconAnchor: [26,52]
+    iconSize: [78,78],
+    iconAnchor: [39,78]
 });
 
 const marker = L.marker([lat, lng], {
@@ -6044,10 +6044,10 @@ if(requestedElementId && !filteredKeys.length){
                     // Marker dizayni (O'z rangi bilan)
                     const pIcon = L.divIcon({
                         className: 'panel-internal-marker',
-                        html: `<span class="hetk-map-marker-wrap ${point.deletionPending ? 'hetk-map-marker-pending' : ''}"><i class="fas fa-map-marker-alt${dualMarkerClass}" style="color:${folderColor};--marker-color-1:${folderColor};--marker-color-2:${secondFolderColor};font-size:24px;text-shadow:0 0 3px black;"></i>${point.deletionPending ? '<i class="hetk-map-marker-slash"></i>' : ''}</span>`,
-                        iconSize: [24, 24],
-                        iconAnchor: [12, 24],
-                        popupAnchor: [0, -28]
+                        html: `<span class="hetk-map-marker-wrap ${point.deletionPending ? 'hetk-map-marker-pending' : ''}"><i class="fas fa-map-marker-alt${dualMarkerClass}" style="color:${folderColor};--marker-color-1:${folderColor};--marker-color-2:${secondFolderColor};font-size:36px;text-shadow:0 0 4.5px black;"></i>${point.deletionPending ? '<i class="hetk-map-marker-slash"></i>' : ''}</span>`,
+                        iconSize: [36, 36],
+                        iconAnchor: [18, 36],
+                        popupAnchor: [0, -42]
                     });
 
                     const marker = L.marker([lat, lng], { icon: pIcon }).addTo(panelInternalMap);
