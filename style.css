@@ -10,6 +10,22 @@ body {
     overflow: hidden;
 }
 
+/* Papka daraxtida ochilgan tarmoqni ko‘z bilan ajratish.
+   Faqat ko‘rinish o‘zgaradi; bosish va ma’lumot yuklashga ta’sir qilmaydi. */
+#tree-root.hetk-tree-focus-active .folder-header,
+#tree-root.hetk-tree-focus-active .tp-tree-row-item {
+    opacity: .24;
+    filter: saturate(.35) brightness(.72);
+    transition: opacity .18s ease, filter .18s ease, background .18s ease;
+}
+
+#tree-root.hetk-tree-focus-active .folder-item.hetk-tree-focus-branch .folder-header,
+#tree-root.hetk-tree-focus-active .folder-item.hetk-tree-focus-branch .tp-tree-row-item,
+#tree-root.hetk-tree-focus-active .folder-item.hetk-tree-focus-ancestor > .folder-header {
+    opacity: 1;
+    filter: none;
+}
+
 .bottom-panel {
     position: fixed;
     bottom: 0;
