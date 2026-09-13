@@ -3835,16 +3835,18 @@ async function hetkDeleteElementImmediately(tpId,tp){
     if(me.role==='master' && !hetkMasterOwnsElement(tp,me)) throw new Error('Master faqat o‘z U/J hududidagi elementni o‘chira oladi.');
     if(!['master','super_admin'].includes(me.role)) throw new Error('Bu elementni darhol o‘chirishga ruxsat yo‘q.');
     const request={requesterUid:actor.uid,requesterName:actor.name,requesterRole:actor.role,directDelete:true};
-    await hetkSendDeletedElementToTelegram(tpId,tp,request,actor);
     const now=Date.now();
     const updates={};
     updates[`DeletedTPs/${tpId}`]=Object.assign({},tp,{
         deletedAt:now,deletedBy:actor.uid,deletedByName:actor.name,
         approvedBy:actor.uid,approvedByName:actor.name,expiresAt:now+HETK_NOTICE_LIFETIME_MS
     });
-    updates[`TPs/${tpId}`]=null;
     updates[`TPComments/${tpId}`]=null;
-    await database.ref().update(updates);
+    if(window.HETKData)await window.HETKData.removeTP(tpId,tp,updates);
+    else{updates[`TPs/${tpId}`]=null;await database.ref().update(updates);}
+    let telegramSent=true;
+    try{await hetkSendDeletedElementToTelegram(tpId,tp,request,actor);}
+    catch(error){telegramSent=false;console.warn('Element o‘chirildi, lekin Telegram e’loni yuborilmadi:',error);}
     let chiefNotified=0;
     if(me.role==='master'){
         try{chiefNotified=await hetkNotifyChiefEngineerDeletion(tpId,tp,actor,'deleted');}
@@ -3857,7 +3859,7 @@ async function hetkDeleteElementImmediately(tpId,tp){
     if(typeof refreshSearchResults==='function') refreshSearchResults();
     const treeRoot=document.getElementById('tree-root');
     if(treeRoot) renderTree('root',treeRoot);
-    return {chiefNotified};
+    return {chiefNotified,telegramSent};
 }
 
 async function hetkFinalizeApprovedElementDeletion(requestId,request){
@@ -3875,15 +3877,12 @@ async function hetkFinalizeApprovedElementDeletion(requestId,request){
         const tpSnap=await database.ref(`TPs/${request.tpId}`).once('value');
         const tp=tpSnap.val();
         if(!tp) throw new Error('Element bazadan topilmadi.');
-        await hetkSendDeletedElementToTelegram(request.tpId,tp,request,actor);
-
         const now=Date.now();
         const updates={};
         updates[`DeletedTPs/${request.tpId}`]=Object.assign({},tp,{
             deletedAt:now,deletedBy:request.requesterUid || '',deletedByName:request.requesterName || '',
             approvedBy:actor.uid,approvedByName:actor.name,expiresAt:now+HETK_NOTICE_LIFETIME_MS
         });
-        updates[`TPs/${request.tpId}`]=null;
         updates[`TPComments/${request.tpId}`]=null;
         updates[`ElementDeletionRequests/${requestId}/status`]='approved';
         updates[`ElementDeletionRequests/${requestId}/resolvedAt`]=now;
@@ -3904,7 +3903,10 @@ async function hetkFinalizeApprovedElementDeletion(requestId,request){
             };
             updates[`UserNotifications/${request.requesterUid}/${resultId}`]=requesterNotice;
         }
-        await database.ref().update(updates);
+        if(window.HETKData)await window.HETKData.removeTP(request.tpId,tp,updates);
+        else{updates[`TPs/${request.tpId}`]=null;await database.ref().update(updates);}
+        try{await hetkSendDeletedElementToTelegram(request.tpId,tp,request,actor);}
+        catch(telegramError){console.warn('Element o‘chirildi, lekin Telegram e’loni yuborilmadi:',telegramError);}
         if(request.requesterUid && requesterNotice) await hetkSafeSendPush([request.requesterUid],'notifications',requesterNotice);
         if(actor.roleCode==='master'){
             try{await hetkNotifyChiefEngineerDeletion(request.tpId,tp,actor,'approved');}
