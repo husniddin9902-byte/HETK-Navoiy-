@@ -595,9 +595,20 @@
     if(e.target.id==='hetk-se-stock-region'){stockRegion=e.target.value;renderStock();}if(e.target.id==='hetk-se-analytics-level'){analyticsLevel=e.target.value;renderNorm();}if(e.target.id==='hetk-se-analytics-type'){analyticsType=e.target.value;renderNorm();}if(e.target.id==='hetk-se-analytics-region'){analyticsRegion=e.target.value;analyticsDistrict='all';renderNorm();}if(e.target.id==='hetk-se-analytics-district'){analyticsDistrict=e.target.value;renderNorm();}if(e.target.id==='hetk-se-report-catalog'){reportCatalogId=e.target.value;renderReport();}if(e.target.id==='hetk-se-report-region'){reportRegion=e.target.value;reportDistrict='all';renderReport();}if(e.target.id==='hetk-se-report-district'){reportDistrict=e.target.value;renderReport();}
   }
   function bindRef(path,setter){const ref=db.ref(path),handler=snap=>{setter(snap.val()||{});setButton();if(byId('hetk-se-overlay')&&byId('hetk-se-overlay').classList.contains('open'))render();scheduleReminderScan();};ref.on('value',handler);refs.push([ref,handler]);}
+  function bindQuery(query,setter){const handler=snap=>{setter(snap.val()||{});setButton();if(byId('hetk-se-overlay')&&byId('hetk-se-overlay').classList.contains('open'))render();scheduleReminderScan();};query.on('value',handler);refs.push([query,handler]);}
   function unbind(){refs.forEach(([ref,handler])=>ref.off('value',handler));refs=[];clearTimeout(reminderTimer);if(reminderInterval)clearInterval(reminderInterval);reminderInterval=null;}
-  function start(account){
-    me=account;if(!window.firebase||!firebase.apps||!firebase.apps.length)return;db=firebase.database();buildShell();unbind();bindRef('users',v=>{users=v;if(window.HETKAuth&&window.HETKAuth.currentUser)me=window.HETKAuth.currentUser;else if(me&&users[me.uid])me=Object.assign({uid:me.uid},users[me.uid]);});bindRef('Folders',v=>folders=v);bindRef('WorkZones',v=>zones=v);bindRef('SafetyConstructionBrigades',v=>brigades=v);bindRef('SafetyEquipmentCatalog',v=>catalog=v);bindRef('SafetyEquipmentItems',v=>items=v);bindRef('SafetyEquipmentReceipts',v=>receipts=v);bindRef('SafetyEquipmentNorms',v=>norms=v);bindRef('SafetyEquipmentSettings',v=>settings=v);bindRef('SafetyEquipmentAudit',v=>audits=v);bindRef('SafetyEquipmentBackups',v=>backups=v);reminderInterval=setInterval(scanReminders,6*60*60*1000);setButton();
+  async function start(account){
+    me=account;if(!window.firebase||!firebase.apps||!firebase.apps.length)return;db=firebase.database();buildShell();unbind();
+    if(window.HETKData){users=(await window.HETKData.readUsers(true)).val()||{};}else bindRef('users',v=>{users=v;if(window.HETKAuth&&window.HETKAuth.currentUser)me=window.HETKAuth.currentUser;else if(me&&users[me.uid])me=Object.assign({uid:me.uid},users[me.uid]);});
+    bindRef('Folders',v=>folders=v);bindRef('WorkZones',v=>zones=v);bindRef('SafetyEquipmentCatalog',v=>catalog=v);bindRef('SafetyEquipmentNorms',v=>norms=v);bindRef('SafetyEquipmentSettings',v=>settings=v);
+    if(me&&me.role==='master'&&me.workZoneId){
+      bindQuery(db.ref('SafetyEquipmentItems').orderByChild('workZoneId').equalTo(me.workZoneId),v=>items=v);
+      bindQuery(db.ref('SafetyEquipmentAudit').orderByChild('workZoneId').equalTo(me.workZoneId),v=>audits=v);
+      receipts={};backups={};brigades={};
+    }else{
+      bindRef('SafetyConstructionBrigades',v=>brigades=v);bindRef('SafetyEquipmentItems',v=>items=v);bindRef('SafetyEquipmentReceipts',v=>receipts=v);bindRef('SafetyEquipmentAudit',v=>audits=v);bindRef('SafetyEquipmentBackups',v=>backups=v);
+    }
+    reminderInterval=setInterval(scanReminders,6*60*60*1000);setButton();
   }
   function clear(){unbind();me=null;users={};folders={};zones={};brigades={};catalog={};items={};receipts={};norms={};settings={};audits={};backups={};tab='items';stockSearch='';stockRegion='all';reportCatalogId='all';reportRegion='all';reportDistrict='all';setButton();close();}
   function init(){buildShell();const btn=byId('hetk-safety-equipment-open');if(btn)btn.addEventListener('click',open);document.addEventListener('hetk-auth-ready',e=>start(e.detail&&e.detail.user));document.addEventListener('hetk-auth-user-updated',e=>start(e.detail&&e.detail.user));document.addEventListener('hetk-auth-cleared',clear);if(window.HETKAuth&&window.HETKAuth.currentUser)start(window.HETKAuth.currentUser);}
