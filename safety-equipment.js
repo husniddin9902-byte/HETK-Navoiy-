@@ -25,6 +25,7 @@
   let db=null,me=null,users={},folders={},zones={},brigades={},catalog={},items={},receipts={},settings={},audits={},norms={},backups={};
   let refs=[],tab='items',searchText='',zoneFilter='all',statusFilter='active',reminderTimer=null,reminderInterval=null;
   let deferredStartTimer=null,dataStarted=false;
+  let folderChildrenIndex=null,accountFolderCache=new Map(),dataRefreshFrame=0;
   let analyticsLevel='unit',analyticsType='all',analyticsRegion='all',analyticsDistrict='all';
   let stockSearch='',stockRegion='all',reportCatalogId='all',reportRegion='all',reportDistrict='all';
 
@@ -60,12 +61,22 @@
   function requiresTest(row){return !row||row.testRequired!==false;}
   function intervalText(row){if(!requiresTest(row))return 'Sinov muddati belgilanmaydi';const n=Number(row&&row.intervalValue)||0;return n?`${n} ${UNIT_LABELS[row.intervalUnit]||'kun'}`:'Kiritilmagan';}
   function objectTrueKeys(value){return Object.keys(value||{}).filter(k=>value[k]);}
+  function resetFolderScopeCache(){folderChildrenIndex=null;accountFolderCache.clear();}
+  function ensureFolderChildrenIndex(){
+    if(folderChildrenIndex)return folderChildrenIndex;
+    folderChildrenIndex={};Object.keys(folders).forEach(function(id){const parent=folders[id]&&folders[id].parentId||'root';if(!folderChildrenIndex[parent])folderChildrenIndex[parent]=[];folderChildrenIndex[parent].push(id);});return folderChildrenIndex;
+  }
   function folderChildren(root){
-    const out=[];Object.keys(folders).forEach(id=>{if(folders[id]&&folders[id].parentId===root){out.push(id);out.push(...folderChildren(id));}});return out;
+    const index=ensureFolderChildrenIndex(),out=[],queue=(index[root]||[]).slice(),seen=new Set();
+    while(queue.length){const id=queue.shift();if(!id||seen.has(id))continue;seen.add(id);out.push(id);(index[id]||[]).forEach(function(child){queue.push(child);});}return out;
   }
   function accountFolderSet(user){
-    if(!user)return new Set();if(user.rootAccess||['super_admin','director','chief_engineer','republic_tb_engineer','chief_dispatcher','dispatcher'].includes(user.role))return new Set(Object.keys(folders));
-    const set=new Set();objectTrueKeys(user.folders).forEach(id=>{if(!folders[id])return;set.add(id);folderChildren(id).forEach(x=>set.add(x));});return set;
+    if(!user)return new Set();
+    const roots=objectTrueKeys(user.folders).sort(),key=`${user.uid||user.login||''}|${user.role||''}|${user.rootAccess?'1':'0'}|${roots.join(',')}`;
+    if(accountFolderCache.has(key))return accountFolderCache.get(key);
+    let set;if(user.rootAccess||['super_admin','director','chief_engineer','republic_tb_engineer','chief_dispatcher','dispatcher'].includes(user.role))set=new Set(Object.keys(folders));
+    else{set=new Set();roots.forEach(id=>{if(!folders[id])return;set.add(id);folderChildren(id).forEach(x=>set.add(x));});}
+    accountFolderCache.set(key,set);return set;
   }
   function zoneRoots(zone){return objectTrueKeys(zone&&zone.folders);}
   function accountCoversZone(user,zoneId){
@@ -598,16 +609,17 @@
     if(e.target.id==='hetk-se-zone-filter'){zoneFilter=e.target.value;renderItems();}if(e.target.id==='hetk-se-status-filter'){statusFilter=e.target.value;renderItems();}
     if(e.target.id==='hetk-se-stock-region'){stockRegion=e.target.value;renderStock();}if(e.target.id==='hetk-se-analytics-level'){analyticsLevel=e.target.value;renderNorm();}if(e.target.id==='hetk-se-analytics-type'){analyticsType=e.target.value;renderNorm();}if(e.target.id==='hetk-se-analytics-region'){analyticsRegion=e.target.value;analyticsDistrict='all';renderNorm();}if(e.target.id==='hetk-se-analytics-district'){analyticsDistrict=e.target.value;renderNorm();}if(e.target.id==='hetk-se-report-catalog'){reportCatalogId=e.target.value;renderReport();}if(e.target.id==='hetk-se-report-region'){reportRegion=e.target.value;reportDistrict='all';renderReport();}if(e.target.id==='hetk-se-report-district'){reportDistrict=e.target.value;renderReport();}
   }
-  function bindRef(path,setter){const ref=db.ref(path),handler=snap=>{setter(snap.val()||{});setButton();if(byId('hetk-se-overlay')&&byId('hetk-se-overlay').classList.contains('open'))render();scheduleReminderScan();};ref.on('value',handler);refs.push([ref,handler]);}
-  function bindQuery(query,setter){const handler=snap=>{setter(snap.val()||{});setButton();if(byId('hetk-se-overlay')&&byId('hetk-se-overlay').classList.contains('open'))render();scheduleReminderScan();};query.on('value',handler);refs.push([query,handler]);}
+  function scheduleDataRefresh(){if(dataRefreshFrame)return;dataRefreshFrame=requestAnimationFrame(()=>{dataRefreshFrame=0;setButton();if(byId('hetk-se-overlay')&&byId('hetk-se-overlay').classList.contains('open'))render();scheduleReminderScan();});}
+  function bindRef(path,setter){const ref=db.ref(path),handler=snap=>{setter(snap.val()||{});scheduleDataRefresh();};ref.on('value',handler);refs.push([ref,handler]);}
+  function bindQuery(query,setter){const handler=snap=>{setter(snap.val()||{});scheduleDataRefresh();};query.on('value',handler);refs.push([query,handler]);}
   function unbind(){refs.forEach(([ref,handler])=>ref.off('value',handler));refs=[];clearTimeout(reminderTimer);if(reminderInterval)clearInterval(reminderInterval);reminderInterval=null;}
   async function startData(account){
     if(dataStarted||!account)return;
     dataStarted=true;
     if(deferredStartTimer){clearTimeout(deferredStartTimer);deferredStartTimer=null;}
     me=account;if(!window.firebase||!firebase.apps||!firebase.apps.length)return;db=firebase.database();buildShell();unbind();
-    if(window.HETKData){users=(await window.HETKData.readUsers(true)).val()||{};}else bindRef('users',v=>{users=v;if(window.HETKAuth&&window.HETKAuth.currentUser)me=window.HETKAuth.currentUser;else if(me&&users[me.uid])me=Object.assign({uid:me.uid},users[me.uid]);});
-    bindRef('Folders',v=>folders=v);bindRef('WorkZones',v=>zones=v);bindRef('SafetyEquipmentCatalog',v=>catalog=v);bindRef('SafetyEquipmentNorms',v=>norms=v);bindRef('SafetyEquipmentSettings',v=>settings=v);
+    if(window.HETKData){users=(await window.HETKData.readUsers(false)).val()||{};}else bindRef('users',v=>{users=v;if(window.HETKAuth&&window.HETKAuth.currentUser)me=window.HETKAuth.currentUser;else if(me&&users[me.uid])me=Object.assign({uid:me.uid},users[me.uid]);});
+    bindRef('Folders',v=>{folders=v;resetFolderScopeCache();});bindRef('WorkZones',v=>zones=v);bindRef('SafetyEquipmentCatalog',v=>catalog=v);bindRef('SafetyEquipmentNorms',v=>norms=v);bindRef('SafetyEquipmentSettings',v=>settings=v);
     if(me&&me.role==='master'&&me.workZoneId){
       bindQuery(db.ref('SafetyEquipmentItems').orderByChild('workZoneId').equalTo(me.workZoneId),v=>items=v);
       bindQuery(db.ref('SafetyEquipmentAudit').orderByChild('workZoneId').equalTo(me.workZoneId),v=>audits=v);
@@ -622,11 +634,10 @@
     unbind();dataStarted=false;me=account;
     if(!window.firebase||!firebase.apps||!firebase.apps.length)return;
     db=firebase.database();buildShell();setButton();
-    // Asosiy ekran avval tez ochiladi. Himoya vositalari tugmasi bosilsa darhol,
-    // aks holda eslatmalar ishlashi uchun fon yuklanishi biroz keyin boshlanadi.
-    deferredStartTimer=setTimeout(()=>startData(account),6000);
+    // Og‘ir himoya vositalari ma’lumotlari faqat foydalanuvchi bo‘limni ochganda yuklanadi.
+    // Bu mobil qurilmada kirishdan 6 soniya keyin butun interfeysning qotishini oldini oladi.
   }
-  function clear(){if(deferredStartTimer)clearTimeout(deferredStartTimer);deferredStartTimer=null;dataStarted=false;unbind();me=null;users={};folders={};zones={};brigades={};catalog={};items={};receipts={};norms={};settings={};audits={};backups={};tab='items';stockSearch='';stockRegion='all';reportCatalogId='all';reportRegion='all';reportDistrict='all';setButton();close();}
+  function clear(){if(deferredStartTimer)clearTimeout(deferredStartTimer);deferredStartTimer=null;if(dataRefreshFrame)cancelAnimationFrame(dataRefreshFrame);dataRefreshFrame=0;dataStarted=false;unbind();me=null;users={};folders={};zones={};brigades={};catalog={};items={};receipts={};norms={};settings={};audits={};backups={};resetFolderScopeCache();tab='items';stockSearch='';stockRegion='all';reportCatalogId='all';reportRegion='all';reportDistrict='all';setButton();close();}
   function init(){buildShell();const btn=byId('hetk-safety-equipment-open');if(btn)btn.addEventListener('click',open);document.addEventListener('hetk-auth-ready',e=>start(e.detail&&e.detail.user));document.addEventListener('hetk-auth-user-updated',e=>start(e.detail&&e.detail.user));document.addEventListener('hetk-auth-cleared',clear);if(window.HETKAuth&&window.HETKAuth.currentUser)start(window.HETKAuth.currentUser);}
   window.HETKSafetyEquipment={open,close,scanReminders};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
