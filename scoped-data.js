@@ -151,6 +151,19 @@
     const updates=userIndexUpdates(uid,user,oldUser||{},folders,zones);await db().ref().update(updates);userCache[uid]=user;
     document.dispatchEvent(new CustomEvent('hetk-scoped-data-changed',{detail:{type:'users',id:uid}}));
   }
+  async function syncUserField(uid,user,field,value){
+    if(!uid||!user||!field)throw new Error('Hodim indeksi uchun ma’lumot yetarli emas.');
+    const values=await Promise.all([readFolders(),db().ref('WorkZones').once('value')]);
+    const folders=values[0],zones=values[1].val()||{},updates={};
+    const roots=userFolderRoots(user,zones);
+    roots.forEach(function(folderId){updates['UsersByFolder/'+folderId+'/'+uid+'/'+field]=value==null?null:value;});
+    const indexedAncestors=new Set();
+    roots.forEach(function(folderId){ancestors(folderId,folders).forEach(function(parentId){indexedAncestors.add(parentId);});});
+    indexedAncestors.forEach(function(folderId){updates['UsersByAncestor/'+folderId+'/'+uid+'/'+field]=value==null?null:value;});
+    if(Object.keys(updates).length)await db().ref().update(updates);
+    if(userCache[uid])userCache[uid]=Object.assign({},userCache[uid],{[field]:value});
+    document.dispatchEvent(new CustomEvent('hetk-scoped-data-changed',{detail:{type:'users',id:uid,field:field}}));
+  }
   async function syncDelegation(row,active){
     if(!row||!row.delegateUid)return;
     const path='DelegatedFolderAccess/'+row.delegateUid;
@@ -183,5 +196,5 @@
   function clear(){tpCache={};userCache={};indexVersionCache=null;}
   document.addEventListener('hetk-auth-cleared',clear);
   document.addEventListener('hetk-auth-user-updated',clear);
-  window.HETKData={INDEX_VERSION,readTPs,readTP,readUsers,saveTP,removeTP,syncUserAccess,syncDelegation,migrate,clear,isGlobal:function(){const account=me();return !!(account&&(account.rootAccess||account.role==='super_admin'));}};
+  window.HETKData={INDEX_VERSION,readTPs,readTP,readUsers,saveTP,removeTP,syncUserAccess,syncUserField,syncDelegation,migrate,clear,isGlobal:function(){const account=me();return !!(account&&(account.rootAccess||account.role==='super_admin'));}};
 })();
