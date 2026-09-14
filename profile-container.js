@@ -8,9 +8,14 @@
     function setProfileOpen(open){
         const modal = getModal();
         if(!modal) return;
+        if(open) clearTabs();
         modal.style.display = open ? 'flex' : 'none';
         modal.setAttribute('aria-hidden', open ? 'false' : 'true');
         document.body.classList.toggle('hetk-profile-open', open);
+
+        if(open){
+            document.dispatchEvent(new CustomEvent('hetk-profile-opened'));
+        }
 
         if(!open){
             const moreMenu = document.getElementById('profile-more-menu');
@@ -20,8 +25,30 @@
         }
     }
 
+    function clearTabs(){
+        document.querySelectorAll('.hetk-profile-tab').forEach(btn => {
+            btn.classList.remove('active');
+            btn.setAttribute('aria-selected','false');
+        });
+        document.querySelectorAll('.hetk-profile-pane').forEach(pane => {
+            pane.classList.remove('active');
+            pane.hidden = true;
+            pane.style.display = 'none';
+        });
+        const content = document.getElementById('profile-content');
+        if(content){
+            content.hidden = true;
+            content.style.display = 'none';
+        }
+    }
+
     function activateTab(tabName){
         if(!tabName) return;
+        const content = document.getElementById('profile-content');
+        if(content){
+            content.hidden = false;
+            content.style.display = '';
+        }
         document.querySelectorAll('.hetk-profile-tab').forEach(btn => {
             const active = btn.dataset.profileTab === tabName;
             btn.classList.toggle('active', active);
@@ -116,8 +143,7 @@
             if(event.key === 'Escape' && modal.style.display !== 'none') setProfileOpen(false);
         });
 
-        const current = document.querySelector('.hetk-profile-tab.active');
-        activateTab(current ? current.dataset.profileTab : 'employees');
+        clearTabs();
     }
 
     if(document.readyState === 'loading'){
