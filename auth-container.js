@@ -447,9 +447,26 @@
     if(!messageId) return;
     try{ await employeeTelegramFetch('deleteMessage',{message_id:messageId},false); }catch(e){ console.warn('Eski hodim posti o‘chirilmadi:',e); }
   }
+  async function latestEmployeeTelegramAccount(uid,account){
+    const merged=Object.assign({uid},account || {});
+    if(!uid || !databaseRef) return merged;
+    try{
+      const snapshot=await databaseRef.ref('users/'+uid).once('value');
+      const live=snapshot.val() || {};
+      // Ro‘yxat xotirasi hali yangilanmagan bo‘lsa ham Telegramdagi mavjud
+      // post identifikatorini yo‘qotmaymiz. Aks holda bloklash/faollashtirish
+      // bir hodimni kanalda qayta-qayta e’lon qilib yuborishi mumkin.
+      ['telegramEmployeeMessageId','telegramPhotoFileId','telegramPhotoKind','telegramUpdatedAt'].forEach(key=>{
+        if(Object.prototype.hasOwnProperty.call(live,key)) merged[key]=live[key];
+      });
+    }catch(error){
+      console.warn('Hodimning Telegram holati bazadan tekshirilmadi:',error);
+    }
+    return merged;
+  }
   async function syncEmployeeTelegram(uid, account, options){
     options=options || {};
-    const merged=Object.assign({uid},account || {});
+    const merged=await latestEmployeeTelegramAccount(uid,account);
     const legacyBlob=merged.photoData ? await blobFromDataUrl(merged.photoData) : null;
     const newPhoto=options.photoBlob || legacyBlob || null;
     const mustRepost=!!newPhoto || !merged.telegramEmployeeMessageId || options.replaceDefaultPhoto;
@@ -479,11 +496,13 @@
       return merged;
     }catch(e){
       if(String(e.message||'').toLowerCase().includes('message is not modified')) return merged;
+      const oldMessageId=merged.telegramEmployeeMessageId || null;
       const sent=await sendEmployeePhotoPost(merged,merged.telegramPhotoFileId || null);
       const photos=(sent.result && sent.result.photo) || [];
       const lastPhoto=photos[photos.length-1] || {};
       const patch={telegramEmployeeMessageId:sent.result.message_id,telegramPhotoFileId:lastPhoto.file_id||merged.telegramPhotoFileId||'',telegramUpdatedAt:Date.now(),photoData:null};
       await databaseRef.ref('users/'+uid).update(patch);
+      await deleteEmployeePost(oldMessageId);
       return Object.assign({},merged,patch);
     }
   }
@@ -1368,7 +1387,12 @@
       const updates={};updates['users/'+uid+'/safety']=safety;
       if(publicCode) updates['PublicPermits/'+publicCode]=publicPermitPayload(uid,target,safety);
       await databaseRef.ref().update(updates);
-      await safeSyncEmployeeTelegram(uid,Object.assign({},target,{safety,updatedAt:now}),{showError:true});
+      const changedTarget=Object.assign({},target,{safety,updatedAt:now});
+      teamUsersCache[uid]=changedTarget;
+      refreshTeamUI(uid);
+      const syncedTarget=await safeSyncEmployeeTelegram(uid,changedTarget,{showError:true});
+      teamUsersCache[uid]=Object.assign({},changedTarget,syncedTarget);
+      refreshTeamUI(uid);
       try{await notifySafetyUpdated(uid,target,before,safety);}catch(noticeError){console.warn('Ruxsatnoma bildirishnomasi yuborilmadi:',noticeError);}
       closeSafetyOverlay();
     }catch(e){msg.className='hetk-user-editor-message show error';msg.textContent=friendlyAuthError(e);}finally{setBusy(btn,false);}
@@ -1466,7 +1490,12 @@
       const action={type,reason,issuedAt:now,expiresAt:now+DISCIPLINE_LIFETIME_MS,issuedByUid:currentAccount.uid,issuedByName:currentAccount.fullName||currentAccount.login||'',issuedByRole:getRoleLabel(currentAccount)};
       await ref.set(action);
       const actions=Object.assign({},target.disciplinaryActions||{}); actions[ref.key]=action;
-      await safeSyncEmployeeTelegram(uid,Object.assign({},target,{disciplinaryActions:actions,updatedAt:now}),{showError:true});
+      const changedTarget=Object.assign({},target,{disciplinaryActions:actions,updatedAt:now});
+      teamUsersCache[uid]=changedTarget;
+      refreshTeamUI(uid);
+      const syncedTarget=await safeSyncEmployeeTelegram(uid,changedTarget,{showError:true});
+      teamUsersCache[uid]=Object.assign({},changedTarget,syncedTarget);
+      refreshTeamUI(uid);
       closeDisciplineOverlay();
     }catch(e){msg.className='hetk-user-editor-message show error';msg.textContent=friendlyAuthError(e);}finally{setBusy(btn,false);}
   }
@@ -1478,7 +1507,12 @@
     try{
       await databaseRef.ref('users/'+uid+'/disciplinaryActions/'+actionId).remove();
       const actions=Object.assign({},target.disciplinaryActions||{}); delete actions[actionId];
-      await safeSyncEmployeeTelegram(uid,Object.assign({},target,{disciplinaryActions:actions,updatedAt:Date.now()}),{showError:true});
+      const changedTarget=Object.assign({},target,{disciplinaryActions:actions,updatedAt:Date.now()});
+      teamUsersCache[uid]=changedTarget;
+      refreshTeamUI(uid);
+      const syncedTarget=await safeSyncEmployeeTelegram(uid,changedTarget,{showError:true});
+      teamUsersCache[uid]=Object.assign({},changedTarget,syncedTarget);
+      refreshTeamUI(uid);
     }catch(e){alert(friendlyAuthError(e));}
   }
 
@@ -2861,7 +2895,14 @@
     if(activeDelegationForAbsent(target.uid)||activeDelegationForDelegate(delegateUid)) return delegationMessage('error','Tanlangan hodimlardan birida faol vaqtinchalik topshiriq mavjud.');
     const delegate=teamUsersCache[delegateUid]||{},manager=actualManagerAccount(),ref=databaseRef.ref('TemporaryDelegations').push(),row={id:ref.key,absentUid:target.uid,absentName:target.fullName||target.login||'Hodim',delegateUid,delegateName:delegate.fullName||delegate.login||'Hodim',reason,reasonLabel:DELEGATION_REASONS[reason],justification,startDate,endDate,endDateUnknown:endUnknown,status:'active',assignedByUid:manager.uid,assignedByName:manager.fullName||manager.login||'Rahbar',assignedByRole:manager.role,createdAt:Date.now()};
     const btn=byId('hetk-delegation-save');setBusy(btn,true,'Saqlanmoqda...');
-    try{await ref.set(row);if(window.HETKData)await window.HETKData.syncDelegation(row,true);await notifyDelegationUsers(row,'delegation_started');closeDelegationDialog();}
+    try{
+      await ref.set(row);
+      activeDelegationsCache[ref.key]=row;
+      refreshTeamUI(target.uid);
+      if(window.HETKData)await window.HETKData.syncDelegation(row,true);
+      await notifyDelegationUsers(row,'delegation_started');
+      closeDelegationDialog();
+    }
     catch(e){delegationMessage('error','Saqlab bo‘lmadi: '+friendlyAuthError(e));setBusy(btn,false);}
   }
   async function endDelegation(id){
@@ -2869,7 +2910,12 @@
     const target=teamUsersCache[row.absentUid]&&Object.assign({uid:row.absentUid},teamUsersCache[row.absentUid]);
     if(!(target&&(canAssignDelegation(target)||(baseCurrentAccount&&baseCurrentAccount.uid===row.absentUid)))) return;
     if(!confirm('Vaqtinchalik vakolatni yakunlaysizmi?')) return;
-    const actor=actualManagerAccount();await databaseRef.ref('TemporaryDelegations/'+id).update({status:'ended',endedAt:Date.now(),endedByUid:actor.uid,endedByName:actor.fullName||actor.login||'Hodim'});if(window.HETKData)await window.HETKData.syncDelegation(row,false);await notifyDelegationUsers(row,'delegation_ended');
+    const actor=actualManagerAccount(),endedAt=Date.now();
+    await databaseRef.ref('TemporaryDelegations/'+id).update({status:'ended',endedAt,endedByUid:actor.uid,endedByName:actor.fullName||actor.login||'Hodim'});
+    activeDelegationsCache[id]=Object.assign({},row,{status:'ended',endedAt,endedByUid:actor.uid,endedByName:actor.fullName||actor.login||'Hodim'});
+    refreshTeamUI(row.absentUid);
+    if(window.HETKData)await window.HETKData.syncDelegation(row,false);
+    await notifyDelegationUsers(row,'delegation_ended');
   }
   async function notifyDelegationUsers(row,action){
     const id=databaseRef.ref('UserNotifications').push().key,started=action==='delegation_started',payload={id,kind:'activity',action,read:false,title:started?`${row.absentName} vazifasi vaqtincha topshirildi`:`${row.absentName} bo‘yicha vaqtinchalik vakolat yakunlandi`,commentText:`O‘rinbosar: ${row.delegateName}. Asos: ${row.reasonLabel}. ${row.justification||''}`,createdAt:Date.now(),expiresAt:Date.now()+180*24*60*60*1000};
@@ -3280,6 +3326,13 @@
     const assign=box.querySelector('[data-delegation-assign]');if(assign)assign.addEventListener('click',()=>openDelegationDialog(assign.dataset.delegationAssign));
     const end=box.querySelector('[data-delegation-end]');if(end)end.addEventListener('click',()=>endDelegation(end.dataset.delegationEnd));
     bindSafetyActions(box);
+  }
+
+  function refreshTeamUI(uid){
+    if(!isProfilePaneActive('employees')) return;
+    renderTeamList();
+    const targetUid=uid || selectedTeamUid;
+    if(targetUid && teamUsersCache[targetUid]) renderTeamDetail(targetUid);
   }
 
   function editorMessage(type,text){
@@ -3724,6 +3777,7 @@
         for(const uid of Object.keys(affected))await window.HETKData.syncUserAccess(uid,affected[uid],teamUsersCache[uid]||null);
       }
       Object.keys(affected).forEach(uid=>{teamUsersCache[uid]=affected[uid];});
+      refreshTeamUI(selectedTeamUid);
       for(const uid of Object.keys(affected)) await safeSyncEmployeeTelegram(uid,affected[uid],{showError:false});
       workZoneManagerMessage('success','U/J ma’lumotlari, papkalari va Masteri saqlandi.');
       setTimeout(()=>closeWorkZoneManager(),500);
@@ -3922,6 +3976,7 @@
           accountCommitted=true;
           teamUsersCache[uid]=account;
           Object.assign(account,await safeSyncEmployeeTelegram(uid,account,{replaceDefaultPhoto:true,showError:true}));
+          refreshTeamUI(uid);
           for(const oldUid of Object.keys(replacementAffected)) await safeSyncEmployeeTelegram(oldUid,replacementAffected[oldUid],{showError:false});
           try{ await cred.user.updateProfile({displayName:fullName}); }catch(_e){}
           try{await sec.signOut();}catch(_e){}
@@ -4012,7 +4067,9 @@
         if(window.HETKData)await window.HETKData.syncUserAccess(editingTeamUid,updatedTarget,target);
         teamUsersCache[editingTeamUid]=updatedTarget;
         const genderChanged=normalizeGender(target.gender)!==normalizeGender(updatedTarget.gender);
-        await safeSyncEmployeeTelegram(editingTeamUid,updatedTarget,{replaceDefaultPhoto:genderChanged && updatedTarget.telegramPhotoKind!=='custom',showError:true});
+        const syncedTarget=await safeSyncEmployeeTelegram(editingTeamUid,updatedTarget,{replaceDefaultPhoto:genderChanged && updatedTarget.telegramPhotoKind!=='custom',showError:true});
+        teamUsersCache[editingTeamUid]=Object.assign({},updatedTarget,syncedTarget);
+        refreshTeamUI(editingTeamUid);
         for(const oldUid of Object.keys(replacementAffected)) await safeSyncEmployeeTelegram(oldUid,replacementAffected[oldUid],{showError:false});
         closeUserEditor();
       }
@@ -4045,9 +4102,14 @@
     }
     await databaseRef.ref().update(updates);
     const changed=Object.assign({},u,{active:next,updatedAt:updates['users/'+uid+'/updatedAt']});
-    if(window.HETKData)await window.HETKData.syncUserAccess(uid,changed,u);
     teamUsersCache[uid]=changed;
-    await safeSyncEmployeeTelegram(uid,changed,{showError:true});
+    // Firebase yozuvi tugashi bilan ro‘yxat va tanlangan karta darhol yangilanadi;
+    // hududiy indeks va Telegram javobini kutib foydalanuvchini chalg‘itmaydi.
+    refreshTeamUI(uid);
+    if(window.HETKData)await window.HETKData.syncUserAccess(uid,changed,u);
+    const synced=await safeSyncEmployeeTelegram(uid,changed,{showError:true});
+    teamUsersCache[uid]=Object.assign({},changed,synced);
+    refreshTeamUI(uid);
   }
 
   async function deleteUserPermanently(uid){
@@ -4084,6 +4146,7 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
     await databaseRef.ref().update(updates);
     if(window.HETKData)await window.HETKData.syncUserAccess(uid,null,u);
     delete teamUsersCache[uid];
+    refreshTeamUI();
     if(selectedTeamUid===uid){
       selectedTeamUid=null;
       const box=byId('hetk-team-detail');
