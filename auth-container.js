@@ -901,7 +901,6 @@
       populateProfile(account);
       window.HETKAuth.currentUser = account;
       await startUserNotifications(uid);
-      await startUserMessages(uid);
       startNotificationSettings(uid);
       setOverlayVisible(false);
       document.dispatchEvent(new CustomEvent('hetk-auth-ready',{detail:{user:account}}));
@@ -2146,7 +2145,7 @@
     userNotificationsRef=databaseRef.ref(`UserNotifications/${uid}`);
     userNotificationsRef.on('value',snap=>{
       userNotificationsCache=snap.val() || {};
-      renderCommunicationPane();
+      if(isProfilePaneActive('messages')) renderCommunicationPane();
       updateOuterMessageBadge();
     });
     notificationsCleanupTimer=setInterval(()=>pruneUserNotifications(uid),6*60*60*1000);
@@ -2164,7 +2163,7 @@
     notificationSettingsRef=databaseRef.ref(`UserNotificationSettings/${uid}`);
     notificationSettingsRef.on('value',snapshot=>{
       notificationSettingsCache=snapshot.val() || {};
-      renderCommunicationPane();
+      if(isProfilePaneActive('messages')) renderCommunicationPane();
       if(browserPushSupported() && Notification.permission==='granted') ensureBrowserPush(false).catch(()=>{});
     });
   }
@@ -2213,12 +2212,12 @@
     savedFilesRef=databaseRef.ref(`UserSavedFiles/${uid}`);
     userMessagesRef.on('value',snap=>{
       userMessagesCache=snap.val() || {};
-      renderCommunicationPane();
+      if(isProfilePaneActive('messages')) renderCommunicationPane();
       updateOuterMessageBadge();
     });
     savedFilesRef.on('value',snap=>{
       savedFilesCache=snap.val() || {};
-      renderSavedFilesPane();
+      if(isProfilePaneActive('files')) renderSavedFilesPane();
     });
     messagesCleanupTimer=setInterval(()=>pruneUserMessages(uid),6*60*60*1000);
   }
@@ -2464,12 +2463,14 @@
     if(tab) tab.hidden=!allowed;
     if(tabs) tabs.classList.toggle('has-security',allowed);
     if(!allowed){
-      if(tab && tab.classList.contains('active') && window.activateProfileTab) window.activateProfileTab('employees');
+      if(tab && tab.classList.contains('active')){
+        tab.classList.remove('active');
+        tab.setAttribute('aria-selected','false');
+      }
       if(pane){pane.hidden=true;pane.style.display='none';}
       if(loginHistoryTimer){clearInterval(loginHistoryTimer);loginHistoryTimer=null;}
       return;
     }
-    ensureLoginAuditUI();
   }
 
   function bindLoginAuditEvents(){
@@ -2501,18 +2502,42 @@
     const avatar = document.querySelector('.hetk-profile-avatar');
     applyAvatar(avatar, accountAvatarUrl(account));
     renderProfileSafetySummary(account);
-    renderPersonalEditor(account);
-    // Respublika profilida minglab hodimlarni sayt kirishi bilan yuklamaymiz.
-    // Hodimlar ro‘yxati profilning shu oynasi ochilgandagina yuklanadi.
-    const profileModal=byId('profile-container');
-    const employeesPane=document.querySelector('[data-profile-pane="employees"]');
-    if(profileModal && profileModal.style.display!=='none' && employeesPane && !employeesPane.hidden){
-      renderEmployeesManager(account);
-    }
-    renderCommunicationPane();
-    renderSavedFilesPane();
     configureLoginAudit(account);
+    const activeTab=document.querySelector('.hetk-profile-tab.active[data-profile-tab]');
+    if(activeTab) loadProfilePane(activeTab.dataset.profileTab);
     installLogoutButton();
+  }
+
+  function isProfilePaneActive(tabName){
+    const pane=document.querySelector(`[data-profile-pane="${tabName}"]`);
+    return !!(pane && !pane.hidden && pane.classList.contains('active'));
+  }
+
+  async function loadProfilePane(tabName){
+    if(!currentAccount || !tabName) return;
+    if(tabName==='employees'){
+      renderEmployeesManager(currentAccount);
+      return;
+    }
+    if(tabName==='messages'){
+      renderCommunicationPane();
+      await startUserMessages(currentAccount.uid);
+      if(isProfilePaneActive('messages')) renderCommunicationPane();
+      return;
+    }
+    if(tabName==='files'){
+      renderSavedFilesPane();
+      await startUserMessages(currentAccount.uid);
+      if(isProfilePaneActive('files')) renderSavedFilesPane();
+      return;
+    }
+    if(tabName==='personal'){
+      renderPersonalEditor(currentAccount);
+      return;
+    }
+    if(tabName==='security' && currentAccount.role==='super_admin'){
+      ensureLoginAuditUI();
+    }
   }
 
   function renderPersonalEditor(account){
@@ -3042,7 +3067,7 @@
       if(q){
         const roots=accountFolderRoots(u);
         const paths=roots.map(id=>folderPath(id)).join(' ');
-        if(![u.fullName,u.login,getRoleLabel(u),u.region,u.workZoneName,paths].join(' ').toLowerCase().includes(q)) return false;
+        if(![u.fullName,getRoleLabel(u),u.region,u.workZoneName,paths].join(' ').toLowerCase().includes(q)) return false;
       }
       if(groupFilter!=='all' && effectiveSafetyGroup(u)!==groupFilter) return false;
       if(permitFilter!=='all'){
@@ -3154,7 +3179,7 @@
     const selected=selectedTeamUid===u.uid ? ' selected' : '';
     return `<button class="hetk-team-user hetk-team-tree-user${selected}" style="--team-depth:${depth}" type="button" data-team-uid="${escapeAttr(u.uid)}">
       <span class="hetk-team-user-avatar"><img src="${escapeAttr(accountAvatarUrl(u))}" alt=""></span>
-      <span class="hetk-team-user-main"><b>${escapeHtml(u.fullName || 'Nomsiz hodim')}</b><small>${escapeHtml(getRoleLabel(u))}</small><em>${escapeHtml(u.login || '')}</em></span>
+      <span class="hetk-team-user-main"><b>${escapeHtml(u.fullName || 'Nomsiz hodim')}</b><small>${escapeHtml(getRoleLabel(u))}</small></span>
       <span class="hetk-team-user-side"><span class="hetk-team-safety-badge ${permitState(u).kind}">XTB ${escapeHtml(effectiveSafetyGroup(u))}</span><span class="hetk-team-user-state ${u.active===false?'off':'on'}">${u.active===false?'Nofaol':'Faol'}</span></span>
     </button>`;
   }
@@ -3231,7 +3256,7 @@
     box.innerHTML=`
       <div class="hetk-team-detail-head">
         <span class="hetk-team-detail-avatar"><img src="${escapeAttr(accountAvatarUrl(u))}" alt=""></span>
-        <div><h3>${escapeHtml(u.fullName || 'Nomsiz hodim')}</h3><p>${escapeHtml(getRoleLabel(u))}</p><span>${escapeHtml(u.login || '')}</span></div>
+        <div><h3>${escapeHtml(u.fullName || 'Nomsiz hodim')}</h3><p>${escapeHtml(getRoleLabel(u))}</p></div>
         <span class="hetk-detail-status ${u.active===false?'off':'on'}"><i></i>${u.active===false?'Nofaol':'Tizimda faol'}</span>
       </div>
       ${safetyPermitHtml(u,{canEdit:canSafetyEdit})}
@@ -4287,7 +4312,6 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
       currentDelegationsRef=databaseRef.ref('TemporaryDelegations');
       currentDelegationsRef.on('value',async snap=>{activeDelegationsCache=snap.val()||{};await refreshEffectiveAccount(true);});
       await startUserNotifications(user.uid);
-      await startUserMessages(user.uid);
       startNotificationSettings(user.uid);
       await databaseRef.ref('users/' + user.uid).update({lastLoginAt:Date.now()});
       if(!currentAccount.telegramEmployeeMessageId || currentAccount.photoData){
@@ -4348,12 +4372,9 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
     });
   }
 
-  document.addEventListener('hetk-profile-opened',()=>{
-    const pane=document.querySelector('[data-profile-pane="employees"]');
-    if(currentAccount&&pane&&!pane.hidden)renderEmployeesManager(currentAccount);
-  });
   document.addEventListener('hetk-profile-tab-changed',event=>{
-    if(currentAccount&&event.detail&&event.detail.tab==='employees')renderEmployeesManager(currentAccount);
+    if(!currentAccount || !event.detail || !event.detail.tab) return;
+    loadProfilePane(event.detail.tab).catch(error=>console.error('Profil bo‘limi yuklanmadi:',error));
   });
 
   window.HETKAuth = {
