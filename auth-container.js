@@ -2502,7 +2502,13 @@
     applyAvatar(avatar, accountAvatarUrl(account));
     renderProfileSafetySummary(account);
     renderPersonalEditor(account);
-    renderEmployeesManager(account);
+    // Respublika profilida minglab hodimlarni sayt kirishi bilan yuklamaymiz.
+    // Hodimlar ro‘yxati profilning shu oynasi ochilgandagina yuklanadi.
+    const profileModal=byId('profile-container');
+    const employeesPane=document.querySelector('[data-profile-pane="employees"]');
+    if(profileModal && profileModal.style.display!=='none' && employeesPane && !employeesPane.hidden){
+      renderEmployeesManager(account);
+    }
     renderCommunicationPane();
     renderSavedFilesPane();
     configureLoginAudit(account);
@@ -2627,7 +2633,7 @@
     // Bosh dispetcher va dispetcherga tezkor nazorat uchun butun daraxt ochiq.
     // Bu faqat ko'rish/tahrirlash doirasini kengaytiradi; yaratish va o'chirish
     // huquqlari hasPermission() ichida alohida bloklangan.
-    if(acc.rootAccess || acc.role==='republic_tb_engineer' || isDispatcherRole(acc)) return Object.keys(folders);
+    if(acc.rootAccess || ['super_admin','director','chief_engineer','republic_tb_engineer'].includes(acc.role) || isDispatcherRole(acc)) return Object.keys(folders);
     const roots = Object.keys(acc.folders || {}).filter(id => acc.folders[id]);
     const set = new Set();
     roots.forEach(id => {
@@ -2706,7 +2712,7 @@
 
   function isTargetWithinScope(target){
     if(!currentAccount || !target) return false;
-    if(currentAccount.role === 'super_admin' || currentAccount.role === 'republic_tb_engineer' || currentAccount.rootAccess) return true;
+    if(['super_admin','director','chief_engineer','republic_tb_engineer'].includes(currentAccount.role) || currentAccount.rootAccess) return true;
     if(target.rootAccess) return false;
     const mySet=new Set(getAccessibleFolderIds(currentAccount, teamFoldersCache));
     const targetRoots=accountFolderRoots(target);
@@ -3359,7 +3365,7 @@
     if(editorFolderLimitRoots && editorFolderLimitRoots.length){
       return normalizeSelectedFolderRoots(editorFolderLimitRoots,teamFoldersCache);
     }
-    if(currentAccount.rootAccess){
+    if(currentAccount.rootAccess || ['super_admin','director','chief_engineer'].includes(currentAccount.role)){
       return Object.keys(teamFoldersCache).filter(id => teamFoldersCache[id] && teamFoldersCache[id].parentId === 'root');
     }
     return normalizeSelectedFolderRoots(accountFolderRoots(currentAccount), teamFoldersCache);
@@ -3530,7 +3536,7 @@
     const box=byId('hetk-workzone-folder-tree');
     if(!box || !currentAccount) return;
     const accessible=new Set(getAccessibleFolderIds(currentAccount,teamFoldersCache));
-    const roots=currentAccount.rootAccess ? Object.keys(teamFoldersCache).filter(id=>teamFoldersCache[id] && teamFoldersCache[id].parentId==='root') : normalizeSelectedFolderRoots(accountFolderRoots(currentAccount),teamFoldersCache);
+    const roots=(currentAccount.rootAccess || ['super_admin','director','chief_engineer'].includes(currentAccount.role)) ? Object.keys(teamFoldersCache).filter(id=>teamFoldersCache[id] && teamFoldersCache[id].parentId==='root') : normalizeSelectedFolderRoots(accountFolderRoots(currentAccount),teamFoldersCache);
     const childrenByParent={};
     Object.keys(teamFoldersCache).forEach(id=>{
       const folder=teamFoldersCache[id]; if(!folder || !accessible.has(id)) return;
@@ -3841,6 +3847,7 @@
         if(await loginAlreadyExists(login,'')) throw new Error('Bu login avval mavjud. Boshqa login kiriting.');
         const sec=secondaryAuth();
         let cred=null;
+        let accountCommitted=false;
         try{
           const internalEmail = makeInternalAuthEmail();
           cred=await sec.createUserWithEmailAndPassword(internalEmail,pass1);
@@ -3871,18 +3878,34 @@
           updates['users/'+uid]=account;
           updates['loginIndex/'+loginIndexKey(login)]={uid,login,authEmail:internalEmail,active:true,updatedAt:now};
           await databaseRef.ref().update(updates);
-          if(window.HETKData)await window.HETKData.syncUserAccess(uid,account,null);
+          if(window.HETKData){
+            try{
+              await window.HETKData.syncUserAccess(uid,account,null);
+            }catch(indexError){
+              // Hududiy indeks yozilmasa foydalanuvchini chala holatda qoldirmaymiz.
+              try{
+                const rollback={};
+                rollback['users/'+uid]=null;
+                rollback['loginIndex/'+loginIndexKey(login)]=null;
+                await databaseRef.ref().update(rollback);
+              }catch(rollbackError){
+                console.error('YARATILGAN HODIMNI ORTGA QAYTARISH XATOSI:',rollbackError);
+              }
+              throw new Error('Hodimning hududiy ruxsatlarini saqlab bo‘lmadi: '+(indexError.message||indexError));
+            }
+          }
+          accountCommitted=true;
           teamUsersCache[uid]=account;
           Object.assign(account,await safeSyncEmployeeTelegram(uid,account,{replaceDefaultPhoto:true,showError:true}));
           for(const oldUid of Object.keys(replacementAffected)) await safeSyncEmployeeTelegram(oldUid,replacementAffected[oldUid],{showError:false});
           try{ await cred.user.updateProfile({displayName:fullName}); }catch(_e){}
-          await sec.signOut();
+          try{await sec.signOut();}catch(_e){}
           selectedTeamUid=uid;
           closeUserEditor();
           try{ openNewAccountSms({fullName,phone,login,password:pass1}); }
           catch(smsError){ console.warn('SMS ilovasi ochilmadi:',smsError); }
         }catch(e){
-          if(cred && cred.user){ try{ await cred.user.delete(); }catch(_e){} }
+          if(!accountCommitted && cred && cred.user){ try{ await cred.user.delete(); }catch(_e){} }
           try{ await sec.signOut(); }catch(_e){}
           throw e;
         }
@@ -4324,6 +4347,14 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
       }
     });
   }
+
+  document.addEventListener('hetk-profile-opened',()=>{
+    const pane=document.querySelector('[data-profile-pane="employees"]');
+    if(currentAccount&&pane&&!pane.hidden)renderEmployeesManager(currentAccount);
+  });
+  document.addEventListener('hetk-profile-tab-changed',event=>{
+    if(currentAccount&&event.detail&&event.detail.tab==='employees')renderEmployeesManager(currentAccount);
+  });
 
   window.HETKAuth = {
     currentUser:null,
