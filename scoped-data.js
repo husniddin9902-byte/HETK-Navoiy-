@@ -2,8 +2,8 @@
   'use strict';
 
   const INDEX_VERSION=2;
-  const GLOBAL_ROLES=new Set(['super_admin','republic_tb_engineer']);
-  const GLOBAL_TP_ROLES=new Set(['super_admin','republic_tb_engineer','chief_dispatcher','dispatcher']);
+  const GLOBAL_ROLES=new Set(['super_admin','director','chief_engineer','republic_tb_engineer']);
+  const GLOBAL_TP_ROLES=new Set(['super_admin','director','chief_engineer','republic_tb_engineer','chief_dispatcher','dispatcher']);
   let tpCache={};
   let userCache={};
   let indexVersionCache=null;
@@ -140,8 +140,8 @@
     newAncestors.forEach(function(id){updates['UsersByAncestor/'+id+'/'+uid]=user;});
     const oldAccess=new Set();oldRoots.forEach(function(id){descendants(id,folders).forEach(function(x){oldAccess.add(x);});});
     const newAccess=new Set();newRoots.forEach(function(id){descendants(id,folders).forEach(function(x){newAccess.add(x);});});
-    if(oldUser&&(oldUser.rootAccess||['republic_tb_engineer','chief_dispatcher','dispatcher'].includes(oldUser.role)))Object.keys(folders).forEach(function(id){oldAccess.add(id);});
-    if(user&&(user.rootAccess||['republic_tb_engineer','chief_dispatcher','dispatcher'].includes(user.role)))Object.keys(folders).forEach(function(id){newAccess.add(id);});
+    if(oldUser&&(oldUser.rootAccess||['director','chief_engineer','republic_tb_engineer','chief_dispatcher','dispatcher'].includes(oldUser.role)))Object.keys(folders).forEach(function(id){oldAccess.add(id);});
+    if(user&&(user.rootAccess||['director','chief_engineer','republic_tb_engineer','chief_dispatcher','dispatcher'].includes(user.role)))Object.keys(folders).forEach(function(id){newAccess.add(id);});
     oldAccess.forEach(function(id){if(!newAccess.has(id))updates['FolderAccess/'+uid+'/'+id]=null;});
     newAccess.forEach(function(id){updates['FolderAccess/'+uid+'/'+id]=true;});
     return updates;
@@ -155,7 +155,7 @@
     if(!row||!row.delegateUid)return;
     const path='DelegatedFolderAccess/'+row.delegateUid;
     if(!active){await db().ref(path).remove();return;}
-    const absent=(await db().ref('users/'+row.absentUid).once('value')).val()||{},folders=await readFolders(),zones=(await db().ref('WorkZones').once('value')).val()||{},access={};
+    const visibleUsers=(await readUsers(true)).val()||{},absent=visibleUsers[row.absentUid]||{},folders=await readFolders(),zones=(await db().ref('WorkZones').once('value')).val()||{},access={};
     userFolderRoots(absent,zones).forEach(function(root){descendants(root,folders).forEach(function(id){access[id]=true;});});
     await db().ref(path).set({delegationId:row.id,absentUid:row.absentUid,folders:access,workZoneId:absent.workZoneId||'',expiresAt:row.endDate?new Date(row.endDate+'T23:59:59').getTime():0,status:'active'});
   }
