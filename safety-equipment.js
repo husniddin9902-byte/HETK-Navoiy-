@@ -24,6 +24,7 @@
 
   let db=null,me=null,users={},folders={},zones={},brigades={},catalog={},items={},receipts={},settings={},audits={},norms={},backups={};
   let refs=[],tab='items',searchText='',zoneFilter='all',statusFilter='active',reminderTimer=null,reminderInterval=null;
+  let deferredStartTimer=null,dataStarted=false;
   let analyticsLevel='unit',analyticsType='all',analyticsRegion='all',analyticsDistrict='all';
   let stockSearch='',stockRegion='all',reportCatalogId='all',reportRegion='all',reportDistrict='all';
 
@@ -97,7 +98,7 @@
     const name=String(value||'').trim();
     return /(viloyat|hududiy\s*(filial|elektr|tarmoq)|\bhetk\b|\bhf\b)/i.test(name)||/^(qoraqalpog[‘'ʼ`]iston|andijon|buxoro|jizzax|qashqadaryo|navoiy|namangan|samarqand|surxondaryo|sirdaryo|toshkent|farg[‘'ʼ`]ona|xorazm)(\s+viloyati)?$/i.test(name);
   }
-  function isDistrictName(value){return /(tuman|shahar|\btet\b|(tuman|shahar)\s+elektr\s*tarmoq)/i.test(String(value||''));}
+  function isDistrictName(value){return /(tuman|shahar|\btet\b|\bshet\b|(tuman|shahar)\s+elektr\s*tarmoq)/i.test(String(value||''));}
   function geographyFromFolder(id){
     const names=folderChain(id).map(x=>x.name).filter(Boolean);
     const district=[...names].reverse().find(isDistrictName)||'Tuman aniqlanmagan';
@@ -194,7 +195,11 @@
     const urgent=coveredItems().filter(it=>['soon','expired','out_of_cycle'].includes(itemState(it).key)).length;
     badge.textContent=String(urgent);badge.hidden=!urgent;
   }
-  function open(){if(!canView())return;buildShell();byId('hetk-se-overlay').classList.add('open');byId('hetk-se-overlay').setAttribute('aria-hidden','false');document.body.style.overflow='hidden';render();scheduleReminderScan();}
+  function open(){
+    if(!canView())return;
+    if(!dataStarted)startData(me);
+    buildShell();byId('hetk-se-overlay').classList.add('open');byId('hetk-se-overlay').setAttribute('aria-hidden','false');document.body.style.overflow='hidden';render();scheduleReminderScan();
+  }
   function close(){const el=byId('hetk-se-overlay');if(el){el.classList.remove('open');el.setAttribute('aria-hidden','true');}closeModal();document.body.style.overflow='';}
   function render(){
     if(isMaster()&&!['items','norm','report'].includes(tab))tab='items';
@@ -369,7 +374,7 @@
       <section class="hetk-se-shortage-list">${shortageRows.length?shortageRows.map(row=>`<article><b>${esc(row.name)} — ${row.shortages.length} turdagi vosita kam</b><span>${row.shortages.slice(0,7).map(x=>`${esc(x.name)}: −${x.missing}`).join(' · ')}</span></article>`).join(''):'<article class="complete"><b>Tanlangan hududda me’yoriy yetishmovchilik topilmadi</b><span>Barcha kiritilgan vositalar belgilangan me’yorni qoplaydi.</span></article>'}</section>`;
   }
 
-  function reportCatalogOptions(selected){const rows=Object.keys(catalog).map(id=>Object.assign({id},catalog[id]||{})).filter(row=>row.active!==false).sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'uz'));return rows.map(row=>`<option value="${attr(row.id)}"${row.id===selected?' selected':''}>${esc(row.name||'Nomsiz vosita')}</option>`).join('');}
+  function reportCatalogOptions(selected){const rows=Object.keys(catalog).map(id=>Object.assign({id},catalog[id]||{})).filter(row=>row.active!==false).sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'uz'));return `<option value="all"${selected==='all'?' selected':''}>Barcha himoya vositalari — umumiy</option>`+rows.map(row=>`<option value="${attr(row.id)}"${row.id===selected?' selected':''}>${esc(row.name||'Nomsiz vosita')}</option>`).join('');}
   function reportItems(){return coveredItems().filter(item=>(reportCatalogId==='all'||item.catalogId===reportCatalogId)&&(reportRegion==='all'||itemGeography(item).region===reportRegion)&&(reportDistrict==='all'||itemGeography(item).district===reportDistrict));}
   function renderReport(){
     if(isMaster()){
@@ -378,11 +383,11 @@
       masterMain.innerHTML=`<section class="hetk-se-simple-head"><div><h3>${esc(me.workZoneName||'Mening U/J')} hisoboti</h3><p>Hisobot faqat sizga biriktirilgan U/J bo‘yicha tuzildi.</p></div></section><section class="hetk-se-norm-summary"><div><b>${unit?unit.active:0}</b><span>Faol vosita</span></div><div class="good"><b>${unit?unit.normTotal:0}</b><span>Belgilangan me’yor</span></div><div class="bad"><b>${unit?unit.shortage:0}</b><span>Jami yetishmaydi</span></div></section><div class="hetk-se-tablewrap analytics"><table class="hetk-se-table"><thead><tr><th>Vosita turi</th><th>Mavjud</th><th>Arxiv</th><th>Me’yor</th><th>Kam</th></tr></thead><tbody>${masterRows.length?masterRows.map(id=>{const actual=Number((unit&&unit.activeBy[id])||0),required=Number(quantities[id]||0),missing=Math.max(0,required-actual);return `<tr><td class="hetk-se-name"><b>${esc((catalog[id]&&catalog[id].name)||'Nomsiz vosita')}</b></td><td><b class="hetk-se-number blue">${actual}</b></td><td><b class="hetk-se-number gray">${Number((unit&&unit.archiveBy[id])||0)}</b></td><td><b class="hetk-se-number green">${required}</b></td><td><b class="hetk-se-number ${missing?'red':'green'}">${missing}</b></td></tr>`}).join(''):'<tr><td colspan="5">U/J uchun vosita yoki me’yor topilmadi.</td></tr>'}</tbody></table></div>`;
       return;
     }
-    const main=byId('hetk-se-main');if(!main)return;const catalogIds=Object.keys(catalog).filter(id=>catalog[id]&&catalog[id].active!==false);if(reportCatalogId==='all'||!catalogIds.includes(reportCatalogId))reportCatalogId=catalogIds[0]||'all';const allUnits=analyticsUnitRows(),regions=uniqueNames(allUnits,'region');if(reportRegion!=='all'&&!regions.includes(reportRegion))reportRegion='all';const districtSource=reportRegion==='all'?allUnits:allUnits.filter(row=>row.region===reportRegion),districts=uniqueNames(districtSource,'district');if(reportDistrict!=='all'&&!districts.includes(reportDistrict))reportDistrict='all';const selectedCatalog=catalog[reportCatalogId]||{},filtered=reportItems(),activeItems=filtered.filter(item=>!['archived','returned'].includes(itemState(item).key)),archivedItems=filtered.filter(item=>itemState(item).key==='archived'),soon=filtered.filter(item=>['soon','expired','out_of_cycle'].includes(itemState(item).key)).length,warehouseRegion=reportRegion,stock=stockRow(reportCatalogId,warehouseRegion),byUnit={};activeItems.forEach(item=>{const key=itemUnitKey(item);byUnit[key]||(byUnit[key]={name:itemUnitName(item),type:itemUnitType(item),active:0,expired:0,archive:0});byUnit[key].active++;if(['expired','soon','out_of_cycle'].includes(itemState(item).key))byUnit[key].expired++;});archivedItems.forEach(item=>{const key=itemUnitKey(item);byUnit[key]||(byUnit[key]={name:itemUnitName(item),type:itemUnitType(item),active:0,expired:0,archive:0});byUnit[key].archive++;});const rows=Object.values(byUnit).sort((a,b)=>b.active-a.active||a.name.localeCompare(b.name,'uz')),max=Math.max(1,...rows.map(row=>row.active));
+    const main=byId('hetk-se-main');if(!main)return;const catalogIds=Object.keys(catalog).filter(id=>catalog[id]&&catalog[id].active!==false);if(reportCatalogId!=='all'&&!catalogIds.includes(reportCatalogId))reportCatalogId='all';const allUnits=analyticsUnitRows(),regions=uniqueNames(allUnits,'region');if(reportRegion!=='all'&&!regions.includes(reportRegion))reportRegion='all';const districtSource=reportRegion==='all'?allUnits:allUnits.filter(row=>row.region===reportRegion),districts=uniqueNames(districtSource,'district');if(reportDistrict!=='all'&&!districts.includes(reportDistrict))reportDistrict='all';const allCatalogs=reportCatalogId==='all',selectedCatalog=allCatalogs?{name:'Barcha himoya vositalari'}:(catalog[reportCatalogId]||{}),filtered=reportItems(),activeItems=filtered.filter(item=>!['archived','returned'].includes(itemState(item).key)),archivedItems=filtered.filter(item=>itemState(item).key==='archived'),soon=filtered.filter(item=>['soon','expired','out_of_cycle'].includes(itemState(item).key)).length,warehouseRegion=reportRegion,stock=allCatalogs?stockTotals(stockRows(warehouseRegion)):stockRow(reportCatalogId,warehouseRegion),byUnit={};activeItems.forEach(item=>{const key=itemUnitKey(item);byUnit[key]||(byUnit[key]={name:itemUnitName(item),type:itemUnitType(item),active:0,expired:0,archive:0});byUnit[key].active++;if(['expired','soon','out_of_cycle'].includes(itemState(item).key))byUnit[key].expired++;});archivedItems.forEach(item=>{const key=itemUnitKey(item);byUnit[key]||(byUnit[key]={name:itemUnitName(item),type:itemUnitType(item),active:0,expired:0,archive:0});byUnit[key].archive++;});const rows=Object.values(byUnit).sort((a,b)=>b.active-a.active||a.name.localeCompare(b.name,'uz')),max=Math.max(1,...rows.map(row=>row.active));
     main.innerHTML=`<section class="hetk-se-simple-head"><div><h3>Vosita turi bo‘yicha alohida statistika</h3><p>Tanlangan bitta himoya vositasining kirimi, ombor qoldig‘i, foydalanilishi va arxivi ko‘rsatiladi.</p></div><div class="hetk-se-utility-row"><button class="hetk-se-mini-btn" data-se-open-catalog><i class="fas fa-book"></i>Umumiy ro‘yxat</button><button class="hetk-se-mini-btn" data-se-open-history><i class="fas fa-clock-rotate-left"></i>Tarix</button></div></section>
       <div class="hetk-se-report-filters"><select id="hetk-se-report-catalog" class="hetk-se-select">${reportCatalogOptions(reportCatalogId)}</select><select id="hetk-se-report-region" class="hetk-se-select"><option value="all">Barcha viloyatlar</option>${regions.map(name=>`<option value="${attr(name)}"${name===reportRegion?' selected':''}>${esc(name)}</option>`).join('')}</select><select id="hetk-se-report-district" class="hetk-se-select"><option value="all">Barcha tumanlar</option>${districts.map(name=>`<option value="${attr(name)}"${name===reportDistrict?' selected':''}>${esc(name)}</option>`).join('')}</select></div>
       <section class="hetk-se-summary compact report-summary"><div class="hetk-se-summary-card received"><b>${stock.received}</b><span>Jami kirim</span></div><div class="hetk-se-summary-card usage"><b>${activeItems.length}</b><span>Foydalanishda</span></div><div class="hetk-se-summary-card warehouse"><b>${stock.balance}</b><span>Viloyat omborida</span></div><div class="hetk-se-summary-card danger archive"><b>${archivedItems.length}</b><span>Arxivda</span></div></section>
-      <section class="hetk-se-report-chart"><header><div><h4>${esc(selectedCatalog.name||'Himoya vositasi')}</h4><p>${esc(intervalText(selectedCatalog))} · nazorat talab qiladigan: ${soon} ta</p></div></header><div class="hetk-se-report-bars">${rows.length?rows.slice(0,14).map(row=>`<div><span>${esc(row.name)}</span><i><b style="width:${Math.max(3,row.active/max*100)}%"></b></i><em>${row.active} ta</em></div>`).join(''):'<p class="hetk-se-chart-empty">Tanlangan kesimda bu vosita biriktirilmagan.</p>'}</div></section>
+      <section class="hetk-se-report-chart"><header><div><h4>${esc(selectedCatalog.name||'Himoya vositasi')}</h4><p>${allCatalogs?'Barcha turlar jamlanmasi':esc(intervalText(selectedCatalog))} · nazorat talab qiladigan: ${soon} ta</p></div></header><div class="hetk-se-report-bars">${rows.length?rows.slice(0,14).map(row=>`<div><span>${esc(row.name)}</span><i><b style="width:${Math.max(3,row.active/max*100)}%"></b></i><em>${row.active} ta</em></div>`).join(''):'<p class="hetk-se-chart-empty">Tanlangan kesimda vosita biriktirilmagan.</p>'}</div></section>
       <section class="hetk-se-stock-list"><header><div><h4>Bo‘linmalar kesimi</h4><p>Qurilish brigadasi statistikada bor, lekin me’yoriy kamchilikka qo‘shilmaydi.</p></div><span>${rows.length} ta bo‘linma</span></header><div class="hetk-se-tablewrap report"><table class="hetk-se-table"><thead><tr><th>Bo‘linma</th><th>Turi</th><th>Foydalanishda</th><th>Nazorat talab qiladi</th><th>Arxiv</th></tr></thead><tbody>${rows.map(row=>`<tr><td class="hetk-se-name"><b>${esc(row.name)}</b></td><td><span class="hetk-se-type-tag ${row.type}">${esc(unitTypeLabel(row.type))}</span></td><td>${row.active}</td><td>${row.expired}</td><td>${row.archive}</td></tr>`).join('')}</tbody></table></div></section>`;
   }
 
@@ -597,7 +602,10 @@
   function bindRef(path,setter){const ref=db.ref(path),handler=snap=>{setter(snap.val()||{});setButton();if(byId('hetk-se-overlay')&&byId('hetk-se-overlay').classList.contains('open'))render();scheduleReminderScan();};ref.on('value',handler);refs.push([ref,handler]);}
   function bindQuery(query,setter){const handler=snap=>{setter(snap.val()||{});setButton();if(byId('hetk-se-overlay')&&byId('hetk-se-overlay').classList.contains('open'))render();scheduleReminderScan();};query.on('value',handler);refs.push([query,handler]);}
   function unbind(){refs.forEach(([ref,handler])=>ref.off('value',handler));refs=[];clearTimeout(reminderTimer);if(reminderInterval)clearInterval(reminderInterval);reminderInterval=null;}
-  async function start(account){
+  async function startData(account){
+    if(dataStarted||!account)return;
+    dataStarted=true;
+    if(deferredStartTimer){clearTimeout(deferredStartTimer);deferredStartTimer=null;}
     me=account;if(!window.firebase||!firebase.apps||!firebase.apps.length)return;db=firebase.database();buildShell();unbind();
     if(window.HETKData){users=(await window.HETKData.readUsers(true)).val()||{};}else bindRef('users',v=>{users=v;if(window.HETKAuth&&window.HETKAuth.currentUser)me=window.HETKAuth.currentUser;else if(me&&users[me.uid])me=Object.assign({uid:me.uid},users[me.uid]);});
     bindRef('Folders',v=>folders=v);bindRef('WorkZones',v=>zones=v);bindRef('SafetyEquipmentCatalog',v=>catalog=v);bindRef('SafetyEquipmentNorms',v=>norms=v);bindRef('SafetyEquipmentSettings',v=>settings=v);
@@ -610,7 +618,16 @@
     }
     reminderInterval=setInterval(scanReminders,6*60*60*1000);setButton();
   }
-  function clear(){unbind();me=null;users={};folders={};zones={};brigades={};catalog={};items={};receipts={};norms={};settings={};audits={};backups={};tab='items';stockSearch='';stockRegion='all';reportCatalogId='all';reportRegion='all';reportDistrict='all';setButton();close();}
+  function start(account){
+    if(deferredStartTimer)clearTimeout(deferredStartTimer);
+    unbind();dataStarted=false;me=account;
+    if(!window.firebase||!firebase.apps||!firebase.apps.length)return;
+    db=firebase.database();buildShell();setButton();
+    // Asosiy ekran avval tez ochiladi. Himoya vositalari tugmasi bosilsa darhol,
+    // aks holda eslatmalar ishlashi uchun fon yuklanishi biroz keyin boshlanadi.
+    deferredStartTimer=setTimeout(()=>startData(account),6000);
+  }
+  function clear(){if(deferredStartTimer)clearTimeout(deferredStartTimer);deferredStartTimer=null;dataStarted=false;unbind();me=null;users={};folders={};zones={};brigades={};catalog={};items={};receipts={};norms={};settings={};audits={};backups={};tab='items';stockSearch='';stockRegion='all';reportCatalogId='all';reportRegion='all';reportDistrict='all';setButton();close();}
   function init(){buildShell();const btn=byId('hetk-safety-equipment-open');if(btn)btn.addEventListener('click',open);document.addEventListener('hetk-auth-ready',e=>start(e.detail&&e.detail.user));document.addEventListener('hetk-auth-user-updated',e=>start(e.detail&&e.detail.user));document.addEventListener('hetk-auth-cleared',clear);if(window.HETKAuth&&window.HETKAuth.currentUser)start(window.HETKAuth.currentUser);}
   window.HETKSafetyEquipment={open,close,scanReminders};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
