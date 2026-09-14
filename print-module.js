@@ -174,6 +174,13 @@ function statusLabel(value){
 
 function primaryFolderId(tp){return tp.primaryFolderId || tp.folderId || pointFolderIds(tp)[0] || '';}
 function primaryFolderName(tp){const id=primaryFolderId(tp);return (currentFolders[id] && currentFolders[id].name) || '—';}
+function elementVoltageClass(tp){
+    // Elementning birinchi/asosiy papkasi nomi 6 (yoki 6 kV) bilan tugasa — 6 kV.
+    // Qolgan barcha holatda 10 kV deb olinadi.
+    const name=String(primaryFolderName(tp)||'').trim();
+    return /\b6(?:\s*k\s*v)?\s*['’ʻʼ`"]*\s*$/i.test(name) ? '6 kV' : '10 kV';
+}
+function elementVoltageHeader(tp){return elementVoltageClass(tp)+' sinf KTP/TP obyektlari';}
 
 function maintenanceRows(tp){
     const source=tp && tp.maintenanceHistory;
@@ -272,7 +279,7 @@ async function passportHtml(tp,opts){
     ].join('');
     const thumbsHtml=thumbs.length ? '<div class="hetk-passport-thumbs">'+thumbs.map(src=>'<div><img src="'+src+'" alt="Element rasmi"></div>').join('')+'</div>' : '';
     const qrHtml=qr ? '<img src="'+qr+'" alt="Navigatsiya QR" style="width:28mm;height:28mm;">' : '<span>Koordinata mavjud emas</span>';
-    let html='<section class="hetk-document-page">'+docHeader()+'<h1 class="hetk-doc-title">ELEMENT PASPORTI</h1>'+
+    let html='<section class="hetk-document-page">'+docHeader(elementVoltageHeader(tp))+'<h1 class="hetk-doc-title">ELEMENT PASPORTI</h1>'+
         '<div class="hetk-doc-element-heading"><span class="name">'+hetkEscapeHtml(tp.name || 'ELEMENT')+'</span><span class="feeder">'+hetkEscapeHtml(primaryFolderName(tp))+'</span></div>'+
         '<div class="hetk-doc-path"><i class="fas fa-folder"></i> '+hetkEscapeHtml(path)+'</div><div class="hetk-passport-grid"><div>'+
         '<div class="hetk-passport-main-image">'+(main?'<img src="'+main+'" alt="Asosiy rasm">':'<div class="hetk-passport-placeholder"><i class="fas fa-image"></i><span>Rasm tanlanmagan</span></div>')+'</div>'+thumbsHtml+
@@ -525,7 +532,7 @@ async function wordPassportStructured(opts){
         rows:[new d.TableRow({cantSplit:true,children:[
             wordLayoutCell(d,[wordParagraph(d,'HETK',{bold:true,size:44,color:'0D3C7C',alignment:d.AlignmentType.CENTER,after:0})],1800,{borders:noBorder}),
             wordLayoutCell(d,[wordParagraph(d,'HUDUDIY ELEKTR TARMOQLARI KORXONASI\nTERRITORIAL ELEKTR TARMOQLARI TIZIMI',{bold:true,size:19,color:'0D3C7C',after:0})],5400,{borders:noBorder}),
-            wordLayoutCell(d,[wordParagraph(d,'10 kV sinf KTP/TP obyektlari',{bold:true,size:18,color:'0D3C7C',alignment:d.AlignmentType.CENTER,after:0})],3240,{borders:noBorder})
+            wordLayoutCell(d,[wordParagraph(d,elementVoltageHeader(tp),{bold:true,size:18,color:'0D3C7C',alignment:d.AlignmentType.CENTER,after:0})],3240,{borders:noBorder})
         ]})]
     });
     const children=[header,
@@ -945,7 +952,7 @@ async function buildStructuredPassportXlsx(tp,opts){
     const setRow=(number,cells,height)=>rows.set(number,{cells,height});
     const addMerge=ref=>merges.push(ref);
     const cell=(ref,value,style)=>strings.cell(ref,value,style);
-    setRow(1,[cell('A1','HETK',1),cell('D1','HUDUDIY ELEKTR TARMOQLARI KORXONASI\nTERRITORIAL ELEKTR TARMOQLARI TIZIMI',2),cell('I1','10 kV sinf KTP/TP obyektlari',3)],44);
+    setRow(1,[cell('A1','HETK',1),cell('D1','HUDUDIY ELEKTR TARMOQLARI KORXONASI\nTERRITORIAL ELEKTR TARMOQLARI TIZIMI',2),cell('I1',elementVoltageHeader(tp),3)],44);
     addMerge('A1:C1');addMerge('D1:H1');addMerge('I1:L1');
     setRow(2,[cell('A2',' ',11)],6);addMerge('A2:L2');
     setRow(3,[cell('A3','ELEMENT PASPORTI',4)],28);addMerge('A3:L3');
@@ -1187,7 +1194,7 @@ function pdfFactRow(page,fonts,label,value,x,y,width,height){
 
 async function pdfPassport(pdfDoc,fonts,tp,opts){
     const size=pdfPageSize(false);const page=pdfDoc.addPage(size);const width=size[0];const margin=28;const blue=PDFLib.rgb(.035,.184,.408);
-    let y=pdfHeader(page,fonts,'ELEMENT PASPORTI','10 kV sinf KTP/TP obyektlari');y-=16;
+    let y=pdfHeader(page,fonts,'ELEMENT PASPORTI',elementVoltageHeader(tp));y-=16;
     pdfCenterText(page,tp.name||'ELEMENT',fonts.bold,21,y,blue);y-=21;
     pdfCenterText(page,primaryFolderName(tp),fonts.bold,13,y,PDFLib.rgb(.08,.47,.83));y-=18;
     const primaryId=primaryFolderId(tp);const pathLines=pdfWrap(primaryId?getFolderPath(primaryId):'—',fonts.regular,7.5,width-margin*2);
