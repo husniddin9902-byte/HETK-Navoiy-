@@ -105,6 +105,7 @@
   let delegationsTeamRef = null;
   let teamTreeExpanded = new Set(['__root__']);
   let teamTreeAutoInitialized = false;
+  let userActiveTogglePending = new Set();
   let editorSelectedFolderIds = new Set();
   let folderPickerExpanded = new Set();
   let workZoneSelectedFolderIds = new Set();
@@ -1388,6 +1389,7 @@
       if(publicCode) updates['PublicPermits/'+publicCode]=publicPermitPayload(uid,target,safety);
       await databaseRef.ref().update(updates);
       const changedTarget=Object.assign({},target,{safety,updatedAt:now});
+      if(window.HETKData&&typeof window.HETKData.syncUserField==='function')await window.HETKData.syncUserField(uid,changedTarget,'safety',safety);
       teamUsersCache[uid]=changedTarget;
       refreshTeamUI(uid);
       const syncedTarget=await safeSyncEmployeeTelegram(uid,changedTarget,{showError:true});
@@ -3296,6 +3298,7 @@
     const roots=accountFolderRoots(u);
     const canEdit=canManageTarget(u,'permissions') || canManageTarget(u,'edit');
     const canDeactivate=canManageTarget(u,'deactivate');
+    const activeTogglePending=userActiveTogglePending.has(uid);
     const canSafetyEdit=canEditSafetyPermit(u);
     const canDiscipline=canManageDiscipline(u);
     const chips=u.rootAccess ? '<span class="hetk-scope-chip root"><i class="fas fa-globe"></i> Barcha hududlar</span>' : (roots.length ? roots.map(id => `<span class="hetk-scope-chip"><i class="fas fa-folder"></i>${escapeHtml(folderPath(id) || (teamFoldersCache[id] && teamFoldersCache[id].name) || 'Papka')}</span>`).join('') : '<span class="hetk-scope-chip empty">Papka biriktirilmagan</span>');
@@ -3317,7 +3320,7 @@
       </div>
       ${(canEdit || canDeactivate) ? `<div class="hetk-team-detail-actions">
         ${canEdit ? '<button type="button" id="hetk-edit-team-user" class="primary"><i class="fas fa-user-shield"></i> Lavozim / papka ruxsatlari</button>' : ''}
-        ${canDeactivate ? `<button type="button" id="hetk-toggle-team-user" class="${u.active===false?'restore':'danger'}"><i class="fas ${u.active===false?'fa-user-check':'fa-user-slash'}"></i> ${u.active===false?'Qayta faollashtirish':'Bloklash'}</button>` : ''}
+        ${canDeactivate ? `<button type="button" id="hetk-toggle-team-user" class="${u.active===false?'restore':'danger'}"${activeTogglePending?' disabled':''}><i class="fas ${activeTogglePending?'fa-circle-notch fa-spin':u.active===false?'fa-user-check':'fa-user-slash'}"></i> ${activeTogglePending?'Saqlanmoqda...':u.active===false?'Qayta faollashtirish':'Bloklash'}</button>` : ''}
         ${(canDeactivate && u.active===false) ? '<button type="button" id="hetk-delete-team-user" class="permanent"><i class="fas fa-trash-alt"></i> Butunlay o‘chirish</button>' : ''}
       </div>` : ((!canSafetyEdit && !canDiscipline) ? '<div class="hetk-team-readonly"><i class="fas fa-lock"></i> Bu foydalanuvchining lavozim/papka ma’lumotlarini boshqarish huquqi yo‘q.</div>' : '')}`;
     const edit=byId('hetk-edit-team-user'); if(edit) edit.addEventListener('click', () => openEditUserEditor(uid));
@@ -3773,11 +3776,15 @@
         affected[uid]=Object.assign({uid},user,{folders:userFolders,workZoneName:name,region:name,updatedAt:now,updatedBy:currentAccount.uid});
       });
       await databaseRef.ref().update(updates);
-      if(window.HETKData){
-        for(const uid of Object.keys(affected))await window.HETKData.syncUserAccess(uid,affected[uid],teamUsersCache[uid]||null);
-      }
-      Object.keys(affected).forEach(uid=>{teamUsersCache[uid]=affected[uid];});
+      const previousAffected={};
+      Object.keys(affected).forEach(uid=>{
+        previousAffected[uid]=teamUsersCache[uid]||null;
+        teamUsersCache[uid]=affected[uid];
+      });
       refreshTeamUI(selectedTeamUid);
+      if(window.HETKData){
+        for(const uid of Object.keys(affected))await window.HETKData.syncUserAccess(uid,affected[uid],previousAffected[uid]);
+      }
       for(const uid of Object.keys(affected)) await safeSyncEmployeeTelegram(uid,affected[uid],{showError:false});
       workZoneManagerMessage('success','U/J ma’lumotlari, papkalari va Masteri saqlandi.');
       setTimeout(()=>closeWorkZoneManager(),500);
@@ -3975,12 +3982,14 @@
           }
           accountCommitted=true;
           teamUsersCache[uid]=account;
+          selectedTeamUid=uid;
+          refreshTeamUI(uid);
           Object.assign(account,await safeSyncEmployeeTelegram(uid,account,{replaceDefaultPhoto:true,showError:true}));
+          teamUsersCache[uid]=account;
           refreshTeamUI(uid);
           for(const oldUid of Object.keys(replacementAffected)) await safeSyncEmployeeTelegram(oldUid,replacementAffected[oldUid],{showError:false});
           try{ await cred.user.updateProfile({displayName:fullName}); }catch(_e){}
           try{await sec.signOut();}catch(_e){}
-          selectedTeamUid=uid;
           closeUserEditor();
           try{ openNewAccountSms({fullName,phone,login,password:pass1}); }
           catch(smsError){ console.warn('SMS ilovasi ochilmadi:',smsError); }
@@ -4064,8 +4073,9 @@
         Object.keys(patch).forEach(key => { updates['users/'+editingTeamUid+'/'+key]=patch[key]; });
         await databaseRef.ref().update(updates);
         const updatedTarget=Object.assign({},target,patch,{uid:editingTeamUid});
-        if(window.HETKData)await window.HETKData.syncUserAccess(editingTeamUid,updatedTarget,target);
         teamUsersCache[editingTeamUid]=updatedTarget;
+        refreshTeamUI(editingTeamUid);
+        if(window.HETKData)await window.HETKData.syncUserAccess(editingTeamUid,updatedTarget,target);
         const genderChanged=normalizeGender(target.gender)!==normalizeGender(updatedTarget.gender);
         const syncedTarget=await safeSyncEmployeeTelegram(editingTeamUid,updatedTarget,{replaceDefaultPhoto:genderChanged && updatedTarget.telegramPhotoKind!=='custom',showError:true});
         teamUsersCache[editingTeamUid]=Object.assign({},updatedTarget,syncedTarget);
@@ -4081,15 +4091,22 @@
 
   async function toggleUserActive(uid){
     const raw=teamUsersCache[uid];
-    if(!raw) return;
+    if(!raw || userActiveTogglePending.has(uid)) return;
     const u=Object.assign({uid},raw);
     if(!canManageTarget(u,'deactivate')) return;
     const next=u.active===false;
     const text=next ? 'Ushbu foydalanuvchini qayta faollashtirasizmi?' : 'Ushbu foydalanuvchini bloklaysizmi? Login saqlanadi, lekin tizimga kira olmaydi. Keyin xohlasangiz qayta faollashtirish yoki butunlay o‘chirish mumkin.';
     if(!confirm(text)) return;
+    const changedAt=Date.now();
+    const changed=Object.assign({},u,{active:next,updatedAt:changedAt,updatedBy:currentAccount.uid});
+    // Tugma tasdiqlangach statusni server, indeks va Telegramni kutmasdan
+    // shu zahoti almashtiramiz. Asosiy Firebase yozuvi bajarilmasa ortga qaytadi.
+    userActiveTogglePending.add(uid);
+    teamUsersCache[uid]=changed;
+    refreshTeamUI(uid);
     const updates={};
     updates['users/'+uid+'/active']=next;
-    updates['users/'+uid+'/updatedAt']=Date.now();
+    updates['users/'+uid+'/updatedAt']=changedAt;
     updates['users/'+uid+'/updatedBy']=currentAccount.uid;
     if(u.login) updates['loginIndex/'+loginIndexKey(u.login)+'/active']=next;
     if(!next && u.role==='master' && u.workZoneId){
@@ -4100,16 +4117,23 @@
         updates['WorkZones/'+u.workZoneId+'/updatedBy']=currentAccount.uid;
       }
     }
-    await databaseRef.ref().update(updates);
-    const changed=Object.assign({},u,{active:next,updatedAt:updates['users/'+uid+'/updatedAt']});
-    teamUsersCache[uid]=changed;
-    // Firebase yozuvi tugashi bilan ro‘yxat va tanlangan karta darhol yangilanadi;
-    // hududiy indeks va Telegram javobini kutib foydalanuvchini chalg‘itmaydi.
-    refreshTeamUI(uid);
-    if(window.HETKData)await window.HETKData.syncUserAccess(uid,changed,u);
-    const synced=await safeSyncEmployeeTelegram(uid,changed,{showError:true});
-    teamUsersCache[uid]=Object.assign({},changed,synced);
-    refreshTeamUI(uid);
+    let databaseCommitted=false;
+    try{
+      await databaseRef.ref().update(updates);
+      databaseCommitted=true;
+      if(window.HETKData)await window.HETKData.syncUserAccess(uid,changed,u);
+      const synced=await safeSyncEmployeeTelegram(uid,changed,{showError:true});
+      teamUsersCache[uid]=Object.assign({},changed,synced);
+    }catch(error){
+      if(!databaseCommitted) teamUsersCache[uid]=u;
+      else teamUsersCache[uid]=changed;
+      alert(databaseCommitted
+        ? 'Hodim holati bazada o‘zgardi, lekin hududiy indeksni yangilashda xato bo‘ldi: '+friendlyAuthError(error)
+        : 'Hodim holatini o‘zgartirib bo‘lmadi: '+friendlyAuthError(error));
+    }finally{
+      userActiveTogglePending.delete(uid);
+      refreshTeamUI(uid);
+    }
   }
 
   async function deleteUserPermanently(uid){
@@ -4142,16 +4166,16 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
         updates['WorkZones/'+zoneId+'/updatedBy']=currentAccount.uid;
       }
     });
-    await deleteEmployeePost(u.telegramEmployeeMessageId);
     await databaseRef.ref().update(updates);
-    if(window.HETKData)await window.HETKData.syncUserAccess(uid,null,u);
     delete teamUsersCache[uid];
-    refreshTeamUI();
     if(selectedTeamUid===uid){
       selectedTeamUid=null;
       const box=byId('hetk-team-detail');
       if(box) box.innerHTML='<div class="hetk-team-empty"><i class="fas fa-user-times"></i><h4>Foydalanuvchi o‘chirildi</h4><p>Ro‘yxatdan boshqa hodimni tanlang.</p></div>';
     }
+    refreshTeamUI();
+    if(window.HETKData)await window.HETKData.syncUserAccess(uid,null,u);
+    await deleteEmployeePost(u.telegramEmployeeMessageId);
     alert('Foydalanuvchi tizim ro‘yxatidan o‘chirildi.');
   }
 
