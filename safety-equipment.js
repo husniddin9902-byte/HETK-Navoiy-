@@ -5,11 +5,11 @@
   const NOTICE_LIFETIME=180*DAY;
   const REGIONAL_TB_ROLES=['regional_tb_chief','regional_tb_operations_engineer','regional_tb_engineer','regional_fire_safety_engineer'];
   const VIEW_ROLES=new Set(['super_admin','director','republic_tb_engineer','chief_engineer',...REGIONAL_TB_ROLES,'tb_engineer','chief_dispatcher','dispatcher','master']);
-  const ITEM_MANAGER_ROLES=new Set(['super_admin','republic_tb_engineer','chief_engineer',...REGIONAL_TB_ROLES,'tb_engineer']);
-  const TEST_MANAGER_ROLES=new Set(['super_admin','republic_tb_engineer','chief_engineer',...REGIONAL_TB_ROLES,'tb_engineer']);
-  const CATALOG_MANAGER_ROLES=new Set(['super_admin','republic_tb_engineer','regional_tb_chief']);
+  const ITEM_MANAGER_ROLES=new Set(['super_admin','director','republic_tb_engineer','chief_engineer',...REGIONAL_TB_ROLES,'tb_engineer']);
+  const TEST_MANAGER_ROLES=new Set(['super_admin','director','republic_tb_engineer','chief_engineer',...REGIONAL_TB_ROLES,'tb_engineer']);
+  const CATALOG_MANAGER_ROLES=new Set(['super_admin','director','chief_engineer','republic_tb_engineer','regional_tb_chief']);
   const STOCK_VIEW_ROLES=new Set(['super_admin','director','republic_tb_engineer','chief_engineer',...REGIONAL_TB_ROLES,'tb_engineer']);
-  const STOCK_MANAGER_ROLES=new Set(['super_admin','republic_tb_engineer','chief_engineer','regional_tb_chief']);
+  const STOCK_MANAGER_ROLES=new Set(['super_admin','director','republic_tb_engineer','chief_engineer','regional_tb_chief']);
   const CONSTRUCTION_MANAGER_ROLES=new Set(['director','chief_engineer']);
   const TB_ROLES=new Set(['republic_tb_engineer',...REGIONAL_TB_ROLES,'tb_engineer']);
   const FIELD_LABELS={
@@ -43,7 +43,7 @@
   function canManageCatalog(){return !!(me&&(me.rootAccess||CATALOG_MANAGER_ROLES.has(role())));}
   function canViewStock(){return !!(me&&(me.rootAccess||STOCK_VIEW_ROLES.has(role())));}
   function canManageStock(){return !!(me&&(me.rootAccess||STOCK_MANAGER_ROLES.has(role())));}
-  function canManageConstructionBrigades(){return !!(me&&CONSTRUCTION_MANAGER_ROLES.has(role()));}
+  function canManageConstructionBrigades(){return !!(me&&(me.rootAccess||role()==='super_admin'||CONSTRUCTION_MANAGER_ROLES.has(role())));}
   function isSuperAdmin(){return !!(me&&role()==='super_admin');}
   function isMaster(){return role()==='master';}
   function isDispatcher(){return role()==='chief_dispatcher'||role()==='dispatcher';}
@@ -64,19 +64,19 @@
     const out=[];Object.keys(folders).forEach(id=>{if(folders[id]&&folders[id].parentId===root){out.push(id);out.push(...folderChildren(id));}});return out;
   }
   function accountFolderSet(user){
-    if(!user)return new Set();if(user.rootAccess||user.role==='super_admin'||user.role==='republic_tb_engineer'||user.role==='chief_dispatcher'||user.role==='dispatcher')return new Set(Object.keys(folders));
+    if(!user)return new Set();if(user.rootAccess||['super_admin','director','chief_engineer','republic_tb_engineer','chief_dispatcher','dispatcher'].includes(user.role))return new Set(Object.keys(folders));
     const set=new Set();objectTrueKeys(user.folders).forEach(id=>{if(!folders[id])return;set.add(id);folderChildren(id).forEach(x=>set.add(x));});return set;
   }
   function zoneRoots(zone){return objectTrueKeys(zone&&zone.folders);}
   function accountCoversZone(user,zoneId){
     if(!user)return false;const zone=zones[zoneId]||{};
-    if(user.rootAccess||user.role==='super_admin'||user.role==='republic_tb_engineer')return true;
+    if(user.rootAccess||['super_admin','director','chief_engineer','republic_tb_engineer'].includes(user.role))return true;
     if(user.workZoneId&&user.workZoneId===zoneId)return true;
     const roots=zoneRoots(zone),allowed=accountFolderSet(user);return !!(roots.length&&roots.every(id=>allowed.has(id)));
   }
   function accountCoversFolder(user,folderId){
     if(!user||!folderId)return false;
-    if(user.rootAccess||user.role==='super_admin'||user.role==='republic_tb_engineer'||user.role==='chief_dispatcher'||user.role==='dispatcher')return true;
+    if(user.rootAccess||['super_admin','director','chief_engineer','republic_tb_engineer','chief_dispatcher','dispatcher'].includes(user.role))return true;
     const allowed=accountFolderSet(user);if(allowed.has(folderId))return true;
     let cur=folders[folderId]&&folders[folderId].parentId,guard=0;
     while(cur&&cur!=='root'&&folders[cur]&&guard<100){if(allowed.has(cur))return true;cur=folders[cur].parentId;guard++;}
@@ -124,11 +124,11 @@
   }
   function accountCoversItem(user,item){const type=itemUnitType(item),id=itemUnitId(item);if(type==='dispatcher')return accountCoversFolder(user,id);if(type==='construction'){const brigade=brigades[id]||{};return !!(user&&(user.rootAccess||user.role==='super_admin'||user.role==='republic_tb_engineer'||accountCoversFolder(user,brigade.folderId)));}return accountCoversZone(user,id);}
   function normalizeRegionName(value){const text=String(value||'').trim();return text||'Viloyat aniqlanmagan';}
-  function accountCoversRegionName(user,regionName){if(!user)return false;if(user.rootAccess||user.role==='super_admin'||user.role==='republic_tb_engineer')return true;const region=normalizeRegionName(regionName).replace(/\s+viloyati$/i,'').toLocaleLowerCase('uz'),own=String(user.region||'').toLocaleLowerCase('uz');if(region&&own.includes(region))return true;const allowed=accountFolderSet(user);return Array.from(allowed).some(id=>folderChain(id).some(row=>String(row.name||'').toLocaleLowerCase('uz').includes(region)));}
+  function accountCoversRegionName(user,regionName){if(!user)return false;if(user.rootAccess||['super_admin','director','chief_engineer','republic_tb_engineer'].includes(user.role))return true;const region=normalizeRegionName(regionName).replace(/\s+viloyati$/i,'').toLocaleLowerCase('uz'),own=String(user.region||'').toLocaleLowerCase('uz');if(region&&own.includes(region))return true;const allowed=accountFolderSet(user);return Array.from(allowed).some(id=>folderChain(id).some(row=>String(row.name||'').toLocaleLowerCase('uz').includes(region)));}
   function accessibleRegionNames(){
     const found=new Set();unitOptionRows().forEach(row=>{if(row.region&&row.region!=='Viloyat aniqlanmagan')found.add(row.region);});
     coveredItems().forEach(item=>{const name=itemGeography(item).region;if(name&&name!=='Viloyat aniqlanmagan')found.add(name);});
-    Object.keys(receipts).forEach(id=>{const name=normalizeRegionName((receipts[id]||{}).regionName);if(name!=='Viloyat aniqlanmagan'&&(me&&(me.rootAccess||role()==='super_admin'||role()==='republic_tb_engineer')||String(me&&me.region||'').includes(name.replace(/\s+viloyati$/i,''))))found.add(name);});
+    Object.keys(receipts).forEach(id=>{const name=normalizeRegionName((receipts[id]||{}).regionName);if(name!=='Viloyat aniqlanmagan'&&(me&&(me.rootAccess||['super_admin','director','chief_engineer','republic_tb_engineer'].includes(role()))||String(me&&me.region||'').includes(name.replace(/\s+viloyati$/i,''))))found.add(name);});
     if(me&&isRegionName(me.region))found.add(normalizeRegionName(me.region));
     if(!found.size&&/navoiy/i.test(document.title||''))found.add('Navoiy viloyati');
     return Array.from(found).sort((a,b)=>a.localeCompare(b,'uz'));
