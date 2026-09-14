@@ -631,3 +631,4 @@
   window.HETKSafetyEquipment={open,close,scanReminders};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
+ 
