@@ -7,6 +7,12 @@
   let tpCache={};
   let userCache={};
   let indexVersionCache=null;
+  let indexVersionRequest=null;
+  let tpCacheReady=false,userCacheReady=false;
+  let tpCacheAt=0,userCacheAt=0;
+  let tpRequest=null,userRequest=null;
+  let foldersCache=null,foldersCacheAt=0,foldersRequest=null;
+  const READ_CACHE_MS=15000;
 
   function db(){return firebase.database();}
   function me(){return window.HETKAuth&&window.HETKAuth.currentUser;}
@@ -45,8 +51,9 @@
   }
   async function indexVersion(){
     if(indexVersionCache!==null)return indexVersionCache;
-    try{indexVersionCache=Number((await db().ref('AccessIndexMeta/version').once('value')).val()||0);}catch(_e){indexVersionCache=0;}
-    return indexVersionCache;
+    if(indexVersionRequest)return indexVersionRequest;
+    indexVersionRequest=db().ref('AccessIndexMeta/version').once('value').then(function(snap){indexVersionCache=Number(snap.val()||0);return indexVersionCache;}).catch(function(){indexVersionCache=0;return 0;}).finally(function(){indexVersionRequest=null;});
+    return indexVersionRequest;
   }
   function userFolderRoots(user,zones){
     const ids=keysTrue(user&&user.folders);
@@ -69,23 +76,35 @@
     });
     await Promise.all(jobs);
   }
-  async function readFolders(){return (await db().ref('Folders').once('value')).val()||{};}
+  async function readFolders(){
+    if(foldersCache&&Date.now()-foldersCacheAt<READ_CACHE_MS)return foldersCache;
+    if(foldersRequest)return foldersRequest;
+    foldersRequest=db().ref('Folders').once('value').then(function(snap){foldersCache=snap.val()||{};foldersCacheAt=Date.now();return foldersCache;}).finally(function(){foldersRequest=null;});
+    return foldersRequest;
+  }
   async function readTPs(force){
     const account=me();if(!account)return snapshot({});
-    if(!force&&Object.keys(tpCache).length)return snapshot(tpCache);
-    if(globalTPAccount(account)){tpCache=(await db().ref('TPs').once('value')).val()||{};return snapshot(tpCache);}
-    const folders=await readFolders(),allowed=accessibleFolderIds(folders),result={};
-    const optimized=(await indexVersion())>=INDEX_VERSION;
-    if(optimized&&(account.role==='master'||account.role==='electrician')&&account.workZoneId){
-      tpCache=(await db().ref('TPsByWorkZone/'+account.workZoneId).once('value')).val()||{};return snapshot(tpCache);
-    }
-    const paths=optimized?topRoots(allowed,folders):allowed;
-    await mapLimit(paths,12,async function(folderId){
-      const path=(optimized?'TPsByAncestor/':'TPsByFolder/')+folderId;
-      const rows=(await db().ref(path).once('value')).val()||{};
-      Object.keys(rows).forEach(function(id){if(!result[id])result[id]=rows[id];});
-    });
-    tpCache=result;return snapshot(result);
+    if(tpRequest)return tpRequest;
+    if(tpCacheReady&&(!force||Date.now()-tpCacheAt<READ_CACHE_MS))return snapshot(tpCache);
+    tpRequest=(async function(){
+      if(globalTPAccount(account)){tpCache=(await db().ref('TPs').once('value')).val()||{};}
+      else{
+        const folders=await readFolders(),allowed=accessibleFolderIds(folders),result={};
+        const optimized=(await indexVersion())>=INDEX_VERSION;
+        if(optimized&&(account.role==='master'||account.role==='electrician')&&account.workZoneId)tpCache=(await db().ref('TPsByWorkZone/'+account.workZoneId).once('value')).val()||{};
+        else{
+          const paths=optimized?topRoots(allowed,folders):allowed;
+          await mapLimit(paths,12,async function(folderId){
+            const path=(optimized?'TPsByAncestor/':'TPsByFolder/')+folderId;
+            const rows=(await db().ref(path).once('value')).val()||{};
+            Object.keys(rows).forEach(function(id){if(!result[id])result[id]=rows[id];});
+          });
+          tpCache=result;
+        }
+      }
+      tpCacheReady=true;tpCacheAt=Date.now();return snapshot(tpCache);
+    })().finally(function(){tpRequest=null;});
+    return tpRequest;
   }
   async function readTP(id){
     if(tpCache[id])return snapshot(tpCache[id]);
@@ -93,18 +112,27 @@
   }
   async function readUsers(force){
     const account=me();if(!account)return snapshot({});
-    if(!force&&Object.keys(userCache).length)return snapshot(userCache);
-    if(globalAccount(account)){userCache=(await db().ref('users').once('value')).val()||{};return snapshot(userCache);}
-    const folders=await readFolders(),allowed=accessibleFolderIds(folders),result={},optimized=(await indexVersion())>=INDEX_VERSION;
-    const paths=optimized?topRoots(allowed,folders):allowed;
-    await mapLimit(paths,12,async function(folderId){
-      const path=(optimized?'UsersByAncestor/':'UsersByFolder/')+folderId;
-      const rows=(await db().ref(path).once('value')).val()||{};
-      Object.keys(rows).forEach(function(uid){if(!result[uid])result[uid]=rows[uid];});
-    });
-    const own=(await db().ref('users/'+account.uid).once('value')).val();if(own)result[account.uid]=own;
-    if(account.actingForUid){const absent=(await db().ref('users/'+account.actingForUid).once('value')).val();if(absent)result[account.actingForUid]=absent;}
-    userCache=result;return snapshot(result);
+    if(userRequest)return userRequest;
+    if(userCacheReady&&(!force||Date.now()-userCacheAt<READ_CACHE_MS))return snapshot(userCache);
+    userRequest=(async function(){
+      if(globalAccount(account))userCache=(await db().ref('users').once('value')).val()||{};
+      else{
+        const folders=await readFolders(),allowed=accessibleFolderIds(folders),result={},optimized=(await indexVersion())>=INDEX_VERSION;
+        const paths=optimized?topRoots(allowed,folders):allowed;
+        await mapLimit(paths,12,async function(folderId){
+          const path=(optimized?'UsersByAncestor/':'UsersByFolder/')+folderId;
+          const rows=(await db().ref(path).once('value')).val()||{};
+          Object.keys(rows).forEach(function(uid){if(!result[uid])result[uid]=rows[uid];});
+        });
+        const extraPaths=['users/'+account.uid];if(account.actingForUid)extraPaths.push('users/'+account.actingForUid);
+        const extras=await Promise.all(extraPaths.map(function(path){return db().ref(path).once('value');}));
+        const own=extras[0]&&extras[0].val();if(own)result[account.uid]=own;
+        if(account.actingForUid){const absent=extras[1]&&extras[1].val();if(absent)result[account.actingForUid]=absent;}
+        userCache=result;
+      }
+      userCacheReady=true;userCacheAt=Date.now();return snapshot(userCache);
+    })().finally(function(){userRequest=null;});
+    return userRequest;
   }
   async function saveTP(id,value,before){
     const folders=await readFolders(),updates={};updates['TPs/'+id]=value;
@@ -116,13 +144,13 @@
     const oldZones=tpWorkZoneIds(before),newZones=tpWorkZoneIds(value);
     oldZones.forEach(function(zoneId){if(!newZones.includes(zoneId))updates['TPsByWorkZone/'+zoneId+'/'+id]=null;});
     newZones.forEach(function(zoneId){updates['TPsByWorkZone/'+zoneId+'/'+id]=value;});
-    await db().ref().update(updates);tpCache[id]=value;document.dispatchEvent(new CustomEvent('hetk-scoped-data-changed',{detail:{type:'tps',id:id}}));
+    await db().ref().update(updates);tpCache[id]=value;tpCacheReady=true;tpCacheAt=Date.now();document.dispatchEvent(new CustomEvent('hetk-scoped-data-changed',{detail:{type:'tps',id:id}}));
   }
   async function removeTP(id,before,additionalUpdates){
     const folders=await readFolders(),updates=Object.assign({},additionalUpdates||{});updates['TPs/'+id]=null;tpFolderIds(before).forEach(function(folderId){updates['TPsByFolder/'+folderId+'/'+id]=null;});
     ancestorFolderIds(before,folders).forEach(function(folderId){updates['TPsByAncestor/'+folderId+'/'+id]=null;});
     tpWorkZoneIds(before).forEach(function(zoneId){updates['TPsByWorkZone/'+zoneId+'/'+id]=null;});
-    await db().ref().update(updates);delete tpCache[id];document.dispatchEvent(new CustomEvent('hetk-scoped-data-changed',{detail:{type:'tps',id:id}}));
+    await db().ref().update(updates);delete tpCache[id];tpCacheReady=true;tpCacheAt=Date.now();document.dispatchEvent(new CustomEvent('hetk-scoped-data-changed',{detail:{type:'tps',id:id}}));
   }
   function descendants(rootId,folders){
     const found=[];const queue=[rootId],seen=new Set();
@@ -148,7 +176,7 @@
   }
   async function syncUserAccess(uid,user,oldUser){
     const values=await Promise.all([readFolders(),db().ref('WorkZones').once('value')]),folders=values[0],zones=values[1].val()||{};
-    const updates=userIndexUpdates(uid,user,oldUser||{},folders,zones);await db().ref().update(updates);userCache[uid]=user;
+    const updates=userIndexUpdates(uid,user,oldUser||{},folders,zones);await db().ref().update(updates);userCache[uid]=user;userCacheReady=true;userCacheAt=Date.now();
     document.dispatchEvent(new CustomEvent('hetk-scoped-data-changed',{detail:{type:'users',id:uid}}));
   }
   async function syncUserField(uid,user,field,value){
@@ -161,7 +189,7 @@
     roots.forEach(function(folderId){ancestors(folderId,folders).forEach(function(parentId){indexedAncestors.add(parentId);});});
     indexedAncestors.forEach(function(folderId){updates['UsersByAncestor/'+folderId+'/'+uid+'/'+field]=value==null?null:value;});
     if(Object.keys(updates).length)await db().ref().update(updates);
-    if(userCache[uid])userCache[uid]=Object.assign({},userCache[uid],{[field]:value});
+    if(userCache[uid])userCache[uid]=Object.assign({},userCache[uid],{[field]:value});userCacheAt=Date.now();
     document.dispatchEvent(new CustomEvent('hetk-scoped-data-changed',{detail:{type:'users',id:uid,field:field}}));
   }
   async function syncDelegation(row,active){
@@ -191,9 +219,9 @@
     await chunkedUpdate(updates,onProgress);
     for(const id of Object.keys(delegations)){const row=Object.assign({id:id},delegations[id]||{});if(row.status==='active')await syncDelegation(row,true);}
     await db().ref('AccessIndexMeta').set({version:INDEX_VERSION,completedAt:Date.now(),completedBy:account.uid,tpCount:Object.keys(tps).length,userCount:Object.keys(users).length});
-    indexVersionCache=INDEX_VERSION;tpCache={};userCache={};return {tpCount:Object.keys(tps).length,userCount:Object.keys(users).length};
+    indexVersionCache=INDEX_VERSION;tpCache={};userCache={};tpCacheReady=false;userCacheReady=false;tpCacheAt=0;userCacheAt=0;return {tpCount:Object.keys(tps).length,userCount:Object.keys(users).length};
   }
-  function clear(){tpCache={};userCache={};indexVersionCache=null;}
+  function clear(){tpCache={};userCache={};indexVersionCache=null;indexVersionRequest=null;tpCacheReady=false;userCacheReady=false;tpCacheAt=0;userCacheAt=0;tpRequest=null;userRequest=null;foldersCache=null;foldersCacheAt=0;foldersRequest=null;}
   document.addEventListener('hetk-auth-cleared',clear);
   document.addEventListener('hetk-auth-user-updated',clear);
   window.HETKData={INDEX_VERSION,readTPs,readTP,readUsers,saveTP,removeTP,syncUserAccess,syncUserField,syncDelegation,migrate,clear,isGlobal:function(){const account=me();return !!(account&&(account.rootAccess||account.role==='super_admin'));}};
