@@ -759,31 +759,70 @@ const searchState = {
     results: []
 };
 
-// Brauzer parol menejeri saqlangan loginni qidiruv maydoniga yozmasligi uchun
-// maydon foydalanuvchi tegmaguncha readonly turadi. Birinchi bosish yoki klaviatura
-// harakatida tozalanib, oddiy qidiruv maydoniga aylanadi.
-if (elementSearchInput) {
-    elementSearchInput.setAttribute('autocomplete', 'off');
-    elementSearchInput.setAttribute('data-form-type', 'other');
-    elementSearchInput.readOnly = true;
-    let searchActivatedByUser = false;
-    const activateElementSearch = () => {
-        if (searchActivatedByUser) return;
-        searchActivatedByUser = true;
-        elementSearchInput.value = '';
-        searchState.text = '';
-        elementSearchInput.readOnly = false;
+// Chrome va parol menejerlari saqlangan loginni qidiruv maydonlariga yozib
+// yubormasligi uchun umumiy himoya. Bu funksiya profil, naryad, himoya vositalari
+// va keyinchalik JavaScript orqali yaratiladigan qidiruv maydonlariga ham ishlaydi.
+(function installSearchAutofillProtection() {
+    const isSearchField = input => {
+        if (!input || input.tagName !== 'INPUT') return false;
+        const type = String(input.type || '').toLowerCase();
+        const id = String(input.id || '').toLowerCase();
+        const placeholder = String(input.placeholder || '').toLowerCase();
+        return type === 'search' || id.includes('search') ||
+            placeholder.includes('qidir') || placeholder.includes('izlash');
     };
-    elementSearchInput.addEventListener('pointerdown', activateElementSearch, { once: true });
-    elementSearchInput.addEventListener('touchstart', activateElementSearch, { once: true, passive: true });
-    elementSearchInput.addEventListener('keydown', activateElementSearch, { once: true });
-    [100, 500, 1500].forEach(delay => setTimeout(() => {
-        if (!searchActivatedByUser && elementSearchInput.value) {
-            elementSearchInput.value = '';
-            searchState.text = '';
-        }
-    }, delay));
-}
+
+    const protectSearch = input => {
+        if (!isSearchField(input) || input.dataset.hetkSearchProtected === '1') return;
+        input.dataset.hetkSearchProtected = '1';
+        input.setAttribute('autocomplete', 'off');
+        input.setAttribute('autocorrect', 'off');
+        input.setAttribute('autocapitalize', 'none');
+        input.setAttribute('spellcheck', 'false');
+        input.setAttribute('data-lpignore', 'true');
+        input.setAttribute('data-1p-ignore', 'true');
+        input.setAttribute('data-bwignore', 'true');
+        input.setAttribute('data-form-type', 'other');
+        input.setAttribute('name', 'hetk-search-' + (input.id || 'query'));
+
+        // Bo‘sh qidiruv foydalanuvchi tegmaguncha readonly turadi. Shu usul
+        // Chrome'ning autocomplete="off"ni e'tiborsiz qoldirishini ham to‘sadi.
+        // Dastur qidiruv qiymatini qayta chizgan bo‘lsa, u qiymat o‘chirilmaydi.
+        const hasProgramValue = input.hasAttribute('value') && input.getAttribute('value') !== '';
+        if (hasProgramValue || input.disabled) return;
+        input.readOnly = true;
+        let activated = false;
+        const activate = () => {
+            if (activated) return;
+            activated = true;
+            input.readOnly = false;
+            input.value = '';
+            if (input === elementSearchInput) searchState.text = '';
+        };
+        input.addEventListener('pointerdown', activate, { once: true });
+        input.addEventListener('touchstart', activate, { once: true, passive: true });
+        input.addEventListener('keydown', activate, { once: true });
+        [100, 500, 1500].forEach(delay => setTimeout(() => {
+            if (!activated && input.isConnected && input.value) {
+                input.value = '';
+                if (input === elementSearchInput) searchState.text = '';
+            }
+        }, delay));
+    };
+
+    const protectInside = root => {
+        if (!root) return;
+        if (root.nodeType === 1 && root.tagName === 'INPUT') protectSearch(root);
+        if (root.querySelectorAll) root.querySelectorAll('input').forEach(protectSearch);
+    };
+
+    protectInside(document);
+    const observer = new MutationObserver(records => {
+        records.forEach(record => record.addedNodes.forEach(protectInside));
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    window.HETKProtectSearchInputs = protectInside;
+})();
 
 const filterState = {
     balance: "none",
