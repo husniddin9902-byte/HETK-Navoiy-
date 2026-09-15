@@ -1,0 +1,56 @@
+.hetk-training-shell{border-radius:14px;background:#edf4f8;color:#0b3550}
+.hetk-training-head{background:#002f49;min-height:78px}
+.hetk-training-head h2{color:#fff}
+.hetk-training-head p{color:#cde0eb;opacity:1}
+.hetk-training-head-icon{background:#087ff5;border-radius:10px}
+.hetk-training-head-action,.hetk-training-close{background:#087ff5;border-radius:9px}
+.hetk-training-person{display:flex;align-items:center;gap:9px;padding:5px 10px;border-radius:10px;background:#064d71;min-width:0}
+.hetk-training-person img{width:38px;height:38px;border-radius:50%;object-fit:cover;background:#dceeff}
+.hetk-training-person span{display:flex;flex-direction:column;min-width:0}
+.hetk-training-person b{font-size:12px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px}
+.hetk-training-person small{font-size:10px;color:#cde0eb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px}
+.hetk-training-side{background:#002f49}
+.hetk-training-nav{background:#0c4663;color:#fff;border-radius:9px}
+.hetk-training-nav.is-active{background:#087ff5;color:#fff;box-shadow:none}
+.hetk-training-welcome{border-radius:14px;background:#002f49}
+.hetk-training-welcome h3{color:#fff}
+.hetk-training-welcome p{color:#d5e7f0;opacity:1}
+.hetk-training-welcome div>span{color:#9fd2f1;opacity:1}
+.hetk-training-welcome>i{color:#fff;opacity:.22}
+.hetk-training-welcome button{margin-top:15px;border:0;border-radius:9px;background:#ff8a00;color:#fff;min-height:44px;padding:0 16px;font-weight:700;cursor:pointer}
+.hetk-training-actions button{border:0;border-radius:10px;background:#064d71;color:#fff}
+.hetk-training-actions button:nth-child(3){background:#159957}
+.hetk-training-actions button:last-child{background:#ff8a00}
+.hetk-training-actions i{background:rgba(255,255,255,.16);color:#fff;border-radius:8px}
+.hetk-training-actions span{color:#d9e8f0}
+.hetk-training-book-cover{background:#064d71}
+.hetk-training-books>article:nth-child(2) .hetk-training-book-cover{background:#ff8a00}
+.hetk-training-books>article:nth-child(3) .hetk-training-book-cover{background:#159957}
+.hetk-training-book-info button,.hetk-training-test-side button.primary,.hetk-training-editor button.primary,.hetk-training-exam button.primary{background:#087ff5;border-color:#087ff5;color:#fff;border-radius:9px;min-height:42px}
+.hetk-training-test-side button,.hetk-training-owner-actions button,.hetk-training-secondary,.hetk-training-editor>footer button{background:#e5eff5;color:#0b3550;border:1px solid #cbdce8;border-radius:9px;min-height:42px;font-weight:700;cursor:pointer}
+.hetk-training-owner-actions button:first-child{background:#087ff5;border-color:#087ff5;color:#fff}
+.hetk-training-question-head button{background:#087ff5;color:#fff;border-radius:9px;min-height:42px}
+.hetk-training-result-hero{background:#002f49;border-radius:14px}
+.hetk-training-result-ring{border-color:#087ff5}
+.hetk-training-exam-progress{height:8px;background:#d5e2ea;border-radius:99px;overflow:hidden;margin:0 2px 12px}
+.hetk-training-exam-progress span{display:block;height:100%;background:#ff8a00;transition:width .2s}
+.hetk-training-exam-one>article{min-height:300px;display:flex;flex-direction:column;justify-content:center}
+.hetk-training-exam-one label{min-height:52px}
+.hetk-training-exam button:disabled{opacity:.45;cursor:not-allowed}
+.hetk-training-audience{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+.hetk-training-audience>div{background:#f5f9fc;border:1px solid #cbdce8;border-radius:10px;padding:12px}
+.hetk-training-audience header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px}
+.hetk-training-audience header button{border:0;border-radius:8px;background:#087ff5;color:#fff;min-height:36px;padding:0 11px;font-weight:700;cursor:pointer}
+.hetk-training-choice-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;max-height:230px;overflow:auto}
+.hetk-training-choice{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #d4e2eb;border-radius:8px;padding:8px;cursor:pointer}
+.hetk-training-choice:has(input:checked){background:#dff0ff;border-color:#087ff5;color:#0067d7}
+.hetk-training-choice input{width:18px;height:18px;accent-color:#087ff5}
+.hetk-training-choice span{font-size:12px}
+.hetk-training-audience-summary{display:flex;align-items:center;gap:9px;background:#e7f4ff;color:#0b5d91;border-radius:9px;padding:10px 12px;margin-top:10px;font-size:12px}
+.hetk-training-question-extra{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px}
+.hetk-training-question-extra input,.hetk-training-question-extra textarea{width:100%;box-sizing:border-box;border:1px solid #cbdde9;border-radius:9px;background:#fff;color:#193b53;padding:10px;margin-top:5px}
+.hetk-training-answer-explanation{background:#e7f4ff;color:#0b5d91;border-radius:8px;padding:9px}
+.hetk-training-answer-source{background:#f3f6f8;color:#526b7c;border-radius:8px;padding:9px}
+.hetk-training-ranking-layout{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(260px,.5fr);gap:12px}.hetk-training-ranking-layout>div>h3,.hetk-training-absent>h3{margin:0 0 10px}.hetk-training-absent{background:#fff;border:1px solid #cbdce8;border-radius:11px;padding:14px}.hetk-training-absent>div{display:flex;flex-direction:column;gap:3px;padding:9px 0;border-bottom:1px solid #dce6ed}.hetk-training-absent>div:last-child{border-bottom:0}.hetk-training-absent b{font-size:13px}.hetk-training-absent span{font-size:11px;color:#607b8d}
+@media(max-width:820px){.hetk-training-person{margin-left:auto}.hetk-training-person span{display:none}.hetk-training-audience,.hetk-training-question-extra,.hetk-training-ranking-layout{grid-template-columns:1fr}.hetk-training-choice-grid{grid-template-columns:1fr 1fr}.hetk-training-mobile-nav{background:#002f49;border-color:#255a73}.hetk-training-mobile-nav .hetk-training-nav{background:#0c4663;color:#fff}.hetk-training-mobile-nav .hetk-training-nav.is-active{background:#087ff5;color:#fff}.hetk-training-exam-one>article{min-height:250px}}
+@media(max-width:520px){.hetk-training-head-copy p{display:none}.hetk-training-person{padding:3px;background:transparent}.hetk-training-person img{width:34px;height:34px}.hetk-training-choice-grid{grid-template-columns:1fr}.hetk-training-exam>footer{flex-wrap:wrap}.hetk-training-exam>footer>span{width:100%;order:-1}.hetk-training-exam>footer button{flex:1}}
