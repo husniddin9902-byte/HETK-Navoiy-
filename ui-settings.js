@@ -136,6 +136,9 @@
   const fontState=new Map();
   let observer=null;
   let renderQueued=false;
+  let appInfo={phone:'',telegram:''};
+  let appInfoRef=null;
+  let contactNotice='';
 
   function tr(value){
     const text=String(value==null?'':value);
@@ -232,17 +235,66 @@
     if(btn)btn.setAttribute('aria-expanded','false');
   }
 
+  function esc(value){
+    return String(value==null?'':value).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  }
+
+  function isSuperAdmin(){
+    const user=window.HETKAuth&&window.HETKAuth.currentUser;
+    return !!(user && user.role==='super_admin');
+  }
+
+  function telegramLink(value){
+    let raw=String(value||'').trim();
+    if(!raw)return '';
+    raw=raw.replace(/^https?:\/\/(www\.)?t\.me\//i,'').replace(/^t\.me\//i,'').replace(/^@/,'').replace(/^\/+|\/+$/g,'');
+    if(!/^[A-Za-z0-9_]{5,64}$/.test(raw))return '';
+    return 'https://t.me/'+raw;
+  }
+
+  function telegramLabel(value){
+    const link=telegramLink(value);
+    return link?'@'+link.split('/').pop():'';
+  }
+
+  function phoneLink(value){
+    const clean=String(value||'').replace(/[^\d+]/g,'');
+    return clean.length>=7?'tel:'+clean:'';
+  }
+
+  function startAppInfo(){
+    if(appInfoRef || typeof firebase==='undefined' || !firebase.apps || !firebase.apps.length)return;
+    try{
+      appInfoRef=firebase.database().ref('SystemSettings/appInfo');
+      appInfoRef.on('value',snapshot=>{
+        appInfo=Object.assign({phone:'',telegram:''},snapshot.val()||{});
+        const open=document.getElementById('hetk-ui-settings-overlay');
+        if(open && !open.hidden && open.dataset.showAbout==='1')renderDialog(true,open.dataset.editAbout==='1');
+      },error=>console.warn('Dastur aloqa ma’lumotlari yuklanmadi:',error&&error.message));
+    }catch(error){console.warn('Dastur aloqa ma’lumotlari ulanmagan:',error&&error.message);}
+  }
+
+  function stopAppInfo(){
+    if(appInfoRef){appInfoRef.off();appInfoRef=null;}
+  }
+
   function labels(){
     return language==='ru'?{
       settings:'Настройки',about:'О программе',title:'Настройки интерфейса',language:'Язык интерфейса',
       font:'Размер шрифта',note:'Названия папок, элементов, У/Ж и сотрудников не переводятся.',
       close:'Закрыть',aboutTitle:'О программе HETK Monitoring',aboutText:'Единая система управления объектами электросетей, сотрудниками, средствами защиты, допусками и уведомлениями.',
-      version:'Версия интерфейса: 1.0 · 2026'
+      version:'Версия интерфейса: 1.0 · 2026',suggestions:'Связь с автором программы: предложения и замечания',
+      phone:'Телефон',telegram:'Telegram',notSet:'Не указано',editContact:'Изменить контакты',saveContact:'Сохранить контакты',
+      contactHelp:'Эти данные видят все сотрудники. Изменять их может только главный администратор.',
+      phoneHint:'Например: +998 90 123 45 67',telegramHint:'Например: @username или t.me/username',saved:'Контактные данные сохранены.'
     }:{
       settings:'Sozlamalar',about:'Dastur haqida',title:'Interfeys sozlamalari',language:'Interfeys tili',
       font:'Shrift o‘lchami',note:'Papka, element, U/J va hodimlarning nomlari tarjima qilinmaydi.',
       close:'Yopish',aboutTitle:'HETK Monitoring dasturi haqida',aboutText:'Elektr tarmoq obyektlari, hodimlar, himoya vositalari, ruxsatnomalar va bildirishnomalarni yagona tizimda boshqarish uchun yaratilgan.',
-      version:'Interfeys versiyasi: 1.0 · 2026'
+      version:'Interfeys versiyasi: 1.0 · 2026',suggestions:'Dastur muallifi bilan aloqa: taklif yoki e’tirozlar uchun',
+      phone:'Telefon',telegram:'Telegram',notSet:'Kiritilmagan',editContact:'Aloqa ma’lumotlarini tahrirlash',saveContact:'Aloqa ma’lumotlarini saqlash',
+      contactHelp:'Bu ma’lumotlarni barcha hodimlar ko‘radi. Faqat Bosh administrator o‘zgartira oladi.',
+      phoneHint:'Masalan: +998 90 123 45 67',telegramHint:'Masalan: @username yoki t.me/username',saved:'Aloqa ma’lumotlari saqlandi.'
     };
   }
 
@@ -257,6 +309,7 @@
       .hetk-ui-settings-body{padding:18px;display:grid;gap:18px}.hetk-ui-setting-group h4{margin:0 0 9px;font-size:13px;color:#557086}.hetk-ui-choice-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.hetk-ui-font-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
       .hetk-ui-choice{min-height:48px;border:1px solid #d7e3ec;border-radius:11px;background:#fff;color:#35546b;font-weight:800;cursor:pointer}.hetk-ui-choice.active{border-color:#1687ff;background:#eaf5ff;color:#0872d1;box-shadow:0 0 0 2px rgba(22,135,255,.1)}
       .hetk-ui-settings-note{margin:0;padding:11px;border-radius:10px;background:#edf4f8;color:#657f92;font-size:11px;line-height:1.5}.hetk-ui-about{padding:15px;border:1px solid #dbe7ef;border-radius:13px;background:#fff}.hetk-ui-about h4{margin:0 0 7px;color:#173b55}.hetk-ui-about p{margin:0;color:#607b8e;line-height:1.55;font-size:12px}.hetk-ui-about small{display:block;margin-top:9px;color:#8a9da9}
+      .hetk-ui-about-contact{display:grid;gap:9px;margin-top:14px;padding-top:13px;border-top:1px solid #e3ebf1}.hetk-ui-about-contact>h5{margin:0;color:#234a65;font-size:12px}.hetk-ui-contact-row{display:grid;grid-template-columns:34px minmax(0,1fr);gap:9px;align-items:center;padding:9px 10px;border-radius:10px;background:#f3f8fc}.hetk-ui-contact-row>i{width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:9px;background:#dff0ff;color:#0878dc}.hetk-ui-contact-row span{display:block;color:#8295a4;font-size:9px;margin-bottom:2px}.hetk-ui-contact-row b,.hetk-ui-contact-row a{color:#21445d;font-size:11px;font-weight:800;text-decoration:none;overflow-wrap:anywhere}.hetk-ui-contact-row a:hover{text-decoration:underline;color:#0878dc}.hetk-ui-contact-edit{width:100%;min-height:40px;border:1px solid #bdd9ee;border-radius:9px;background:#eaf5ff;color:#0874ce;font-weight:800;cursor:pointer}.hetk-ui-contact-help{font-size:9px!important;color:#8193a0!important}.hetk-ui-contact-form{display:grid;gap:10px;margin-top:12px}.hetk-ui-contact-form label{display:grid;gap:5px;color:#587184;font-size:10px;font-weight:800}.hetk-ui-contact-form input{box-sizing:border-box;width:100%;height:42px;border:1px solid #d4e1ea;border-radius:9px;background:#fbfdff;color:#213f55;padding:0 11px;outline:none}.hetk-ui-contact-form input:focus{border-color:#1687ff;box-shadow:0 0 0 2px rgba(22,135,255,.1)}.hetk-ui-contact-actions{display:flex;gap:8px}.hetk-ui-contact-actions button{flex:1;min-height:40px;border:0;border-radius:9px;font-weight:800;cursor:pointer}.hetk-ui-contact-actions .cancel{background:#eaf0f4;color:#587184}.hetk-ui-contact-actions .save{background:#1687ff;color:#fff}.hetk-ui-contact-status{min-height:15px;font-size:9px;color:#198754}.hetk-ui-contact-status.error{color:#c43d3d}
       .hetk-ui-settings-foot{display:flex;justify-content:flex-end;padding:13px 18px;border-top:1px solid #dce6ed}.hetk-ui-settings-done{min-height:42px;padding:0 22px;border:0;border-radius:10px;background:#1687ff;color:#fff;font-weight:800;cursor:pointer}
       .hetk-profile-more-menu button i{width:22px;color:#1687ff}
       @media(max-width:540px){.hetk-ui-font-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.hetk-ui-settings-overlay{align-items:flex-end;padding:0}.hetk-ui-settings-card{width:100%;max-height:88vh;border-radius:18px 18px 0 0}}
@@ -264,17 +317,57 @@
     document.head.appendChild(style);
   }
 
-  function renderDialog(showAbout){
+  function aboutContactHtml(l,editAbout){
+    const phone=String(appInfo.phone||'').trim();
+    const telegram=String(appInfo.telegram||'').trim();
+    if(editAbout && isSuperAdmin())return `<div class="hetk-ui-contact-form">
+      <label>${l.phone}<input id="hetk-ui-contact-phone" value="${esc(phone)}" inputmode="tel" placeholder="${l.phoneHint}"></label>
+      <label>${l.telegram}<input id="hetk-ui-contact-telegram" value="${esc(telegram)}" placeholder="${l.telegramHint}"></label>
+      <div id="hetk-ui-contact-status" class="hetk-ui-contact-status"></div>
+      <div class="hetk-ui-contact-actions"><button type="button" class="cancel" data-ui-contact-cancel>${l.close}</button><button type="button" class="save" data-ui-contact-save><i class="fas fa-save"></i> ${l.saveContact}</button></div>
+    </div>`;
+    const telHref=phoneLink(phone),tgHref=telegramLink(telegram),tgLabel=telegramLabel(telegram);
+    return `<div class="hetk-ui-about-contact"><h5>${l.suggestions}</h5>${contactNotice?`<div class="hetk-ui-contact-status">${esc(contactNotice)}</div>`:''}
+      <div class="hetk-ui-contact-row"><i class="fas fa-phone"></i><div><span>${l.phone}</span>${telHref?`<a href="${esc(telHref)}">${esc(phone)}</a>`:`<b>${l.notSet}</b>`}</div></div>
+      <div class="hetk-ui-contact-row"><i class="fab fa-telegram"></i><div><span>${l.telegram}</span>${tgHref?`<a href="${esc(tgHref)}" target="_blank" rel="noopener noreferrer">${esc(tgLabel)}</a>`:`<b>${l.notSet}</b>`}</div></div>
+      ${isSuperAdmin()?`<button type="button" class="hetk-ui-contact-edit" data-ui-contact-edit><i class="fas fa-pen"></i> ${l.editContact}</button><p class="hetk-ui-contact-help">${l.contactHelp}</p>`:''}
+    </div>`;
+  }
+
+  async function saveAppInfo(){
+    const status=document.getElementById('hetk-ui-contact-status');
+    const button=document.querySelector('[data-ui-contact-save]');
+    const phone=String((document.getElementById('hetk-ui-contact-phone')||{}).value||'').trim();
+    const telegram=String((document.getElementById('hetk-ui-contact-telegram')||{}).value||'').trim();
+    const l=labels();
+    if(!isSuperAdmin()){if(status){status.className='hetk-ui-contact-status error';status.textContent='Ruxsat yo‘q.';}return;}
+    if(phone && !phoneLink(phone)){if(status){status.className='hetk-ui-contact-status error';status.textContent=language==='ru'?'Введите правильный номер телефона.':'Telefon raqamini to‘g‘ri kiriting.';}return;}
+    if(telegram && !telegramLink(telegram)){if(status){status.className='hetk-ui-contact-status error';status.textContent=language==='ru'?'Введите имя Telegram в формате @username.':'Telegram manzilini @username ko‘rinishida kiriting.';}return;}
+    if(button)button.disabled=true;
+    try{
+      const user=window.HETKAuth.currentUser;
+      const payload={phone:phone.slice(0,40),telegram:telegramLabel(telegram),updatedAt:Date.now(),updatedBy:user.uid,updatedByName:user.fullName||user.login||'Bosh administrator'};
+      await firebase.database().ref('SystemSettings/appInfo').set(payload);
+      appInfo=payload;
+      contactNotice=l.saved;
+      renderDialog(true,false);
+    }catch(error){
+      if(status){status.className='hetk-ui-contact-status error';status.textContent=(error&&error.message)||'Saqlanmadi.';}
+    }finally{if(button)button.disabled=false;}
+  }
+
+  function renderDialog(showAbout,editAbout){
     const l=labels();
     let overlay=document.getElementById('hetk-ui-settings-overlay');
     if(!overlay){overlay=document.createElement('div');overlay.id='hetk-ui-settings-overlay';overlay.className='hetk-ui-settings-overlay';overlay.dataset.hetkNoTranslate='1';document.body.appendChild(overlay);}
+    overlay.dataset.showAbout=showAbout?'1':'0';overlay.dataset.editAbout=editAbout?'1':'0';
     overlay.innerHTML=`<section class="hetk-ui-settings-card" role="dialog" aria-modal="true">
       <header class="hetk-ui-settings-head"><h3><i class="fas fa-sliders-h"></i> ${l.title}</h3><button class="hetk-ui-settings-close" type="button" data-ui-close aria-label="${l.close}"><i class="fas fa-times"></i></button></header>
       <div class="hetk-ui-settings-body">
         <section class="hetk-ui-setting-group"><h4>${l.language}</h4><div class="hetk-ui-choice-grid"><button class="hetk-ui-choice ${language==='uz'?'active':''}" data-ui-language="uz">O‘zbekcha</button><button class="hetk-ui-choice ${language==='ru'?'active':''}" data-ui-language="ru">Русский</button></div></section>
         <section class="hetk-ui-setting-group"><h4>${l.font}</h4><div class="hetk-ui-choice-grid hetk-ui-font-grid">${Object.keys(FONT_SCALES).map(key=>`<button class="hetk-ui-choice ${fontSize===key?'active':''}" data-ui-font="${key}">${fontLabels[language][key]}</button>`).join('')}</div></section>
         <p class="hetk-ui-settings-note"><i class="fas fa-circle-info"></i> ${l.note}</p>
-        ${showAbout?`<section class="hetk-ui-about"><h4>${l.aboutTitle}</h4><p>${l.aboutText}</p><small>${l.version}</small></section>`:''}
+        ${showAbout?`<section class="hetk-ui-about"><h4>${l.aboutTitle}</h4><p>${l.aboutText}</p><small>${l.version}</small>${aboutContactHtml(l,!!editAbout)}</section>`:''}
       </div><footer class="hetk-ui-settings-foot"><button class="hetk-ui-settings-done" type="button" data-ui-close>${l.close}</button></footer>
     </section>`;
     overlay.hidden=false;
@@ -282,6 +375,9 @@
     overlay.addEventListener('click',event=>{if(event.target===overlay)overlay.hidden=true;},{once:true});
     overlay.querySelectorAll('[data-ui-language]').forEach(btn=>btn.addEventListener('click',()=>setLanguage(btn.dataset.uiLanguage,showAbout)));
     overlay.querySelectorAll('[data-ui-font]').forEach(btn=>btn.addEventListener('click',()=>setFontSize(btn.dataset.uiFont,showAbout)));
+    const edit=overlay.querySelector('[data-ui-contact-edit]');if(edit)edit.addEventListener('click',()=>{contactNotice='';renderDialog(true,true);});
+    const cancel=overlay.querySelector('[data-ui-contact-cancel]');if(cancel)cancel.addEventListener('click',()=>renderDialog(true,false));
+    const save=overlay.querySelector('[data-ui-contact-save]');if(save)save.addEventListener('click',saveAppInfo);
   }
 
   function ensureMenu(){
@@ -290,7 +386,7 @@
     let settings=document.getElementById('hetk-ui-settings-button');
     if(!settings){settings=document.createElement('button');settings.id='hetk-ui-settings-button';settings.type='button';settings.addEventListener('click',()=>{closeMenu();renderDialog(false);});menu.prepend(settings);}
     let about=document.getElementById('hetk-ui-about-button');
-    if(!about){about=document.createElement('button');about.id='hetk-ui-about-button';about.type='button';about.addEventListener('click',()=>{closeMenu();renderDialog(true);});settings.after(about);}
+    if(!about){about=document.createElement('button');about.id='hetk-ui-about-button';about.type='button';about.addEventListener('click',()=>{closeMenu();renderDialog(true,false);});settings.after(about);}
     const l=labels();
     settings.innerHTML=`<i class="fas fa-sliders-h"></i> ${l.settings}`;
     about.innerHTML=`<i class="fas fa-circle-info"></i> ${l.about}`;
@@ -299,7 +395,7 @@
   function setLanguage(next,showAbout){
     if(!LANGUAGES.includes(next))return;
     language=next;localStorage.setItem(STORAGE_LANGUAGE,next);
-    applyInterface(document);ensureMenu();renderDialog(!!showAbout);
+    applyInterface(document);ensureMenu();renderDialog(!!showAbout,false);
     document.dispatchEvent(new CustomEvent('hetk-language-changed',{detail:{language}}));
   }
 
@@ -307,7 +403,7 @@
     if(!FONT_SCALES[next])return;
     if(fontSize!=='normal')applyFont(document);
     fontSize=next;localStorage.setItem(STORAGE_FONT,next);
-    applyFont(document);renderDialog(!!showAbout);
+    applyFont(document);renderDialog(!!showAbout,false);
     document.dispatchEvent(new CustomEvent('hetk-font-size-changed',{detail:{fontSize,scale:FONT_SCALES[next]}}));
   }
 
@@ -318,6 +414,10 @@
 
   function init(){
     ensureStyle();ensureMenu();applyInterface(document);
+    if(window.HETKAuth&&window.HETKAuth.currentUser)startAppInfo();
+    document.addEventListener('hetk-auth-ready',startAppInfo);
+    document.addEventListener('hetk-auth-user-updated',startAppInfo);
+    document.addEventListener('hetk-auth-cleared',stopAppInfo);
     observer=new MutationObserver(records=>{
       const nodes=[];records.forEach(record=>{
         if(record.type==='characterData' && record.target.parentElement)nodes.push(record.target.parentElement);
