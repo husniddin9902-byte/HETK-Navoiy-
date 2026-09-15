@@ -383,6 +383,7 @@ function loadFolders() {
     hetkFoldersValueRef = database.ref('Folders');
     hetkFoldersValueRef.on('value', (snapshot) => {
         currentFolders = snapshot.val() || {};
+        window.currentFolders = currentFolders;
         hetkRebuildFolderChildrenIndex();
         hetkRenderFolderTreePreservingState();
         hetkNotifyManagementScopeChanged('folders');
