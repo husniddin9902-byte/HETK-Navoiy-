@@ -196,7 +196,7 @@ map.on('contextmenu', function(e) {
     selectedMarker = L.marker(e.latlng).addTo(map);
     
     var deleteBtn = `<div class="marker-delete-popup" onclick="resetToUserLocation()">
-                        Удалить это местоположение?
+                        Bu joylashuv o‘chirilsinmi?
                      </div>`;
     
     selectedMarker.bindPopup(deleteBtn, {
@@ -268,7 +268,7 @@ function copyCoords() {
     const lat = document.getElementById('latitude').innerText;
     const lng = document.getElementById('longitude').innerText;
     const address = document.getElementById('address').innerText;
-    const fullText = `Широта: ${lat}\nДолгота: ${lng}\nАдрес: ${address}\nGoogle Maps: http://maps.google.com/?q=${lat},${lng}`;
+    const fullText = `Kenglik: ${lat}\nUzunlik: ${lng}\nManzil: ${address}\nGoogle Maps: http://maps.google.com/?q=${lat},${lng}`;
     navigator.clipboard.writeText(fullText).then(() => { showToast("Ma’lumot nusxalandi"); });
 }
 
@@ -1894,7 +1894,7 @@ document.querySelector('.save-btn').addEventListener('click', function() {
     editingElementId = null;
     originalElementData = null;
     renderElementWorkZonePicker([]);
-    document.getElementById('element-panel-title').innerText = "Добавить местоположение";
+    document.getElementById('element-panel-title').innerText = "Joylashuv qo‘shish";
     deleteElementBtn.classList.add('hidden');
 
     // Qiymatlarni kiritamiz
@@ -1919,7 +1919,7 @@ if (inputBalanceToggle) {
             // Maydonlarni to'ldirish majburiy bo'ladi
             togglePrivateFieldsRequired(true);
         } else {
-            balanceStatusText.innerText = "ЕТК";
+            balanceStatusText.innerText = "ETK";
             balanceStatusText.style.color = "#007AFF";
             privateOwnerInfoBlock.classList.add('hidden');
             togglePrivateFieldsRequired(false);
@@ -4371,7 +4371,7 @@ function resetElementForm() {
     removeImageBtn.classList.add('hidden');
     imageStatusText.innerText = "Rasm";
     imageStatusText.style.color = "#88a0b0";
-    balanceStatusText.innerText = "ЕТК";
+    balanceStatusText.innerText = "ETK";
     balanceStatusText.style.color = "#007AFF";
     privateOwnerInfoBlock.classList.add('hidden');
     togglePrivateFieldsRequired(false);
@@ -4630,7 +4630,7 @@ document.addEventListener('hetk-scoped-data-changed', event => {
       
         resetElementForm();
         editingElementId = tpId;
-        document.getElementById('element-panel-title').innerText = "Редактировать местоположение";
+        document.getElementById('element-panel-title').innerText = "Joylashuvni tahrirlash";
         deleteElementBtn.classList.toggle('hidden',!hetkHasPermission('deleteElements'));
 
         // Ma'lumotlarni formaga yuklaymiz
@@ -5647,7 +5647,7 @@ if (!useSearchResults && !isPointInSelectedFolder(point)) {
             const isBlinking=markerPalette.isDual;
 
             // Xususiy yoki ETK ekanligiga qarab sarlavha tayyorlash
-            const balanceBadge = point.isPrivate ? `<span style="color:#ff4444; font-weight:bold;">[Xususiy - ${point.ownerFirm || ''}]</span>` : `<span style="color:#007AFF; font-weight:bold;">[ЕТК balansi]</span>`;
+            const balanceBadge = point.isPrivate ? `<span style="color:#ff4444; font-weight:bold;">[Xususiy - ${point.ownerFirm || ''}]</span>` : `<span style="color:#007AFF; font-weight:bold;">[ETK balansi]</span>`;
 
             // Maxsus divIcon marker yaratish
           const markerDiv = document.createElement('div');
@@ -5688,7 +5688,7 @@ const marker = L.marker([lat, lng], {
                 <div style="color:white; background:#001a2c; padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); min-width:200px;">
                     <b style="font-size:15px; color:#fff; display:block; margin-bottom:4px;">⚡ ${displayName}</b>
                     ${balanceBadge}<br>
-                    <span style="font-size:12px; color:#88a0b0; display:block; margin-top:5px;"><b>Адрес:</b> ${point.address}</span>
+                    <span style="font-size:12px; color:#88a0b0; display:block; margin-top:5px;"><b>Manzil:</b> ${point.address}</span>
             `;
             if (point.isPrivate) {
                 popupHtml += `
