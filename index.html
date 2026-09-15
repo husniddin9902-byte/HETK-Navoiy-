@@ -38,7 +38,7 @@
         <div class="header-left">
             <i class="fas fa-bars" id="menu-btn" onclick="var p=document.getElementById('profile-container');if(p){p.style.display='flex';p.setAttribute('aria-hidden','false');document.body.classList.add('hetk-profile-open');}"></i>
         </div>
-        <div class="header-title">Сохранить местоположение</div>
+        <div class="header-title">Joylashuvni saqlash</div>
         <div class="header-right">
             <i class="fas fa-list-ul" id="list-btn"></i>
             <div class="map-type-preview" id="map-type-btn"></div>
@@ -949,7 +949,7 @@ cursor:pointer;
         
         <div class="sheet-header" style="display: flex; justify-content: flex-start; align-items: center; gap: 15px; margin-bottom: 15px;">
             <button type="button" onclick="document.getElementById('element-manage-panel').classList.add('hidden')" style="background: #ff4444; border: none; color: white; font-size: 22px; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; line-height: 1; flex-shrink: 0; box-shadow: 0 2px 8px rgba(255, 68, 68, 0.3);">×</button>
-            <h4 id="element-panel-title" style="margin: 0; font-size: 18px; font-weight: bold;">Добавить местоположение</h4>
+            <h4 id="element-panel-title" style="margin: 0; font-size: 18px; font-weight: bold;">Joylashuv qo‘shish</h4>
         </div>
 
         <form id="element-main-form" style="display: flex; flex-direction: column; gap: 12px; max-height: 75vh; overflow-y: auto; padding-bottom: 20px;">
@@ -993,11 +993,11 @@ gap:6px;
 </div>   
             <div style="display: flex; flex-direction: column; gap: 8px; flex: 1;">
                     <div style="display: flex; align-items: center; background: #001a2c; border-radius: 8px; padding: 2px 10px;">
-                        <span style="font-size: 12px; color: #88a0b0; width: 35px;">Шир:</span>
+                        <span style="font-size: 12px; color: #88a0b0; width: 55px;">Kenglik:</span>
                         <input type="number" id="input-latitude" step="any" style="width: 100%; background: transparent; border: none; color: white; padding: 8px 0; outline: none; font-size: 14px;" required>
                     </div>
                     <div style="display: flex; align-items: center; background: #001a2c; border-radius: 8px; padding: 2px 10px;">
-                        <span style="font-size: 12px; color: #88a0b0; width: 35px;">Дол:</span>
+                        <span style="font-size: 12px; color: #88a0b0; width: 55px;">Uzunlik:</span>
                         <input type="number" id="input-longitude" step="any" style="width: 100%; background: transparent; border: none; color: white; padding: 8px 0; outline: none; font-size: 14px;" required>
                     </div>
                 <button 
@@ -1212,7 +1212,7 @@ margin-bottom:8px;
 </div>
 
             <div>
-                <label style="font-size: 13px; color: #88a0b0; margin-left: 4px;">Заметка:</label>
+                <label style="font-size: 13px; color: #88a0b0; margin-left: 4px;">Izoh:</label>
                 <textarea id="input-element-note" rows="2" placeholder="Qo'shimcha eslatmalar..." style="width:100%; padding:10px; margin-top:5px; border-radius:8px; background:#001a2c; color:white; border:1px solid rgba(255,255,255,0.05); resize: none; outline: none;"></textarea>
             </div>
 
@@ -1323,7 +1323,7 @@ margin-bottom:8px;
 </div>
                 
             <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); padding: 12px; border-radius: 8px; margin-top: 5px;">
-                <span style="font-size: 14px; font-weight: bold; color: white;">Баланс: <span id="balance-status-text" style="color: #007AFF;">ЕТК</span></span>
+                <span style="font-size: 14px; font-weight: bold; color: white;">Balans: <span id="balance-status-text" style="color: #007AFF;">ETK</span></span>
                 
                 <label class="switch-control" style="position: relative; display: inline-block; width: 50px; height: 26px;">
                     <input type="checkbox" id="input-balance-toggle" style="opacity: 0; width: 0; height: 0;">
@@ -1622,8 +1622,9 @@ gap:8px;
 
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="app.js?v=10.10"></script>
+    <script src="app.js?v=10.11"></script>
     <script src="profile-container.js?v=3.5"></script>
+    <script src="ui-settings.js?v=1.2"></script>
     <script src="auth-container.js?v=9.6"></script>
     <script src="scoped-data.js?v=1.5"></script>
     <script src="safety-equipment.js?v=2.9"></script>
