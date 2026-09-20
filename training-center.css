@@ -23,3 +23,9 @@
 /* v7: bob testi editor */
 .hetk-book-studio-card [data-chapter-question-list]{display:grid;gap:12px;margin:14px 0}
 .hetk-book-studio-card [data-add-chapter-question]{margin-top:4px}
+
+/* v8: kitob o‘qish/tinglash va tahrirlash yaxshilanishlari */
+.hetk-training-nav.is-reader-locked,.hetk-training-nav:disabled{opacity:.45;cursor:not-allowed;pointer-events:none}
+.hetk-reader-audio{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:220px;padding:28px;border:1px solid #dbe7ee;border-radius:16px;background:#f7fbfe;text-align:center;color:#173e55}
+.hetk-reader-audio>i{font-size:34px;color:#168de2;margin-bottom:10px}.hetk-reader-audio h4{margin:0 0 16px}.hetk-reader-audio audio{width:min(100%,680px)}.hetk-reader-audio small{margin-top:10px;color:#7890a0}
+.hetk-saved-audio-preview{margin-top:10px;padding:12px 14px;border:1px solid #cfe5d7;border-radius:14px;background:#f5fff8;display:flex;flex-direction:column;gap:8px;color:#235c3c}.hetk-saved-audio-preview audio{width:100%}
