@@ -33,3 +33,36 @@
 .hetk-training-shell.is-book-reader>.hetk-training-head,.hetk-training-shell.is-book-reader>.hetk-training-layout>.hetk-training-side,.hetk-training-shell.is-book-reader>.hetk-training-mobile-nav{display:none!important}
 .hetk-training-shell.is-book-reader .hetk-training-layout{display:block!important;height:100%!important}.hetk-training-shell.is-book-reader .hetk-training-main{padding:0!important;max-width:none!important;height:100%!important}.hetk-training-shell.is-book-reader .hetk-training-content{height:100%!important;overflow:auto!important;padding:0!important}
 .hetk-v11-reader{min-height:100%;background:#07131c;color:#eef4f7}.hetk-v11-reader header{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:18px 24px;background:#07364e}.hetk-v11-reader header>button{background:none;border:0;color:#fff;font-weight:800;font-size:16px}.hetk-v11-reader .book{display:flex;align-items:center;gap:12px;margin-right:auto}.hetk-v11-reader .book img{width:52px;height:68px;object-fit:cover;border-radius:9px}.hetk-v11-reader .book b{display:block;font-size:22px}.hetk-v11-reader .book small{opacity:.75}.hetk-v11-reader .chapter,.hetk-v11-reader .modes,.hetk-v11-reader .tools{display:flex;align-items:center;gap:8px}.hetk-v11-reader select,.hetk-v11-reader .chapter button,.hetk-v11-reader .modes button,.hetk-v11-reader .tools button{border:1px solid #35515f;border-radius:10px;padding:10px 13px;background:#10232d;color:#fff;font-weight:700}.hetk-v11-reader .modes button.on{background:#148bf2}.hetk-v11-reader .tools{justify-content:flex-end;padding:12px 28px;background:#0a1821}.hetk-v11-reader .tools .dot{width:30px;height:30px;border-radius:50%;padding:0}.hetk-v11-reader .tools .paper{background:#f2dfb7}.hetk-v11-reader .tools .light{background:#fff}.hetk-v11-reader .tools .dark{background:#111}.hetk-v11-reader .tools .dot.on{outline:3px solid #e8bd5a}.hetk-v11-reader .body{padding:24px 4vw 34px}.hetk-v11-page{max-width:1200px;margin:auto;padding:36px 48px 20px;border:1px solid #2d3c43;border-radius:16px;font-family:Georgia,'Times New Roman',serif;font-size:var(--reader-font);line-height:1.65}.theme-dark .hetk-v11-page{background:#080c0f;color:#f4f1e9}.theme-paper .hetk-v11-page{background:#f4e6c7;color:#272116}.theme-light .hetk-v11-page{background:#fff;color:#20252a}.hetk-v11-page h1{font-size:2em;margin:0 0 24px}.hetk-v11-page footer{display:flex;justify-content:space-between;gap:12px;margin-top:36px;padding-top:14px;border-top:1px solid currentColor;opacity:.65;font-family:Arial,sans-serif;font-size:13px}.hetk-v11-listen{max-width:850px;margin:70px auto;text-align:center;padding:40px;border:1px solid #334854;border-radius:16px}.hetk-v11-listen audio{width:100%;margin-top:24px}@media(max-width:800px){.hetk-v11-reader header{padding:12px}.hetk-v11-reader .book{width:100%}.hetk-v11-reader .chapter{width:100%}.hetk-v11-reader .chapter select{flex:1;min-width:0}.hetk-v11-reader .tools{justify-content:center;flex-wrap:wrap;padding:10px}.hetk-v11-reader .body{padding:12px}.hetk-v11-page{padding:24px 18px}.hetk-v11-page footer{flex-direction:column}.hetk-v11-reader .modes{width:100%}}
+
+/* v12 compact reader header */
+.hetk-v11-reader header{padding:10px 18px;gap:10px;display:grid;grid-template-columns:auto 1fr;align-items:center}
+.hetk-v11-reader .reader-topline{display:flex;align-items:center;gap:14px;min-width:0}
+.hetk-v11-reader .reader-topline>button{background:none;border:0;color:#fff;font-weight:800;font-size:15px;white-space:nowrap}
+.hetk-v11-reader .reader-book-title{font-size:19px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hetk-v11-reader .reader-controls{display:flex;align-items:center;justify-content:flex-end;gap:10px;min-width:0}
+.hetk-v11-reader .tools{position:sticky;top:58px;z-index:4;padding:8px 20px}
+.hetk-v11-reader .body{padding-top:14px}
+@media(max-width:800px){
+ .hetk-v11-reader header{position:sticky;top:0;padding:8px 10px;display:flex;flex-direction:column;align-items:stretch;gap:7px}
+ .hetk-v11-reader .reader-topline{height:34px;justify-content:space-between;gap:8px}
+ .hetk-v11-reader .reader-topline>button{font-size:14px;padding:4px 0}
+ .hetk-v11-reader .reader-book-title{font-size:16px;text-align:right;max-width:42vw}
+ .hetk-v11-reader .reader-controls{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px;width:100%}
+ .hetk-v11-reader .chapter{width:100%;gap:5px}
+ .hetk-v11-reader .chapter>span{font-size:13px}
+ .hetk-v11-reader .chapter select{min-width:0;flex:1;padding:8px 9px}
+ .hetk-v11-reader .chapter button{padding:8px 11px}
+ .hetk-v11-reader .modes{width:auto;gap:6px}
+ .hetk-v11-reader .modes button{padding:8px 10px;font-size:13px;white-space:nowrap}
+ .hetk-v11-reader .tools{top:97px;justify-content:center;gap:6px;flex-wrap:nowrap;padding:7px 8px;font-size:13px}
+ .hetk-v11-reader .tools button{padding:7px 10px}
+ .hetk-v11-reader .tools .dot{width:26px;height:26px;padding:0}
+ .hetk-v11-reader .body{padding:8px}
+ .hetk-v11-page{padding:20px 16px}
+ .hetk-v11-page h1{margin-bottom:18px}
+}
+@media(max-width:480px){
+ .hetk-v11-reader .reader-controls{grid-template-columns:1fr}
+ .hetk-v11-reader .modes{justify-content:flex-start}
+ .hetk-v11-reader .tools{top:137px}
+}
