@@ -346,4 +346,3 @@
 
   document.addEventListener('click',e=>{const b=e.target&&e.target.closest?e.target.closest('#profile-training'):null;if(b){e.preventDefault();open();}},true);document.addEventListener('keydown',e=>{if(e.key==='Escape')close();});window.HETKTraining={open,close,canCreate,statusOf};
 })();
-
