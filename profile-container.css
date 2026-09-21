@@ -9,6 +9,9 @@
     --profile-green:#24b866;
 }
 
+/* O‘quv markazi: xodim profilidagi kitob o‘zlashtirish statistikasi */
+.hetk-training-progress-panel h4{display:flex;align-items:center;gap:8px}.hetk-training-progress-panel h4 i{color:#0d88e7}.hetk-training-progress-loading,.hetk-training-progress-empty{padding:14px 0;color:#71889b;font-size:13px}.hetk-training-progress-list{display:grid;gap:10px;margin-top:10px}.hetk-training-progress-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 14px;padding:12px;border:1px solid #d6e7f1;border-radius:12px;background:#f7fbfe}.hetk-training-progress-row>div{min-width:0}.hetk-training-progress-row b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#123d58;font-size:13px}.hetk-training-progress-row span{display:block;margin-top:3px;color:#698296;font-size:11px}.hetk-training-progress-row strong{align-self:center;color:#087dcc;font-size:15px}.hetk-training-progress-row>i{grid-column:1/-1;height:7px;overflow:hidden;border-radius:999px;background:#dceaf2}.hetk-training-progress-row>i em{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#128cf0,#18b879)}
+
 .hetk-profile-modal{
     position:fixed;
     inset:0;
