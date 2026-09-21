@@ -162,6 +162,14 @@
       ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true",
       ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && (root.child('users').child(auth.uid).child('rootAccess').val() === true || root.child('users').child(auth.uid).child('role').val() === 'super_admin' || root.child('users').child(auth.uid).child('role').val() === 'republic_tb_engineer')"
     },
+    "TrainingBookProgress": {
+      "$uid": {
+        ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && ($uid === auth.uid || root.child('users').child(auth.uid).child('rootAccess').val() === true || root.child('users').child(auth.uid).child('role').val() === 'super_admin' || root.child('users').child(auth.uid).child('role').val() === 'republic_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_chief' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_operations_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_fire_safety_engineer' || root.child('users').child(auth.uid).child('role').val() === 'tb_engineer')",
+        "$bookId": {
+          ".write": "auth != null && $uid === auth.uid && root.child('users').child(auth.uid).child('active').val() === true"
+        }
+      }
+    },
     "TrainingTests": {
       ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true",
       "$testId": {
