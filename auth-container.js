@@ -2552,6 +2552,10 @@
   async function loadProfilePane(tabName){
     if(!currentAccount || !tabName) return;
     if(tabName==='employees'){
+      // Hodimlar bo‘limi har ochilganda barcha papkalar yig‘ilgan holatdan boshlanadi.
+      teamTreeExpanded=new Set(['__root__']);
+      teamTreeAutoInitialized=true;
+      selectedTeamUid=null;
       renderEmployeesManager(currentAccount);
       return;
     }
@@ -3111,7 +3115,7 @@
     const q=String((byId('hetk-team-search') && byId('hetk-team-search').value) || '').trim().toLowerCase();
     const permitFilter=String((byId('hetk-safety-filter')&&byId('hetk-safety-filter').value)||'all');
     const groupFilter=String((byId('hetk-safety-group-filter')&&byId('hetk-safety-group-filter').value)||'all');
-    return Object.keys(teamUsersCache).map(uid => Object.assign({uid},teamUsersCache[uid] || {})).filter(canViewTarget).filter(u => {
+    return Object.keys(teamUsersCache).map(uid => Object.assign({uid},teamUsersCache[uid] || {})).filter(u=>u.role!=='super_admin'&&u.rootAccess!==true).filter(canViewTarget).filter(u => {
       if(q){
         const roots=accountFolderRoots(u);
         const paths=roots.map(id=>folderPath(id)).join(' ');
@@ -3318,6 +3322,7 @@
         <div><span>Yaratgan</span><b>${escapeHtml(u.createdByName || '—')}</b></div>
         <div><span>Oxirgi kirish</span><b>${u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString() : '—'}</b></div>
       </div>
+      ${canViewTrainingProgress() ? '<div id="hetk-team-training-progress" class="hetk-team-detail-section hetk-training-progress-panel"><h4><i class="fas fa-graduation-cap"></i> O‘quv markazi statistikasi</h4><div class="hetk-training-progress-loading"><i class="fas fa-circle-notch fa-spin"></i> Yuklanmoqda...</div></div>' : ''}
       ${(canEdit || canDeactivate) ? `<div class="hetk-team-detail-actions">
         ${canEdit ? '<button type="button" id="hetk-edit-team-user" class="primary"><i class="fas fa-user-shield"></i> Lavozim / papka ruxsatlari</button>' : ''}
         ${canDeactivate ? `<button type="button" id="hetk-toggle-team-user" class="${u.active===false?'restore':'danger'}"${activeTogglePending?' disabled':''}><i class="fas ${activeTogglePending?'fa-circle-notch fa-spin':u.active===false?'fa-user-check':'fa-user-slash'}"></i> ${activeTogglePending?'Saqlanmoqda...':u.active===false?'Qayta faollashtirish':'Bloklash'}</button>` : ''}
@@ -3329,6 +3334,38 @@
     const assign=box.querySelector('[data-delegation-assign]');if(assign)assign.addEventListener('click',()=>openDelegationDialog(assign.dataset.delegationAssign));
     const end=box.querySelector('[data-delegation-end]');if(end)end.addEventListener('click',()=>endDelegation(end.dataset.delegationEnd));
     bindSafetyActions(box);
+    if(canViewTrainingProgress()) loadTeamTrainingProgress(uid);
+  }
+
+  function canViewTrainingProgress(){
+    return !!(currentAccount && ['super_admin','republic_tb_engineer','regional_tb_chief','regional_tb_operations_engineer','regional_tb_engineer','regional_fire_safety_engineer','tb_engineer'].includes(currentAccount.role));
+  }
+
+  async function loadTeamTrainingProgress(uid){
+    const panel=byId('hetk-team-training-progress');
+    if(!panel || !databaseRef || !canViewTrainingProgress()) return;
+    try{
+      const [booksSnap,progressSnap]=await Promise.all([
+        databaseRef.ref('TrainingBooks').once('value'),
+        databaseRef.ref('TrainingBookProgress/'+uid).once('value')
+      ]);
+      if(selectedTeamUid!==uid || !byId('hetk-team-training-progress')) return;
+      const books=booksSnap.val() || {};
+      const progress=progressSnap.val() || {};
+      const rows=Object.keys(books).map(bookId=>{
+        const book=books[bookId] || {};
+        const chapters=book.chapters || {};
+        const tested=Object.keys(chapters).filter(chapterId=>Object.keys((chapters[chapterId]||{}).testQuestions||{}).length>0);
+        const chapterProgress=(progress[bookId]&&progress[bookId].chapters)||{};
+        const passed=tested.filter(chapterId=>chapterProgress[chapterId]&&chapterProgress[chapterId].passed===true).length;
+        const percent=tested.length ? Math.round(passed/tested.length*100) : 0;
+        return {title:book.titleUz||book.title||'Nomsiz kitob',passed,total:tested.length,percent};
+      }).filter(row=>row.total>0);
+      panel.innerHTML=`<h4><i class="fas fa-graduation-cap"></i> O‘quv markazi statistikasi</h4>${rows.length?`<div class="hetk-training-progress-list">${rows.map(row=>`<div class="hetk-training-progress-row"><div><b title="${escapeAttr(row.title)}">${escapeHtml(row.title)}</b><span>${row.passed}/${row.total} ta bob testi bajarilgan</span></div><strong>${row.percent}%</strong><i><em style="width:${row.percent}%"></em></i></div>`).join('')}</div>`:'<div class="hetk-training-progress-empty">Hozircha bob testlari bo‘yicha natija yo‘q.</div>'}`;
+    }catch(err){
+      if(selectedTeamUid!==uid || !byId('hetk-team-training-progress')) return;
+      panel.innerHTML='<h4><i class="fas fa-graduation-cap"></i> O‘quv markazi statistikasi</h4><div class="hetk-training-progress-empty">Statistikani yuklab bo‘lmadi.</div>';
+    }
   }
 
   function refreshTeamUI(uid){
