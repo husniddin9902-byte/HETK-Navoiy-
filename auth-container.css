@@ -10,6 +10,14 @@
   --auth-danger:#e54949;
 }
 
+/* Bog‘bon, farrosh, ombor mudiri va ijro intizomi inspektori uchun profil-markazli ko‘rinish */
+body.hetk-minimal-support-role #map,
+body.hetk-minimal-support-role #panel,
+body.hetk-minimal-support-role #search-container-box,
+body.hetk-minimal-support-role #map-type-btn{display:none!important}
+body.hetk-minimal-support-role::before{content:"O‘quv markazi va xabarlar uchun profil menyusini oching";position:fixed;inset:72px 18px 18px;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;border:1px solid #cbdfea;border-radius:18px;background:linear-gradient(145deg,#eef8ff,#fff);color:#17445f;font-size:18px;font-weight:800;z-index:1}
+body.hetk-minimal-support-role.hetk-profile-open::before{display:none}
+
 #hetk-auth-overlay{
   position:fixed;
   inset:0;
