@@ -1140,7 +1140,7 @@
 
   function isDistrictPermitCategory(target){
     if(!target) return false;
-    if(['electrician','tchb_electrician','driver'].includes(target.role)) return true;
+    if(['electrician','driver'].includes(target.role)) return true;
     const text=(String(target.roleLabel||'')+' '+String(getRoleLabel(target)||'')).toLowerCase();
     return text.includes('shofyor') || text.includes('shofyor') || text.includes('haydovchi');
   }
@@ -1152,6 +1152,8 @@
     if(currentAccount.role==='super_admin') return true;
     if(isRepublicSafetyOfficer(currentAccount)) return target.role!=='super_admin' && target.role!=='republic_tb_engineer';
     if(isRegionalSafetyOfficer(currentAccount)){
+      // TChB elektromontyor ruxsatnomasini viloyat TB hodimi,
+      // haydovchinikini esa tuman va viloyat TB hodimlari yuritadi.
       if(isRegionalSafetyChief(currentAccount)) return target.role!=='super_admin' && target.role!=='republic_tb_engineer' && !TERRITORIAL_MANAGER_ROLES.has(target.role) && target.role!=='regional_tb_chief';
       return target.role!=='super_admin' && target.role!=='republic_tb_engineer' && !TERRITORIAL_MANAGER_ROLES.has(target.role) && !['regional_tb_chief','regional_tb_operations_engineer','regional_tb_engineer','regional_fire_safety_engineer'].includes(target.role);
     }
