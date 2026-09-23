@@ -1593,6 +1593,9 @@
     return Object.keys((zone && zone.folders) || {}).filter(id => zone.folders[id]);
   }
 
+  function workZoneType(zone){ return zone && zone.zoneType==='construction' ? 'construction' : 'standard'; }
+  function workZoneTypeLabel(zone){ return workZoneType(zone)==='construction' ? 'Qurilish U/J' : 'Oddiy U/J'; }
+
   function workZoneAccessibleIds(zone){
     const set=new Set();
     workZoneRoots(zone).forEach(id => {
@@ -3096,6 +3099,8 @@
                 <div id="hetk-user-workzone-new-wrap" class="hetk-user-field" hidden>
                   <label>Yangi U/J nomi *</label>
                   <input id="hetk-user-workzone-new-name" placeholder="Masalan: Zarafshon U/J">
+                  <label style="margin-top:10px">U/J turi *</label>
+                  <select id="hetk-user-workzone-new-type"><option value="standard">Oddiy U/J</option><option value="construction">Qurilish U/J</option></select>
                 </div>
               </div>
               <div id="hetk-user-workzone-current" class="hetk-workzone-current"></div>
@@ -3124,6 +3129,7 @@
             <div class="hetk-user-form-grid">
               <div class="hetk-user-field"><label>U/J ni tanlang *</label><select id="hetk-workzone-manage-select"></select></div>
               <div class="hetk-user-field"><label>U/J nomi *</label><input id="hetk-workzone-manage-name" placeholder="Masalan: Zarafshon U/J"></div>
+              <div class="hetk-user-field"><label>U/J turi *</label><select id="hetk-workzone-manage-type"><option value="standard">Oddiy U/J</option><option value="construction">Qurilish U/J</option></select></div>
               <div class="hetk-user-field"><label>Mas’ul Master *</label><select id="hetk-workzone-manage-master"></select></div>
             </div>
             <div class="hetk-user-folder-section">
@@ -3839,7 +3845,7 @@
     const select=byId('hetk-workzone-manage-select');
     if(!editor || !select) return;
     const zones=manageableWorkZones();
-    select.innerHTML=zones.length ? zones.map(zone=>`<option value="${escapeAttr(zone.id)}">${escapeHtml(zone.name||'Nomsiz U/J')}</option>`).join('') : '<option value="">U/J topilmadi</option>';
+    select.innerHTML=zones.length ? zones.map(zone=>`<option value="${escapeAttr(zone.id)}">${escapeHtml(zone.name||'Nomsiz U/J')} — ${escapeHtml(workZoneTypeLabel(zone))}</option>`).join('') : '<option value="">U/J topilmadi</option>';
     editor.hidden=false;
     document.body.classList.add('hetk-user-editor-open');
     workZoneManagerMessage('','');
@@ -3860,8 +3866,10 @@
     const zone=getWorkZoneById(zoneId);
     editingWorkZoneId=zone ? zone.id : null;
     const name=byId('hetk-workzone-manage-name');
+    const type=byId('hetk-workzone-manage-type');
     const master=byId('hetk-workzone-manage-master');
     if(name) name.value=zone ? (zone.name||'') : '';
+    if(type) type.value=workZoneType(zone);
     if(master){
       const candidates=zone ? workZoneManagerCandidates(zone) : [];
       master.innerHTML='<option value="">Master tanlanmagan</option>'+candidates.map(user=>`<option value="${escapeAttr(user.uid)}">${escapeHtml(user.fullName||user.login||'Nomsiz')} — ${escapeHtml(getRoleLabel(user))}</option>`).join('');
@@ -3982,6 +3990,7 @@
     const zone=Object.assign({id:editingWorkZoneId},raw);
     if(!canCurrentUserUseWorkZone(zone)) return workZoneManagerMessage('error','Bu U/J ni tahrirlashga ruxsatingiz yo‘q.');
     const name=normalizeWorkZoneName(byId('hetk-workzone-manage-name').value);
+    const zoneType=byId('hetk-workzone-manage-type').value==='construction'?'construction':'standard';
     const newMasterUid=String(byId('hetk-workzone-manage-master').value||'');
     const selectedRoots=normalizeSelectedFolderRoots(Array.from(workZoneSelectedFolderIds),teamFoldersCache);
     if(name.length<4) return workZoneManagerMessage('error','U/J nomini kiriting.');
@@ -3997,6 +4006,7 @@
       const newMaster=Object.assign({uid:newMasterUid},teamUsersCache[newMasterUid]);
       const updates={};const affected={};
       updates['WorkZones/'+zone.id+'/name']=name;
+      updates['WorkZones/'+zone.id+'/zoneType']=zoneType;
       updates['WorkZones/'+zone.id+'/folders']=folders;
       updates['WorkZones/'+zone.id+'/currentMasterUid']=newMasterUid;
       updates['WorkZones/'+zone.id+'/updatedAt']=now;
@@ -4147,11 +4157,12 @@
     const supportsZone=role==='master' || role==='electrician' || role==='tractor_operator';
     const requiresZone=role==='master' || role==='electrician';
     let zoneChoice=supportsZone ? getSelectedWorkZoneId() : '';
-    let zone=null, zoneName='', newZoneName='';
+    let zone=null, zoneName='', newZoneName='', newZoneType='standard';
     if(supportsZone && zoneChoice){
       if(zoneChoice==='__new__'){
         if(!canCreateNewWorkZoneForRole(role)) return editorMessage('error','Yangi U/J yaratishga ruxsatingiz yo‘q.');
         newZoneName=normalizeWorkZoneName(byId('hetk-user-workzone-new-name').value);
+        newZoneType=(byId('hetk-user-workzone-new-type')&&byId('hetk-user-workzone-new-type').value)==='construction'?'construction':'standard';
         if(newZoneName.length<4) return editorMessage('error','U/J nomini kiriting. Masalan: Zarafshon U/J');
         zoneName=newZoneName;
       }else{
@@ -4212,7 +4223,7 @@
           if(role==='master' && zoneChoice==='__new__'){
             finalZoneId=databaseRef.ref('WorkZones').push().key;
             updates['WorkZones/'+finalZoneId]={
-              name:newZoneName,active:true,folders:foldersObj,currentMasterUid:uid,
+              name:newZoneName,zoneType:newZoneType,active:true,folders:foldersObj,currentMasterUid:uid,
               createdAt:now,createdBy:currentAccount.uid,updatedAt:now,updatedBy:currentAccount.uid
             };
           }else if(role==='master' && zone){
@@ -4292,7 +4303,7 @@
           if(role==='master' && zone && !confirmMasterReplacement(zone,target.uid)) throw new Error('Master almashtirish bekor qilindi.');
           if(role==='master' && zoneChoice==='__new__'){
             finalZoneId=databaseRef.ref('WorkZones').push().key;
-            updates['WorkZones/'+finalZoneId]={name:newZoneName,active:true,folders:foldersObj,currentMasterUid:target.uid,createdAt:Date.now(),createdBy:currentAccount.uid,updatedAt:Date.now(),updatedBy:currentAccount.uid};
+            updates['WorkZones/'+finalZoneId]={name:newZoneName,zoneType:newZoneType,active:true,folders:foldersObj,currentMasterUid:target.uid,createdAt:Date.now(),createdBy:currentAccount.uid,updatedAt:Date.now(),updatedBy:currentAccount.uid};
             stageMasterPromotionHistory(updates,target,{id:finalZoneId,name:newZoneName},Date.now());
           }else{
             finalZoneId=zoneChoice;
