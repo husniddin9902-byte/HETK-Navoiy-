@@ -2552,6 +2552,10 @@ function hetkCurrentAccount(){
     return (window.HETKAuth && window.HETKAuth.currentUser) ? window.HETKAuth.currentUser : null;
 }
 
+const HETK_DIRECTOR_ROLES=new Set(['director','regional_director','district_director']);
+const HETK_CHIEF_ENGINEER_ROLES=new Set(['chief_engineer','regional_chief_engineer','district_chief_engineer']);
+const HETK_TERRITORIAL_MANAGER_ROLES=new Set([...HETK_DIRECTOR_ROLES,...HETK_CHIEF_ENGINEER_ROLES]);
+
 function hetkAccountRoleLabel(account){
     if(!account) return 'Foydalanuvchi';
     if(window.HETKAuth && window.HETKAuth.getAccountRoleLabel) return window.HETKAuth.getAccountRoleLabel(account);
@@ -2728,7 +2732,7 @@ async function hetkNotificationRecipients(tp,excludeUid){
     if(!recipients.size){
         Object.keys(users).forEach(uid=>{
             const user=users[uid] || {};
-            if(uid===excludeUid || user.active===false || !['super_admin','director','chief_engineer'].includes(user.role)) return;
+            if(uid===excludeUid || user.active===false || !(user.role==='super_admin'||HETK_TERRITORIAL_MANAGER_ROLES.has(user.role))) return;
             if(user.rootAccess || user.role==='super_admin') return recipients.add(uid);
             const roots=Object.keys(user.folders || {}).filter(id=>user.folders[id]);
             if(targetFolders.some(folderId=>roots.some(rootId=>hetkFolderIsInside(folderId,rootId)))) recipients.add(uid);
@@ -2756,7 +2760,7 @@ async function hetkChiefEngineerRecipients(tp,excludeUid){
     });
     return Object.keys(users).filter(uid=>{
         const user=users[uid] || {};
-        if(uid===excludeUid || user.active===false || user.role!=='chief_engineer') return false;
+        if(uid===excludeUid || user.active===false || !HETK_CHIEF_ENGINEER_ROLES.has(user.role)) return false;
         if(user.rootAccess) return true;
         const roots=Object.keys(user.folders || {}).filter(id=>user.folders[id]);
         return Array.from(targetFolders).some(folderId=>roots.some(rootId=>hetkFolderIsInside(folderId,rootId)));
@@ -2818,7 +2822,7 @@ async function hetkFolderNotificationRecipients(folderId,excludeUid){
     if(!recipients.size){
         Object.keys(users).forEach(uid=>{
             const user=users[uid] || {};
-            if(uid===excludeUid || user.active===false || !['super_admin','director','chief_engineer'].includes(user.role)) return;
+            if(uid===excludeUid || user.active===false || !(user.role==='super_admin'||HETK_TERRITORIAL_MANAGER_ROLES.has(user.role))) return;
             if(user.rootAccess || user.role==='super_admin') recipients.add(uid);
         });
     }
@@ -3104,7 +3108,7 @@ function hetkGetTPWorkZoneNames(tp){
 
 function hetkCanManageElementWorkZones(){
     const me=hetkCurrentAccount();
-    return !!(me && ['super_admin','director','chief_engineer'].includes(me.role));
+    return !!(me && (me.role==='super_admin'||HETK_TERRITORIAL_MANAGER_ROLES.has(me.role)));
 }
 
 function hetkZoneAllowedForCurrentUser(zone){
