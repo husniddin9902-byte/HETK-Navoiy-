@@ -166,6 +166,8 @@
   let folderPickerExpanded = new Set();
   let workZoneSelectedFolderIds = new Set();
   let workZonePickerExpanded = new Set();
+  let workZoneTreeExpanded = new Set();
+  let workZoneTreeInitialized = false;
   let editingWorkZoneId = null;
   let userNotificationsRef = null;
   let userNotificationsUid = '';
@@ -3074,7 +3076,15 @@
               <div class="hetk-workzone-grid">
                 <div class="hetk-user-field">
                   <label>U/J ni tanlang *</label>
-                  <select id="hetk-user-workzone-select"></select>
+                  <select id="hetk-user-workzone-select" hidden aria-hidden="true"></select>
+                  <button type="button" id="hetk-user-workzone-tree-button" class="hetk-workzone-tree-button">
+                    <span><i class="fas fa-sitemap"></i><b id="hetk-user-workzone-tree-label">U/J ni tanlang</b></span>
+                    <i class="fas fa-chevron-down"></i>
+                  </button>
+                  <div id="hetk-user-workzone-tree-panel" class="hetk-workzone-tree-panel" hidden>
+                    <div class="hetk-workzone-tree-search"><i class="fas fa-search"></i><input id="hetk-user-workzone-tree-search" placeholder="Hudud yoki U/J nomini qidiring..."></div>
+                    <div id="hetk-user-workzone-tree" class="hetk-workzone-tree"></div>
+                  </div>
                 </div>
                 <div id="hetk-user-workzone-new-wrap" class="hetk-user-field" hidden>
                   <label>Yangi U/J nomi *</label>
@@ -3172,6 +3182,16 @@
     if(roleSelect) roleSelect.addEventListener('change', () => refreshWorkZoneEditor());
     const zoneSelect=byId('hetk-user-workzone-select');
     if(zoneSelect) zoneSelect.addEventListener('change', () => handleWorkZoneSelectionChange());
+    const zoneTreeButton=byId('hetk-user-workzone-tree-button');
+    if(zoneTreeButton) zoneTreeButton.addEventListener('click',()=>{
+      if(zoneTreeButton.disabled)return;
+      const panel=byId('hetk-user-workzone-tree-panel');if(!panel)return;
+      panel.hidden=!panel.hidden;
+      zoneTreeButton.classList.toggle('open',!panel.hidden);
+      if(!panel.hidden){renderWorkZoneTree();const input=byId('hetk-user-workzone-tree-search');if(input)setTimeout(()=>input.focus(),30);}
+    });
+    const zoneTreeSearch=byId('hetk-user-workzone-tree-search');
+    if(zoneTreeSearch) zoneTreeSearch.addEventListener('input',()=>renderWorkZoneTree());
     const folderSearch=byId('hetk-user-folder-search');
     if(folderSearch) folderSearch.addEventListener('input', () => renderUserFolderPicker());
     const save=byId('hetk-user-save');
@@ -3485,6 +3505,119 @@
       .sort((a,b) => String(a.name||'').localeCompare(String(b.name||'')));
   }
 
+  function isCountryFolderName(value){
+    const name=String(value||'').toLowerCase().replace(/[‘’ʼʻ`]/g,"'");
+    return name.includes("o'zbekiston") || name.includes('uzbekistan');
+  }
+
+  function workZoneTreeChains(zone){
+    const seen=new Set(),chains=[];
+    workZoneRoots(zone).forEach(folderId=>{
+      let chain=folderChainIds(folderId).filter(id=>teamFoldersCache[id]&&!isCountryFolderName(teamFoldersCache[id].name));
+      // U/J tanlashda asosiy korxona va tuman pog‘onasi yetarli;
+      // fider/pastki papkalar alohida U/J nomlarini chalkashtirmasligi uchun ko‘rsatilmaydi.
+      if(chain.length>2)chain=chain.slice(0,2);
+      if(!chain.length)return;
+      const key=chain.join('/');if(seen.has(key))return;seen.add(key);chains.push(chain);
+    });
+    return chains;
+  }
+
+  function workZoneTreePath(zone){
+    if(!zone)return '';
+    const chain=workZoneTreeChains(zone)[0]||[];
+    const names=chain.map(id=>(teamFoldersCache[id]&&teamFoldersCache[id].name)||'Papka');
+    names.push(zone.name||'Nomsiz U/J');
+    return names.join(' › ');
+  }
+
+  function buildWorkZoneTree(zones){
+    const root={id:'__root__',name:'',children:[],childMap:{},zones:[]};
+    zones.forEach(zone=>{
+      const chains=workZoneTreeChains(zone);
+      if(!chains.length){root.zones.push(zone);return;}
+      chains.forEach(chain=>{
+        let node=root;
+        chain.forEach(id=>{
+          if(!node.childMap[id]){
+            const child={id,name:(teamFoldersCache[id]&&teamFoldersCache[id].name)||'Papka',children:[],childMap:{},zones:[]};
+            node.childMap[id]=child;node.children.push(child);
+          }
+          node=node.childMap[id];
+        });
+        if(!node.zones.some(item=>item.id===zone.id))node.zones.push(zone);
+      });
+    });
+    const sortNode=node=>{
+      node.children.sort((a,b)=>a.name.localeCompare(b.name,'uz'));
+      node.zones.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'uz'));
+      node.children.forEach(sortNode);
+    };
+    sortNode(root);return root;
+  }
+
+  function renderWorkZoneTree(zonesArg){
+    const treeBox=byId('hetk-user-workzone-tree');
+    const select=byId('hetk-user-workzone-select');
+    if(!treeBox||!select)return;
+    const zones=Array.isArray(zonesArg)?zonesArg:getAvailableWorkZones();
+    const root=buildWorkZoneTree(zones),selectedId=select.value;
+    const query=String((byId('hetk-user-workzone-tree-search')&&byId('hetk-user-workzone-tree-search').value)||'').trim().toLowerCase();
+    if(!workZoneTreeInitialized){root.children.forEach(node=>workZoneTreeExpanded.add(node.id));workZoneTreeInitialized=true;}
+    if(selectedId&&selectedId!=='__new__'){
+      const selected=zones.find(zone=>zone.id===selectedId);
+      workZoneTreeChains(selected).forEach(chain=>chain.forEach(id=>workZoneTreeExpanded.add(id)));
+    }
+    const allCount=node=>{
+      const ids=new Set(node.zones.map(zone=>zone.id));
+      node.children.forEach(child=>allCount(child).forEach(id=>ids.add(id)));
+      return ids;
+    };
+    const renderNode=(node,depth,parentMatched)=>{
+      const folderMatched=!!query&&node.name.toLowerCase().includes(query);
+      const pass=parentMatched||folderMatched;
+      const zoneRows=node.zones.filter(zone=>!query||pass||[zone.name,workZoneTreePath(zone)].join(' ').toLowerCase().includes(query));
+      const childRows=node.children.map(child=>renderNode(child,depth+1,pass)).filter(Boolean);
+      if(query&&!zoneRows.length&&!childRows.length)return '';
+      const expanded=!!query||workZoneTreeExpanded.has(node.id);
+      const count=allCount(node).size;
+      return `<div class="hetk-workzone-tree-branch">
+        <button type="button" class="hetk-workzone-tree-folder" data-wz-folder="${escapeAttr(node.id)}" style="--wz-depth:${depth}">
+          <i class="fas ${expanded?'fa-chevron-down':'fa-chevron-right'}"></i><i class="fas fa-folder"></i><span>${escapeHtml(node.name)}</span><b>${count}</b>
+        </button>
+        <div class="hetk-workzone-tree-children" ${expanded?'':'hidden'}>
+          ${zoneRows.map(zone=>`<button type="button" class="hetk-workzone-tree-zone ${selectedId===zone.id?'selected':''}" data-wz-zone="${escapeAttr(zone.id)}" style="--wz-depth:${depth+1}"><i class="fas ${selectedId===zone.id?'fa-check-circle':'fa-map-marker-alt'}"></i><span>${escapeHtml(zone.name||'Nomsiz U/J')}</span></button>`).join('')}
+          ${childRows.join('')}
+        </div>
+      </div>`;
+    };
+    const branches=root.children.map(node=>renderNode(node,0,false)).filter(Boolean);
+    const unassigned=root.zones.filter(zone=>!query||String(zone.name||'').toLowerCase().includes(query));
+    let html=branches.join('');
+    if(unassigned.length)html+=`<div class="hetk-workzone-tree-unassigned"><small>Papkasi belgilanmagan U/J</small>${unassigned.map(zone=>`<button type="button" class="hetk-workzone-tree-zone ${selectedId===zone.id?'selected':''}" data-wz-zone="${escapeAttr(zone.id)}" style="--wz-depth:0"><i class="fas ${selectedId===zone.id?'fa-check-circle':'fa-map-marker-alt'}"></i><span>${escapeHtml(zone.name||'Nomsiz U/J')}</span></button>`).join('')}</div>`;
+    const role=byId('hetk-user-role')&&byId('hetk-user-role').value;
+    if(canCreateNewWorkZoneForRole(role))html+=`<button type="button" class="hetk-workzone-tree-new ${selectedId==='__new__'?'selected':''}" data-wz-zone="__new__"><i class="fas fa-plus-circle"></i><span>Yangi U/J yaratish</span></button>`;
+    treeBox.innerHTML=html||'<div class="hetk-folder-picker-empty">U/J topilmadi.</div>';
+    treeBox.querySelectorAll('[data-wz-folder]').forEach(button=>button.addEventListener('click',()=>{
+      const id=button.dataset.wzFolder;if(workZoneTreeExpanded.has(id))workZoneTreeExpanded.delete(id);else workZoneTreeExpanded.add(id);renderWorkZoneTree(zones);
+    }));
+    treeBox.querySelectorAll('[data-wz-zone]').forEach(button=>button.addEventListener('click',()=>{
+      select.value=button.dataset.wzZone;updateWorkZoneTreeButton(zones);renderWorkZoneTree(zones);
+      const panel=byId('hetk-user-workzone-tree-panel');if(panel)panel.hidden=true;
+      const trigger=byId('hetk-user-workzone-tree-button');if(trigger)trigger.classList.remove('open');
+      handleWorkZoneSelectionChange();
+    }));
+  }
+
+  function updateWorkZoneTreeButton(zonesArg){
+    const select=byId('hetk-user-workzone-select'),button=byId('hetk-user-workzone-tree-button'),label=byId('hetk-user-workzone-tree-label');
+    if(!select||!button||!label)return;
+    const zones=Array.isArray(zonesArg)?zonesArg:getAvailableWorkZones();
+    const zone=zones.find(item=>item.id===select.value);
+    label.textContent=select.value==='__new__'?'Yangi U/J yaratish':(zone?workZoneTreePath(zone):'U/J ni tanlang');
+    button.classList.toggle('selected',!!select.value);
+  }
+
   function refreshWorkZoneEditor(preferredId){
     const section=byId('hetk-user-workzone-section');
     const roleEl=byId('hetk-user-role');
@@ -3499,6 +3632,7 @@
     if(!needsZone){
       editorFolderLimitRoots=null;editorFolderLocked=false;
       if(newWrap) newWrap.hidden=true;
+      const treePanel=byId('hetk-user-workzone-tree-panel');if(treePanel)treePanel.hidden=true;
       renderUserFolderPicker(getEditorSelectedFolders());
       return;
     }
@@ -3514,6 +3648,10 @@
     if(selected && (selected==='__new__' || available.some(z=>z.id===selected))) select.value=selected;
     else if(fixedByMaster && currentAccount.workZoneId) select.value=currentAccount.workZoneId;
     select.disabled=fixedByMaster || !editingCanCore;
+    const treeButton=byId('hetk-user-workzone-tree-button');
+    if(treeButton)treeButton.disabled=select.disabled;
+    updateWorkZoneTreeButton(available);
+    renderWorkZoneTree(available);
     if(help){
       if(role==='master') help.textContent='U/J doimiy hudud nomi. Master almashsa TP larni emas, faqat shu U/J ning masterini almashtirasiz.';
       else help.textContent='Elektromontyor o‘z U/J siga bog‘lanadi. Element kiritganda U/J ni o‘zgartira olmaydi.';
@@ -3540,7 +3678,7 @@
       editorFolderLocked=role==='master' && roots.length>0;
       if(currentBox){
         const master=zone.currentMasterUid && teamUsersCache[zone.currentMasterUid];
-        currentBox.innerHTML=`<span><i class="fas fa-map-marker-alt"></i> ${escapeHtml(zone.name || 'U/J')}</span>${master ? `<small>Hozirgi master: <b>${escapeHtml(master.fullName || 'Nomsiz')}</b></small>` : '<small>Hozirgi master biriktirilmagan</small>'}`;
+        currentBox.innerHTML=`<span><i class="fas fa-map-marker-alt"></i> ${escapeHtml(workZoneTreePath(zone)||zone.name||'U/J')}</span>${master ? `<small>Hozirgi master: <b>${escapeHtml(master.fullName || 'Nomsiz')}</b></small>` : '<small>Hozirgi master biriktirilmagan</small>'}`;
       }
       const selected=(role==='master' && roots.length) ? roots : getEditorSelectedFolders().filter(x => workZoneAccessibleIds(zone).includes(x));
       renderUserFolderPicker(selected.length ? selected : roots);
@@ -3916,6 +4054,9 @@
     document.querySelectorAll('.hetk-create-password').forEach(x => x.style.display='');
     editorFolderLimitRoots=null;editorFolderLocked=false;
     editorSelectedFolderIds=new Set();folderPickerExpanded=new Set();
+    workZoneTreeExpanded=new Set();
+    workZoneTreeInitialized=false;
+    const zoneTreeSearch=byId('hetk-user-workzone-tree-search');if(zoneTreeSearch)zoneTreeSearch.value='';
     const folderSearch=byId('hetk-user-folder-search');if(folderSearch) folderSearch.value='';
     fillRoleOptions(getCreatableRoles()[0],true);
     renderUserFolderPicker([]);
@@ -3941,6 +4082,9 @@
     document.querySelectorAll('.hetk-create-password').forEach(x => x.style.display='none');
     editorFolderLimitRoots=null;editorFolderLocked=false;
     editorSelectedFolderIds=new Set();folderPickerExpanded=new Set();
+    workZoneTreeExpanded=new Set();
+    workZoneTreeInitialized=false;
+    const zoneTreeSearch=byId('hetk-user-workzone-tree-search');if(zoneTreeSearch)zoneTreeSearch.value='';
     const folderSearch=byId('hetk-user-folder-search');if(folderSearch) folderSearch.value='';
     fillRoleOptions(u.role,canManageTarget(u,'role'));
     renderUserFolderPicker(accountFolderRoots(u));
