@@ -1,9 +1,10 @@
 (function(){
   'use strict';
 
-  const INDEX_VERSION=2;
-  const GLOBAL_ROLES=new Set(['super_admin','director','chief_engineer','republic_tb_engineer']);
-  const GLOBAL_TP_ROLES=new Set(['super_admin','director','chief_engineer','republic_tb_engineer','chief_dispatcher','dispatcher']);
+  const INDEX_VERSION=3;
+  const GLOBAL_ROLES=new Set(['super_admin','republic_tb_engineer']);
+  const GLOBAL_TP_ROLES=new Set(['super_admin','republic_tb_engineer','chief_dispatcher','dispatcher','tchb_electrician','driver']);
+  const NO_FOLDER_ACCESS_ROLES=new Set(['execution_discipline_inspector','warehouse_manager','gardener','cleaner']);
   let tpCache={};
   let userCache={};
   let indexVersionCache=null;
@@ -168,8 +169,9 @@
     newAncestors.forEach(function(id){updates['UsersByAncestor/'+id+'/'+uid]=user;});
     const oldAccess=new Set();oldRoots.forEach(function(id){descendants(id,folders).forEach(function(x){oldAccess.add(x);});});
     const newAccess=new Set();newRoots.forEach(function(id){descendants(id,folders).forEach(function(x){newAccess.add(x);});});
-    if(oldUser&&(oldUser.rootAccess||['director','chief_engineer','republic_tb_engineer','chief_dispatcher','dispatcher'].includes(oldUser.role)))Object.keys(folders).forEach(function(id){oldAccess.add(id);});
-    if(user&&(user.rootAccess||['director','chief_engineer','republic_tb_engineer','chief_dispatcher','dispatcher'].includes(user.role)))Object.keys(folders).forEach(function(id){newAccess.add(id);});
+    if(oldUser&&(oldUser.rootAccess||GLOBAL_TP_ROLES.has(oldUser.role)))Object.keys(folders).forEach(function(id){oldAccess.add(id);});
+    if(user&&(user.rootAccess||GLOBAL_TP_ROLES.has(user.role)))Object.keys(folders).forEach(function(id){newAccess.add(id);});
+    if(user&&NO_FOLDER_ACCESS_ROLES.has(user.role))newAccess.clear();
     oldAccess.forEach(function(id){if(!newAccess.has(id))updates['FolderAccess/'+uid+'/'+id]=null;});
     newAccess.forEach(function(id){updates['FolderAccess/'+uid+'/'+id]=true;});
     return updates;
