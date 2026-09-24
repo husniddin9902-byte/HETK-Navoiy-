@@ -1470,6 +1470,49 @@
 
   function closeSafetyQr(){const el=byId('hetk-safety-qr-overlay');if(el) el.remove();}
 
+  function qrCanvasDataUrl(link,size){
+    return new Promise((resolve,reject)=>{
+      if(typeof QRCode!=='function') return reject(new Error('QR kutubxonasi yuklanmadi.'));
+      const host=document.createElement('div');host.style.cssText='position:fixed;left:-10000px;top:-10000px;width:'+size+'px;height:'+size+'px;background:#fff';document.body.appendChild(host);
+      try{
+        new QRCode(host,{text:link,width:size,height:size,colorDark:'#001f35',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.H});
+        requestAnimationFrame(()=>{try{const canvas=host.querySelector('canvas'),img=host.querySelector('img');const finish=()=>{const value=canvas&&canvas.width?canvas.toDataURL('image/png'):(img&&img.src?img.src:'');host.remove();value?resolve(value):reject(new Error('QR rasmi tayyorlanmadi.'));};if(img&&!canvas&&!img.complete){img.onload=finish;img.onerror=()=>{host.remove();reject(new Error('QR rasmi tayyorlanmadi.'));};}else finish();}catch(error){host.remove();reject(error);}});
+      }catch(error){host.remove();reject(error);}
+    });
+  }
+
+  function qrPrintDocument(items,autoPrint,popup){
+    const cards=items.map(item=>`<article class="qr-label"><img src="${escapeAttr(String(item.image||''))}" alt="QR"><b>${escapeHtml(String(item.name||'Hodim'))}</b><small>${escapeHtml(String(item.code||''))}</small></article>`).join('');
+    popup=popup||window.open('','_blank');if(!popup){alert('Chop oynasi bloklandi. Brauzerda yangi oynalarga ruxsat bering.');return;}
+    popup.document.open();popup.document.write(`<!doctype html><html lang="uz"><head><meta charset="utf-8"><title>HETK QR kodlari</title><style>@page{size:A4 portrait;margin:10mm}*{box-sizing:border-box}html,body{margin:0;padding:0;background:#fff;color:#001f35;font-family:Arial,sans-serif}.sheet{display:grid;grid-template-columns:repeat(5,35mm);grid-auto-rows:40mm;gap:6mm 3.75mm;align-content:start}.qr-label{width:35mm;height:40mm;margin:0;padding:1.5mm;border:.2mm dashed #b8c5cc;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;overflow:hidden;break-inside:avoid;page-break-inside:avoid}.qr-label img{display:block;width:30mm;height:30mm;object-fit:contain}.qr-label b{display:block;width:100%;margin-top:.5mm;font-size:6.5pt;line-height:1.05;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.qr-label small{display:block;width:100%;font-size:4.8pt;line-height:1;text-align:center;color:#486172;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}@media screen{body{padding:10mm}.sheet{width:190mm;margin:auto}}</style></head><body><main class="sheet">${cards}</main><script>window.addEventListener('load',function(){${autoPrint?'setTimeout(function(){window.print()},250);':''}});<\/script></body></html>`);popup.document.close();
+  }
+
+  async function printQrItems(rows){
+    if(!rows.length)return alert('Chop etish uchun hodim tanlanmagan.');
+    const popup=window.open('','_blank');if(!popup)return alert('Chop oynasi bloklandi. Brauzerda yangi oynalarga ruxsat bering.');
+    popup.document.write('<!doctype html><title>QR tayyorlanmoqda...</title><p style="font:16px Arial;padding:30px">QR kodlar tayyorlanmoqda...</p>');
+    try{const items=[];for(const row of rows)items.push({name:row.fullName||'Hodim',code:row.code,image:await qrCanvasDataUrl(permitPublicUrl(row.code),420)});qrPrintDocument(items,true,popup);}catch(error){popup.close();throw error;}
+  }
+
+  async function downloadQrPng(account,rec){
+    try{
+      const qr=await qrCanvasDataUrl(permitPublicUrl(rec.publicCode),1063),canvas=document.createElement('canvas');canvas.width=1240;canvas.height=1417;const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);const image=new Image();image.src=qr;await new Promise((resolve,reject)=>{image.onload=resolve;image.onerror=reject;});ctx.drawImage(image,88,55,1063,1063);ctx.fillStyle='#001f35';ctx.textAlign='center';ctx.font='700 44px Arial';const name=String(account.fullName||'Hodim');ctx.fillText(name.length>38?name.slice(0,37)+'…':name,620,1190);ctx.fillStyle='#486172';ctx.font='30px monospace';ctx.fillText(String(rec.publicCode||''),620,1250);ctx.strokeStyle='#b8c5cc';ctx.lineWidth=3;ctx.setLineDash([12,10]);ctx.strokeRect(2,2,1236,1413);const link=document.createElement('a');link.download='HETK-QR-'+String(name).replace(/[^a-zA-Z0-9\u0400-\u04FF]+/g,'-').replace(/^-|-$/g,'')+'.png';link.href=canvas.toDataURL('image/png');link.click();
+    }catch(error){alert(friendlyAuthError(error));}
+  }
+
+  function closeQrBatch(){const el=byId('hetk-qr-batch-overlay');if(el)el.remove();}
+
+  function openQrBatch(){
+    if(!isSafetyOfficer(currentAccount))return;
+    const visible=getVisibleUsers().filter(u=>!PERMIT_EXEMPT_ROLES.has(u.role));
+    const ready=visible.filter(u=>{const rec=safetyRecord(u);return rec.publicEnabled&&rec.publicCode&&u.active!==false;});
+    const overlay=document.createElement('div');overlay.id='hetk-qr-batch-overlay';overlay.className='hetk-safety-overlay';
+    overlay.innerHTML=`<div class="hetk-safety-overlay-backdrop" data-close-qr-batch></div><div class="hetk-qr-batch-dialog"><header><div><small>A4 · 35 × 40 mm</small><h3>Hodimlarning QR kodlarini chiqarish</h3><p>Bir varaqda 30 tagacha QR kod avtomatik joylashadi.</p></div><button type="button" data-close-qr-batch><i class="fas fa-times"></i></button></header><div class="hetk-qr-batch-tools"><label><input type="checkbox" id="hetk-qr-batch-all"> <b>Hammasini tanlash</b></label><span id="hetk-qr-batch-count">0 ta tanlangan</span></div><div class="hetk-qr-batch-list">${ready.length?ready.map(u=>{const rec=safetyRecord(u);return `<label><input type="checkbox" data-qr-batch-user="${escapeAttr(u.uid)}"><span><b>${escapeHtml(u.fullName||'Hodim')}</b><small>${escapeHtml(getRoleLabel(u))} · ${escapeHtml(u.workZoneName||u.region||'—')}</small></span><code>${escapeHtml(rec.publicCode)}</code></label>`;}).join(''):'<div class="hetk-qr-batch-empty">Faol QR kodi mavjud hodim topilmadi.</div>'}</div><footer><button type="button" data-close-qr-batch>Bekor qilish</button><button type="button" id="hetk-qr-batch-print" ${ready.length?'':'disabled'}><i class="fas fa-print"></i> Tanlanganlarni chop etish</button></footer></div>`;
+    document.body.appendChild(overlay);overlay.querySelectorAll('[data-close-qr-batch]').forEach(x=>x.addEventListener('click',closeQrBatch));
+    const checks=Array.from(overlay.querySelectorAll('[data-qr-batch-user]')),all=byId('hetk-qr-batch-all'),count=byId('hetk-qr-batch-count');const update=()=>{const n=checks.filter(x=>x.checked).length;count.textContent=n+' ta tanlangan';all.checked=checks.length>0&&n===checks.length;all.indeterminate=n>0&&n<checks.length;};checks.forEach(x=>x.addEventListener('change',update));all.addEventListener('change',()=>{checks.forEach(x=>x.checked=all.checked);update();});
+    const print=byId('hetk-qr-batch-print');if(print)print.addEventListener('click',async()=>{const rows=checks.filter(x=>x.checked).map(x=>{const u=Object.assign({uid:x.dataset.qrBatchUser},teamUsersCache[x.dataset.qrBatchUser]||{});return Object.assign(u,{code:safetyRecord(u).publicCode});});if(!rows.length)return alert('Kamida bitta hodimni tanlang.');setBusy(print,true,'QR tayyorlanmoqda...');try{await printQrItems(rows);}catch(error){alert(friendlyAuthError(error));}finally{setBusy(print,false);}});
+  }
+
   function openSafetyQr(uid){
     const raw=teamUsersCache[uid] || (currentAccount && currentAccount.uid===uid ? currentAccount : null);
     if(!raw) return;
@@ -1478,14 +1521,15 @@
     closeSafetyQr();
     const link=permitPublicUrl(rec.publicCode);
     const overlay=document.createElement('div');overlay.id='hetk-safety-qr-overlay';overlay.className='hetk-safety-overlay hetk-safety-qr-overlay';
-    overlay.innerHTML=`<div class="hetk-safety-overlay-backdrop" data-close-qr></div><div class="hetk-qr-dialog"><button type="button" class="hetk-qr-close" data-close-qr><i class="fas fa-times"></i></button><div class="hetk-qr-brand"><i class="fas fa-bolt"></i><b>HETK</b></div><h3>Ruxsatnomani tekshirish QR kodi</h3><p>${escapeHtml(raw.fullName||'Hodim')}</p><div id="hetk-safety-qr-image"></div><code>${escapeHtml(rec.publicCode)}</code><small>QR skanerlanganda ruxsatnomaning cheklangan va doimiy yangilanadigan ma’lumoti ochiladi.</small><div class="hetk-qr-actions"><button type="button" id="hetk-qr-copy"><i class="fas fa-link"></i> Havolani nusxalash</button><button type="button" id="hetk-qr-print"><i class="fas fa-print"></i> Chop etish</button></div></div>`;
+    overlay.innerHTML=`<div class="hetk-safety-overlay-backdrop" data-close-qr></div><div class="hetk-qr-dialog"><button type="button" class="hetk-qr-close" data-close-qr><i class="fas fa-times"></i></button><div class="hetk-qr-brand"><i class="fas fa-bolt"></i><b>HETK</b></div><h3>Ruxsatnomani tekshirish QR kodi</h3><p>${escapeHtml(raw.fullName||'Hodim')}</p><div id="hetk-safety-qr-image"></div><code>${escapeHtml(rec.publicCode)}</code><small>Chopda o‘lcham 35 × 40 mm, QR kodi 30 × 30 mm bo‘lib chiqadi.</small><div class="hetk-qr-actions"><button type="button" id="hetk-qr-copy"><i class="fas fa-link"></i> Havolani nusxalash</button><button type="button" id="hetk-qr-download"><i class="fas fa-download"></i> PNG yuklab olish</button><button type="button" id="hetk-qr-print"><i class="fas fa-print"></i> Chop etish</button></div></div>`;
     document.body.appendChild(overlay);
     overlay.querySelectorAll('[data-close-qr]').forEach(btn=>btn.addEventListener('click',closeSafetyQr));
     const box=byId('hetk-safety-qr-image');
     if(typeof QRCode==='function') new QRCode(box,{text:link,width:240,height:240,colorDark:'#001f35',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.H});
     else box.innerHTML='<div class="hetk-qr-error">QR kutubxonasi yuklanmadi. Sahifani internet bilan yangilang.</div>';
     byId('hetk-qr-copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(link);alert('QR havolasi nusxalandi.');}catch(_e){prompt('Havolani nusxalang:',link);}});
-    byId('hetk-qr-print').addEventListener('click',()=>window.print());
+    byId('hetk-qr-download').addEventListener('click',()=>downloadQrPng(raw,rec));
+    byId('hetk-qr-print').addEventListener('click',async()=>{try{await printQrItems([{fullName:raw.fullName||'Hodim',code:rec.publicCode}]);}catch(error){alert(friendlyAuthError(error));}});
   }
 
   function publicPermitExamHtml(exam,index){
@@ -3041,6 +3085,7 @@
           </div>
           <div style="display:flex;gap:10px;flex-wrap:wrap">
             ${(account.rootAccess||account.role==='super_admin') ? '<button id="hetk-build-access-index" class="hetk-team-add" type="button"><i class="fas fa-shield-alt"></i><span>Hududiy xavfsizlik indeksini yangilash</span></button>' : ''}
+            ${isSafetyOfficer(account) ? '<button id="hetk-qr-batch-open" class="hetk-team-add hetk-qr-batch-open" type="button"><i class="fas fa-qrcode"></i><span>QR kodlarni chiqarish</span></button>' : ''}
             ${canManageZones ? '<button id="hetk-manage-workzones" class="hetk-team-add" type="button"><i class="fas fa-hard-hat"></i><span>U/J larni boshqarish</span></button>' : ''}
             ${canCreate ? '<button id="hetk-add-user" class="hetk-team-add" type="button"><i class="fas fa-user-plus"></i><span>Yangi hodim / admin</span></button>' : ''}
           </div>
@@ -3188,6 +3233,8 @@
     if(add) add.addEventListener('click', openCreateUserEditor);
     const buildIndex=byId('hetk-build-access-index');
     if(buildIndex)buildIndex.addEventListener('click',runAccessIndexMigration);
+    const qrBatch=byId('hetk-qr-batch-open');
+    if(qrBatch)qrBatch.addEventListener('click',openQrBatch);
     const manageZones=byId('hetk-manage-workzones');
     if(manageZones) manageZones.addEventListener('click',openWorkZoneManager);
     document.querySelectorAll('[data-close-user-editor]').forEach(el => el.addEventListener('click', closeUserEditor));
