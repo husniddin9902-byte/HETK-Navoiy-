@@ -23,6 +23,7 @@
     <link rel="stylesheet" href="naryad-module.css?v=1.2">
     <link rel="stylesheet" href="training-center.css?v=2.2">
     <link rel="stylesheet" href="training-center-theme.css?v=1.5">
+    <link rel="stylesheet" href="safety-home.css?v=1.0">
 </head>
 <body>
 
@@ -48,6 +49,45 @@
     </div>
 
     <div id="map"></div>
+
+    <!-- MMQ/TB xodimlari uchun xarita o‘rnidagi maxsus bosh ekran. -->
+    <main id="hetk-safety-home" class="hetk-safety-home" hidden aria-hidden="true">
+        <div class="hetk-safety-home-shade"></div>
+        <section class="hetk-safety-home-copy" aria-labelledby="hetk-safety-home-title">
+            <p class="hetk-safety-home-kicker"><i class="fas fa-shield-alt"></i> Mehnat muhofazasi va texnika xavfsizligi</p>
+            <h1 id="hetk-safety-home-title">Eng katta natija — har bir xodimning oilasi bag‘riga sog‘-omon qaytishi.</h1>
+            <button id="hetk-safety-home-notice" class="hetk-safety-home-notice" type="button" data-safety-action="notifications">
+                <i class="fas fa-bell"></i>
+                <span>Bildirishnomalar</span>
+                <b id="hetk-safety-home-notice-count" hidden>0</b>
+            </button>
+        </section>
+
+        <nav class="hetk-safety-home-actions" aria-label="TB muhandisi tezkor bo‘limlari">
+            <div class="hetk-safety-home-primary">
+                <button class="hetk-safety-home-action permits" type="button" data-safety-action="permits">
+                    <i class="fas fa-id-card"></i><span>Ruxsatnomalar</span>
+                </button>
+                <button class="hetk-safety-home-action exams" type="button" data-safety-action="exams">
+                    <i class="fas fa-clipboard-check"></i><span>Imtihonlar</span>
+                </button>
+                <button class="hetk-safety-home-action equipment" type="button" data-safety-action="equipment">
+                    <i class="fas fa-hard-hat"></i><span>Himoya vositalari</span>
+                </button>
+                <button class="hetk-safety-home-action inspections" type="button" data-safety-action="inspections">
+                    <i class="fas fa-search"></i><span>Tekshiruvlar</span>
+                </button>
+            </div>
+            <div class="hetk-safety-home-secondary">
+                <button class="hetk-safety-home-action notifications" type="button" data-safety-action="notifications">
+                    <i class="fas fa-bell"></i><span>Bildirishnomalar</span><b class="hetk-safety-home-action-count" hidden>0</b>
+                </button>
+                <button class="hetk-safety-home-action reports" type="button" data-safety-action="reports">
+                    <i class="fas fa-chart-column"></i><span>Hisobotlar</span>
+                </button>
+            </div>
+        </nav>
+    </main>
 <button id="return-element-btn"
 style="
 display:none;
@@ -1635,5 +1675,6 @@ gap:8px;
     <script src="statistics.js?v=3.4"></script>
     <script src="print-module.js?v=10.3"></script>
     <script src="mahalla.js?v=1.1"></script>
+    <script src="safety-home.js?v=1.0"></script>
 </body>
                          </html>
