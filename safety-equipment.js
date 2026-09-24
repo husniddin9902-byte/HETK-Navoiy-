@@ -163,10 +163,27 @@
     Object.keys(brigades).map(id=>Object.assign({id},brigades[id]||{})).filter(row=>row.active!==false&&(me&&((me.rootAccess||role()==='super_admin'||role()==='republic_tb_engineer')||accountCoversFolder(me,row.folderId)))).sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'uz')).forEach(row=>{const geo=itemGeography({unitType:'construction',constructionBrigadeId:row.id});result.push({key:unitKey('construction',row.id),type:'construction',id:row.id,name:row.name||'Qurilish brigadasi',region:geo.region,district:geo.district});});
     return result;
   }
-  function unitOptions(selected,allLabel){
-    const rows=unitOptionRows(),uj=rows.filter(x=>x.type==='work_zone'),constructionUj=rows.filter(x=>x.type==='construction_work_zone'),dispatch=rows.filter(x=>x.type==='dispatcher'),construction=rows.filter(x=>x.type==='construction');
-    return `${allLabel?`<option value="all">${esc(allLabel)}</option>`:''}${uj.length?`<optgroup label="Oddiy U/J lar">${uj.map(x=>`<option value="${attr(x.key)}"${x.key===selected?' selected':''}>${esc(x.name)}</option>`).join('')}</optgroup>`:''}${constructionUj.length?`<optgroup label="Qurilish U/J lar">${constructionUj.map(x=>`<option value="${attr(x.key)}"${x.key===selected?' selected':''}>${esc(x.name)}</option>`).join('')}</optgroup>`:''}${dispatch.length?`<optgroup label="Dispetcherliklar">${dispatch.map(x=>`<option value="${attr(x.key)}"${x.key===selected?' selected':''}>${esc(x.name)}</option>`).join('')}</optgroup>`:''}${construction.length?`<optgroup label="Qurilish brigadalari — me’yor qo‘llanmaydi">${construction.map(x=>`<option value="${attr(x.key)}"${x.key===selected?' selected':''}>${esc(x.name)}</option>`).join('')}</optgroup>`:''}`;
+  function groupedUnitOptionsHtml(rows,selected,allLabel){
+    const types=[
+      {key:'work_zone',label:'ODDIY U/J LAR'},
+      {key:'construction_work_zone',label:'QURILISH U/J LAR'},
+      {key:'dispatcher',label:'DISPETCHERLIKLAR'},
+      {key:'construction',label:'QURILISH BRIGADALARI — ME’YOR QO‘LLANMAYDI'}
+    ],regions=Array.from(new Set(rows.map(row=>row.region).filter(Boolean))),showRegion=regions.length>1;
+    let html=allLabel?`<option value="all"${selected==='all'?' selected':''}>${esc(allLabel)}</option>`:'';
+    types.forEach(group=>{
+      const typeRows=rows.filter(row=>row.type===group.key);if(!typeRows.length)return;
+      html+=`<option disabled>──────── ${esc(group.label)} ────────</option>`;
+      const districts=Array.from(new Set(typeRows.map(row=>row.district||'Hudud aniqlanmagan'))).sort((a,b)=>a.localeCompare(b,'uz'));
+      districts.forEach(district=>{
+        const districtRows=typeRows.filter(row=>(row.district||'Hudud aniqlanmagan')===district).sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'uz')),
+          region=showRegion&&districtRows[0]&&districtRows[0].region?`${districtRows[0].region} → `:'';
+        html+=`<optgroup label="${attr(region+district)}">${districtRows.map(row=>`<option value="${attr(row.key)}"${row.key===selected?' selected':''}>↳ ${esc(row.name)}</option>`).join('')}</optgroup>`;
+      });
+    });
+    return html;
   }
+  function unitOptions(selected,allLabel){return groupedUnitOptionsHtml(unitOptionRows(),selected,allLabel);}
   function catalogRow(id){return catalog[id]||{};}
   function itemName(item){return item.equipmentName||catalogRow(item.catalogId).name||'Nomsiz vosita';}
   function daysLeft(item){const due=parseDate(item.nextTestDate);return due?Math.ceil((due-todayStart())/DAY):null;}
@@ -430,7 +447,7 @@
   function unitNormRowsHtml(meta){const specific=unitNormRecord(meta.key),fallback=normRecordForType(meta.type),record=specific||fallback,qty=record&&record.quantities||{},rows=activeCatalogRows();return `<p class="hetk-se-note ${specific?'success':''}"><b>${specific?'Alohida me’yor tasdiqlangan.':unitTypeLabel(meta.type)+' umumiy me’yori qo‘llanmoqda.'}</b> ${specific?'Saqlasangiz maxsus me’yor yangilanadi.':'Qiymatlarni o‘zgartirib saqlasangiz shu bo‘linma uchun alohida me’yor tasdiqlanadi.'}</p>`+rows.map(row=>`<label class="hetk-se-norm-row"><span><b>${esc(row.name||'Nomsiz vosita')}</b><small>Sinov oralig‘i: ${esc(intervalText(row))}</small></span><input type="number" min="0" step="1" value="${attr(Number(qty[row.id])||0)}" data-se-unit-norm-catalog="${attr(row.id)}"><em>ta</em></label>`).join('');}
   function unitNormForm(selectedKey){
     if(!canApproveUnitNorm())return;const units=normEditableUnits();if(!units.length)return toast('Me’yor tasdiqlash uchun bo‘linma topilmadi.','error');let meta=units.find(row=>row.key===selectedKey)||units[0];
-    const options=units.map(row=>`<option value="${attr(row.key)}"${row.key===meta.key?' selected':''}>${esc(unitTypeLabel(row.type))} — ${esc(row.name)} — ${esc(row.district)}</option>`).join('');
+    const options=groupedUnitOptionsHtml(units,meta.key,'');
     const content=`<header><i class="fas fa-stamp"></i><div><h3>Bo‘linma uchun alohida me’yor</h3><p>Faqat tanlangan U/J, Qurilish U/J yoki dispetcherlik uchun amal qiladi.</p></div><button data-se-modal-close>×</button></header><div class="hetk-se-dialog-body"><div id="hetk-se-formerror" class="hetk-se-formerror"></div><div class="hetk-se-field full"><span>Bo‘linma *</span><select id="hetk-se-unit-norm-key">${options}</select></div><div id="hetk-se-unit-norm-rows" class="hetk-se-norm-rows">${unitNormRowsHtml(meta)}</div></div><footer><button class="cancel" data-se-modal-close>Bekor qilish</button><button id="hetk-se-unit-norm-reset" class="danger"${unitNormRecord(meta.key)?'':' hidden'}><i class="fas fa-rotate-left"></i> Umumiy me’yorga qaytarish</button><button id="hetk-se-unit-norm-save" class="save"><i class="fas fa-stamp"></i> Alohida me’yorni tasdiqlash</button></footer>`;
     openModal(content,true);byId('hetk-se-unit-norm-key').addEventListener('change',()=>unitNormForm(fieldValue('hetk-se-unit-norm-key')));byId('hetk-se-unit-norm-save').addEventListener('click',saveUnitNorm);const reset=byId('hetk-se-unit-norm-reset');if(reset)reset.addEventListener('click',resetUnitNorm);
   }
