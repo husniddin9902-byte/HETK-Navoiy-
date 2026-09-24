@@ -1476,7 +1476,9 @@
       const host=document.createElement('div');host.style.cssText='position:fixed;left:-10000px;top:-10000px;width:'+size+'px;height:'+size+'px;background:#fff';document.body.appendChild(host);
       try{
         new QRCode(host,{text:link,width:size,height:size,colorDark:'#001f35',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.H});
-        requestAnimationFrame(()=>{try{const canvas=host.querySelector('canvas'),img=host.querySelector('img');const finish=()=>{const value=canvas&&canvas.width?canvas.toDataURL('image/png'):(img&&img.src?img.src:'');host.remove();value?resolve(value):reject(new Error('QR rasmi tayyorlanmadi.'));};if(img&&!canvas&&!img.complete){img.onload=finish;img.onerror=()=>{host.remove();reject(new Error('QR rasmi tayyorlanmadi.'));};}else finish();}catch(error){host.remove();reject(error);}});
+        let settled=false;
+        const timer=setTimeout(()=>{if(settled)return;settled=true;host.remove();reject(new Error('QR tayyorlash vaqti tugadi. Sahifani yangilab qayta urinib ko‘ring.'));},15000);
+        setTimeout(()=>{if(settled)return;try{const canvas=host.querySelector('canvas'),img=host.querySelector('img');const finish=()=>{if(settled)return;settled=true;clearTimeout(timer);const value=canvas&&canvas.width?canvas.toDataURL('image/png'):(img&&img.src?img.src:'');host.remove();value?resolve(value):reject(new Error('QR rasmi tayyorlanmadi.'));};if(img&&!canvas&&!img.complete){img.onload=finish;img.onerror=()=>{if(settled)return;settled=true;clearTimeout(timer);host.remove();reject(new Error('QR rasmi tayyorlanmadi.'));};}else finish();}catch(error){if(settled)return;settled=true;clearTimeout(timer);host.remove();reject(error);}},0);
       }catch(error){host.remove();reject(error);}
     });
   }
