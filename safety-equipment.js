@@ -6,7 +6,7 @@
   const REGIONAL_TB_ROLES=['regional_tb_chief','regional_tb_operations_engineer','regional_tb_engineer','regional_fire_safety_engineer'];
   const DIRECTOR_ROLES=['director','regional_director','district_director'];
   const CHIEF_ENGINEER_ROLES=['chief_engineer','regional_chief_engineer','district_chief_engineer'];
-  const VIEW_ROLES=new Set(['super_admin',...DIRECTOR_ROLES,'republic_tb_engineer',...CHIEF_ENGINEER_ROLES,...REGIONAL_TB_ROLES,'tb_engineer','chief_dispatcher','dispatcher','tchb_electrician','driver','master']);
+  const VIEW_ROLES=new Set(['super_admin',...DIRECTOR_ROLES,'republic_tb_engineer',...CHIEF_ENGINEER_ROLES,...REGIONAL_TB_ROLES,'tb_engineer','chief_dispatcher','dispatcher','tchb_electrician','tchb_driver','master']);
   const ITEM_MANAGER_ROLES=new Set(['super_admin',...DIRECTOR_ROLES,'republic_tb_engineer',...CHIEF_ENGINEER_ROLES,...REGIONAL_TB_ROLES,'tb_engineer']);
   const TEST_MANAGER_ROLES=new Set(['super_admin',...DIRECTOR_ROLES,'republic_tb_engineer',...CHIEF_ENGINEER_ROLES,...REGIONAL_TB_ROLES,'tb_engineer']);
   const CATALOG_MANAGER_ROLES=new Set(['super_admin',...DIRECTOR_ROLES,...CHIEF_ENGINEER_ROLES,'republic_tb_engineer','regional_tb_chief']);
@@ -50,7 +50,7 @@
   function canManageConstructionBrigades(){return !!(me&&(me.rootAccess||role()==='super_admin'||CONSTRUCTION_MANAGER_ROLES.has(role())));}
   function isSuperAdmin(){return !!(me&&role()==='super_admin');}
   function isMaster(){return role()==='master';}
-  function isDispatcher(){return ['chief_dispatcher','dispatcher','tchb_electrician','driver'].includes(role());}
+  function isDispatcher(){return ['chief_dispatcher','dispatcher','tchb_electrician','tchb_driver'].includes(role());}
   function now(){return Date.now();}
   function todayStart(){const d=new Date();return new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime();}
   function parseDate(value){if(!value)return 0;const t=Date.parse(String(value).slice(0,10)+'T00:00:00');return Number.isFinite(t)?t:0;}
@@ -77,7 +77,7 @@
     if(!user)return new Set();
     const roots=objectTrueKeys(user.folders).sort(),key=`${user.uid||user.login||''}|${user.role||''}|${user.rootAccess?'1':'0'}|${roots.join(',')}`;
     if(accountFolderCache.has(key))return accountFolderCache.get(key);
-    let set;if(user.rootAccess||['super_admin','republic_tb_engineer','chief_dispatcher','dispatcher','tchb_electrician','driver'].includes(user.role))set=new Set(Object.keys(folders));
+    let set;if(user.rootAccess||['super_admin','republic_tb_engineer'].includes(user.role))set=new Set(Object.keys(folders));
     else{set=new Set();roots.forEach(id=>{if(!folders[id])return;set.add(id);folderChildren(id).forEach(x=>set.add(x));});}
     accountFolderCache.set(key,set);return set;
   }
@@ -90,7 +90,7 @@
   }
   function accountCoversFolder(user,folderId){
     if(!user||!folderId)return false;
-    if(user.rootAccess||['super_admin','republic_tb_engineer','chief_dispatcher','dispatcher','tchb_electrician','driver'].includes(user.role))return true;
+    if(user.rootAccess||['super_admin','republic_tb_engineer'].includes(user.role))return true;
     const allowed=accountFolderSet(user);if(allowed.has(folderId))return true;
     let cur=folders[folderId]&&folders[folderId].parentId,guard=0;
     while(cur&&cur!=='root'&&folders[cur]&&guard<100){if(allowed.has(cur))return true;cur=folders[cur].parentId;guard++;}
