@@ -1502,17 +1502,49 @@
     }catch(error){alert(friendlyAuthError(error));}
   }
 
+  function loadQrPdfLibrary(){
+    if(window.PDFLib)return Promise.resolve();
+    return new Promise((resolve,reject)=>{const old=document.querySelector('script[data-hetk-qr-pdf]');if(old){old.addEventListener('load',()=>window.PDFLib?resolve():reject(new Error('PDF moduli yuklanmadi.')),{once:true});old.addEventListener('error',()=>reject(new Error('PDF moduli yuklanmadi.')),{once:true});return;}const script=document.createElement('script');script.src='pdf-lib.min.js?v=1.0';script.dataset.hetkQrPdf='1';script.onload=()=>window.PDFLib?resolve():reject(new Error('PDF moduli yuklanmadi.'));script.onerror=()=>reject(new Error('PDF moduli yuklanmadi.'));document.head.appendChild(script);});
+  }
+
+  async function qrLabelDataUrl(row){
+    const qr=await qrCanvasDataUrl(permitPublicUrl(row.code),360),canvas=document.createElement('canvas');canvas.width=420;canvas.height=480;const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,420,480);const image=new Image();image.src=qr;await new Promise((resolve,reject)=>{image.onload=resolve;image.onerror=reject;});ctx.drawImage(image,30,16,360,360);ctx.fillStyle='#001f35';ctx.textAlign='center';ctx.font='700 22px Arial';let name=String(row.fullName||'Hodim');if(name.length>32)name=name.slice(0,31)+'…';ctx.fillText(name,210,414);ctx.fillStyle='#486172';ctx.font='15px monospace';ctx.fillText(String(row.code||''),210,444);ctx.strokeStyle='#aebec7';ctx.lineWidth=2;ctx.setLineDash([8,6]);ctx.strokeRect(1,1,418,478);return canvas.toDataURL('image/png');
+  }
+
+  async function downloadQrPdf(rows,onProgress){
+    if(!rows.length)throw new Error('PDF uchun kamida bitta hodimni tanlang.');
+    await loadQrPdfLibrary();
+    const pdf=await PDFLib.PDFDocument.create(),pageWidth=595.28,pageHeight=841.89,mm=72/25.4,labelW=35*mm,labelH=40*mm,gapX=3.75*mm,gapY=6*mm,marginX=10*mm,marginY=10*mm;
+    let page=null;
+    for(let i=0;i<rows.length;i++){
+      if(i%30===0)page=pdf.addPage([pageWidth,pageHeight]);
+      const slot=i%30,col=slot%5,row=Math.floor(slot/5),png=await pdf.embedPng(await qrLabelDataUrl(rows[i]));
+      const x=marginX+col*(labelW+gapX),y=pageHeight-marginY-labelH-row*(labelH+gapY);page.drawImage(png,{x,y,width:labelW,height:labelH});
+      if(onProgress)onProgress(i+1,rows.length);
+    }
+    const bytes=await pdf.save(),blob=new Blob([bytes],{type:'application/pdf'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='HETK-QR-kodlari-'+new Date().toISOString().slice(0,10)+'.pdf';a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);
+  }
+
   function closeQrBatch(){const el=byId('hetk-qr-batch-overlay');if(el)el.remove();}
 
   function openQrBatch(){
     if(!isSafetyOfficer(currentAccount))return;
     const visible=getVisibleUsers().filter(u=>!PERMIT_EXEMPT_ROLES.has(u.role));
     const ready=visible.filter(u=>{const rec=safetyRecord(u);return rec.publicEnabled&&rec.publicCode&&u.active!==false;});
+    const readyById={};ready.forEach(u=>readyById[u.uid]=u);const selected=new Set(),expanded=new Set(['__root__']);
     const overlay=document.createElement('div');overlay.id='hetk-qr-batch-overlay';overlay.className='hetk-safety-overlay';
-    overlay.innerHTML=`<div class="hetk-safety-overlay-backdrop" data-close-qr-batch></div><div class="hetk-qr-batch-dialog"><header><div><small>A4 · 35 × 40 mm</small><h3>Hodimlarning QR kodlarini chiqarish</h3><p>Bir varaqda 30 tagacha QR kod avtomatik joylashadi.</p></div><button type="button" data-close-qr-batch><i class="fas fa-times"></i></button></header><div class="hetk-qr-batch-tools"><label><input type="checkbox" id="hetk-qr-batch-all"> <b>Hammasini tanlash</b></label><span id="hetk-qr-batch-count">0 ta tanlangan</span></div><div class="hetk-qr-batch-list">${ready.length?ready.map(u=>{const rec=safetyRecord(u);return `<label><input type="checkbox" data-qr-batch-user="${escapeAttr(u.uid)}"><span><b>${escapeHtml(u.fullName||'Hodim')}</b><small>${escapeHtml(getRoleLabel(u))} · ${escapeHtml(u.workZoneName||u.region||'—')}</small></span><code>${escapeHtml(rec.publicCode)}</code></label>`;}).join(''):'<div class="hetk-qr-batch-empty">Faol QR kodi mavjud hodim topilmadi.</div>'}</div><footer><button type="button" data-close-qr-batch>Bekor qilish</button><button type="button" id="hetk-qr-batch-print" ${ready.length?'':'disabled'}><i class="fas fa-print"></i> Tanlanganlarni chop etish</button></footer></div>`;
+    overlay.innerHTML=`<div class="hetk-safety-overlay-backdrop" data-close-qr-batch></div><div class="hetk-qr-batch-dialog"><header><div><small>A4 · 35 × 40 mm</small><h3>Hodimlarning QR kodlarini chiqarish</h3><p>Hududlarni + orqali oching. Tanlov boshqa hududga o‘tganda ham saqlanadi.</p></div><button type="button" data-close-qr-batch><i class="fas fa-times"></i></button></header><div class="hetk-qr-batch-search"><i class="fas fa-search"></i><input id="hetk-qr-batch-search" placeholder="Hodim, U/J, tuman yoki viloyatni qidiring..."></div><div class="hetk-qr-batch-tools"><button type="button" id="hetk-qr-batch-all">Ko‘rinayotganlarning hammasini tanlash</button><button type="button" id="hetk-qr-batch-clear"><i class="fas fa-times"></i> Tanlovni tozalash</button><span id="hetk-qr-batch-count">0 ta tanlangan</span></div><div class="hetk-qr-batch-list" id="hetk-qr-batch-list"></div><footer><button type="button" data-close-qr-batch>Bekor qilish</button><button type="button" id="hetk-qr-batch-pdf" class="pdf" ${ready.length?'':'disabled'}><i class="fas fa-file-pdf"></i> PDF yuklab olish</button><button type="button" id="hetk-qr-batch-print" ${ready.length?'':'disabled'}><i class="fas fa-print"></i> Chop etish</button></footer></div>`;
     document.body.appendChild(overlay);overlay.querySelectorAll('[data-close-qr-batch]').forEach(x=>x.addEventListener('click',closeQrBatch));
-    const checks=Array.from(overlay.querySelectorAll('[data-qr-batch-user]')),all=byId('hetk-qr-batch-all'),count=byId('hetk-qr-batch-count');const update=()=>{const n=checks.filter(x=>x.checked).length;count.textContent=n+' ta tanlangan';all.checked=checks.length>0&&n===checks.length;all.indeterminate=n>0&&n<checks.length;};checks.forEach(x=>x.addEventListener('change',update));all.addEventListener('change',()=>{checks.forEach(x=>x.checked=all.checked);update();});
-    const print=byId('hetk-qr-batch-print');if(print)print.addEventListener('click',async()=>{const rows=checks.filter(x=>x.checked).map(x=>{const u=Object.assign({uid:x.dataset.qrBatchUser},teamUsersCache[x.dataset.qrBatchUser]||{});return Object.assign(u,{code:safetyRecord(u).publicCode});});if(!rows.length)return alert('Kamida bitta hodimni tanlang.');setBusy(print,true,'QR tayyorlanmoqda...');try{await printQrItems(rows);}catch(error){alert(friendlyAuthError(error));}finally{setBusy(print,false);}});
+    const list=byId('hetk-qr-batch-list'),search=byId('hetk-qr-batch-search'),count=byId('hetk-qr-batch-count');let shownReady=ready.slice();
+    const selectedRows=()=>Array.from(selected).map(uid=>{const u=readyById[uid];return Object.assign({},u,{code:safetyRecord(u).publicCode});}).filter(x=>x.code);
+    const updateCount=()=>{count.textContent=selected.size+' ta tanlangan';};
+    const userRow=(u,depth)=>`<label class="hetk-qr-tree-user" style="--qr-depth:${depth}"><input type="checkbox" data-qr-batch-user="${escapeAttr(u.uid)}" ${selected.has(u.uid)?'checked':''}><span><b>${escapeHtml(u.fullName||'Hodim')}</b><small>${escapeHtml(getRoleLabel(u))} · ${escapeHtml(u.workZoneName||u.region||'—')}</small></span><i class="fas fa-check"></i></label>`;
+    const treeNode=(nodes,id,depth,searching)=>{const node=nodes[id];if(!node||!node.count)return'';const children=Array.from(node.children).filter(cid=>nodes[cid]&&nodes[cid].count).sort((a,b)=>String(nodes[a].name||'').localeCompare(String(nodes[b].name||'')));const users=node.users.slice().sort((a,b)=>String(a.fullName||'').localeCompare(String(b.fullName||'')));const open=searching||expanded.has(id);let html='';if(id!=='__root__')html+=`<button type="button" class="hetk-qr-tree-node ${node.type}" data-qr-tree-toggle="${escapeAttr(id)}" style="--qr-depth:${depth}"><i class="fas ${open?'fa-minus':'fa-plus'}"></i><span>${escapeHtml(node.name)}</span><b>${node.count}</b></button>`;if(id==='__root__'||open){const next=id==='__root__'?0:depth+1;html+=users.map(u=>userRow(u,next)).join('')+children.map(ch=>treeNode(nodes,ch,next,searching)).join('');}return html;};
+    const render=()=>{const q=String(search.value||'').trim().toLowerCase();shownReady=q?ready.filter(u=>[u.fullName,getRoleLabel(u),u.workZoneName,u.region,accountFolderRoots(u).map(folderPath).join(' ')].join(' ').toLowerCase().includes(q)):ready.slice();list.innerHTML=shownReady.length?treeNode(buildTeamTree(shownReady),'__root__',0,!!q):'<div class="hetk-qr-batch-empty">Mos hodim topilmadi.</div>';list.querySelectorAll('[data-qr-tree-toggle]').forEach(btn=>btn.addEventListener('click',()=>{const id=btn.dataset.qrTreeToggle;expanded.has(id)?expanded.delete(id):expanded.add(id);render();}));list.querySelectorAll('[data-qr-batch-user]').forEach(input=>input.addEventListener('change',()=>{input.checked?selected.add(input.dataset.qrBatchUser):selected.delete(input.dataset.qrBatchUser);updateCount();}));};
+    search.addEventListener('input',render);byId('hetk-qr-batch-all').addEventListener('click',()=>{shownReady.forEach(u=>selected.add(u.uid));render();updateCount();});byId('hetk-qr-batch-clear').addEventListener('click',()=>{selected.clear();render();updateCount();});
+    const print=byId('hetk-qr-batch-print');print.addEventListener('click',async()=>{const rows=selectedRows();if(!rows.length)return alert('Kamida bitta hodimni tanlang.');setBusy(print,true,'QR tayyorlanmoqda...');try{await printQrItems(rows);}catch(error){alert(friendlyAuthError(error));}finally{setBusy(print,false);}});
+    const pdf=byId('hetk-qr-batch-pdf');pdf.addEventListener('click',async()=>{const rows=selectedRows();if(!rows.length)return alert('Kamida bitta hodimni tanlang.');setBusy(pdf,true,'PDF tayyorlanmoqda...');try{await downloadQrPdf(rows,(done,total)=>{pdf.innerHTML='<i class="fas fa-circle-notch fa-spin"></i> '+done+'/'+total;});}catch(error){alert(friendlyAuthError(error));}finally{setBusy(pdf,false);pdf.innerHTML='<i class="fas fa-file-pdf"></i> PDF yuklab olish';}});
+    render();updateCount();
   }
 
   function openSafetyQr(uid){
