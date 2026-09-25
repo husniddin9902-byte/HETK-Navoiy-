@@ -4,7 +4,9 @@
     ".write": false,
     "loginIndex": {
       ".read": true,
-      ".indexOn": ["login"],
+      ".indexOn": [
+        "login"
+      ],
       "$key": {
         ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && ((data.exists() && data.child('uid').val() === auth.uid) || (newData.exists() && newData.child('uid').val() === auth.uid) || root.child('users').child(auth.uid).child('role').val() === 'super_admin' || (root.child('users').child(auth.uid).child('role').val() === 'director' || root.child('users').child(auth.uid).child('role').val() === 'regional_director' || root.child('users').child(auth.uid).child('role').val() === 'district_director') || (root.child('users').child(auth.uid).child('role').val() === 'chief_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_chief_engineer' || root.child('users').child(auth.uid).child('role').val() === 'district_chief_engineer') || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_chief' || root.child('users').child(auth.uid).child('role').val() === 'chief_dispatcher' || root.child('users').child(auth.uid).child('role').val() === 'master' || root.child('users').child(auth.uid).child('permissions').child('createUsers').val() === true || root.child('users').child(auth.uid).child('permissions').child('managePermissions').val() === true || root.child('users').child(auth.uid).child('permissions').child('deactivateUsers').val() === true)"
       }
@@ -13,22 +15,52 @@
       ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && (root.child('users').child(auth.uid).child('rootAccess').val() === true || root.child('users').child(auth.uid).child('role').val() === 'super_admin' || root.child('users').child(auth.uid).child('role').val() === 'republic_tb_engineer')",
       "$uid": {
         ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && ($uid === auth.uid || root.child('users').child(auth.uid).child('rootAccess').val() === true || root.child('users').child(auth.uid).child('role').val() === 'super_admin' || root.child('DelegatedFolderAccess').child(auth.uid).child('absentUid').val() === $uid)",
-        ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && (($uid === auth.uid && data.exists() && newData.exists()) || root.child('users').child(auth.uid).child('rootAccess').val() === true || root.child('users').child(auth.uid).child('role').val() === 'super_admin' || ((((root.child('users').child(auth.uid).child('role').val() === 'director' || root.child('users').child(auth.uid).child('role').val() === 'regional_director' || root.child('users').child(auth.uid).child('role').val() === 'district_director') && (newData.exists() ? newData : data).child('role').val() !== 'super_admin' && (newData.exists() ? newData : data).child('role').val() !== 'director' && (newData.exists() ? newData : data).child('role').val() !== 'regional_director' && (root.child('users').child(auth.uid).child('role').val() === 'regional_director' || (newData.exists() ? newData : data).child('role').val() !== 'district_director') && (newData.exists() ? newData : data).child('role').val() !== 'republic_tb_engineer' && (root.child('users').child(auth.uid).child('role').val() === 'regional_director' || (newData.exists() ? newData : data).child('role').val() !== 'regional_chief_engineer')) || ((root.child('users').child(auth.uid).child('role').val() === 'chief_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_chief_engineer' || root.child('users').child(auth.uid).child('role').val() === 'district_chief_engineer') && (newData.exists() ? newData : data).child('role').val() !== 'super_admin' && (newData.exists() ? newData : data).child('role').val() !== 'director' && (newData.exists() ? newData : data).child('role').val() !== 'regional_director' && (newData.exists() ? newData : data).child('role').val() !== 'district_director' && (newData.exists() ? newData : data).child('role').val() !== 'republic_tb_engineer' && (newData.exists() ? newData : data).child('role').val() !== 'chief_engineer' && (newData.exists() ? newData : data).child('role').val() !== 'regional_chief_engineer' && (root.child('users').child(auth.uid).child('role').val() === 'regional_chief_engineer' || (newData.exists() ? newData : data).child('role').val() !== 'district_chief_engineer')) || (root.child('users').child(auth.uid).child('role').val() === 'regional_tb_chief' && ((newData.exists() ? newData : data).child('role').val() === 'regional_tb_operations_engineer' || (newData.exists() ? newData : data).child('role').val() === 'regional_tb_engineer' || (newData.exists() ? newData : data).child('role').val() === 'regional_fire_safety_engineer' || (newData.exists() ? newData : data).child('role').val() === 'tb_engineer')) || (root.child('users').child(auth.uid).child('role').val() === 'chief_dispatcher' && ((newData.exists() ? newData : data).child('role').val() === 'dispatcher' || (newData.exists() ? newData : data).child('role').val() === 'tchb_electrician' || (newData.exists() ? newData : data).child('role').val() === 'driver')) || (root.child('users').child(auth.uid).child('role').val() === 'master' && (newData.exists() ? newData : data).child('role').val() === 'electrician') || ((root.child('users').child(auth.uid).child('permissions').child('createUsers').val() === true || root.child('users').child(auth.uid).child('permissions').child('managePermissions').val() === true || root.child('users').child(auth.uid).child('permissions').child('deactivateUsers').val() === true) && root.child('users').child(auth.uid).child('level').val() > (newData.exists() ? newData.child('level').val() : data.child('level').val()) && (newData.exists() ? newData : data).child('role').val() !== 'regional_director' && (newData.exists() ? newData : data).child('role').val() !== 'district_director' && (newData.exists() ? newData : data).child('role').val() !== 'regional_chief_engineer' && (newData.exists() ? newData : data).child('role').val() !== 'district_chief_engineer')) && (!newData.exists() || newData.child('rootAccess').val() !== true)))",
-        "role": { ".validate": "$uid !== auth.uid || newData.val() === data.val() || root.child('users').child(auth.uid).child('role').val() === 'super_admin'" },
-        "roleLabel": { ".validate": "$uid !== auth.uid || newData.val() === data.val() || root.child('users').child(auth.uid).child('role').val() === 'super_admin'" },
-        "level": { ".validate": "$uid !== auth.uid || newData.val() === data.val() || root.child('users').child(auth.uid).child('role').val() === 'super_admin'" },
-        "rootAccess": { ".validate": "$uid !== auth.uid || newData.val() === data.val() || root.child('users').child(auth.uid).child('role').val() === 'super_admin'" },
-        "folders": { ".validate": "$uid !== auth.uid || newData.val() === data.val() || root.child('users').child(auth.uid).child('role').val() === 'super_admin'" },
-        "permissions": { ".validate": "$uid !== auth.uid || newData.val() === data.val() || root.child('users').child(auth.uid).child('role').val() === 'super_admin'" },
-        "workZoneId": { ".validate": "$uid !== auth.uid || newData.val() === data.val() || root.child('users').child(auth.uid).child('role').val() === 'super_admin'" },
-        "active": { ".validate": "$uid !== auth.uid || newData.val() === data.val() || root.child('users').child(auth.uid).child('role').val() === 'super_admin'" },
-        "safety": { ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && (root.child('users').child(auth.uid).child('role').val() === 'super_admin' || root.child('users').child(auth.uid).child('role').val() === 'republic_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_chief' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_operations_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_fire_safety_engineer' || (root.child('users').child(auth.uid).child('role').val() === 'tb_engineer' && (root.child('users').child($uid).child('role').val() === 'electrician' || root.child('users').child($uid).child('role').val() === 'driver' || root.child('users').child($uid).child('role').val() === 'tractor_operator')))" },
-        "disciplinaryActions": { ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && (root.child('users').child(auth.uid).child('role').val() === 'super_admin' || root.child('users').child(auth.uid).child('role').val() === 'republic_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_chief' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_operations_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_fire_safety_engineer' || root.child('users').child(auth.uid).child('role').val() === 'tb_engineer')" },
-        "telegramEmployeeMessageId": { ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && (root.child('users').child(auth.uid).child('role').val() === 'super_admin' || root.child('users').child(auth.uid).child('role').val() === 'republic_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_chief' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_operations_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_fire_safety_engineer' || root.child('users').child(auth.uid).child('role').val() === 'tb_engineer')" },
-        "telegramPhotoFileId": { ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && (root.child('users').child(auth.uid).child('role').val() === 'super_admin' || root.child('users').child(auth.uid).child('role').val() === 'republic_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_chief' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_operations_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_fire_safety_engineer' || root.child('users').child(auth.uid).child('role').val() === 'tb_engineer')" },
-        "telegramPhotoKind": { ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && (root.child('users').child(auth.uid).child('role').val() === 'super_admin' || root.child('users').child(auth.uid).child('role').val() === 'republic_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_chief' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_operations_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_fire_safety_engineer' || root.child('users').child(auth.uid).child('role').val() === 'tb_engineer')" },
-        "telegramUpdatedAt": { ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && (root.child('users').child(auth.uid).child('role').val() === 'super_admin' || root.child('users').child(auth.uid).child('role').val() === 'republic_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_chief' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_operations_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_fire_safety_engineer' || root.child('users').child(auth.uid).child('role').val() === 'tb_engineer')" },
-        "photoData": { ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && (root.child('users').child(auth.uid).child('role').val() === 'super_admin' || root.child('users').child(auth.uid).child('role').val() === 'republic_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_chief' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_operations_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_fire_safety_engineer' || root.child('users').child(auth.uid).child('role').val() === 'tb_engineer')" }
+        ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && (($uid === auth.uid && data.exists() && newData.exists()) || root.child('users').child(auth.uid).child('rootAccess').val() === true || root.child('users').child(auth.uid).child('role').val() === 'super_admin' || ((((root.child('users').child(auth.uid).child('role').val() === 'director' || root.child('users').child(auth.uid).child('role').val() === 'regional_director' || root.child('users').child(auth.uid).child('role').val() === 'district_director') && (newData.exists() ? newData : data).child('role').val() !== 'super_admin' && (newData.exists() ? newData : data).child('role').val() !== 'director' && (newData.exists() ? newData : data).child('role').val() !== 'regional_director' && (root.child('users').child(auth.uid).child('role').val() === 'regional_director' || (newData.exists() ? newData : data).child('role').val() !== 'district_director') && (newData.exists() ? newData : data).child('role').val() !== 'republic_tb_engineer' && (root.child('users').child(auth.uid).child('role').val() === 'regional_director' || (newData.exists() ? newData : data).child('role').val() !== 'regional_chief_engineer')) || ((root.child('users').child(auth.uid).child('role').val() === 'chief_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_chief_engineer' || root.child('users').child(auth.uid).child('role').val() === 'district_chief_engineer') && (newData.exists() ? newData : data).child('role').val() !== 'super_admin' && (newData.exists() ? newData : data).child('role').val() !== 'director' && (newData.exists() ? newData : data).child('role').val() !== 'regional_director' && (newData.exists() ? newData : data).child('role').val() !== 'district_director' && (newData.exists() ? newData : data).child('role').val() !== 'republic_tb_engineer' && (newData.exists() ? newData : data).child('role').val() !== 'chief_engineer' && (newData.exists() ? newData : data).child('role').val() !== 'regional_chief_engineer' && (root.child('users').child(auth.uid).child('role').val() === 'regional_chief_engineer' || (newData.exists() ? newData : data).child('role').val() !== 'district_chief_engineer')) || (root.child('users').child(auth.uid).child('role').val() === 'regional_tb_chief' && ((newData.exists() ? newData : data).child('role').val() === 'regional_tb_operations_engineer' || (newData.exists() ? newData : data).child('role').val() === 'regional_tb_engineer' || (newData.exists() ? newData : data).child('role').val() === 'regional_fire_safety_engineer' || (newData.exists() ? newData : data).child('role').val() === 'tb_engineer')) || (root.child('users').child(auth.uid).child('role').val() === 'chief_dispatcher' && ((newData.exists() ? newData : data).child('role').val() === 'dispatcher' || (newData.exists() ? newData : data).child('role').val() === 'tchb_electrician' || (newData.exists() ? newData : data).child('role').val() === 'tchb_driver')) || (root.child('users').child(auth.uid).child('role').val() === 'master' && (newData.exists() ? newData : data).child('role').val() === 'electrician') || ((root.child('users').child(auth.uid).child('permissions').child('createUsers').val() === true || root.child('users').child(auth.uid).child('permissions').child('managePermissions').val() === true || root.child('users').child(auth.uid).child('permissions').child('deactivateUsers').val() === true) && root.child('users').child(auth.uid).child('level').val() > (newData.exists() ? newData.child('level').val() : data.child('level').val()) && (newData.exists() ? newData : data).child('role').val() !== 'regional_director' && (newData.exists() ? newData : data).child('role').val() !== 'district_director' && (newData.exists() ? newData : data).child('role').val() !== 'regional_chief_engineer' && (newData.exists() ? newData : data).child('role').val() !== 'district_chief_engineer')) && (!newData.exists() || newData.child('rootAccess').val() !== true)))",
+        "role": {
+          ".validate": "$uid !== auth.uid || newData.val() === data.val() || root.child('users').child(auth.uid).child('role').val() === 'super_admin'"
+        },
+        "roleLabel": {
+          ".validate": "$uid !== auth.uid || newData.val() === data.val() || root.child('users').child(auth.uid).child('role').val() === 'super_admin'"
+        },
+        "level": {
+          ".validate": "$uid !== auth.uid || newData.val() === data.val() || root.child('users').child(auth.uid).child('role').val() === 'super_admin'"
+        },
+        "rootAccess": {
+          ".validate": "$uid !== auth.uid || newData.val() === data.val() || root.child('users').child(auth.uid).child('role').val() === 'super_admin'"
+        },
+        "folders": {
+          ".validate": "$uid !== auth.uid || newData.val() === data.val() || root.child('users').child(auth.uid).child('role').val() === 'super_admin'"
+        },
+        "permissions": {
+          ".validate": "$uid !== auth.uid || newData.val() === data.val() || root.child('users').child(auth.uid).child('role').val() === 'super_admin'"
+        },
+        "workZoneId": {
+          ".validate": "$uid !== auth.uid || newData.val() === data.val() || root.child('users').child(auth.uid).child('role').val() === 'super_admin'"
+        },
+        "active": {
+          ".validate": "$uid !== auth.uid || newData.val() === data.val() || root.child('users').child(auth.uid).child('role').val() === 'super_admin'"
+        },
+        "safety": {
+          ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && (root.child('users').child(auth.uid).child('role').val() === 'super_admin' || root.child('users').child(auth.uid).child('role').val() === 'republic_tb_engineer' || (root.child('users').child(auth.uid).child('role').val() === 'regional_chief_engineer' && (root.child('users').child($uid).child('role').val() === 'regional_tb_operations_engineer' || root.child('users').child($uid).child('role').val() === 'regional_tb_engineer' || root.child('users').child($uid).child('role').val() === 'regional_fire_safety_engineer')) || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_chief' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_operations_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_fire_safety_engineer' || (root.child('users').child(auth.uid).child('role').val() === 'tb_engineer' && (root.child('users').child($uid).child('role').val() === 'electrician' || root.child('users').child($uid).child('role').val() === 'driver' || root.child('users').child($uid).child('role').val() === 'tchb_driver' || root.child('users').child($uid).child('role').val() === 'tractor_operator')))"
+        },
+        "disciplinaryActions": {
+          ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && (root.child('users').child(auth.uid).child('role').val() === 'super_admin' || root.child('users').child(auth.uid).child('role').val() === 'republic_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_chief' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_operations_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_fire_safety_engineer' || root.child('users').child(auth.uid).child('role').val() === 'tb_engineer')"
+        },
+        "telegramEmployeeMessageId": {
+          ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && (root.child('users').child(auth.uid).child('role').val() === 'super_admin' || root.child('users').child(auth.uid).child('role').val() === 'republic_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_chief' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_operations_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_fire_safety_engineer' || root.child('users').child(auth.uid).child('role').val() === 'tb_engineer')"
+        },
+        "telegramPhotoFileId": {
+          ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && (root.child('users').child(auth.uid).child('role').val() === 'super_admin' || root.child('users').child(auth.uid).child('role').val() === 'republic_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_chief' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_operations_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_fire_safety_engineer' || root.child('users').child(auth.uid).child('role').val() === 'tb_engineer')"
+        },
+        "telegramPhotoKind": {
+          ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && (root.child('users').child(auth.uid).child('role').val() === 'super_admin' || root.child('users').child(auth.uid).child('role').val() === 'republic_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_chief' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_operations_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_fire_safety_engineer' || root.child('users').child(auth.uid).child('role').val() === 'tb_engineer')"
+        },
+        "telegramUpdatedAt": {
+          ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && (root.child('users').child(auth.uid).child('role').val() === 'super_admin' || root.child('users').child(auth.uid).child('role').val() === 'republic_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_chief' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_operations_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_fire_safety_engineer' || root.child('users').child(auth.uid).child('role').val() === 'tb_engineer')"
+        },
+        "photoData": {
+          ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && (root.child('users').child(auth.uid).child('role').val() === 'super_admin' || root.child('users').child(auth.uid).child('role').val() === 'republic_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_chief' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_operations_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_fire_safety_engineer' || root.child('users').child(auth.uid).child('role').val() === 'tb_engineer')"
+        }
       }
     },
     "Folders": {
@@ -58,7 +90,7 @@
       }
     },
     "TPs": {
-      ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && (root.child('users').child(auth.uid).child('rootAccess').val() === true || root.child('users').child(auth.uid).child('role').val() === 'super_admin' || root.child('users').child(auth.uid).child('role').val() === 'republic_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'chief_dispatcher' || root.child('users').child(auth.uid).child('role').val() === 'dispatcher' || root.child('users').child(auth.uid).child('role').val() === 'tchb_electrician' || root.child('users').child(auth.uid).child('role').val() === 'driver')",
+      ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && (root.child('users').child(auth.uid).child('rootAccess').val() === true || root.child('users').child(auth.uid).child('role').val() === 'super_admin' || root.child('users').child(auth.uid).child('role').val() === 'republic_tb_engineer')",
       ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && (root.child('users').child(auth.uid).child('rootAccess').val() === true || root.child('users').child(auth.uid).child('role').val() === 'super_admin')",
       "$tpId": {
         ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && (root.child('FolderAccess').child(auth.uid).child(data.child('primaryFolderId').val()).val() === true || root.child('DelegatedFolderAccess').child(auth.uid).child('folders').child(data.child('primaryFolderId').val()).val() === true || data.child('workZones').child(root.child('users').child(auth.uid).child('workZoneId').val()).val() === true || data.child('workZones').child(root.child('DelegatedFolderAccess').child(auth.uid).child('workZoneId').val()).val() === true)",
@@ -99,7 +131,7 @@
         "$uid": {
           ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && (root.child('users').child(auth.uid).child('rootAccess').val() === true || root.child('users').child(auth.uid).child('role').val() === 'super_admin' || (root.child('users').child(auth.uid).child('role').val() === 'director' || root.child('users').child(auth.uid).child('role').val() === 'regional_director' || root.child('users').child(auth.uid).child('role').val() === 'district_director') || (root.child('users').child(auth.uid).child('role').val() === 'chief_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_chief_engineer' || root.child('users').child(auth.uid).child('role').val() === 'district_chief_engineer') || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_chief' || root.child('users').child(auth.uid).child('role').val() === 'chief_dispatcher' || root.child('users').child(auth.uid).child('role').val() === 'master' || root.child('users').child(auth.uid).child('permissions').child('createUsers').val() === true || root.child('users').child(auth.uid).child('permissions').child('managePermissions').val() === true)",
           "safety": {
-            ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && (root.child('users').child(auth.uid).child('role').val() === 'republic_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_chief' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_operations_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_fire_safety_engineer' || (root.child('users').child(auth.uid).child('role').val() === 'tb_engineer' && (root.child('users').child($uid).child('role').val() === 'electrician' || root.child('users').child($uid).child('role').val() === 'driver' || root.child('users').child($uid).child('role').val() === 'tractor_operator'))) && (root.child('FolderAccess').child(auth.uid).child($folderId).val() === true || root.child('DelegatedFolderAccess').child(auth.uid).child('folders').child($folderId).val() === true) && newData.val() === root.child('users').child($uid).child('safety').val()"
+            ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && (root.child('users').child(auth.uid).child('role').val() === 'republic_tb_engineer' || (root.child('users').child(auth.uid).child('role').val() === 'regional_chief_engineer' && (root.child('users').child($uid).child('role').val() === 'regional_tb_operations_engineer' || root.child('users').child($uid).child('role').val() === 'regional_tb_engineer' || root.child('users').child($uid).child('role').val() === 'regional_fire_safety_engineer')) || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_chief' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_operations_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_fire_safety_engineer' || (root.child('users').child(auth.uid).child('role').val() === 'tb_engineer' && (root.child('users').child($uid).child('role').val() === 'electrician' || root.child('users').child($uid).child('role').val() === 'driver' || root.child('users').child($uid).child('role').val() === 'tchb_driver' || root.child('users').child($uid).child('role').val() === 'tractor_operator'))) && (root.child('FolderAccess').child(auth.uid).child($folderId).val() === true || root.child('DelegatedFolderAccess').child(auth.uid).child('folders').child($folderId).val() === true) && newData.val() === root.child('users').child($uid).child('safety').val()"
           }
         }
       }
@@ -111,7 +143,7 @@
         "$uid": {
           ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && (root.child('users').child(auth.uid).child('rootAccess').val() === true || root.child('users').child(auth.uid).child('role').val() === 'super_admin' || (root.child('users').child(auth.uid).child('role').val() === 'director' || root.child('users').child(auth.uid).child('role').val() === 'regional_director' || root.child('users').child(auth.uid).child('role').val() === 'district_director') || (root.child('users').child(auth.uid).child('role').val() === 'chief_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_chief_engineer' || root.child('users').child(auth.uid).child('role').val() === 'district_chief_engineer') || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_chief' || root.child('users').child(auth.uid).child('role').val() === 'chief_dispatcher' || root.child('users').child(auth.uid).child('role').val() === 'master' || root.child('users').child(auth.uid).child('permissions').child('createUsers').val() === true || root.child('users').child(auth.uid).child('permissions').child('managePermissions').val() === true)",
           "safety": {
-            ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && (root.child('users').child(auth.uid).child('role').val() === 'republic_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_chief' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_operations_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_fire_safety_engineer' || (root.child('users').child(auth.uid).child('role').val() === 'tb_engineer' && (root.child('users').child($uid).child('role').val() === 'electrician' || root.child('users').child($uid).child('role').val() === 'driver' || root.child('users').child($uid).child('role').val() === 'tractor_operator'))) && (root.child('FolderAccess').child(auth.uid).child($folderId).val() === true || root.child('DelegatedFolderAccess').child(auth.uid).child('folders').child($folderId).val() === true) && newData.val() === root.child('users').child($uid).child('safety').val()"
+            ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && (root.child('users').child(auth.uid).child('role').val() === 'republic_tb_engineer' || (root.child('users').child(auth.uid).child('role').val() === 'regional_chief_engineer' && (root.child('users').child($uid).child('role').val() === 'regional_tb_operations_engineer' || root.child('users').child($uid).child('role').val() === 'regional_tb_engineer' || root.child('users').child($uid).child('role').val() === 'regional_fire_safety_engineer')) || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_chief' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_operations_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_fire_safety_engineer' || (root.child('users').child(auth.uid).child('role').val() === 'tb_engineer' && (root.child('users').child($uid).child('role').val() === 'electrician' || root.child('users').child($uid).child('role').val() === 'driver' || root.child('users').child($uid).child('role').val() === 'tchb_driver' || root.child('users').child($uid).child('role').val() === 'tractor_operator'))) && (root.child('FolderAccess').child(auth.uid).child($folderId).val() === true || root.child('DelegatedFolderAccess').child(auth.uid).child('folders').child($folderId).val() === true) && newData.val() === root.child('users').child($uid).child('safety').val()"
           }
         }
       }
@@ -123,41 +155,125 @@
       }
     },
     "SafetyEquipmentItems": {
-      ".indexOn": ["workZoneId", "regionName"],
+      ".indexOn": [
+        "workZoneId",
+        "regionName"
+      ],
       ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && (root.child('users').child(auth.uid).child('role').val() !== 'master' || (query.orderByChild == 'workZoneId' && query.equalTo == root.child('users').child(auth.uid).child('workZoneId').val()))",
       "$itemId": {
         ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && ((root.child('users').child(auth.uid).child('role').val() === 'master' && data.exists() && newData.exists() && data.child('workZoneId').val() === root.child('users').child(auth.uid).child('workZoneId').val() && newData.child('workZoneId').val() === data.child('workZoneId').val() && newData.child('status').val() === 'out_of_cycle') || root.child('users').child(auth.uid).child('rootAccess').val() === true || root.child('users').child(auth.uid).child('role').val() === 'super_admin' || (root.child('users').child(auth.uid).child('role').val() === 'director' || root.child('users').child(auth.uid).child('role').val() === 'regional_director' || root.child('users').child(auth.uid).child('role').val() === 'district_director') || (root.child('users').child(auth.uid).child('role').val() === 'chief_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_chief_engineer' || root.child('users').child(auth.uid).child('role').val() === 'district_chief_engineer') || root.child('users').child(auth.uid).child('role').val() === 'republic_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_chief' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_operations_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_fire_safety_engineer' || root.child('users').child(auth.uid).child('role').val() === 'tb_engineer')"
       }
     },
     "SafetyEquipmentAudit": {
-      ".indexOn": ["workZoneId", "regionName"],
+      ".indexOn": [
+        "workZoneId",
+        "regionName"
+      ],
       ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && (root.child('users').child(auth.uid).child('role').val() !== 'master' || (query.orderByChild == 'workZoneId' && query.equalTo == root.child('users').child(auth.uid).child('workZoneId').val()))",
       "$auditId": {
         ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && ((root.child('users').child(auth.uid).child('role').val() === 'master' && !data.exists() && newData.exists() && newData.child('workZoneId').val() === root.child('users').child(auth.uid).child('workZoneId').val() && newData.child('actorUid').val() === auth.uid && newData.child('action').val() === 'out_of_cycle') || root.child('users').child(auth.uid).child('rootAccess').val() === true || root.child('users').child(auth.uid).child('role').val() === 'super_admin' || (root.child('users').child(auth.uid).child('role').val() === 'director' || root.child('users').child(auth.uid).child('role').val() === 'regional_director' || root.child('users').child(auth.uid).child('role').val() === 'district_director') || (root.child('users').child(auth.uid).child('role').val() === 'chief_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_chief_engineer' || root.child('users').child(auth.uid).child('role').val() === 'district_chief_engineer') || root.child('users').child(auth.uid).child('role').val() === 'republic_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_chief' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_operations_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_fire_safety_engineer' || root.child('users').child(auth.uid).child('role').val() === 'tb_engineer')"
       }
     },
-    "UserNotifications": { "$uid": { ".read": "auth != null && $uid === auth.uid", ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true" } },
-    "UserMessages": { "$uid": { ".read": "auth != null && $uid === auth.uid", ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true" } },
-    "UserSavedFiles": { "$uid": { ".read": "auth != null && $uid === auth.uid", ".write": "auth != null && $uid === auth.uid" } },
-    "UserNotificationSettings": { "$uid": { ".read": "auth != null && $uid === auth.uid", ".write": "auth != null && $uid === auth.uid" } },
-    "PushTokens": { "$uid": { ".read": "auth != null && $uid === auth.uid", ".write": "auth != null && $uid === auth.uid" } },
-    "UserPresence": { "$uid": { ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true", ".write": "auth != null && $uid === auth.uid" } },
-    "AccessIndexMeta": { ".read": "auth != null", ".write": "auth != null && (root.child('users').child(auth.uid).child('rootAccess').val() === true || root.child('users').child(auth.uid).child('role').val() === 'super_admin')" },
-    "PublicPermits": { ".read": true, ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true" },
-    "DeletedTPs": { ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true", ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true" },
-    "DeletedUsers": { ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true", ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && (root.child('users').child(auth.uid).child('rootAccess').val() === true || root.child('users').child(auth.uid).child('role').val() === 'super_admin' || (root.child('users').child(auth.uid).child('role').val() === 'director' || root.child('users').child(auth.uid).child('role').val() === 'regional_director' || root.child('users').child(auth.uid).child('role').val() === 'district_director') || (root.child('users').child(auth.uid).child('role').val() === 'chief_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_chief_engineer' || root.child('users').child(auth.uid).child('role').val() === 'district_chief_engineer') || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_chief' || root.child('users').child(auth.uid).child('role').val() === 'chief_dispatcher' || root.child('users').child(auth.uid).child('role').val() === 'master' || root.child('users').child(auth.uid).child('permissions').child('createUsers').val() === true || root.child('users').child(auth.uid).child('permissions').child('managePermissions').val() === true || root.child('users').child(auth.uid).child('permissions').child('deactivateUsers').val() === true)" },
-    "ElementDeletionRequests": { ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true", ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true" },
-    "Messages": { ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true", ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true" },
-    "Naryads": { ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true", ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true" },
-    "NaryadSequences": { ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true", ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true" },
-    "TPComments": { ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true", ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true" },
-    "SafetyConstructionBrigades": { ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true", ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true" },
-    "SafetyEquipmentCatalog": { ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true", ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true" },
-    "SafetyEquipmentReceipts": { ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && root.child('users').child(auth.uid).child('role').val() !== 'master'", ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && root.child('users').child(auth.uid).child('role').val() !== 'master'" },
-    "SafetyEquipmentNorms": { ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true", ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && (root.child('users').child(auth.uid).child('rootAccess').val() === true || root.child('users').child(auth.uid).child('role').val() === 'super_admin' || root.child('users').child(auth.uid).child('role').val() === 'regional_director' || root.child('users').child(auth.uid).child('role').val() === 'district_director' || root.child('users').child(auth.uid).child('role').val() === 'regional_chief_engineer' || root.child('users').child(auth.uid).child('role').val() === 'district_chief_engineer' || root.child('users').child(auth.uid).child('role').val() === 'republic_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_chief' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_operations_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_fire_safety_engineer')" },
-    "SafetyEquipmentSettings": { ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true", ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && root.child('users').child(auth.uid).child('role').val() !== 'master'" },
-    "SafetyEquipmentReminderMarks": { ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true", ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true" },
-    "SafetyEquipmentBackups": { ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && root.child('users').child(auth.uid).child('role').val() !== 'master'", ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && root.child('users').child(auth.uid).child('role').val() !== 'master'" },
+    "UserNotifications": {
+      "$uid": {
+        ".read": "auth != null && $uid === auth.uid",
+        ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true"
+      }
+    },
+    "UserMessages": {
+      "$uid": {
+        ".read": "auth != null && $uid === auth.uid",
+        ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true"
+      }
+    },
+    "UserSavedFiles": {
+      "$uid": {
+        ".read": "auth != null && $uid === auth.uid",
+        ".write": "auth != null && $uid === auth.uid"
+      }
+    },
+    "UserNotificationSettings": {
+      "$uid": {
+        ".read": "auth != null && $uid === auth.uid",
+        ".write": "auth != null && $uid === auth.uid"
+      }
+    },
+    "PushTokens": {
+      "$uid": {
+        ".read": "auth != null && $uid === auth.uid",
+        ".write": "auth != null && $uid === auth.uid"
+      }
+    },
+    "UserPresence": {
+      "$uid": {
+        ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true",
+        ".write": "auth != null && $uid === auth.uid"
+      }
+    },
+    "AccessIndexMeta": {
+      ".read": "auth != null",
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('rootAccess').val() === true || root.child('users').child(auth.uid).child('role').val() === 'super_admin')"
+    },
+    "PublicPermits": {
+      ".read": true,
+      ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true"
+    },
+    "DeletedTPs": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true"
+    },
+    "DeletedUsers": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && (root.child('users').child(auth.uid).child('rootAccess').val() === true || root.child('users').child(auth.uid).child('role').val() === 'super_admin' || (root.child('users').child(auth.uid).child('role').val() === 'director' || root.child('users').child(auth.uid).child('role').val() === 'regional_director' || root.child('users').child(auth.uid).child('role').val() === 'district_director') || (root.child('users').child(auth.uid).child('role').val() === 'chief_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_chief_engineer' || root.child('users').child(auth.uid).child('role').val() === 'district_chief_engineer') || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_chief' || root.child('users').child(auth.uid).child('role').val() === 'chief_dispatcher' || root.child('users').child(auth.uid).child('role').val() === 'master' || root.child('users').child(auth.uid).child('permissions').child('createUsers').val() === true || root.child('users').child(auth.uid).child('permissions').child('managePermissions').val() === true || root.child('users').child(auth.uid).child('permissions').child('deactivateUsers').val() === true)"
+    },
+    "ElementDeletionRequests": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true"
+    },
+    "Messages": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true"
+    },
+    "Naryads": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true"
+    },
+    "NaryadSequences": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true"
+    },
+    "TPComments": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true"
+    },
+    "SafetyConstructionBrigades": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true"
+    },
+    "SafetyEquipmentCatalog": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true"
+    },
+    "SafetyEquipmentReceipts": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && root.child('users').child(auth.uid).child('role').val() !== 'master'",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && root.child('users').child(auth.uid).child('role').val() !== 'master'"
+    },
+    "SafetyEquipmentNorms": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && (root.child('users').child(auth.uid).child('rootAccess').val() === true || root.child('users').child(auth.uid).child('role').val() === 'super_admin' || root.child('users').child(auth.uid).child('role').val() === 'regional_director' || root.child('users').child(auth.uid).child('role').val() === 'district_director' || root.child('users').child(auth.uid).child('role').val() === 'regional_chief_engineer' || root.child('users').child(auth.uid).child('role').val() === 'district_chief_engineer' || root.child('users').child(auth.uid).child('role').val() === 'republic_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_chief' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_operations_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_fire_safety_engineer')"
+    },
+    "SafetyEquipmentSettings": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && root.child('users').child(auth.uid).child('role').val() !== 'master'"
+    },
+    "SafetyEquipmentReminderMarks": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true"
+    },
+    "SafetyEquipmentBackups": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && root.child('users').child(auth.uid).child('role').val() !== 'master'",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && root.child('users').child(auth.uid).child('role').val() !== 'master'"
+    },
     "TrainingBooks": {
       ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true",
       ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && (root.child('users').child(auth.uid).child('rootAccess').val() === true || root.child('users').child(auth.uid).child('role').val() === 'super_admin' || root.child('users').child(auth.uid).child('role').val() === 'republic_tb_engineer')"
@@ -174,9 +290,15 @@
       ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true",
       "$testId": {
         ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && (((!data.exists() && newData.child('createdBy').val() === auth.uid) || (data.exists() && data.child('createdBy').val() === auth.uid && newData.child('createdBy').val() === auth.uid)) && (root.child('users').child(auth.uid).child('rootAccess').val() === true || root.child('users').child(auth.uid).child('role').val() === 'super_admin' || root.child('users').child(auth.uid).child('role').val() === 'republic_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_chief' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_operations_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_tb_engineer' || root.child('users').child(auth.uid).child('role').val() === 'regional_fire_safety_engineer'))",
-        "createdBy": { ".validate": "newData.val() === auth.uid" },
-        "startAt": { ".validate": "newData.val() === data.val() || newData.parent().child('status').val() === 'draft' || newData.val() >= now + 7200000" },
-        "endAt": { ".validate": "newData.val() === data.val() || newData.parent().child('status').val() === 'draft' || newData.val() > newData.parent().child('startAt').val()" }
+        "createdBy": {
+          ".validate": "newData.val() === auth.uid"
+        },
+        "startAt": {
+          ".validate": "newData.val() === data.val() || newData.parent().child('status').val() === 'draft' || newData.val() >= now + 7200000"
+        },
+        "endAt": {
+          ".validate": "newData.val() === data.val() || newData.parent().child('status').val() === 'draft' || newData.val() > newData.parent().child('startAt').val()"
+        }
       }
     },
     "TrainingQuestionBanks": {
@@ -235,8 +357,17 @@
         ".write": "auth != null && !data.exists() && newData.child('actorUid').val() === auth.uid && root.child('users').child(auth.uid).child('active').val() === true && (root.child('users').child(auth.uid).child('rootAccess').val() === true || root.child('users').child(auth.uid).child('role').val() === 'super_admin')"
       }
     },
-    "SystemSettings": { ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true", ".write": "auth != null && (root.child('users').child(auth.uid).child('rootAccess').val() === true || root.child('users').child(auth.uid).child('role').val() === 'super_admin')" },
-    "StatisticsEvents": { ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true", ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true" },
-    "UsageDaily": { ".read": "auth != null && (root.child('users').child(auth.uid).child('rootAccess').val() === true || root.child('users').child(auth.uid).child('role').val() === 'super_admin')", ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true" }
+    "SystemSettings": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true",
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('rootAccess').val() === true || root.child('users').child(auth.uid).child('role').val() === 'super_admin')"
+    },
+    "StatisticsEvents": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true"
+    },
+    "UsageDaily": {
+      ".read": "auth != null && (root.child('users').child(auth.uid).child('rootAccess').val() === true || root.child('users').child(auth.uid).child('role').val() === 'super_admin')",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true"
+    }
   }
 }
