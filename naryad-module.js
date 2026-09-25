@@ -19,7 +19,7 @@
     issueOrder:{label:'Farmoyish berish (keyingi bosqich)',min:4}
   };
   const MANAGERS=new Set(['super_admin','director','regional_director','district_director','chief_engineer','regional_chief_engineer','district_chief_engineer']);
-  const OPERATIONAL_ROLES=new Set([...MANAGERS,'chief_dispatcher','dispatcher','tchb_electrician','driver','master','electrician','pto_engineer']);
+  const OPERATIONAL_ROLES=new Set([...MANAGERS,'chief_dispatcher','dispatcher','tchb_electrician','tchb_driver','driver','master','electrician','pto_engineer']);
   const DAY=24*60*60*1000;
   const LEXUZ_URL='https://lex.uz/uz/docs/-5038211';
 
@@ -133,7 +133,7 @@
 
   function tpFolderIds(tp){const ids=new Set();objectKeysTrue(tp&&tp.folders).forEach(id=>ids.add(id));if(tp&&tp.folderId)ids.add(tp.folderId);if(tp&&tp.primaryFolderId)ids.add(tp.primaryFolderId);return Array.from(ids);}
   function canAccessTp(tp){
-    if(!me||!tp)return false;if(me.rootAccess||['super_admin','chief_dispatcher','dispatcher','tchb_electrician','driver'].includes(me.role))return true;
+    if(!me||!tp)return false;if(me.rootAccess||me.role==='super_admin')return true;
     const ids=tpFolderIds(tp);return ids.some(id=>window.HETKAuth&&window.HETKAuth.canAccessFolder&&window.HETKAuth.canAccessFolder(id,folders));
   }
   function folderPath(id){const names=[];const seen=new Set();let cur=id;while(cur&&folders[cur]&&!seen.has(cur)){seen.add(cur);names.unshift(folders[cur].name||cur);cur=folders[cur].parentId;}return names.join(' / ');}
