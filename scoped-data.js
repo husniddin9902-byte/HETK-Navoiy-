@@ -3,7 +3,7 @@
 
   const INDEX_VERSION=3;
   const GLOBAL_ROLES=new Set(['super_admin','republic_tb_engineer']);
-  const GLOBAL_TP_ROLES=new Set(['super_admin','republic_tb_engineer','chief_dispatcher','dispatcher','tchb_electrician','driver']);
+  const GLOBAL_TP_ROLES=new Set(['super_admin','republic_tb_engineer']);
   const NO_FOLDER_ACCESS_ROLES=new Set(['execution_discipline_inspector','warehouse_manager','gardener','cleaner']);
   let tpCache={};
   let userCache={};
