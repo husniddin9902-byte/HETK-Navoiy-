@@ -6,7 +6,7 @@
     activeFolderId:'root',refs:[],started:false,currentUid:'',presenceRef:null,
     connectedRef:null,heartbeat:null,lastActivityAt:Date.now(),usageDay:'',
     selectedYear:String(new Date().getFullYear()),selectedMonth:String(new Date().getMonth()+1).padStart(2,'0'),
-    adminFolderId:'root',adminFolderExpanded:{},adminFolderSearch:'',adminFolderDocumentBound:false,selectedTeamUid:''
+    adminFolderId:'root',adminFolderExpanded:{},adminFolderSearch:'',adminFolderDocumentBound:false,adminUnit:'all',selectedTeamUid:''
   };
   const ONLINE_LIMIT_MS=150000;
   const ACTIVE_LIMIT_MS=5*60*1000;
@@ -343,18 +343,43 @@
     const rows=zoneRows(state.adminFolderId,points).slice(0,12),max=Math.max(1,...rows.map(function(r){return r.total;}));
     return rows.length?rows.map(function(row){const etk=Math.round(row.etk/max*100),priv=Math.round(row.privateCount/max*100);return `<div class="hetk-zone-chart-row"><span>${esc(row.name)}</span><i><b class="etk" style="width:${etk}%"></b><b class="private" style="width:${priv}%"></b></i><strong>${row.total}</strong></div>`;}).join(''):'<div class="hetk-stats-empty">U/J ma’lumoti topilmadi.</div>';
   }
+  const DISPATCHER_ROLES=new Set(['chief_dispatcher','dispatcher','tchb_electrician','tchb_driver']);
+  function adminUnitOptions(){
+    const folderId=state.adminFolderId,options=['<option value="all">Barcha bo‘limlar</option>'];
+    const zoneRows=Object.keys(state.zones).map(function(id){return Object.assign({id:id},state.zones[id]||{});}).filter(function(zone){return zoneVisible(zone,folderId);}).sort(function(a,b){return String(a.name||'').localeCompare(String(b.name||''),'uz');});
+    if(zoneRows.length)options.push('<optgroup label="U/J lar">'+zoneRows.map(function(zone){return `<option value="work_zone:${esc(zone.id)}"${state.adminUnit==='work_zone:'+zone.id?' selected':''}>${esc(zone.name||'Nomsiz U/J')}</option>`;}).join('')+'</optgroup>');
+    const dispatcherFolders=new Map();Object.keys(state.users).forEach(function(uid){const u=state.users[uid]||{};if(!DISPATCHER_ROLES.has(u.role)||u.active===false)return;userFolderIds(u).forEach(function(id){if(state.folders[id]&&(folderId==='root'||isInside(id,folderId)||isInside(folderId,id)))dispatcherFolders.set(id,folderPath(id)||folderName(id));});});
+    const dispatcherRows=Array.from(dispatcherFolders.entries()).sort(function(a,b){return a[1].localeCompare(b[1],'uz');});
+    if(dispatcherRows.length)options.push('<optgroup label="Dispetcherliklar">'+dispatcherRows.map(function(row){return `<option value="dispatcher:${esc(row[0])}"${state.adminUnit==='dispatcher:'+row[0]?' selected':''}>${esc(row[1])} — Dispetcherlik</option>`;}).join('')+'</optgroup>');
+    return options.join('');
+  }
+  function userMatchesAdminUnit(user){
+    if(state.adminUnit==='all')return true;const parts=state.adminUnit.split(':'),kind=parts.shift(),id=parts.join(':');
+    if(kind==='work_zone')return user.workZoneId===id;
+    if(kind==='dispatcher')return DISPATCHER_ROLES.has(user.role)&&userFolderIds(user).some(function(folderId){return isInside(folderId,id)||isInside(id,folderId);});
+    return true;
+  }
+  function safetyGroupStats(){
+    const ids=Object.keys(state.users).filter(function(uid){const u=state.users[uid]||{};return u.active!==false&&(state.adminFolderId==='root'||userInAdminFolder(u,state.adminFolderId))&&userMatchesAdminUnit(u);}),counts={I:0,II:0,III:0,IV:0,V:0,none:0};
+    ids.forEach(function(uid){const group=String((((state.users[uid]||{}).safety||{}).group)||'').toUpperCase();if(Object.prototype.hasOwnProperty.call(counts,group)&&group!=='none')counts[group]++;else counts.none++;});
+    const total=ids.length||1,colors={I:'#2490ef',II:'#19a974',III:'#f1b62c',IV:'#f47a3d',V:'#8a5cf6',none:'#a6b3bf'},labels={I:'I guruh',II:'II guruh',III:'III guruh',IV:'IV guruh',V:'V guruh',none:'Guruh belgilanmagan'},keys=['I','II','III','IV','V','none'];let angle=0;
+    const segments=keys.map(function(key){const start=angle;angle+=counts[key]/total*360;return `${colors[key]} ${start}deg ${angle}deg`;}).join(',');
+    const legend=keys.map(function(key){const pct=ids.length?Math.round(counts[key]/ids.length*100):0;return `<span><i style="background:${colors[key]}"></i><em>${labels[key]}</em><b>${counts[key]} ta · ${pct}%</b></span>`;}).join('');
+    return `<div class="hetk-group-chart"><div class="hetk-group-donut" style="background:conic-gradient(${segments||'#e4ebf0 0 360deg'})"><div><b>${ids.length}</b><small>hodim</small></div></div><div class="hetk-group-legend">${legend}</div></div>`;
+  }
   function renderAdminDashboard(){
     const pane=ensureAdminTab();if(!pane||!me()||me().role!=='super_admin')return;
     const actual=adminActualSummary(),period=periodUsage(),created=periodCreatedPoints();
     const privatePct=actual.total?Math.round(actual.privateCount/actual.total*100):0;
     pane.innerHTML=`<div class="hetk-admin-stats">
-      <div class="hetk-admin-stats-head"><div><h3><i class="fas fa-chart-line"></i> Bosh administrator statistikasi</h3><p>Elementlar, U/J lar va tizimdan foydalanish ko‘rsatkichlari.</p></div><div class="hetk-stat-filters"><select id="hetk-stat-year">${yearOptions()}</select><select id="hetk-stat-month">${monthOptions()}</select>${adminFolderPickerHtml()}</div></div>
+      <div class="hetk-admin-stats-head"><div><h3><i class="fas fa-chart-line"></i> Bosh administrator statistikasi</h3><p>Elementlar, U/J lar, hodimlar va tizimdan foydalanish ko‘rsatkichlari.</p></div><div class="hetk-stat-filters"><select id="hetk-stat-year">${yearOptions()}</select><select id="hetk-stat-month">${monthOptions()}</select>${adminFolderPickerHtml()}<select id="hetk-stat-unit">${adminUnitOptions()}</select></div></div>
       <div class="hetk-admin-cards"><div><span>Jami element</span><b>${actual.total}</b><small>Hozirgi aniq son</small></div><div class="power"><span>TP/KTP umumiy quvvati</span><b>${esc(formatPower(actual.totalPower))}</b><small>${actual.powerMissing?actual.powerMissing+' ta elementda quvvat kiritilmagan':'Barcha element quvvati kiritilgan'}</small></div><div><span>Jami hodim</span><b>${actual.users}</b><small>${actual.activeUsers} ta faol</small></div><div><span>Onlayn</span><b>${actual.online}</b><small>So‘nggi 2,5 daqiqa</small></div><div><span>Faol vaqt</span><b>${esc(formatDuration(period.seconds))}</b><small>${period.users} hodim · ${period.visits} kirish</small></div></div>
       <div class="hetk-chart-grid">
         <section class="hetk-chart-card"><h4>Balans tarkibi</h4><div class="hetk-donut-wrap"><div class="hetk-donut" style="--private:${privatePct*3.6}deg"><b>${actual.total}</b><span>element</span></div><div class="hetk-donut-legend"><span><i class="etk"></i>ETK <b>${actual.etk}</b></span><span><i class="private"></i>Xususiy <b>${actual.privateCount}</b></span></div></div></section>
         <section class="hetk-chart-card wide"><h4>${esc(state.selectedYear)}-${esc(state.selectedMonth)} faolligi</h4><div class="hetk-activity-chart">${activityBars(period.days)}</div></section>
         <section class="hetk-chart-card"><h4>U/J kesimida</h4><div class="hetk-zone-chart">${adminZoneBars(actual.points)}</div><div class="hetk-chart-legend"><span class="etk">ETK</span><span class="private">Xususiy</span></div></section>
         <section class="hetk-chart-card"><h4>Tanlangan oyda yaratilgan elementlar: ${created.length}</h4><div class="hetk-rank-chart">${topFolderRows(created)}</div></section>
+        <section class="hetk-chart-card wide hetk-group-card"><h4>Hodimlarning XTB guruhlari</h4>${safetyGroupStats()}</section>
       </div>
       <section class="hetk-reset-card"><div><h4><i class="fas fa-undo-alt"></i> Test statistikasini nolga qaytarish</h4><p>Faqat kirishlar va faol vaqt tarixi o‘chadi. Elementlar, hodimlar, U/J va onlayn holat o‘chmaydi.</p><span id="hetk-stat-reset-status"></span></div><div><button id="hetk-stat-set-pin" type="button"><i class="fas fa-key"></i> Kodni o‘rnatish</button><button id="hetk-stat-reset" type="button" class="danger"><i class="fas fa-eraser"></i> Nolga qaytarish</button></div></section>
     </div>`;
@@ -376,6 +401,7 @@
     const year=byId('hetk-stat-year'),month=byId('hetk-stat-month');
     if(year)year.addEventListener('change',function(){state.selectedYear=year.value;renderAdminDashboard();});
     if(month)month.addEventListener('change',function(){state.selectedMonth=month.value;renderAdminDashboard();});
+    const unit=byId('hetk-stat-unit');if(unit)unit.addEventListener('change',function(){state.adminUnit=unit.value||'all';renderAdminDashboard();});
     bindAdminFolderPicker();
     const setPin=byId('hetk-stat-set-pin');if(setPin)setPin.addEventListener('click',setResetPin);
     const reset=byId('hetk-stat-reset');if(reset)reset.addEventListener('click',resetUsageStatistics);
@@ -396,7 +422,7 @@
       const toggle=event.target.closest('[data-stat-folder-toggle]');
       if(toggle){const id=toggle.dataset.statFolderToggle;state.adminFolderExpanded[id]=state.adminFolderExpanded[id]!==true;tree.innerHTML=adminFolderTreeHtml(state.adminFolderSearch);return;}
       const select=event.target.closest('[data-stat-folder-select]');
-      if(select){state.adminFolderId=select.dataset.statFolderSelect||'root';state.adminFolderSearch='';renderAdminDashboard();}
+      if(select){state.adminFolderId=select.dataset.statFolderSelect||'root';state.adminFolderSearch='';state.adminUnit='all';renderAdminDashboard();}
     });
     if(!state.adminFolderDocumentBound){
       state.adminFolderDocumentBound=true;
