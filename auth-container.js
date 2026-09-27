@@ -3241,7 +3241,7 @@
           <div class="hetk-user-editor-body">
             <div id="hetk-workzone-editor-message" class="hetk-user-editor-message"></div>
             <div class="hetk-user-form-grid">
-              <div class="hetk-user-field"><label>U/J ni tanlang *</label><select id="hetk-workzone-manage-select"></select></div>
+              <div class="hetk-user-field"><label>U/J ni tanlang *</label><select id="hetk-workzone-manage-select" hidden aria-hidden="true"></select><button type="button" id="hetk-workzone-manage-tree-button" class="hetk-workzone-tree-button"><span><i class="fas fa-sitemap"></i><b id="hetk-workzone-manage-tree-label">U/J ni tanlang</b></span><i class="fas fa-chevron-down"></i></button><div id="hetk-workzone-manage-tree-panel" class="hetk-workzone-tree-panel" hidden><div class="hetk-workzone-tree-search"><i class="fas fa-search"></i><input id="hetk-workzone-manage-tree-search" placeholder="Viloyat, tuman yoki U/J ni qidiring..."></div><div id="hetk-workzone-manage-tree" class="hetk-workzone-tree"></div></div></div>
               <div class="hetk-user-field"><label>U/J nomi *</label><input id="hetk-workzone-manage-name" placeholder="Masalan: Zarafshon U/J"></div>
               <div class="hetk-user-field"><label>U/J turi *</label><select id="hetk-workzone-manage-type"><option value="standard">Oddiy U/J</option><option value="construction">Qurilish U/J</option></select></div>
               <div class="hetk-user-field"><label>Mas’ul Master *</label><select id="hetk-workzone-manage-master"></select></div>
@@ -3287,6 +3287,7 @@
       renderTeamList();
       if(selectedTeamUid) renderTeamDetail(selectedTeamUid);
       if(!byId('hetk-user-editor').hidden) refreshWorkZoneEditor();
+      if(byId('hetk-workzone-editor')&&!byId('hetk-workzone-editor').hidden) renderWorkZoneManagerTree();
       if(communicationTab==='chats') renderCommunicationContent();
     });
     delegationsTeamRef.on('value',snap=>{
@@ -3328,6 +3329,10 @@
     document.querySelectorAll('[data-close-workzone-editor]').forEach(el=>el.addEventListener('click',closeWorkZoneManager));
     const manageSelect=byId('hetk-workzone-manage-select');
     if(manageSelect) manageSelect.addEventListener('change',()=>loadWorkZoneManager(manageSelect.value));
+    const manageTreeButton=byId('hetk-workzone-manage-tree-button');
+    if(manageTreeButton) manageTreeButton.addEventListener('click',()=>{const panel=byId('hetk-workzone-manage-tree-panel');if(!panel)return;panel.hidden=!panel.hidden;manageTreeButton.classList.toggle('open',!panel.hidden);if(!panel.hidden){renderWorkZoneManagerTree();const input=byId('hetk-workzone-manage-tree-search');if(input)setTimeout(()=>input.focus(),30);}});
+    const manageTreeSearch=byId('hetk-workzone-manage-tree-search');
+    if(manageTreeSearch) manageTreeSearch.addEventListener('input',()=>renderWorkZoneManagerTree());
     const manageSearch=byId('hetk-workzone-folder-search');
     if(manageSearch) manageSearch.addEventListener('input',()=>renderWorkZoneFolderPicker());
     const manageSave=byId('hetk-workzone-save');
@@ -3983,6 +3988,21 @@
     el.textContent=text||'';
   }
 
+  function renderWorkZoneManagerTree(zonesArg){
+    const treeBox=byId('hetk-workzone-manage-tree'),select=byId('hetk-workzone-manage-select'),label=byId('hetk-workzone-manage-tree-label');
+    if(!treeBox||!select)return;
+    const zones=Array.isArray(zonesArg)?zonesArg:manageableWorkZones(),root=buildWorkZoneTree(zones),selectedId=select.value;
+    const query=String((byId('hetk-workzone-manage-tree-search')&&byId('hetk-workzone-manage-tree-search').value)||'').trim().toLowerCase();
+    if(selectedId){const selected=zones.find(zone=>zone.id===selectedId);workZoneTreeChains(selected).forEach(chain=>chain.forEach(id=>workZoneTreeExpanded.add(id)));}
+    const countNode=node=>{const ids=new Set(node.zones.map(zone=>zone.id));node.children.forEach(child=>countNode(child).forEach(id=>ids.add(id)));return ids;};
+    const nodeHtml=(node,depth,parentMatched)=>{const matched=parentMatched||(!query?false:node.name.toLowerCase().includes(query)),zoneRows=node.zones.filter(zone=>!query||matched||[zone.name,workZoneTreePath(zone),workZoneTypeLabel(zone)].join(' ').toLowerCase().includes(query)),children=node.children.map(child=>nodeHtml(child,depth+1,matched)).filter(Boolean);if(query&&!zoneRows.length&&!children.length)return '';const expanded=!!query||workZoneTreeExpanded.has(node.id);return `<div class="hetk-workzone-tree-branch"><button type="button" class="hetk-workzone-tree-folder" data-wzm-folder="${escapeAttr(node.id)}" style="--wz-depth:${depth}"><i class="fas ${expanded?'fa-chevron-down':'fa-chevron-right'}"></i><i class="fas fa-folder"></i><span>${escapeHtml(node.name)}</span><b>${countNode(node).size}</b></button><div class="hetk-workzone-tree-children" ${expanded?'':'hidden'}>${zoneRows.map(zone=>`<button type="button" class="hetk-workzone-tree-zone ${selectedId===zone.id?'selected':''}" data-wzm-zone="${escapeAttr(zone.id)}" style="--wz-depth:${depth+1}"><i class="fas ${selectedId===zone.id?'fa-check-circle':'fa-map-marker-alt'}"></i><span>${escapeHtml(zone.name||'Nomsiz U/J')} <small>— ${escapeHtml(workZoneTypeLabel(zone))}</small></span></button>`).join('')}${children.join('')}</div></div>`;};
+    const branches=root.children.map(node=>nodeHtml(node,0,false)).filter(Boolean),unassigned=root.zones.filter(zone=>!query||String(zone.name||'').toLowerCase().includes(query));
+    treeBox.innerHTML=branches.join('')+unassigned.map(zone=>`<button type="button" class="hetk-workzone-tree-zone ${selectedId===zone.id?'selected':''}" data-wzm-zone="${escapeAttr(zone.id)}"><i class="fas fa-map-marker-alt"></i><span>${escapeHtml(zone.name||'Nomsiz U/J')}</span></button>`).join('');
+    if(label){const chosen=zones.find(zone=>zone.id===selectedId);label.textContent=chosen?workZoneTreePath(chosen):'U/J ni tanlang';}
+    treeBox.querySelectorAll('[data-wzm-folder]').forEach(button=>button.addEventListener('click',()=>{const id=button.dataset.wzmFolder;workZoneTreeExpanded.has(id)?workZoneTreeExpanded.delete(id):workZoneTreeExpanded.add(id);renderWorkZoneManagerTree(zones);}));
+    treeBox.querySelectorAll('[data-wzm-zone]').forEach(button=>button.addEventListener('click',()=>{select.value=button.dataset.wzmZone;loadWorkZoneManager(select.value);const panel=byId('hetk-workzone-manage-tree-panel');if(panel)panel.hidden=true;renderWorkZoneManagerTree(zones);}));
+  }
+
   function openWorkZoneManager(){
     if(!canManageWorkZones()) return;
     const editor=byId('hetk-workzone-editor');
@@ -3994,6 +4014,7 @@
     document.body.classList.add('hetk-user-editor-open');
     workZoneManagerMessage('','');
     loadWorkZoneManager(select.value);
+    renderWorkZoneManagerTree(zones);
   }
 
   function closeWorkZoneManager(){
