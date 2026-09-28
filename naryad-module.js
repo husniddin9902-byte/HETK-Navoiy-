@@ -36,6 +36,7 @@
   let selectedId='';
   let editingId='';
   let selectedRightsUid='';
+  let broadcastStats=null;
   let refs=[];
   let toastTimer=null;
 
@@ -93,7 +94,7 @@
     overlay.id='hetk-naryad-overlay';overlay.className='hetk-naryad-overlay';overlay.setAttribute('aria-hidden','true');
     overlay.innerHTML=`<section class="hetk-naryad-shell" role="dialog" aria-modal="true" aria-labelledby="hetk-naryad-heading">
       <header class="hetk-naryad-topbar">
-        <div class="hetk-naryad-title"><i class="fas fa-file-signature"></i><div><h2 id="hetk-naryad-heading">Elektron naryadlar</h2><p>638-son Qoidaning 3-ilova shakli asosida</p></div></div>
+        <div class="hetk-naryad-title"><i class="fas fa-location-dot"></i><div><h2 id="hetk-naryad-heading">Ish joylari va xabarnomalar</h2><p>Naryad, farmoyish va Xabarchi bot</p></div></div>
         <button type="button" class="hetk-naryad-close" data-n-close aria-label="Yopish">×</button>
       </header>
       <nav id="hetk-naryad-nav" class="hetk-naryad-nav"></nav>
@@ -122,14 +123,16 @@
     const nav=byId('hetk-naryad-nav');if(!nav)return;
     const items=[['list','fa-list','Naryadlar']];
     if(canDraft())items.push(['new','fa-plus-circle',editingId?'Qoralamani tahrirlash':'Yangi naryad']);
+    if(me&&me.role==='super_admin')items.push(['broadcast','fa-bullhorn','Xabarchi bot']);
     // Soddalashtirilgan raqamli qaydda alohida vakolat oynasi talab qilinmaydi.
     nav.innerHTML=items.map(([id,icon,label])=>`<button type="button" class="hetk-naryad-tab ${currentTab===id?'active':''}" data-n-tab="${id}"><i class="fas ${icon}"></i> ${label}</button>`).join('');
   }
-  function notice(){return `<div class="hetk-naryad-notice"><i class="fas fa-shield-alt"></i><span><b>Sinov rejimi.</b> Modul <a href="${LEXUZ_URL}" target="_blank" rel="noopener">VMning 638-son qarori</a>dagi naryad shakli va tashkiliy ketma-ketlikka tayangan. Hozirgi “tasdiq” tizim qaydi bo‘lib, malakali elektron imzo o‘rnini bosmaydi.</span></div>`;}
+  function notice(){return `<div class="hetk-naryad-notice"><i class="fas fa-circle-info"></i><span><b>Raqamli qayd.</b> Bu bo‘lim xodimlar qayerda ishlayotganini qayd etish va iste’molchilarga tezkor xabar yuborish uchun xizmat qiladi.</span></div>`;}
   function render(){
     if(!byId('hetk-naryad-body'))return;renderNav();
     if(selectedId&&naryads[selectedId])renderDetail(naryads[selectedId]);
     else if(currentTab==='new')renderForm(editingId&&naryads[editingId]);
+    else if(currentTab==='broadcast')renderBroadcast();
     else if(currentTab==='rights')renderRights();
     else renderList();
   }
@@ -358,21 +361,40 @@
     clearError();try{if(!canManageRights())throw new Error('Vakolatlarni boshqarishga ruxsat yo‘q.');const u=Object.assign({uid:selectedRightsUid},users[selectedRightsUid]||{});if(!u.uid)throw new Error('Hodim tanlanmagan.');const record={};let any=false;document.querySelectorAll('[data-n-right]').forEach(el=>{record[el.dataset.nRight]=!!el.checked;if(el.checked)any=true;});record.orderNo=val('n-right-order');record.orderDate=val('n-right-date');record.validUntil=val('n-right-until');if(any&&(!record.orderNo||!record.orderDate||!record.validUntil))throw new Error('Vakolat berilganda buyruq raqami, sanasi va amal qilish muddatini kiriting.');if(record.validUntil&&new Date(record.validUntil+'T23:59:59').getTime()<now())throw new Error('Vakolatning amal qilish muddati o‘tib ketgan.');Object.keys(RIGHTS).forEach(key=>{if(record[key]&&groupNumber(safetyGroup(u))<RIGHTS[key].min)throw new Error(`“${RIGHTS[key].label}” uchun kamida ${['','I','II','III','IV','V'][RIGHTS[key].min]} guruh kerak.`);});record.grantedAt=now();record.grantedBy=me.uid;record.grantedByName=userName(me.uid);await db.ref(`users/${u.uid}/naryadRights`).set(record);users[u.uid].naryadRights=record;toast('Naryad vakolatlari saqlandi.','success');renderRightsCard();}catch(e){errorBox(e.message||String(e));}
   }
 
+  async function consumerApi(path,options){
+    const get=refresh=>window.HETKAuth&&window.HETKAuth.getIdToken?window.HETKAuth.getIdToken(refresh):firebase.auth().currentUser.getIdToken(refresh);
+    let token=await get(false),opts=Object.assign({},options||{});opts.headers=Object.assign({},opts.headers||{},{Authorization:`Bearer ${token}`});
+    let response=await fetch(`${CONSUMER_WORKER_URL}${path}`,opts);
+    if(response.status===401){token=await get(true);opts.headers.Authorization=`Bearer ${token}`;response=await fetch(`${CONSUMER_WORKER_URL}${path}`,opts);}
+    const result=await response.json().catch(()=>({}));if(!response.ok||!result.ok)throw new Error(result.error||'Xabarchi bot bilan bog‘lanilmadi.');return result;
+  }
+  function statCard(value,label){return `<div><small>${esc(label)}</small><b>${esc(value)}</b></div>`;}
+  function renderBroadcast(){
+    if(!me||me.role!=='super_admin'){currentTab='list';return render();}
+    const s=broadcastStats||{};
+    byId('hetk-naryad-body').innerHTML=`${notice()}<section class="hetk-naryad-section"><div class="hetk-naryad-form-head"><i class="fas fa-chart-line"></i><div><h3>Bot statistikasi</h3><p>Telegram kim xabarni o‘qiganini bermaydi; bu yerda bot bilan aloqa va yetkazish natijalari ko‘rsatiladi.</p></div><button type="button" class="hetk-naryad-btn ghost" data-n-broadcast-refresh><i class="fas fa-rotate"></i> Yangilash</button></div><div class="hetk-naryad-summary">${statCard(s.registered===undefined?'…':s.registered,'Jami ro‘yxatdan o‘tgan')}${statCard(s.available===undefined?'…':s.available,'Xabar olish mumkin')}${statCard(s.active7===undefined?'…':s.active7,'7 kunda faol')}${statCard(s.active30===undefined?'…':s.active30,'30 kunda faol')}${statCard(s.linked===undefined?'…':s.linked,'KTPga biriktirilgan')}${statCard(s.channels===undefined?'…':s.channels,'Ulangan kanallar')}${statCard(s.broadcastSent===undefined?'…':s.broadcastSent,'Admin xabari yetkazilgan')}${statCard(s.broadcastFailed===undefined?'…':s.broadcastFailed,'Admin xabari xato')}${statCard(s.noticeSent===undefined?'…':s.noticeSent,'Naryad xabari yetkazilgan')}${statCard(s.noticeFailed===undefined?'…':s.noticeFailed,'Naryad xabari xato')}</div></section><form id="n-broadcast-form" class="hetk-naryad-form"><div class="hetk-naryad-form-head"><i class="fas fa-bullhorn"></i><div><h3>Reklama yoki umumiy xabar</h3><p>Xabar botdan foydalanayotgan barcha faol abonentlarga yuboriladi.</p></div></div><div id="hetk-naryad-form-error" class="hetk-naryad-error"></div><section class="hetk-naryad-section"><div class="hetk-naryad-field"><label>Sarlavha *</label><input id="n-broadcast-title" class="hetk-naryad-input" maxlength="100" placeholder="Masalan: Rejali elektr uzilishi"></div><div class="hetk-naryad-field"><label>Xabar matni *</label><textarea id="n-broadcast-message" class="hetk-naryad-textarea" rows="8" maxlength="3500" placeholder="Xabar yoki e’lon matnini yozing..."></textarea><small class="hetk-naryad-field-help"><span id="n-broadcast-count">0</span>/3500 belgi</small></div><div class="hetk-naryad-field"><label>Telegramda ko‘rinishi</label><div id="n-broadcast-preview" class="hetk-naryad-notice"><span><b>Sarlavha</b><br>Xabar matni shu yerda ko‘rinadi.</span></div></div></section><div class="hetk-naryad-form-actions"><button type="submit" class="hetk-naryad-btn primary"><i class="fas fa-paper-plane"></i> Barchaga yuborish</button></div></form>`;
+    if(!broadcastStats)loadBroadcastStats();
+  }
+  function updateBroadcastPreview(){const title=val('n-broadcast-title')||'Sarlavha',message=val('n-broadcast-message')||'Xabar matni shu yerda ko‘rinadi.',box=byId('n-broadcast-preview'),count=byId('n-broadcast-count');if(box)box.innerHTML=`<span>📢 <b>${esc(title)}</b><br><br>${esc(message).replace(/\n/g,'<br>')}<br><br><i>— HETK</i></span>`;if(count)count.textContent=String(val('n-broadcast-message').length);}
+  async function loadBroadcastStats(){try{broadcastStats=await consumerApi('/broadcast/stats');if(currentTab==='broadcast')renderBroadcast();}catch(e){toast(e.message||String(e),'error');}}
+  async function sendBroadcast(){clearError();try{const title=val('n-broadcast-title'),message=val('n-broadcast-message');if(title.length<3||message.length<3)throw new Error('Sarlavha va xabar matnini kiriting.');const total=broadcastStats&&broadcastStats.available!==undefined?broadcastStats.available:'barcha';if(!confirm(`Xabar ${total} ta faol foydalanuvchiga yuborilsinmi?`))return;const result=await consumerApi('/broadcast/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,message})});toast(`Yuborildi: ${result.sent}. Xato: ${result.failed}.`,'success');broadcastStats=null;renderBroadcast();}catch(e){errorBox(e.message||String(e));}}
+
   function handleClick(e){
     const closeBtn=e.target.closest('[data-n-close]');if(closeBtn)return close();
     const tab=e.target.closest('[data-n-tab]');if(tab){currentTab=tab.dataset.nTab;selectedId='';if(currentTab!=='new')editingId='';return render();}
     const openCard=e.target.closest('[data-n-open]');if(openCard){selectedId=openCard.dataset.nOpen;return render();}
     if(e.target.closest('[data-n-back]')){selectedId='';currentTab='list';return render();}
     if(e.target.closest('[data-n-refresh]'))return refreshList();
+    if(e.target.closest('[data-n-broadcast-refresh]')){broadcastStats=null;return loadBroadcastStats();}
     if(e.target.closest('[data-n-cancel-form]')){editingId='';currentTab='list';selectedId='';return render();}
     if(e.target.closest('[data-n-add-measure]')){const box=byId('n-measures');if(box)box.insertAdjacentHTML('beforeend',measureRow({}));return;}
     const remove=e.target.closest('[data-n-remove-measure]');if(remove){const rows=document.querySelectorAll('#n-measures .hetk-naryad-measure');if(rows.length>1)remove.closest('.hetk-naryad-measure').remove();else toast('Kamida bitta chora qatori qolishi kerak.','error');return;}
     const action=e.target.closest('[data-n-action]');if(action){action.disabled=true;executeAction(action.dataset.nAction).catch(err=>toast(err.message||String(err),'error')).finally(()=>{action.disabled=false;});return;}
     const rightUser=e.target.closest('[data-n-right-user]');if(rightUser){selectedRightsUid=rightUser.dataset.nRightUser;refreshRightsUsers();renderRightsCard();}
   }
-  function handleInput(e){if(e.target.id==='hetk-naryad-list-search')refreshList();if(e.target.id==='n-tp-search'){const selectEl=byId('n-tp');if(selectEl)selectEl.innerHTML=tpOptions(selectEl.value,e.target.value);}if(e.target.id==='n-rights-search')refreshRightsUsers();}
+  function handleInput(e){if(e.target.id==='hetk-naryad-list-search')refreshList();if(e.target.id==='n-tp-search'){const selectEl=byId('n-tp');if(selectEl)selectEl.innerHTML=tpOptions(selectEl.value,e.target.value);}if(e.target.id==='n-rights-search')refreshRightsUsers();if(e.target.id==='n-broadcast-title'||e.target.id==='n-broadcast-message')updateBroadcastPreview();}
   function handleChange(e){if(e.target.id==='hetk-naryad-list-status')refreshList();if(e.target.id==='n-voltage')refreshRoleOptions();if(e.target.id==='n-condition')refreshBrigadeOptions();if(e.target.id==='n-tp'){const p=byId('n-tp-path');p.textContent=e.target.value&&tps[e.target.value]?tpPath(tps[e.target.value]):'Ruxsat etilgan elementlardan tanlang';}}
-  function handleSubmit(e){if(e.target.id==='hetk-naryad-form'){e.preventDefault();const btn=e.target.querySelector('[type=submit]');btn.disabled=true;saveDraft().finally(()=>btn.disabled=false);}if(e.target.id==='n-rights-form'){e.preventDefault();const btn=e.target.querySelector('[type=submit]');btn.disabled=true;saveRights().finally(()=>btn.disabled=false);}}
+  function handleSubmit(e){if(e.target.id==='hetk-naryad-form'){e.preventDefault();const btn=e.target.querySelector('[type=submit]');btn.disabled=true;saveDraft().finally(()=>btn.disabled=false);}if(e.target.id==='n-rights-form'){e.preventDefault();const btn=e.target.querySelector('[type=submit]');btn.disabled=true;saveRights().finally(()=>btn.disabled=false);}if(e.target.id==='n-broadcast-form'){e.preventDefault();const btn=e.target.querySelector('[type=submit]');btn.disabled=true;sendBroadcast().finally(()=>btn.disabled=false);}}
 
   function bindRef(ref,event,handler){ref.on(event,handler);refs.push([ref,event,handler]);}
   function unbindAll(){refs.forEach(([ref,event,handler])=>ref.off(event,handler));refs=[];users={};folders={};tps={};naryads={};}
