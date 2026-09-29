@@ -262,9 +262,11 @@ body.hetk-minimal-support-role.hetk-profile-open::before{display:none}
 }
 .hetk-team-tree-node:hover{background:#f2f7fb;}
 .hetk-team-tree-node.zone{color:#236b91;background:#f7fbff;margin:2px 0;}
+.hetk-team-tree-node.res_staff{color:#155e52;background:linear-gradient(90deg,#ecfdf7,#f6fffc);border:1px solid #c6f1e3;margin:3px 0;}
 .hetk-team-tree-node .hetk-team-tree-arrow{font-size:9px;color:#6e879a;text-align:center;}
 .hetk-team-tree-node .hetk-team-tree-icon{font-size:13px;color:#6089a6;text-align:center;}
 .hetk-team-tree-node.zone .hetk-team-tree-icon{color:#1687ff;}
+.hetk-team-tree-node.res_staff .hetk-team-tree-icon{color:#0f9f82;}
 .hetk-team-tree-node span{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .hetk-team-tree-node b{font-size:9px;color:#6e879a;background:#edf3f7;border-radius:12px;padding:3px 6px;min-width:18px;text-align:center;}
 .hetk-team-tree-user{padding-left:calc(8px + var(--team-depth,0)*15px);}
