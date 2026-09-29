@@ -3462,7 +3462,8 @@
       return nodes[id];
     }
     users.forEach(u=>{
-      let parent=ensureFolder(teamUserPlacementFolder(u));
+      const placementId=teamUserPlacementFolder(u);
+      let parent=ensureFolder(placementId);
       if(MANAGEMENT_ROLES.has(u.role)){
         const mkey='__management__'+parent.id;
         if(!nodes[mkey]){nodes[mkey]={id:mkey,name:'Boshqarma',type:'management',parent:parent.id,children:new Set(),users:[],count:0};parent.children.add(mkey);}
@@ -3483,9 +3484,13 @@
         }
         parent=nodes[zkey];
       }else{
-        const rkey='__res_staff__'+parent.id;
-        if(!nodes[rkey]){nodes[rkey]={id:rkey,name:'RES hodimlari',type:'res_staff',parent:parent.id,children:new Set(),users:[],count:0};parent.children.add(rkey);}
-        parent=nodes[rkey];
+        const districtId=districtOrCityFolderId(placementId);
+        if(districtId){
+          parent=ensureFolder(districtId);
+          const rkey='__res_staff__'+parent.id;
+          if(!nodes[rkey]){nodes[rkey]={id:rkey,name:'RES hodimlari',type:'res_staff',parent:parent.id,children:new Set(),users:[],count:0};parent.children.add(rkey);}
+          parent=nodes[rkey];
+        }
       }
       parent.users.push(u);
     });
@@ -3529,7 +3534,11 @@
   function renderTeamTreeNode(nodes,id,depth,searching){
     const node=nodes[id];
     if(!node || !node.count) return '';
-    const children=Array.from(node.children).filter(cid=>nodes[cid] && nodes[cid].count).sort((a,b)=>String(nodes[a].name||'').localeCompare(String(nodes[b].name||'')));
+    const children=Array.from(node.children).filter(cid=>nodes[cid] && nodes[cid].count).sort((a,b)=>{
+      const ap=nodes[a].type==='res_staff'?0:1;
+      const bp=nodes[b].type==='res_staff'?0:1;
+      return ap-bp || String(nodes[a].name||'').localeCompare(String(nodes[b].name||''));
+    });
     const users=node.users.slice().sort((a,b)=>Number(b.level||0)-Number(a.level||0) || String(a.fullName||'').localeCompare(String(b.fullName||'')));
     const expanded=searching || teamTreeExpanded.has(id);
     const hasChildren=children.length || users.length;
@@ -4330,14 +4339,18 @@
     return roots.length + ' ta hudud / papka';
   }
 
-  function isDistrictOrCityScope(folderId){
+  function districtOrCityFolderId(folderId){
     let current=folderId,guard=0;
     while(current&&current!=='root'&&teamFoldersCache[current]&&guard<100){
       const name=String(teamFoldersCache[current].name||'').toLocaleLowerCase('uz');
-      if(/(^|\s)(tet|shet|tuman|shahar)(\s|$)|elektr.*tarmoq/.test(name))return true;
+      if(/(^|\s)(tet|shet|tuman|shahar)(\s|$)|elektr.*tarmoq/.test(name))return current;
       current=teamFoldersCache[current].parentId;guard++;
     }
-    return false;
+    return '';
+  }
+
+  function isDistrictOrCityScope(folderId){
+    return Boolean(districtOrCityFolderId(folderId));
   }
 
   function secondaryAuth(){
