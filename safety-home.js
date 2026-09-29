@@ -88,10 +88,6 @@
   function openTests(){
     if(!window.HETKTraining || typeof window.HETKTraining.open !== 'function') return;
     window.HETKTraining.open();
-    requestAnimationFrame(()=>{
-      const button=document.querySelector('#hetk-training-overlay [data-training-tab="tests"]');
-      if(button) button.click();
-    });
   }
 
   function runAction(action){
