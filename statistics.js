@@ -6,10 +6,13 @@
     activeFolderId:'root',refs:[],started:false,currentUid:'',presenceRef:null,
     connectedRef:null,heartbeat:null,lastActivityAt:Date.now(),usageDay:'',
     selectedYear:String(new Date().getFullYear()),selectedMonth:String(new Date().getMonth()+1).padStart(2,'0'),
-    adminFolderId:'root',adminFolderExpanded:{},adminFolderSearch:'',adminFolderDocumentBound:false,adminUnit:'all',selectedTeamUid:''
+    adminFolderId:'root',adminFolderExpanded:{},adminFolderSearch:'',adminFolderDocumentBound:false,adminUnit:'all',selectedTeamUid:'',
+    safetyMonth:'',safetyScope:'root',safetyUnit:'all',safetyMonthly:{},snapshotSavedMonth:''
   };
   const ONLINE_LIMIT_MS=150000;
   const ACTIVE_LIMIT_MS=5*60*1000;
+  const SAFETY_OFFICER_ROLES=new Set(['super_admin','republic_tb_engineer','regional_tb_chief','regional_tb_operations_engineer','regional_tb_engineer','regional_fire_safety_engineer','tb_engineer']);
+  const PERMIT_EXEMPT_ROLES=new Set(['document_technician','contract_service_engineer','execution_discipline_inspector','warehouse_manager','gardener','cleaner','guard','regional_hr_head','regional_training_specialist','regional_hr_engineer','regional_press_secretary','askue_group_operator']);
 
   function byId(id){return document.getElementById(id);}
   function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
@@ -101,6 +104,34 @@
     if(user.workZoneId&&state.zones[user.workZoneId])roots=roots.concat(zoneFolderIds(state.zones[user.workZoneId]));
     return roots.some(function(id){return isInside(id,folderId)||isInside(folderId,id);});
   }
+  function monthKey(date){const d=date||new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+  function recentMonths(){const out=[],names=['Yanvar','Fevral','Mart','Aprel','May','Iyun','Iyul','Avgust','Sentabr','Oktabr','Noyabr','Dekabr'],now=new Date();for(let i=0;i<6;i++){const d=new Date(now.getFullYear(),now.getMonth()-i,1);out.push({key:monthKey(d),label:names[d.getMonth()]+' '+d.getFullYear()});}return out;}
+  function permitSnapshot(user){
+    const api=window.HETKAuth,st=api&&api.getPermitState?api.getPermitState(user):{kind:'none',days:null};
+    return {uid:user.uid||'',fullName:user.fullName||user.login||'Hodim',role:user.role||'',active:user.active!==false,group:String(((user.safety||{}).group)||'').toUpperCase(),permitKind:st.kind||'none',days:st.days==null?null:Number(st.days),folderIds:userFolderIds(user),workZoneId:user.workZoneId||'',capturedAt:Date.now()};
+  }
+  function snapshotFolderMatch(row,folderId){if(folderId==='root')return true;let roots=Array.isArray(row.folderIds)?row.folderIds:Object.keys(row.folderIds||{}).filter(id=>row.folderIds[id]);if(row.workZoneId&&state.zones[row.workZoneId])roots=roots.concat(zoneFolderIds(state.zones[row.workZoneId]));return roots.some(id=>isInside(id,folderId)||isInside(folderId,id));}
+  function safetyRows(folderId,unit,period){
+    const current=period===monthKey(),source=current?Object.keys(state.users).map(uid=>permitSnapshot(Object.assign({uid},state.users[uid]||{}))):Object.values((((state.safetyMonthly[period]||{}).users)||{}));
+    return source.filter(row=>row&&row.active!==false&&!PERMIT_EXEMPT_ROLES.has(row.role)&&snapshotFolderMatch(row,folderId)).filter(row=>{if(!unit||unit==='all')return true;const parts=unit.split(':'),kind=parts.shift(),id=parts.join(':');if(kind==='work_zone')return row.workZoneId===id;if(kind==='folder')return (Array.isArray(row.folderIds)?row.folderIds:Object.keys(row.folderIds||{}).filter(k=>row.folderIds[k])).some(fid=>isInside(fid,id)||isInside(id,fid));return true;});
+  }
+  function safetySummary(rows){
+    const groups={I:0,II:0,III:0,IV:0,V:0,none:0},status={expired:0,soon:0,valid:0,none:0};
+    rows.forEach(row=>{const g=['I','II','III','IV','V'].includes(row.group)?row.group:'none';groups[g]++;if(row.permitKind==='expired')status.expired++;else if(row.days!=null&&row.days<=10)status.soon++;else if(row.permitKind==='none'||row.days==null)status.none++;else status.valid++;});return {total:rows.length,groups,status};
+  }
+  function donutStyle(values,colors){const total=values.reduce((a,b)=>a+b,0)||1;let angle=0;return values.map((value,i)=>{const start=angle;angle+=value/total*360;return `${colors[i]} ${start}deg ${angle}deg`;}).join(',');}
+  function safetyReportHtml(rows,compact){
+    const s=safetySummary(rows),groupKeys=['I','II','III','IV','V','none'],groupLabels={I:'I guruh',II:'II guruh',III:'III guruh',IV:'IV guruh',V:'V guruh',none:'Guruh belgilanmagan'},groupColors=['#258cf0','#18a873','#f0b429','#f2773c','#8759e8','#a7b3be'],statusKeys=['valid','soon','expired','none'],statusLabels={valid:'Amaldagi',soon:'10 kun qolgan',expired:'Muddati o‘tgan',none:'Muddat kiritilmagan'},statusColors=['#20a56b','#f4b52e','#e34b4b','#9aa9b6'];
+    const groupLegend=groupKeys.map((key,i)=>{const pct=s.total?Math.round(s.groups[key]/s.total*100):0;return `<span><i style="background:${groupColors[i]}"></i><em>${groupLabels[key]}</em><b>${s.groups[key]} ta · ${pct}%</b></span>`;}).join('');
+    const statusLegend=statusKeys.map((key,i)=>{const pct=s.total?Math.round(s.status[key]/s.total*100):0;return `<span><i style="background:${statusColors[i]}"></i><em>${statusLabels[key]}</em><b>${s.status[key]} ta · ${pct}%</b></span>`;}).join('');
+    return `<div class="hetk-safety-report ${compact?'compact':''}"><div class="hetk-safety-kpis"><article><small>Jami hodim</small><b>${s.total}</b><span>100%</span></article><article class="good"><small>Amaldagi</small><b>${s.status.valid}</b><span>${s.total?Math.round(s.status.valid/s.total*100):0}%</span></article><article class="warn"><small>10 kun qolgan</small><b>${s.status.soon}</b><span>${s.total?Math.round(s.status.soon/s.total*100):0}%</span></article><article class="bad"><small>Muddati o‘tgan</small><b>${s.status.expired}</b><span>${s.total?Math.round(s.status.expired/s.total*100):0}%</span></article></div><div class="hetk-safety-charts"><section><h5>XTB guruhlari</h5><div class="hetk-safety-chart"><div class="hetk-safety-donut" style="background:conic-gradient(${donutStyle(groupKeys.map(k=>s.groups[k]),groupColors)})"><b>${s.total}</b><small>hodim</small></div><div class="hetk-safety-legend">${groupLegend}</div></div></section><section><h5>Ruxsatnoma va imtihon muddati</h5><div class="hetk-safety-chart"><div class="hetk-safety-donut" style="background:conic-gradient(${donutStyle(statusKeys.map(k=>s.status[k]),statusColors)})"><b>${s.status.expired+s.status.soon}</b><small>nazoratda</small></div><div class="hetk-safety-legend">${statusLegend}</div></div></section></div></div>`;
+  }
+  function safetyMonthOptions(){return recentMonths().map(row=>`<option value="${row.key}"${(state.safetyMonth||monthKey())===row.key?' selected':''}>${row.label}</option>`).join('');}
+  function safetyScopeOptions(){const allowed=Object.keys(state.folders).filter(id=>{const account=me();return account&&(account.role==='super_admin'||account.rootAccess||userInScope(account,id));}).sort((a,b)=>folderPath(a).localeCompare(folderPath(b),'uz'));return `<option value="root">Barcha ruxsat etilgan hududlar</option>`+allowed.map(id=>`<option value="${esc(id)}"${state.safetyScope===id?' selected':''}>${esc(folderPath(id)||folderName(id))}</option>`).join('');}
+  function safetyUnitOptions(folderId){const opts=['<option value="all">Barcha bo‘limlar</option>'];const zones=Object.keys(state.zones).filter(id=>zoneVisible(state.zones[id],folderId)).sort((a,b)=>String(state.zones[a].name||'').localeCompare(String(state.zones[b].name||''),'uz'));if(zones.length)opts.push('<optgroup label="U/J lar">'+zones.map(id=>`<option value="work_zone:${esc(id)}"${state.safetyUnit==='work_zone:'+id?' selected':''}>${esc(state.zones[id].name||'U/J')}</option>`).join('')+'</optgroup>');return opts.join('');}
+  async function saveSafetyMonthlySnapshot(){
+    const account=me(),key=monthKey();if(!account||!SAFETY_OFFICER_ROLES.has(account.role)||state.snapshotSavedMonth===key||!Object.keys(state.users).length)return;state.snapshotSavedMonth=key;const updates={};Object.keys(state.users).forEach(uid=>{const u=state.users[uid]||{};if(!userInScope(u,'root'))return;updates[`SafetyStatisticsMonthly/${key}/users/${uid}`]=permitSnapshot(Object.assign({uid},u));});updates[`SafetyStatisticsMonthly/${key}/updatedAt`]=Date.now();try{await db().ref().update(updates);if(account.role==='super_admin'){const keep=new Set(recentMonths().map(r=>r.key)),old=Object.keys(state.safetyMonthly).filter(k=>!keep.has(k));if(old.length){const remove={};old.forEach(k=>remove[`SafetyStatisticsMonthly/${k}`]=null);await db().ref().update(remove);}}}catch(e){state.snapshotSavedMonth='';console.warn('SAFETY MONTHLY SNAPSHOT:',e);}
+  }
   function uidOnline(uid){
     const devices=state.presence[uid]||{},now=Date.now();
     return Object.keys(devices).some(function(id){const p=devices[id]||{};return p.online===true&&now-number(p.lastSeen)<ONLINE_LIMIT_MS;});
@@ -138,7 +169,7 @@
     overlay.setAttribute('aria-hidden','true');
     overlay.innerHTML=`<section class="hetk-stats-panel" role="dialog" aria-modal="true" aria-labelledby="hetk-stats-panel-title">
       <header class="hetk-stats-panel-header">
-        <div><i class="fas fa-chart-pie"></i><h3 id="hetk-stats-panel-title">Statistika</h3></div>
+        <div><i class="fas fa-chart-pie"></i><h3 id="hetk-stats-panel-title">Hodimlar statistikasi</h3></div>
         <button id="hetk-stats-close" type="button" aria-label="Statistikani yopish">×</button>
       </header>
       <div class="hetk-stats-panel-body"><section id="hetk-operational-stats" class="hetk-operational-stats"></section></div>
@@ -177,19 +208,11 @@
   }
   function renderOperational(){
     const box=mountOperational();if(!box||!me())return;
-    const folderId=activeFolderId();state.activeFolderId=folderId;
-    const data=summary(folderId),rows=zoneRows(folderId,data.points);
-    box.innerHTML=`<div class="hetk-stats-heading"><div><b><i class="fas fa-chart-pie"></i> Tezkor statistika</b><span>${esc(folderName(folderId))}</span></div><button type="button" id="hetk-stats-refresh" title="Yangilash"><i class="fas fa-sync-alt"></i></button></div>
-      <div class="hetk-stat-cards">
-        <div class="hetk-stat-card total"><i class="fas fa-bolt"></i><span>Jami element</span><strong>${data.total}</strong></div>
-        <div class="hetk-stat-card etk"><i class="fas fa-building"></i><span>ETK balansi</span><strong>${data.etk}</strong></div>
-        <div class="hetk-stat-card private"><i class="fas fa-industry"></i><span>Xususiy balans</span><strong>${data.privateCount}</strong></div>
-        <div class="hetk-stat-card online"><i class="fas fa-user-check"></i><span>Hozir onlayn</span><strong>${data.online}</strong></div>
-      </div>
-      <details class="hetk-zone-stats" ${rows.length&&rows.length<=8?'open':''}><summary><span><i class="fas fa-hard-hat"></i> Ustalik joylari kesimida</span><b>${rows.length} ta U/J</b></summary>
-        <div class="hetk-zone-stat-list">${rows.length?rows.map(function(row){return `<div class="hetk-zone-stat-row"><span class="name">${esc(row.name)}</span><span class="all">Jami <b>${row.total}</b></span><span class="etk">ETK <b>${row.etk}</b></span><span class="private">Xususiy <b>${row.privateCount}</b></span></div>`;}).join(''):'<div class="hetk-stats-empty">Bu hududda U/J topilmadi.</div>'}</div>
-      </details>`;
+    if(!state.safetyMonth)state.safetyMonth=monthKey();const folderId=state.safetyScope||'root',rows=safetyRows(folderId,state.safetyUnit,state.safetyMonth);
+    box.innerHTML=`<div class="hetk-stats-heading"><div><b><i class="fas fa-users"></i> Hodimlar hisoboti</b><span>Oxirgi 6 oy</span></div><button type="button" id="hetk-stats-refresh" title="Yangilash"><i class="fas fa-sync-alt"></i></button></div><div class="hetk-safety-report-filters"><label><span>Oy</span><select id="hetk-safety-stat-month">${safetyMonthOptions()}</select></label><label><span>HF, tuman yoki shahar</span><select id="hetk-safety-stat-scope">${safetyScopeOptions()}</select></label><label><span>U/J yoki bo‘lim</span><select id="hetk-safety-stat-unit">${safetyUnitOptions(folderId)}</select></label></div>${safetyReportHtml(rows,true)}${state.safetyMonth!==monthKey()&&!Object.keys(((state.safetyMonthly[state.safetyMonth]||{}).users)||{}).length?'<div class="hetk-stats-empty">Bu oy uchun tarixiy ma’lumot hali saqlanmagan.</div>':''}`;
     const refresh=byId('hetk-stats-refresh');if(refresh)refresh.addEventListener('click',function(){refresh.classList.add('spin');startDataListeners(true);setTimeout(function(){refresh.classList.remove('spin');},700);});
+    const month=byId('hetk-safety-stat-month'),scope=byId('hetk-safety-stat-scope'),unit=byId('hetk-safety-stat-unit');if(month)month.addEventListener('change',function(){state.safetyMonth=month.value;renderOperational();});if(scope)scope.addEventListener('change',function(){state.safetyScope=scope.value||'root';state.safetyUnit='all';renderOperational();});if(unit)unit.addEventListener('change',function(){state.safetyUnit=unit.value||'all';renderOperational();});
+    saveSafetyMonthlySnapshot();
     renderOwnZoneCard();
     renderSelectedUserZoneCard(state.selectedTeamUid);
     renderAdminDashboard();
@@ -379,7 +402,7 @@
         <section class="hetk-chart-card wide"><h4>${esc(state.selectedYear)}-${esc(state.selectedMonth)} faolligi</h4><div class="hetk-activity-chart">${activityBars(period.days)}</div></section>
         <section class="hetk-chart-card"><h4>U/J kesimida</h4><div class="hetk-zone-chart">${adminZoneBars(actual.points)}</div><div class="hetk-chart-legend"><span class="etk">ETK</span><span class="private">Xususiy</span></div></section>
         <section class="hetk-chart-card"><h4>Tanlangan oyda yaratilgan elementlar: ${created.length}</h4><div class="hetk-rank-chart">${topFolderRows(created)}</div></section>
-        <section class="hetk-chart-card wide hetk-group-card"><h4>Hodimlarning XTB guruhlari</h4>${safetyGroupStats()}</section>
+        <section class="hetk-chart-card wide hetk-group-card hetk-admin-safety-card"><div class="hetk-admin-safety-head"><div><h4>Hodimlar xavfsizlik hisoboti</h4><p>XTB guruhlari, ruxsatnoma va imtihon muddatlari</p></div><select id="hetk-admin-safety-month">${safetyMonthOptions()}</select></div>${safetyReportHtml(safetyRows(state.adminFolderId,state.adminUnit,state.safetyMonth||monthKey()),false)}</section>
       </div>
       <section class="hetk-reset-card"><div><h4><i class="fas fa-undo-alt"></i> Test statistikasini nolga qaytarish</h4><p>Faqat kirishlar va faol vaqt tarixi o‘chadi. Elementlar, hodimlar, U/J va onlayn holat o‘chmaydi.</p><span id="hetk-stat-reset-status"></span></div><div><button id="hetk-stat-set-pin" type="button"><i class="fas fa-key"></i> Kodni o‘rnatish</button><button id="hetk-stat-reset" type="button" class="danger"><i class="fas fa-eraser"></i> Nolga qaytarish</button></div></section>
     </div>`;
@@ -402,6 +425,7 @@
     if(year)year.addEventListener('change',function(){state.selectedYear=year.value;renderAdminDashboard();});
     if(month)month.addEventListener('change',function(){state.selectedMonth=month.value;renderAdminDashboard();});
     const unit=byId('hetk-stat-unit');if(unit)unit.addEventListener('change',function(){state.adminUnit=unit.value||'all';renderAdminDashboard();});
+    const safetyMonth=byId('hetk-admin-safety-month');if(safetyMonth)safetyMonth.addEventListener('change',function(){state.safetyMonth=safetyMonth.value;renderAdminDashboard();});
     bindAdminFolderPicker();
     const setPin=byId('hetk-stat-set-pin');if(setPin)setPin.addEventListener('click',setResetPin);
     const reset=byId('hetk-stat-reset');if(reset)reset.addEventListener('click',resetUsageStatistics);
@@ -478,7 +502,7 @@
     }else{
       listen('TPs','tps');listen('users','users');listen('UserPresence','presence');listen('UsageDaily','usage');
     }
-    listen('Folders','folders');listen('WorkZones','zones');listen('SystemSettings','settings');renderOperational();
+    listen('Folders','folders');listen('WorkZones','zones');listen('SystemSettings','settings');listen('SafetyStatisticsMonthly','safetyMonthly');renderOperational();setTimeout(saveSafetyMonthlySnapshot,800);
   }
   function stopDataListeners(){state.refs.forEach(function(ref){ref.off('value');});state.refs=[];state.started=false;}
 
