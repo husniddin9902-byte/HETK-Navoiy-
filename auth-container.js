@@ -510,6 +510,7 @@
       `🔢 Guvohnoma №: ${rec.certificateNo || '—'}`,
       `1️⃣ XT va reanimatsiya / XTQ: ${formatProfileDate(exam1.examDate)} · ${exam1.grade || '—'} · keyingi ${formatProfileDate(exam1.nextExamDate)}`,
       `2️⃣ Elektr qurilmalar / Yong‘in XQ: ${formatProfileDate(exam2.examDate)} · ${exam2.grade || '—'} · keyingi ${formatProfileDate(exam2.nextExamDate)}`,
+      `⚖️ Navbatdan tashqari: ${rec.extraordinaryExam.status==='none'?'Belgilanmagan':extraordinaryScopeLabel(rec.extraordinaryExam.scope)+' · '+rec.extraordinaryExam.status+' · '+formatProfileDate(rec.extraordinaryExam.dueDate)}`,
       `🧰 Maxsus ishlar: ${special.length ? shortText(special.map(item=>item.decision).join(', '),120) : '—'}`,
       `✅ Ruxsatnoma holati: ${state.text || '—'}`,
       `🔳 QR ruxsatnoma: ${rec.publicEnabled && rec.publicCode ? rec.publicCode : 'Faollashtirilmagan'}`,
@@ -1072,10 +1073,14 @@
     return {examDate:'',grade:'',nextExamDate:''};
   }
 
+  function defaultExtraordinaryExam(){
+    return {status:'none',scope:'both',assignedDate:'',decisionNo:'',note:'',resultDate:'',dueDate:''};
+  }
+
   function defaultSafetyRecord(){
     return {
       group:'I',certificateNo:'',examDate:'',validUntil:'',
-      exam1:defaultSafetyExam(),exam2:defaultSafetyExam(),specialWorks:{},history:{},
+      exam1:defaultSafetyExam(),exam2:defaultSafetyExam(),extraordinaryExam:defaultExtraordinaryExam(),specialWorks:{},history:{},
       publicCode:'',publicEnabled:false,publicIssuedAt:0,publicIssuedBy:'',
       notes:'',updatedAt:0,updatedBy:'',updatedByName:'',updatedByRole:''
     };
@@ -1095,6 +1100,7 @@
     const rec=Object.assign(defaultSafetyRecord(),stored);
     rec.exam1=normalizeSafetyExam(stored.exam1,stored.examDate,stored.validUntil);
     rec.exam2=normalizeSafetyExam(stored.exam2,'','');
+    rec.extraordinaryExam=Object.assign(defaultExtraordinaryExam(),stored.extraordinaryExam||{});
     rec.specialWorks=stored.specialWorks && typeof stored.specialWorks==='object' ? stored.specialWorks : {};
     rec.history=stored.history && typeof stored.history==='object' ? stored.history : {};
     rec.publicEnabled=stored.publicEnabled===true;
@@ -1128,8 +1134,38 @@
     return !!(until && until < Date.now());
   }
 
+  function isoDateLocal(date){
+    const year=date.getFullYear(),month=String(date.getMonth()+1).padStart(2,'0'),day=String(date.getDate()).padStart(2,'0');
+    return year+'-'+month+'-'+day;
+  }
+
+  function addOneCalendarMonth(value){
+    const start=parseDateStart(value); if(!start) return '';
+    const date=new Date(start),day=date.getDate();
+    date.setDate(1);date.setMonth(date.getMonth()+1);
+    const lastDay=new Date(date.getFullYear(),date.getMonth()+1,0).getDate();
+    date.setDate(Math.min(day,lastDay));
+    return isoDateLocal(date);
+  }
+
+  function isUnsatisfactory(exam){return String((exam&&exam.grade)||'')==='Qoniqarsiz';}
+
+  function extraordinaryActive(extra){return extra && ['assigned','unsatisfactory'].includes(String(extra.status||''));}
+
+  function extraordinaryState(extra){
+    if(!extraordinaryActive(extra)) return {kind:extra&&extra.status==='satisfactory'?'ok':'none',text:extra&&extra.status==='satisfactory'?'Topshirilgan':'Belgilanmagan',until:0};
+    const until=parseDateEnd(extra.dueDate);
+    if(until && until<Date.now()) return {kind:'expired',text:'Navbatdan tashqari imtihon muddati tugagan',until,days:0};
+    const days=until?Math.max(0,Math.floor((until-Date.now())/ONE_DAY_MS)):null;
+    return {kind:'warn',text:extra.status==='unsatisfactory'?'Qayta topshirish uchun 1 oy':'1 oy ichida topshirish',until,days};
+  }
+
   function safetyExamState(exam){
     const until=parseDateEnd(exam && exam.nextExamDate);
+    if(isUnsatisfactory(exam)){
+      if(until && until<Date.now()) return {kind:'expired',text:'Qayta topshirish muddati tugagan',until,days:0};
+      return {kind:'warn',text:'Qayta topshirish uchun 1 oy',until,days:until?Math.max(0,Math.floor((until-Date.now())/ONE_DAY_MS)):null};
+    }
     if(!until) return {kind:'none',text:'Muddat kiritilmagan',until:0};
     const left=until-Date.now();
     if(left<=0) return {kind:'expired',text:'Muddati tugagan',until};
@@ -1141,6 +1177,9 @@
 
   function effectiveSafetyGroup(account){
     const rec=safetyRecord(account);
+    if(isUnsatisfactory(rec.exam1) || isUnsatisfactory(rec.exam2)) return 'I';
+    const extra=extraordinaryState(rec.extraordinaryExam);
+    if(rec.extraordinaryExam.status==='unsatisfactory' || extra.kind==='expired') return 'I';
     if(safetyExamExpired(rec.exam1) || safetyExamExpired(rec.exam2)) return 'I';
     return SAFETY_GROUPS.includes(String(rec.group||'').toUpperCase()) ? String(rec.group).toUpperCase() : 'I';
   }
@@ -1148,6 +1187,16 @@
   function permitState(account){
     const rec=safetyRecord(account);
     const exams=[rec.exam1,rec.exam2];
+    const failed=exams.map((exam,index)=>isUnsatisfactory(exam)?{exam,index:index+1,until:parseDateEnd(exam.nextExamDate)}:null).filter(Boolean);
+    const failedExpired=failed.filter(item=>item.until && item.until<Date.now());
+    if(failedExpired.length) return {kind:'expired',days:0,hours:0,text:'Qayta topshirish muddati tugagan',percent:0,until:failedExpired[0].until,expiredExams:failedExpired.map(x=>x.index)};
+    if(failed.length){
+      const nearest=failed.slice().sort((a,b)=>(a.until||Infinity)-(b.until||Infinity))[0];
+      const days=nearest.until?Math.max(0,Math.floor((nearest.until-Date.now())/ONE_DAY_MS)):null;
+      return {kind:'warn',days,hours:0,text:(failed.length===2?'Ikkala imtihon':' '+nearest.index+'-imtihon')+' qayta topshiriladi',percent:days===null?0:Math.max(0,Math.min(100,Math.round(days/31*100))),until:nearest.until||0,expiredExams:[]};
+    }
+    const extraState=extraordinaryState(rec.extraordinaryExam);
+    if(extraordinaryActive(rec.extraordinaryExam)) return {kind:extraState.kind,days:extraState.days,hours:0,text:extraState.text,percent:extraState.days===null?0:Math.max(0,Math.min(100,Math.round(extraState.days/31*100))),until:extraState.until||0,expiredExams:[]};
     const expired=exams.map((exam,index)=>safetyExamExpired(exam)?index+1:0).filter(Boolean);
     if(expired.length){
       const text=expired.length===2 ? 'Ikkala imtihon muddati tugagan' : expired[0]+'-imtihon muddati tugagan';
@@ -1251,6 +1300,16 @@
     </div>`;
   }
 
+  function extraordinaryScopeLabel(scope){return scope==='exam1'?'1-imtihon':scope==='exam2'?'2-imtihon':'Ikkala imtihon';}
+
+  function extraordinaryExamHtml(extra){
+    extra=Object.assign(defaultExtraordinaryExam(),extra||{});
+    if(extra.status==='none') return '';
+    const state=extraordinaryState(extra);
+    const status=extra.status==='assigned'?'Belgilangan':extra.status==='unsatisfactory'?'Qoniqarsiz — qayta topshiradi':'Qoniqarli — yopilgan';
+    return `<article class="hetk-extraordinary-card ${state.kind}"><div class="hetk-extraordinary-head"><div><i class="fas fa-gavel"></i><b>Navbatdan tashqari imtihon</b></div><span>${escapeHtml(status)}</span></div><div class="hetk-extraordinary-grid"><div><small>Qamrovi</small><b>${escapeHtml(extraordinaryScopeLabel(extra.scope))}</b></div><div><small>Qaror raqami</small><b>${escapeHtml(extra.decisionNo||'—')}</b></div><div><small>Belgilangan sana</small><b>${escapeHtml(formatDateOnly(extra.assignedDate))}</b></div><div><small>Oxirgi muddat</small><b>${escapeHtml(formatDateOnly(extra.dueDate))}</b></div></div>${extra.note?`<p>${escapeHtml(extra.note)}</p>`:''}</article>`;
+  }
+
   function safetyPermitHtml(account, opts){
     opts=opts||{};
     if(account && PERMIT_EXEMPT_ROLES.has(account.role)) return '';
@@ -1272,8 +1331,9 @@
         <div class="hetk-safety-group ${group!==(rec.group||'I')?'expired':''}"><small>XTB guruhi</small><strong>${escapeHtml(group)}</strong><span>guruh</span></div>
         <div class="hetk-safety-expiry"><div class="hetk-safety-expiry-top"><span>Eng yaqin imtihon muddati</span><b class="${state.kind}">${escapeHtml(state.text)}</b></div><div class="hetk-safety-progress"><i class="${state.kind}" style="width:${state.percent}%"></i></div><small>${state.until ? 'Eng yaqin sana: '+escapeHtml(new Date(state.until).toLocaleDateString('uz-UZ')) : 'TB muhandisi ma’lumot kiritadi'}</small></div>
       </div>
-      ${state.kind==='expired'?'<div class="hetk-safety-expired-rule"><i class="fas fa-exclamation-triangle"></i> Asosiy imtihonlardan bittasining muddati tugagani uchun hodim avtomatik I guruhga tushirildi.</div>':''}
+      ${(group==='I' && group!==(rec.group||'I'))?'<div class="hetk-safety-expired-rule"><i class="fas fa-exclamation-triangle"></i> Imtihon qoniqarsiz yoki muddati tugaganligi sababli hodim avtomatik I guruhga tushirildi.</div>':''}
       <div class="hetk-safety-exams">${safetyExamCardHtml(rec.exam1,1)}${safetyExamCardHtml(rec.exam2,2)}</div>
+      ${extraordinaryExamHtml(rec.extraordinaryExam)}
       ${safetySpecialWorksHtml(rec)}
       ${rec.notes?`<div class="hetk-safety-note">${escapeHtml(rec.notes)}</div>`:''}
     </section>`;
@@ -1330,7 +1390,12 @@
 
   function safetyExamEditorHtml(exam,index){
     const subjects=SAFETY_EXAM_SUBJECTS['exam'+index];
-    return `<section class="hetk-safety-exam-editor"><h4><span>${index}</span>${index}-imtihon</h4><p>${subjects.map(escapeHtml).join(' · ')}</p><div class="hetk-safety-form-grid three"><label><span>Imtihon vaqti *</span><input id="hetk-safety-exam${index}-date" type="date" value="${escapeAttr(exam.examDate||'')}"></label><label><span>Baho *</span><select id="hetk-safety-exam${index}-grade">${safetyGradeOptions(exam.grade||'')}</select></label><label><span>Keyingi imtihon vaqti *</span><input id="hetk-safety-exam${index}-next" type="date" value="${escapeAttr(exam.nextExamDate||'')}"></label></div></section>`;
+    return `<section class="hetk-safety-exam-editor"><h4><span>${index}</span>${index}-imtihon · Navbatdagi</h4><p>${subjects.map(escapeHtml).join(' · ')}</p><div class="hetk-safety-form-grid three"><label><span>Imtihon vaqti *</span><input id="hetk-safety-exam${index}-date" type="date" value="${escapeAttr(exam.examDate||'')}"></label><label><span>Baho *</span><select id="hetk-safety-exam${index}-grade">${safetyGradeOptions(exam.grade||'')}</select></label><label><span>Keyingi imtihon / qayta topshirish *</span><input id="hetk-safety-exam${index}-next" type="date" value="${escapeAttr(exam.nextExamDate||'')}" ${isUnsatisfactory(exam)?'readonly':''}><small id="hetk-safety-exam${index}-retry-help" class="hetk-retry-help ${isUnsatisfactory(exam)?'show':''}">Qoniqarsiz bahoda muddat avtomatik 1 oy va o‘zgartirilmaydi.</small></label></div></section>`;
+  }
+
+  function extraordinaryEditorHtml(extra){
+    extra=Object.assign(defaultExtraordinaryExam(),extra||{});
+    return `<section class="hetk-extraordinary-editor"><div class="hetk-special-editor-head"><div><h4><i class="fas fa-gavel"></i> Navbatdan tashqari imtihon</h4><p>Jazo yoki alohida qaror asosida 1-imtihon, 2-imtihon yoki ikkalasi belgilanadi.</p></div></div><div class="hetk-safety-form-grid three"><label><span>Holati</span><select id="hetk-extra-status"><option value="none" ${extra.status==='none'?'selected':''}>Belgilanmagan</option><option value="assigned" ${extra.status==='assigned'?'selected':''}>Belgilandi</option><option value="satisfactory" ${extra.status==='satisfactory'?'selected':''}>Qoniqarli topshirdi</option><option value="unsatisfactory" ${extra.status==='unsatisfactory'?'selected':''}>Qoniqarsiz</option></select></label><label><span>Qaysi imtihon *</span><select id="hetk-extra-scope"><option value="exam1" ${extra.scope==='exam1'?'selected':''}>1-imtihon</option><option value="exam2" ${extra.scope==='exam2'?'selected':''}>2-imtihon</option><option value="both" ${extra.scope==='both'?'selected':''}>Ikkala imtihon</option></select></label><label><span>Belgilangan sana *</span><input id="hetk-extra-assigned" type="date" value="${escapeAttr(extra.assignedDate||'')}"></label><label><span>Qaror raqami *</span><input id="hetk-extra-decision" value="${escapeAttr(extra.decisionNo||'')}" placeholder="Masalan: 25-01/26"></label><label><span>Natija sanasi</span><input id="hetk-extra-result" type="date" value="${escapeAttr(extra.resultDate||'')}"></label><label><span>Topshirish / qayta topshirish muddati</span><input id="hetk-extra-due" type="date" value="${escapeAttr(extra.dueDate||'')}" readonly></label></div><label class="hetk-safety-notes-label"><span>Qaror sababi va izoh *</span><textarea id="hetk-extra-note" rows="3" placeholder="Navbatdan tashqari imtihon sababi">${escapeHtml(extra.note||'')}</textarea></label></section>`;
   }
 
   function specialEditorRowHtml(item){
@@ -1353,15 +1418,47 @@
     const rec=safetyRecord(target);
     const specialRows=specialWorksList(rec);
     const overlay=document.createElement('div'); overlay.id='hetk-safety-overlay'; overlay.className='hetk-safety-overlay';
-    overlay.innerHTML=`<div class="hetk-safety-overlay-backdrop" data-close-safety></div><div class="hetk-safety-editor wide"><header><div><small>${escapeHtml(target.fullName||'Hodim')}</small><h3>RUXSATNOMA VA IMTIHONLAR</h3></div><button type="button" data-close-safety><i class="fas fa-times"></i></button></header><div class="hetk-safety-editor-body"><div id="hetk-safety-editor-msg" class="hetk-user-editor-message"></div><div class="hetk-safety-general"><div class="hetk-safety-form-grid"><label><span>Belgilangan XTB guruhi *</span><select id="hetk-safety-group">${SAFETY_GROUPS.map(g=>`<option value="${g}" ${String(rec.group||'I')===g?'selected':''}>${g} guruh</option>`).join('')}</select></label><label><span>Guvohnoma raqami</span><input id="hetk-safety-cert" value="${escapeAttr(rec.certificateNo||'')}" placeholder="Masalan: 125/26"></label></div></div>${safetyExamEditorHtml(rec.exam1,1)}${safetyExamEditorHtml(rec.exam2,2)}<section class="hetk-special-editor"><div class="hetk-special-editor-head"><div><h4>Maxsus ishlar bo‘yicha bilimlar sinovi</h4><p>Qoida nomi: “Maxsus ishlarga”. Komissiya qarori ro‘yxatdan tanlanadi.</p></div><button type="button" id="hetk-special-add"><i class="fas fa-plus"></i> Yangi sinov</button></div><div id="hetk-special-editor-list">${specialRows.map(specialEditorRowHtml).join('')}</div></section><label class="hetk-safety-qr-toggle"><input id="hetk-safety-public" type="checkbox" ${rec.publicEnabled?'checked':''}><span><i class="fas fa-qrcode"></i><b>QR ruxsatnomani faollashtirish</b><small>QR ichida maxfiy login, telefon va parol bo‘lmaydi. Ma’lumot saytdan doim yangilanadi.</small></span></label><label class="hetk-safety-notes-label"><span>Izoh</span><textarea id="hetk-safety-notes" rows="3" placeholder="Sinov yoki ruxsatnoma bo‘yicha izoh">${escapeHtml(rec.notes||'')}</textarea></label></div><footer><button type="button" data-close-safety>Bekor qilish</button><button type="button" id="hetk-safety-save"><i class="fas fa-save"></i> Saqlash</button></footer></div>`;
+    overlay.innerHTML=`<div class="hetk-safety-overlay-backdrop" data-close-safety></div><div class="hetk-safety-editor wide"><header><div><small>${escapeHtml(target.fullName||'Hodim')}</small><h3>BILIM SINOVI VA RUXSATNOMALAR</h3></div><button type="button" data-close-safety><i class="fas fa-times"></i></button></header><div class="hetk-safety-editor-body"><div id="hetk-safety-editor-msg" class="hetk-user-editor-message"></div><div class="hetk-safety-general"><div class="hetk-safety-form-grid"><label><span>Belgilangan XTB guruhi *</span><select id="hetk-safety-group">${SAFETY_GROUPS.map(g=>`<option value="${g}" ${String(rec.group||'I')===g?'selected':''}>${g} guruh</option>`).join('')}</select></label><label><span>Guvohnoma raqami</span><input id="hetk-safety-cert" value="${escapeAttr(rec.certificateNo||'')}" placeholder="Masalan: 125/26"></label></div></div>${safetyExamEditorHtml(rec.exam1,1)}${safetyExamEditorHtml(rec.exam2,2)}${extraordinaryEditorHtml(rec.extraordinaryExam)}<section class="hetk-special-editor"><div class="hetk-special-editor-head"><div><h4>Maxsus ishlar bo‘yicha bilimlar sinovi</h4><p>Qoida nomi: “Maxsus ishlarga”. Komissiya qarori ro‘yxatdan tanlanadi.</p></div><button type="button" id="hetk-special-add"><i class="fas fa-plus"></i> Yangi sinov</button></div><div id="hetk-special-editor-list">${specialRows.map(specialEditorRowHtml).join('')}</div></section><label class="hetk-safety-qr-toggle"><input id="hetk-safety-public" type="checkbox" ${rec.publicEnabled?'checked':''}><span><i class="fas fa-qrcode"></i><b>QR ruxsatnomani faollashtirish</b><small>QR ichida maxfiy login, telefon va parol bo‘lmaydi. Ma’lumot saytdan doim yangilanadi.</small></span></label><label class="hetk-safety-notes-label"><span>Izoh</span><textarea id="hetk-safety-notes" rows="3" placeholder="Sinov yoki ruxsatnoma bo‘yicha izoh">${escapeHtml(rec.notes||'')}</textarea></label></div><footer><button type="button" data-close-safety>Bekor qilish</button><button type="button" id="hetk-safety-save"><i class="fas fa-save"></i> Saqlash</button></footer></div>`;
     document.body.appendChild(overlay);
     overlay.querySelectorAll('[data-close-safety]').forEach(x=>x.addEventListener('click',closeSafetyOverlay));
     bindSpecialEditorRows(overlay);
+    bindSafetyExamAutomation();
+    bindExtraordinaryAutomation();
     byId('hetk-safety-save').addEventListener('click',()=>saveSafetyPermit(uid));
   }
 
   function readSafetyExamFromEditor(index){
-    return {examDate:String(byId('hetk-safety-exam'+index+'-date').value||''),grade:String(byId('hetk-safety-exam'+index+'-grade').value||''),nextExamDate:String(byId('hetk-safety-exam'+index+'-next').value||'')};
+    const exam={examDate:String(byId('hetk-safety-exam'+index+'-date').value||''),grade:String(byId('hetk-safety-exam'+index+'-grade').value||''),nextExamDate:String(byId('hetk-safety-exam'+index+'-next').value||'')};
+    if(isUnsatisfactory(exam)) exam.nextExamDate=addOneCalendarMonth(exam.examDate);
+    return exam;
+  }
+
+  function bindSafetyExamAutomation(){
+    [1,2].forEach(index=>{
+      const date=byId('hetk-safety-exam'+index+'-date'),grade=byId('hetk-safety-exam'+index+'-grade'),next=byId('hetk-safety-exam'+index+'-next'),help=byId('hetk-safety-exam'+index+'-retry-help');
+      const sync=()=>{const failed=grade.value==='Qoniqarsiz';next.readOnly=failed;if(failed) next.value=addOneCalendarMonth(date.value);help.classList.toggle('show',failed);};
+      date.addEventListener('change',sync);grade.addEventListener('change',sync);sync();
+    });
+  }
+
+  function bindExtraordinaryAutomation(){
+    const status=byId('hetk-extra-status'),assigned=byId('hetk-extra-assigned'),result=byId('hetk-extra-result'),due=byId('hetk-extra-due');
+    const sync=()=>{const base=status.value==='unsatisfactory'?result.value:assigned.value;due.value=['assigned','unsatisfactory'].includes(status.value)?addOneCalendarMonth(base):'';};
+    status.addEventListener('change',sync);assigned.addEventListener('change',sync);result.addEventListener('change',sync);sync();
+  }
+
+  function readExtraordinaryFromEditor(){
+    const extra={status:String(byId('hetk-extra-status').value||'none'),scope:String(byId('hetk-extra-scope').value||'both'),assignedDate:String(byId('hetk-extra-assigned').value||''),decisionNo:String(byId('hetk-extra-decision').value||'').trim(),note:String(byId('hetk-extra-note').value||'').trim(),resultDate:String(byId('hetk-extra-result').value||''),dueDate:''};
+    if(extra.status==='assigned') extra.dueDate=addOneCalendarMonth(extra.assignedDate);
+    if(extra.status==='unsatisfactory') extra.dueDate=addOneCalendarMonth(extra.resultDate);
+    return extra;
+  }
+
+  function validateExtraordinary(extra){
+    if(extra.status==='none') return '';
+    if(!['exam1','exam2','both'].includes(extra.scope) || !extra.assignedDate || !extra.decisionNo || !extra.note) return 'Navbatdan tashqari imtihon uchun qamrov, sana, qaror raqami va izohni kiriting.';
+    if(['satisfactory','unsatisfactory'].includes(extra.status) && !extra.resultDate) return 'Navbatdan tashqari imtihon natijasi sanasini kiriting.';
+    return '';
   }
 
   function readSpecialWorksFromEditor(){
@@ -1388,7 +1485,7 @@
   function addSafetyHistory(history,record,editorName,editorRole,now){
     if(!record || (!record.exam1.examDate && !record.exam2.examDate)) return history;
     const id='h_'+now+'_'+Math.random().toString(36).slice(2,6);
-    history[id]={exam1:record.exam1,exam2:record.exam2,group:record.group||'I',savedAt:now,savedByName:editorName,savedByRole:editorRole};
+    history[id]={exam1:record.exam1,exam2:record.exam2,extraordinaryExam:record.extraordinaryExam||defaultExtraordinaryExam(),group:record.group||'I',savedAt:now,savedByName:editorName,savedByRole:editorRole};
     return history;
   }
 
@@ -1420,7 +1517,7 @@
       active:safety.publicEnabled===true && account.active!==false,
       code:safety.publicCode||'',fullName:account.fullName||'Hodim',gender:normalizeGender(account.gender),
       role:getRoleLabel(account),region:account.workZoneName||account.region||'—',certificateNo:safety.certificateNo||'',
-      assignedGroup:safety.group||'I',effectiveGroup:effectiveSafetyGroup(merged),exam1:safety.exam1,exam2:safety.exam2,
+      assignedGroup:safety.group||'I',effectiveGroup:effectiveSafetyGroup(merged),exam1:safety.exam1,exam2:safety.exam2,extraordinaryExam:safety.extraordinaryExam||defaultExtraordinaryExam(),
       specialWorks:special,stateKind:state.kind,stateText:state.text,updatedAt:safety.updatedAt||Date.now(),
       updatedByName:safety.updatedByName||'',organization:'HETK'
     };
@@ -1443,6 +1540,10 @@
     add('2-imtihon sanasi',formatDateOnly(before.exam2.examDate),formatDateOnly(after.exam2.examDate));
     add('2-imtihon bahosi',before.exam2.grade,after.exam2.grade);
     add('2-imtihon keyingi sana',formatDateOnly(before.exam2.nextExamDate),formatDateOnly(after.exam2.nextExamDate));
+    add('Navbatdan tashqari holat',before.extraordinaryExam.status,after.extraordinaryExam.status);
+    add('Navbatdan tashqari qamrov',extraordinaryScopeLabel(before.extraordinaryExam.scope),extraordinaryScopeLabel(after.extraordinaryExam.scope));
+    add('Qaror raqami',before.extraordinaryExam.decisionNo,after.extraordinaryExam.decisionNo);
+    add('Navbatdan tashqari muddat',formatDateOnly(before.extraordinaryExam.dueDate),formatDateOnly(after.extraordinaryExam.dueDate));
     add('Maxsus ishlar',String(specialWorksList(before).length),String(specialWorksList(after).length));
     const result={};rows.forEach((row,index)=>{result[index]=row;});return result;
   }
@@ -1450,8 +1551,9 @@
   async function notifySafetyUpdated(uid,target,before,after){
     if(!uid || uid===currentAccount.uid) return;
     const now=Date.now(),changes=safetyNoticeChanges(before,after),updates={};
-    const employeeTitle=(currentAccount.fullName||'TB muhandisi')+' ruxsatnoma va imtihon ma’lumotlaringizni yangiladi';
-    const masterTitle=(target.fullName||'Hodim')+' ruxsatnoma va imtihon ma’lumotlari yangilandi';
+    const newlyAssigned=after.extraordinaryExam.status==='assigned' && (before.extraordinaryExam.status!=='assigned' || before.extraordinaryExam.assignedDate!==after.extraordinaryExam.assignedDate || before.extraordinaryExam.scope!==after.extraordinaryExam.scope);
+    const employeeTitle=newlyAssigned?'Sizga navbatdan tashqari imtihon belgilandi':(currentAccount.fullName||'TB muhandisi')+' ruxsatnoma va imtihon ma’lumotlaringizni yangiladi';
+    const masterTitle=newlyAssigned?(target.fullName||'Hodim')+'ga navbatdan tashqari imtihon belgilandi':(target.fullName||'Hodim')+' ruxsatnoma va imtihon ma’lumotlari yangilandi';
     let rows=[{recipientUid:uid,title:employeeTitle}];
     const zone=target.workZoneId && teamWorkZonesCache[target.workZoneId];
     const masterUid=zone && zone.currentMasterUid;
@@ -1460,10 +1562,10 @@
     recipientUids.forEach(recipientUid=>{
       const row=rows.find(x=>x.recipientUid===recipientUid)||{recipientUid,title:masterTitle};
       const noticeId=databaseRef.ref('UserNotifications/'+row.recipientUid).push().key;
-      updates['UserNotifications/'+row.recipientUid+'/'+noticeId]={id:noticeId,kind:'activity',action:'safety_update',read:false,title:row.title,actorUid:currentAccount.uid,actorName:currentAccount.fullName||'',actorRole:getRoleLabel(currentAccount),elementName:target.fullName||'Hodim',folderPath:target.workZoneName||target.region||'—',changes,createdAt:now,expiresAt:now+SAFETY_NOTICE_LIFETIME_MS};
+      updates['UserNotifications/'+row.recipientUid+'/'+noticeId]={id:noticeId,kind:'activity',action:newlyAssigned?'extraordinary_exam_assigned':'safety_update',read:false,title:row.title,actorUid:currentAccount.uid,actorName:currentAccount.fullName||'',actorRole:getRoleLabel(currentAccount),elementName:target.fullName||'Hodim',folderPath:target.workZoneName||target.region||'—',changes,createdAt:now,expiresAt:now+SAFETY_NOTICE_LIFETIME_MS};
     });
     await databaseRef.ref().update(updates);
-    await safeSendBrowserPush(recipientUids,'notifications','Ruxsatnoma yangilandi',masterTitle,{action:'safety_update'});
+    await safeSendBrowserPush(recipientUids,'notifications',newlyAssigned?'Navbatdan tashqari imtihon':'Ruxsatnoma yangilandi',masterTitle,{action:newlyAssigned?'extraordinary_exam_assigned':'safety_update'});
   }
 
   async function saveSafetyPermit(uid){
@@ -1474,11 +1576,12 @@
     const certificateNo=String(byId('hetk-safety-cert').value||'').trim();
     const exam1=readSafetyExamFromEditor(1);
     const exam2=readSafetyExamFromEditor(2);
+    const extraordinaryExam=readExtraordinaryFromEditor();
     const specialWorks=readSpecialWorksFromEditor();
     const publicEnabled=!!byId('hetk-safety-public').checked;
     const notes=String(byId('hetk-safety-notes').value||'').trim();
     const msg=byId('hetk-safety-editor-msg'); const btn=byId('hetk-safety-save');
-    const examError=validateSafetyExam(exam1,'1-imtihon') || validateSafetyExam(exam2,'2-imtihon');
+    const examError=validateSafetyExam(exam1,'1-imtihon') || validateSafetyExam(exam2,'2-imtihon') || validateExtraordinary(extraordinaryExam);
     if(examError){msg.className='hetk-user-editor-message show error';msg.textContent=examError;return;}
     const incompleteSpecial=Object.values(specialWorks).some(item=>!SPECIAL_WORK_DECISIONS.includes(item.decision));
     if(incompleteSpecial){msg.className='hetk-user-editor-message show error';msg.textContent='Maxsus ishlar qatorida komissiya qarorini ro‘yxatdan tanlang.';return;}
@@ -1487,9 +1590,9 @@
       const now=Date.now(); const roleLabel=getRoleLabel(currentAccount);const editorName=currentAccount.fullName||currentAccount.login||'';
       const publicCode=publicEnabled ? await uniquePermitCode(before.publicCode) : (before.publicCode||'');
       let history=Object.assign({},before.history||{});
-      if(safetyExamChanged(before.exam1,exam1) || safetyExamChanged(before.exam2,exam2)) history=addSafetyHistory(history,before,editorName,roleLabel,now);
+      if(safetyExamChanged(before.exam1,exam1) || safetyExamChanged(before.exam2,exam2) || JSON.stringify(before.extraordinaryExam)!==JSON.stringify(extraordinaryExam)) history=addSafetyHistory(history,before,editorName,roleLabel,now);
       Object.keys(specialWorks).forEach(id=>{specialWorks[id]=Object.assign({},specialWorks[id],{updatedAt:now,updatedBy:currentAccount.uid,updatedByName:editorName});});
-      const safety={group,certificateNo,examDate:exam1.examDate,validUntil:exam1.nextExamDate,exam1,exam2,specialWorks,history,publicCode,publicEnabled,publicIssuedAt:before.publicIssuedAt||(publicEnabled?now:0),publicIssuedBy:before.publicIssuedBy||(publicEnabled?currentAccount.uid:''),notes,updatedAt:now,updatedBy:currentAccount.uid,updatedByName:editorName,updatedByRole:roleLabel};
+      const safety={group,certificateNo,examDate:exam1.examDate,validUntil:exam1.nextExamDate,exam1,exam2,extraordinaryExam,specialWorks,history,publicCode,publicEnabled,publicIssuedAt:before.publicIssuedAt||(publicEnabled?now:0),publicIssuedBy:before.publicIssuedBy||(publicEnabled?currentAccount.uid:''),notes,updatedAt:now,updatedBy:currentAccount.uid,updatedByName:editorName,updatedByRole:roleLabel};
       const updates={};updates['users/'+uid+'/safety']=safety;
       if(publicCode) updates['PublicPermits/'+publicCode]=publicPermitPayload(uid,target,safety);
       await databaseRef.ref().update(updates);
@@ -1612,6 +1715,11 @@
     return `<article class="hetk-public-exam ${state.kind}"><div><b>${index}-imtihon</b><span>${escapeHtml(state.text)}</span></div><p>${SAFETY_EXAM_SUBJECTS['exam'+index].map(escapeHtml).join(' · ')}</p><dl><div><dt>Imtihon sanasi</dt><dd>${escapeHtml(formatDateOnly(exam.examDate))}</dd></div><div><dt>Baho</dt><dd>${escapeHtml(exam.grade||'—')}</dd></div><div><dt>Keyingi imtihon</dt><dd>${escapeHtml(formatDateOnly(exam.nextExamDate))}</dd></div></dl></article>`;
   }
 
+  function publicExtraordinaryHtml(extra){
+    extra=Object.assign(defaultExtraordinaryExam(),extra||{});if(extra.status==='none') return '';
+    return `<section class="hetk-public-special-wrap"><h3>Navbatdan tashqari imtihon</h3>${extraordinaryExamHtml(extra)}</section>`;
+  }
+
   function publicSpecialHtml(record){
     const items=specialWorksList(record);
     if(!items.length) return '<div class="hetk-public-special-empty">Maxsus ishlar bo‘yicha ruxsat kiritilmagan.</div>';
@@ -1640,7 +1748,7 @@
       if(!record || record.active!==true){publicPermitShell(code,'<div class="hetk-public-invalid"><i class="fas fa-times-circle"></i><h2>Ruxsatnoma faol emas</h2><p>QR kodi topilmadi, hodim bloklangan yoki ruxsatnoma o‘chirilgan.</p></div>');return;}
       const state={kind:record.stateKind||'none',text:record.stateText||'—'};
       const rec={specialWorks:record.specialWorks||{}};
-      publicPermitShell(code,`<main class="hetk-public-permit-content"><section class="hetk-public-person"><img src="${escapeAttr(defaultAvatarUrl(record.gender))}" alt=""><div><small>Tasdiqlangan hodim</small><h1>${escapeHtml(record.fullName||'Hodim')}</h1><p>${escapeHtml(record.role||'—')}</p><span><i class="fas fa-map-marker-alt"></i>${escapeHtml(record.region||'—')}</span></div><strong class="${state.kind}"><i class="fas ${state.kind==='expired'?'fa-exclamation-triangle':'fa-check-circle'}"></i>${escapeHtml(state.text)}</strong></section><section class="hetk-public-group"><div><small>Guvohnoma №</small><b>${escapeHtml(record.certificateNo||'—')}</b></div><div><small>Belgilangan guruh</small><b>${escapeHtml(record.assignedGroup||'I')} guruh</b></div><div><small>Amaldagi guruh</small><b class="${record.effectiveGroup!==record.assignedGroup?'expired':''}">${escapeHtml(record.effectiveGroup||'I')} guruh</b></div><div><small>Yangilangan</small><b>${escapeHtml(formatProfileDate(record.updatedAt))}</b></div></section><section class="hetk-public-exams">${publicPermitExamHtml(record.exam1||defaultSafetyExam(),1)}${publicPermitExamHtml(record.exam2||defaultSafetyExam(),2)}</section><section class="hetk-public-special-wrap"><h3>Maxsus ishlarga ruxsatlar</h3>${publicSpecialHtml(rec)}</section><div class="hetk-public-verified"><i class="fas fa-shield-alt"></i><span><b>Haqiqiyligi tasdiqlandi</b><small>Ma’lumot QR kod ichida qotib qolmaydi — Firebase bazasidan yangilanib turadi.</small></span></div></main>`);
+      publicPermitShell(code,`<main class="hetk-public-permit-content"><section class="hetk-public-person"><img src="${escapeAttr(defaultAvatarUrl(record.gender))}" alt=""><div><small>Tasdiqlangan hodim</small><h1>${escapeHtml(record.fullName||'Hodim')}</h1><p>${escapeHtml(record.role||'—')}</p><span><i class="fas fa-map-marker-alt"></i>${escapeHtml(record.region||'—')}</span></div><strong class="${state.kind}"><i class="fas ${state.kind==='expired'?'fa-exclamation-triangle':'fa-check-circle'}"></i>${escapeHtml(state.text)}</strong></section><section class="hetk-public-group"><div><small>Guvohnoma №</small><b>${escapeHtml(record.certificateNo||'—')}</b></div><div><small>Belgilangan guruh</small><b>${escapeHtml(record.assignedGroup||'I')} guruh</b></div><div><small>Amaldagi guruh</small><b class="${record.effectiveGroup!==record.assignedGroup?'expired':''}">${escapeHtml(record.effectiveGroup||'I')} guruh</b></div><div><small>Yangilangan</small><b>${escapeHtml(formatProfileDate(record.updatedAt))}</b></div></section><section class="hetk-public-exams">${publicPermitExamHtml(record.exam1||defaultSafetyExam(),1)}${publicPermitExamHtml(record.exam2||defaultSafetyExam(),2)}</section>${publicExtraordinaryHtml(record.extraordinaryExam)}<section class="hetk-public-special-wrap"><h3>Maxsus ishlarga ruxsatlar</h3>${publicSpecialHtml(rec)}</section><div class="hetk-public-verified"><i class="fas fa-shield-alt"></i><span><b>Haqiqiyligi tasdiqlandi</b><small>Ma’lumot QR kod ichida qotib qolmaydi — Firebase bazasidan yangilanib turadi.</small></span></div></main>`);
     }catch(error){publicPermitShell(code,`<div class="hetk-public-invalid"><i class="fas fa-wifi"></i><h2>Ma’lumot ochilmadi</h2><p>Internetni yoki Firebase’dagi PublicPermits o‘qish qoidasini tekshiring.</p></div>`);}
   }
 
