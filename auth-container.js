@@ -207,6 +207,7 @@
   let workZoneSelectedFolderIds = new Set();
   let workZonePickerExpanded = new Set();
   let workZoneTreeExpanded = new Set();
+  let workZoneMasterTreeExpanded = new Set(['__root__']);
   let workZoneTreeInitialized = false;
   let editingWorkZoneId = null;
   let userNotificationsRef = null;
@@ -3273,7 +3274,7 @@
               <div class="hetk-user-field"><label>U/J ni tanlang *</label><select id="hetk-workzone-manage-select" hidden aria-hidden="true"></select><button type="button" id="hetk-workzone-manage-tree-button" class="hetk-workzone-tree-button"><span><i class="fas fa-sitemap"></i><b id="hetk-workzone-manage-tree-label">U/J ni tanlang</b></span><i class="fas fa-chevron-down"></i></button><div id="hetk-workzone-manage-tree-panel" class="hetk-workzone-tree-panel" hidden><div class="hetk-workzone-tree-search"><i class="fas fa-search"></i><input id="hetk-workzone-manage-tree-search" placeholder="Viloyat, tuman yoki U/J ni qidiring..."></div><div id="hetk-workzone-manage-tree" class="hetk-workzone-tree"></div></div></div>
               <div class="hetk-user-field"><label>U/J nomi *</label><input id="hetk-workzone-manage-name" placeholder="Masalan: Zarafshon U/J"></div>
               <div class="hetk-user-field"><label>U/J turi *</label><select id="hetk-workzone-manage-type"><option value="standard">Oddiy U/J</option><option value="construction">Qurilish U/J</option></select></div>
-              <div class="hetk-user-field"><label>Mas’ul Master *</label><select id="hetk-workzone-manage-master"></select></div>
+              <div class="hetk-user-field"><label>Mas’ul Master *</label><select id="hetk-workzone-manage-master" hidden aria-hidden="true"></select><button type="button" id="hetk-workzone-master-tree-button" class="hetk-workzone-tree-button"><span><i class="fas fa-user-hard-hat"></i><b id="hetk-workzone-master-tree-label">Hodimni tanlang</b></span><i class="fas fa-chevron-down"></i></button><div id="hetk-workzone-master-tree-panel" class="hetk-workzone-tree-panel" hidden><div class="hetk-workzone-tree-search"><i class="fas fa-search"></i><input id="hetk-workzone-master-tree-search" placeholder="Hodim, lavozim yoki hududni qidiring..."></div><div id="hetk-workzone-master-tree" class="hetk-workzone-master-tree"></div></div></div>
             </div>
             <div class="hetk-user-folder-section">
               <div class="hetk-user-folder-title"><div><h4><i class="fas fa-folder-tree"></i> U/J xizmat ko‘rsatadigan papkalar</h4><p>Bir U/J ga ko‘p papka, bitta papkaga bir nechta U/J biriktirish mumkin.</p></div><span id="hetk-workzone-folder-count">0 ta tanlangan</span></div>
@@ -3362,6 +3363,10 @@
     if(manageTreeButton) manageTreeButton.addEventListener('click',()=>{const panel=byId('hetk-workzone-manage-tree-panel');if(!panel)return;panel.hidden=!panel.hidden;manageTreeButton.classList.toggle('open',!panel.hidden);if(!panel.hidden){renderWorkZoneManagerTree();const input=byId('hetk-workzone-manage-tree-search');if(input)setTimeout(()=>input.focus(),30);}});
     const manageTreeSearch=byId('hetk-workzone-manage-tree-search');
     if(manageTreeSearch) manageTreeSearch.addEventListener('input',()=>renderWorkZoneManagerTree());
+    const masterTreeButton=byId('hetk-workzone-master-tree-button');
+    if(masterTreeButton) masterTreeButton.addEventListener('click',()=>{const panel=byId('hetk-workzone-master-tree-panel');if(!panel)return;panel.hidden=!panel.hidden;masterTreeButton.classList.toggle('open',!panel.hidden);if(!panel.hidden){renderWorkZoneMasterTree();const input=byId('hetk-workzone-master-tree-search');if(input)setTimeout(()=>input.focus(),30);}});
+    const masterTreeSearch=byId('hetk-workzone-master-tree-search');
+    if(masterTreeSearch) masterTreeSearch.addEventListener('input',renderWorkZoneMasterTree);
     const manageSearch=byId('hetk-workzone-folder-search');
     if(manageSearch) manageSearch.addEventListener('input',()=>renderWorkZoneFolderPicker());
     const manageSave=byId('hetk-workzone-save');
@@ -4045,10 +4050,37 @@
     const countNode=node=>{const ids=new Set(node.zones.map(zone=>zone.id));node.children.forEach(child=>countNode(child).forEach(id=>ids.add(id)));return ids;};
     const nodeHtml=(node,depth,parentMatched)=>{const matched=parentMatched||(!query?false:node.name.toLowerCase().includes(query)),zoneRows=node.zones.filter(zone=>!query||matched||[zone.name,workZoneTreePath(zone),workZoneTypeLabel(zone)].join(' ').toLowerCase().includes(query)),children=node.children.map(child=>nodeHtml(child,depth+1,matched)).filter(Boolean);if(query&&!zoneRows.length&&!children.length)return '';const expanded=!!query||workZoneTreeExpanded.has(node.id);return `<div class="hetk-workzone-tree-branch"><button type="button" class="hetk-workzone-tree-folder" data-wzm-folder="${escapeAttr(node.id)}" style="--wz-depth:${depth}"><i class="fas ${expanded?'fa-chevron-down':'fa-chevron-right'}"></i><i class="fas fa-folder"></i><span>${escapeHtml(node.name)}</span><b>${countNode(node).size}</b></button><div class="hetk-workzone-tree-children" ${expanded?'':'hidden'}>${zoneRows.map(zone=>`<button type="button" class="hetk-workzone-tree-zone ${selectedId===zone.id?'selected':''}" data-wzm-zone="${escapeAttr(zone.id)}" style="--wz-depth:${depth+1}"><i class="fas ${selectedId===zone.id?'fa-check-circle':'fa-map-marker-alt'}"></i><span>${escapeHtml(zone.name||'Nomsiz U/J')} <small>— ${escapeHtml(workZoneTypeLabel(zone))}</small></span></button>`).join('')}${children.join('')}</div></div>`;};
     const branches=root.children.map(node=>nodeHtml(node,0,false)).filter(Boolean),unassigned=root.zones.filter(zone=>!query||String(zone.name||'').toLowerCase().includes(query));
-    treeBox.innerHTML=branches.join('')+unassigned.map(zone=>`<button type="button" class="hetk-workzone-tree-zone ${selectedId===zone.id?'selected':''}" data-wzm-zone="${escapeAttr(zone.id)}"><i class="fas fa-map-marker-alt"></i><span>${escapeHtml(zone.name||'Nomsiz U/J')}</span></button>`).join('');
-    if(label){const chosen=zones.find(zone=>zone.id===selectedId);label.textContent=chosen?workZoneTreePath(chosen):'U/J ni tanlang';}
+    treeBox.innerHTML=`<button type="button" class="hetk-workzone-tree-new ${selectedId==='__new__'?'selected':''}" data-wzm-zone="__new__"><i class="fas fa-plus-circle"></i><span>Yangi U/J yaratish</span></button>`+branches.join('')+unassigned.map(zone=>`<button type="button" class="hetk-workzone-tree-zone ${selectedId===zone.id?'selected':''}" data-wzm-zone="${escapeAttr(zone.id)}"><i class="fas fa-map-marker-alt"></i><span>${escapeHtml(zone.name||'Nomsiz U/J')}</span></button>`).join('');
+    if(label){const chosen=zones.find(zone=>zone.id===selectedId);label.textContent=selectedId==='__new__'?'Yangi U/J yaratish':(chosen?workZoneTreePath(chosen):'U/J ni tanlang');}
     treeBox.querySelectorAll('[data-wzm-folder]').forEach(button=>button.addEventListener('click',()=>{const id=button.dataset.wzmFolder;workZoneTreeExpanded.has(id)?workZoneTreeExpanded.delete(id):workZoneTreeExpanded.add(id);renderWorkZoneManagerTree(zones);}));
     treeBox.querySelectorAll('[data-wzm-zone]').forEach(button=>button.addEventListener('click',()=>{select.value=button.dataset.wzmZone;loadWorkZoneManager(select.value);const panel=byId('hetk-workzone-manage-tree-panel');if(panel)panel.hidden=true;renderWorkZoneManagerTree(zones);}));
+  }
+
+  function renderWorkZoneMasterTree(){
+    const box=byId('hetk-workzone-master-tree'),select=byId('hetk-workzone-manage-master'),label=byId('hetk-workzone-master-tree-label');
+    if(!box||!select)return;
+    const zone=editingWorkZoneId&&editingWorkZoneId!=='__new__'?getWorkZoneById(editingWorkZoneId):null;
+    const all=workZoneManagerCandidates(zone);
+    const query=String((byId('hetk-workzone-master-tree-search')&&byId('hetk-workzone-master-tree-search').value)||'').trim().toLowerCase();
+    const candidates=query?all.filter(user=>[user.fullName,user.login,getRoleLabel(user),employeeOrganizationPath(user),user.workZoneName].join(' ').toLowerCase().includes(query)):all;
+    const nodes=buildTeamTree(candidates);
+    function nodeHtml(id,depth){
+      const node=nodes[id];if(!node||!node.count)return '';
+      const children=Array.from(node.children).filter(cid=>nodes[cid]&&nodes[cid].count).sort((a,b)=>String(nodes[a].name||'').localeCompare(String(nodes[b].name||'')));
+      const users=node.users.slice().sort((a,b)=>String(a.fullName||a.login||'').localeCompare(String(b.fullName||b.login||'')));
+      const expanded=!!query||workZoneMasterTreeExpanded.has(id)||id==='__root__';
+      let html=id==='__root__'?'':`<button type="button" class="hetk-workzone-master-folder" data-wzm-master-folder="${escapeAttr(id)}" style="--wzm-depth:${depth}"><i class="fas ${expanded?'fa-chevron-down':'fa-chevron-right'}"></i><i class="fas ${teamTreeIcon(node)}"></i><span>${escapeHtml(node.name)}</span><b>${node.count}</b></button>`;
+      if(id==='__root__'||expanded){
+        const next=id==='__root__'?0:depth+1;
+        html+=`<div class="hetk-workzone-master-children">${children.map(cid=>nodeHtml(cid,next)).join('')}${users.map(user=>`<button type="button" class="hetk-workzone-master-user ${select.value===user.uid?'selected':''}" data-wzm-master="${escapeAttr(user.uid)}" style="--wzm-depth:${next}"><span class="hetk-workzone-master-check"><i class="fas ${select.value===user.uid?'fa-check':'fa-user'}"></i></span><span><b>${escapeHtml(user.fullName||user.login||'Nomsiz hodim')}</b><small>${escapeHtml(getRoleLabel(user))} · ${escapeHtml(employeeOrganizationPath(user))}</small></span></button>`).join('')}</div>`;
+      }
+      return html;
+    }
+    box.innerHTML=nodeHtml('__root__',0)||'<div class="hetk-folder-picker-empty">Mos hodim topilmadi.</div>';
+    const selected=teamUsersCache[select.value];
+    if(label)label.textContent=selected?`${selected.fullName||selected.login||'Nomsiz'} — ${getRoleLabel(selected)}`:'Hodimni tanlang';
+    box.querySelectorAll('[data-wzm-master-folder]').forEach(btn=>btn.addEventListener('click',()=>{const id=btn.dataset.wzmMasterFolder;workZoneMasterTreeExpanded.has(id)?workZoneMasterTreeExpanded.delete(id):workZoneMasterTreeExpanded.add(id);renderWorkZoneMasterTree();}));
+    box.querySelectorAll('[data-wzm-master]').forEach(btn=>btn.addEventListener('click',()=>{select.value=btn.dataset.wzmMaster;const panel=byId('hetk-workzone-master-tree-panel');if(panel)panel.hidden=true;const trigger=byId('hetk-workzone-master-tree-button');if(trigger)trigger.classList.remove('open');renderWorkZoneMasterTree();}));
   }
 
   function openWorkZoneManager(){
@@ -4057,11 +4089,12 @@
     const select=byId('hetk-workzone-manage-select');
     if(!editor || !select) return;
     const zones=manageableWorkZones();
-    select.innerHTML=zones.length ? zones.map(zone=>`<option value="${escapeAttr(zone.id)}">${escapeHtml(zone.name||'Nomsiz U/J')} — ${escapeHtml(workZoneTypeLabel(zone))}</option>`).join('') : '<option value="">U/J topilmadi</option>';
+    select.innerHTML='<option value="__new__">Yangi U/J yaratish</option>'+zones.map(zone=>`<option value="${escapeAttr(zone.id)}">${escapeHtml(zone.name||'Nomsiz U/J')} — ${escapeHtml(workZoneTypeLabel(zone))}</option>`).join('');
     editor.hidden=false;
     document.body.classList.add('hetk-user-editor-open');
     workZoneManagerMessage('','');
-    loadWorkZoneManager(select.value);
+    loadWorkZoneManager(zones.length?zones[0].id:'__new__');
+    select.value=zones.length?zones[0].id:'__new__';
     renderWorkZoneManagerTree(zones);
   }
 
@@ -4071,23 +4104,27 @@
     editingWorkZoneId=null;
     workZoneSelectedFolderIds=new Set();
     workZonePickerExpanded=new Set();
+    workZoneMasterTreeExpanded=new Set(['__root__']);
     workZoneManagerMessage('','');
     if(!byId('hetk-user-editor') || byId('hetk-user-editor').hidden) document.body.classList.remove('hetk-user-editor-open');
   }
 
   function loadWorkZoneManager(zoneId){
     const zone=getWorkZoneById(zoneId);
-    editingWorkZoneId=zone ? zone.id : null;
+    editingWorkZoneId=zoneId==='__new__'?'__new__':(zone ? zone.id : null);
     const name=byId('hetk-workzone-manage-name');
     const type=byId('hetk-workzone-manage-type');
     const master=byId('hetk-workzone-manage-master');
     if(name) name.value=zone ? (zone.name||'') : '';
     if(type) type.value=workZoneType(zone);
     if(master){
-      const candidates=zone ? workZoneManagerCandidates(zone) : [];
+      const candidates=workZoneManagerCandidates(zone);
       master.innerHTML='<option value="">Master tanlanmagan</option>'+candidates.map(user=>`<option value="${escapeAttr(user.uid)}">${escapeHtml(user.fullName||user.login||'Nomsiz')} — ${escapeHtml(getRoleLabel(user))}</option>`).join('');
       if(zone && zone.currentMasterUid) master.value=zone.currentMasterUid;
     }
+    workZoneMasterTreeExpanded=new Set(['__root__']);
+    const masterSearch=byId('hetk-workzone-master-tree-search');if(masterSearch)masterSearch.value='';
+    renderWorkZoneMasterTree();
     workZoneSelectedFolderIds=new Set(normalizeSelectedFolderRoots(zone ? workZoneRoots(zone) : [],teamFoldersCache));
     workZonePickerExpanded=new Set();
     workZoneSelectedFolderIds.forEach(id=>folderChainIds(id).forEach(parent=>workZonePickerExpanded.add(parent)));
@@ -4199,9 +4236,10 @@
 
   async function saveWorkZoneManager(){
     if(!canManageWorkZones() || !editingWorkZoneId) return;
-    const raw=teamWorkZonesCache[editingWorkZoneId]; if(!raw) return workZoneManagerMessage('error','U/J topilmadi.');
-    const zone=Object.assign({id:editingWorkZoneId},raw);
-    if(!canCurrentUserUseWorkZone(zone)) return workZoneManagerMessage('error','Bu U/J ni tahrirlashga ruxsatingiz yo‘q.');
+    const creating=editingWorkZoneId==='__new__';
+    const raw=creating?null:teamWorkZonesCache[editingWorkZoneId]; if(!creating&&!raw) return workZoneManagerMessage('error','U/J topilmadi.');
+    const zone=creating?{id:databaseRef.ref('WorkZones').push().key,name:'',zoneType:'standard',currentMasterUid:''}:Object.assign({id:editingWorkZoneId},raw);
+    if(!creating&&!canCurrentUserUseWorkZone(zone)) return workZoneManagerMessage('error','Bu U/J ni tahrirlashga ruxsatingiz yo‘q.');
     const name=normalizeWorkZoneName(byId('hetk-workzone-manage-name').value);
     const zoneType=byId('hetk-workzone-manage-type').value==='construction'?'construction':'standard';
     const newMasterUid=String(byId('hetk-workzone-manage-master').value||'');
@@ -4211,6 +4249,8 @@
     if(!selectedRoots.length) return workZoneManagerMessage('error','Kamida bitta papkani tanlang.');
     const accessible=new Set(getAccessibleFolderIds(currentAccount,teamFoldersCache));
     if(selectedRoots.some(id=>!accessible.has(id))) return workZoneManagerMessage('error','Ruxsat berilmagan papkani biriktirib bo‘lmaydi.');
+    const duplicate=manageableWorkZones().find(item=>item.id!==zone.id&&String(item.name||'').trim().toLocaleLowerCase('uz')===name.toLocaleLowerCase('uz')&&workZoneRoots(item).some(id=>selectedRoots.includes(id)));
+    if(duplicate) return workZoneManagerMessage('error','Shu hududda bunday nomli U/J mavjud.');
     const btn=byId('hetk-workzone-save');setBusy(btn,true,'Saqlanmoqda...');
     try{
       const now=Date.now();const folders={};selectedRoots.forEach(id=>folders[id]=true);
@@ -4224,6 +4264,7 @@
       updates['WorkZones/'+zone.id+'/currentMasterUid']=newMasterUid;
       updates['WorkZones/'+zone.id+'/updatedAt']=now;
       updates['WorkZones/'+zone.id+'/updatedBy']=currentAccount.uid;
+      if(creating){updates['WorkZones/'+zone.id+'/active']=true;updates['WorkZones/'+zone.id+'/createdAt']=now;updates['WorkZones/'+zone.id+'/createdBy']=currentAccount.uid;}
 
       if(oldMasterUid!==newMasterUid){
         const historyKey=databaseRef.ref('WorkZones/'+zone.id+'/masterHistory').push().key;
@@ -4270,7 +4311,7 @@
         for(const uid of Object.keys(affected))await window.HETKData.syncUserAccess(uid,affected[uid],previousAffected[uid]);
       }
       for(const uid of Object.keys(affected)) await safeSyncEmployeeTelegram(uid,affected[uid],{showError:false});
-      workZoneManagerMessage('success','U/J ma’lumotlari, papkalari va Masteri saqlandi.');
+      workZoneManagerMessage('success',creating?'Yangi U/J yaratildi va Master biriktirildi.':'U/J ma’lumotlari, papkalari va Masteri saqlandi.');
       setTimeout(()=>closeWorkZoneManager(),500);
     }catch(e){workZoneManagerMessage('error',friendlyAuthError(e));}
     finally{setBusy(btn,false);}
