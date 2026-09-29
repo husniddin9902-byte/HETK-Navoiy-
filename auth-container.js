@@ -3456,6 +3456,11 @@
       const f=teamFoldersCache[id];
       if(!f) return nodes.__root__;
       const parentId=(f.parentId && f.parentId!=='root' && teamFoldersCache[f.parentId]) ? f.parentId : '__root__';
+      // Hodimlar daraxtida oddiy papkalar faqat tuman/shahargacha ko‘rinadi.
+      // Undan ichkaridagi PS va boshqa texnik papkalar yashiriladi; hodimlar esa
+      // tuman/shahar ostidagi tegishli sintetik guruhda (U/J, Dispetcherlik va h.k.) qoladi.
+      const districtId=districtOrCityFolderId(id);
+      if(districtId && districtId!==id) return ensureFolder(districtId);
       const parent=ensureFolder(parentId);
       nodes[id]={id,name:f.name||'Papka',type:'folder',parent:parent.id,children:new Set(),users:[],count:0};
       parent.children.add(id);
