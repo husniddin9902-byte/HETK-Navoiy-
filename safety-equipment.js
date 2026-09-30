@@ -275,8 +275,13 @@
   }
   function quickActionsHtml(){return `<section class="hetk-se-quick-actions">${canManageItems()?'<button class="assign" data-se-add><i class="fas fa-shield-halved"></i><b>Vosita biriktirish</b><small>Ko‘p vositani birdan berish</small></button>':''}${canManageStock()?'<button class="stock" data-se-quick-stock><i class="fas fa-box-open"></i><b>Omborga kirim</b><small>Viloyat omboriga kirim</small></button>':''}${canManageTests()?'<button class="test" data-se-quick-test><i class="fas fa-flask-vial"></i><b>Sinov natijasi</b><small>Uzaytirish yoki almashtirish</small></button>':''}</section>`;}
   function shortageBannerHtml(){
-    const row=analyticsUnitRows().filter(x=>x.type!=='construction'&&x.shortage>0).sort((a,b)=>b.shortage-a.shortage)[0];
-    if(!row)return '<div class="hetk-se-shortage-banner complete"><b>Me’yoriy ta’minot bo‘yicha faol kamchilik topilmadi</b></div>';
+    let rows=analyticsUnitRows().filter(x=>x.type!=='construction');
+    if(zoneFilter!=='all') rows=rows.filter(x=>x.key===zoneFilter||x.id===zoneFilter);
+    const row=rows.filter(x=>x.shortage>0).sort((a,b)=>b.shortage-a.shortage)[0];
+    if(!row){
+      const selected=zoneFilter!=='all' ? rows[0] : null;
+      return `<div class="hetk-se-shortage-banner complete"><b>${selected?esc(selected.name)+' bo‘yicha ':''}me’yoriy ta’minotda faol kamchilik topilmadi</b></div>`;
+    }
     return `<div class="hetk-se-shortage-banner"><b>${esc(row.name)} — ${row.shortages.length} turdagi vosita kam</b><span>${row.shortages.slice(0,4).map(x=>`${esc(x.name)}: −${x.missing}`).join(' · ')}</span></div>`;
   }
   function itemUtilityButtons(){if(isMaster())return '';return `<div class="hetk-se-utility-row"><button class="hetk-se-mini-btn" data-se-open-catalog><i class="fas fa-book"></i>Umumiy ro‘yxat</button><button class="hetk-se-mini-btn" data-se-open-history><i class="fas fa-clock-rotate-left"></i>O‘zgarishlar tarixi</button>${canManageConstructionBrigades()?'<button class="hetk-se-mini-btn" data-se-brigades><i class="fas fa-person-digging"></i>Qurilish brigadalari</button>':''}${isSuperAdmin()?'<button class="hetk-se-mini-btn" data-se-backup-analyze><i class="fas fa-file-zipper"></i>Zaxira faylini tahlil qilish</button><button class="hetk-se-mini-btn danger" data-se-reset><i class="fas fa-rotate-left"></i>Test ma’lumotlarini tozalash</button>':''}</div>`;}
