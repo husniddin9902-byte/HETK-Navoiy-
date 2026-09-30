@@ -269,7 +269,7 @@
     if(tab==='catalog')renderCatalog();else if(tab==='stock')renderStock();else if(tab==='history')renderHistory();else if(tab==='norm')renderNorm();else if(tab==='report')renderReport();else renderItems();
   }
   function summaryHtml(){
-    const all=coveredItems(),stock=stockTotals(stockRows('all'));
+    const all=coveredItems().filter(item=>zoneFilter==='all'||itemUnitKey(item)===zoneFilter||itemUnitId(item)===zoneFilter),stock=stockTotals(stockRows('all'));
     const count=k=>all.filter(it=>itemState(it).key===k).length;
     return `<section class="hetk-se-summary compact"><div class="hetk-se-summary-card usage"><b>${all.filter(it=>!['archived','returned'].includes(itemState(it).key)).length}</b><span>Foydalanishda</span></div>${isMaster()?'':`<div class="hetk-se-summary-card warehouse"><b>${stock.balance}</b><span>Viloyat omborida</span></div>`}<div class="hetk-se-summary-card warn attention"><b>${count('soon')}</b><span>10 kun ichida</span></div><div class="hetk-se-summary-card danger archive"><b>${count('archived')}</b><span>Arxivda</span></div></section>`;
   }
@@ -277,12 +277,14 @@
   function shortageBannerHtml(){
     let rows=analyticsUnitRows().filter(x=>x.type!=='construction');
     if(zoneFilter!=='all') rows=rows.filter(x=>x.key===zoneFilter||x.id===zoneFilter);
-    const row=rows.filter(x=>x.shortage>0).sort((a,b)=>b.shortage-a.shortage)[0];
-    if(!row){
+    const shortages=aggregateShortages(rows.flatMap(row=>row.shortages||[]));
+    const missing=shortages.reduce((sum,row)=>sum+row.missing,0);
+    if(!shortages.length){
       const selected=zoneFilter!=='all' ? rows[0] : null;
       return `<div class="hetk-se-shortage-banner complete"><b>${selected?esc(selected.name)+' bo‘yicha ':''}me’yoriy ta’minotda faol kamchilik topilmadi</b></div>`;
     }
-    return `<div class="hetk-se-shortage-banner"><b>${esc(row.name)} — ${row.shortages.length} turdagi vosita kam</b><span>${row.shortages.slice(0,4).map(x=>`${esc(x.name)}: −${x.missing}`).join(' · ')}</span></div>`;
+    const label=zoneFilter==='all'?'Barcha bo‘linmalar':(rows[0]&&rows[0].name)||'Tanlangan bo‘linma';
+    return `<div class="hetk-se-shortage-banner"><b>${esc(label)} — ${shortages.length} turdagi vosita, jami ${missing} dona kam</b><span>${shortages.map(x=>`${esc(x.name)}: −${x.missing} dona`).join(' · ')}</span></div>`;
   }
   function itemUtilityButtons(){if(isMaster())return '';return `<div class="hetk-se-utility-row"><button class="hetk-se-mini-btn" data-se-open-catalog><i class="fas fa-book"></i>Umumiy ro‘yxat</button><button class="hetk-se-mini-btn" data-se-open-history><i class="fas fa-clock-rotate-left"></i>O‘zgarishlar tarixi</button>${canManageConstructionBrigades()?'<button class="hetk-se-mini-btn" data-se-brigades><i class="fas fa-person-digging"></i>Qurilish brigadalari</button>':''}${isSuperAdmin()?'<button class="hetk-se-mini-btn" data-se-backup-analyze><i class="fas fa-file-zipper"></i>Zaxira faylini tahlil qilish</button><button class="hetk-se-mini-btn danger" data-se-reset><i class="fas fa-rotate-left"></i>Test ma’lumotlarini tozalash</button>':''}</div>`;}
   function renderItems(){
@@ -404,13 +406,22 @@
     return Object.assign({},meta,{active:active.length,archived:archived.length,normTotal:Object.keys(quantities).reduce((sum,id)=>sum+(Number(quantities[id])||0),0),shortage:shortages.reduce((sum,x)=>sum+x.missing,0),shortages,configured:meta.type==='construction'||!!norm,normScope:norm&&norm.scope||'',activeBy,archiveBy});
   }
   function uniqueNames(rows,key){return Array.from(new Set(rows.map(row=>row[key]).filter(name=>name&&!/aniqlanmagan|ko‘rsatilmagan/i.test(name)))).sort((a,b)=>a.localeCompare(b,'uz'));}
+  function aggregateShortages(values){
+    const grouped=new Map();
+    (values||[]).forEach(row=>{
+      if(!row||!row.catalogId||Number(row.missing||0)<=0)return;
+      if(!grouped.has(row.catalogId))grouped.set(row.catalogId,{catalogId:row.catalogId,name:row.name||((catalog[row.catalogId]||{}).name)||'Nomsiz vosita',required:0,actual:0,missing:0,unitNames:new Set()});
+      const target=grouped.get(row.catalogId);target.required+=Number(row.required||0);target.actual+=Number(row.actual||0);target.missing+=Number(row.missing||0);if(row.unitName)target.unitNames.add(row.unitName);
+    });
+    return Array.from(grouped.values()).map(row=>({catalogId:row.catalogId,name:row.name,required:row.required,actual:row.actual,missing:row.missing,unitNames:Array.from(row.unitNames)})).sort((a,b)=>b.missing-a.missing||String(a.name).localeCompare(String(b.name),'uz'));
+  }
   function filteredAnalyticsUnits(all){return all.filter(row=>(analyticsType==='all'||row.type===analyticsType)&&(analyticsRegion==='all'||row.region===analyticsRegion)&&(analyticsDistrict==='all'||row.district===analyticsDistrict));}
   function groupedAnalyticsRows(rows){
     if(analyticsLevel==='unit')return rows;
-    const keyName=analyticsLevel==='region'?'region':'district',groups=new Map();rows.forEach(row=>{const label=row[keyName]||'Ko‘rsatilmagan',groupKey=analyticsLevel==='district'?`${row.region}::${label}`:label;if(!groups.has(groupKey))groups.set(groupKey,{key:`${analyticsLevel}:${groupKey}`,name:label,type:'mixed',region:analyticsLevel==='region'?label:row.region,district:analyticsLevel==='district'?label:'Barcha tumanlar',active:0,archived:0,normTotal:0,shortage:0,shortages:[],configured:true,activeBy:{},archiveBy:{}});const g=groups.get(groupKey);g.active+=row.active;g.archived+=row.archived;g.normTotal+=row.normTotal;g.shortage+=row.shortage;g.shortages.push(...row.shortages);Object.keys(row.activeBy||{}).forEach(id=>g.activeBy[id]=(g.activeBy[id]||0)+(row.activeBy[id]||0));Object.keys(row.archiveBy||{}).forEach(id=>g.archiveBy[id]=(g.archiveBy[id]||0)+(row.archiveBy[id]||0));if(!row.configured)g.configured=false;});return Array.from(groups.values()).sort((a,b)=>a.region.localeCompare(b.region,'uz')||a.name.localeCompare(b.name,'uz'));
+    const keyName=analyticsLevel==='region'?'region':'district',groups=new Map();rows.forEach(row=>{const label=row[keyName]||'Ko‘rsatilmagan',groupKey=analyticsLevel==='district'?`${row.region}::${label}`:label;if(!groups.has(groupKey))groups.set(groupKey,{key:`${analyticsLevel}:${groupKey}`,name:label,type:'mixed',region:analyticsLevel==='region'?label:row.region,district:analyticsLevel==='district'?label:'Barcha tumanlar',active:0,archived:0,normTotal:0,shortage:0,shortages:[],configured:true,activeBy:{},archiveBy:{}});const g=groups.get(groupKey);g.active+=row.active;g.archived+=row.archived;g.normTotal+=row.normTotal;g.shortage+=row.shortage;g.shortages.push(...row.shortages);Object.keys(row.activeBy||{}).forEach(id=>g.activeBy[id]=(g.activeBy[id]||0)+(row.activeBy[id]||0));Object.keys(row.archiveBy||{}).forEach(id=>g.archiveBy[id]=(g.archiveBy[id]||0)+(row.archiveBy[id]||0));if(!row.configured)g.configured=false;});return Array.from(groups.values()).map(group=>Object.assign(group,{shortages:aggregateShortages(group.shortages)})).sort((a,b)=>a.region.localeCompare(b.region,'uz')||a.name.localeCompare(b.name,'uz'));
   }
   function equipmentDetails(row){const ids=new Set([...Object.keys(row.activeBy||{}),...Object.keys(row.archiveBy||{})]);if(!ids.size)return '<span class="hetk-se-no-equipment">Vosita yo‘q</span>';return `<div class="hetk-se-equipment-list">${Array.from(ids).sort((a,b)=>String((catalog[a]||{}).name||'').localeCompare(String((catalog[b]||{}).name||''),'uz')).map(id=>`<span><b>${esc((catalog[id]&&catalog[id].name)||'Nomsiz vosita')}</b><em>${row.activeBy[id]||0} ta faol${row.archiveBy[id]?` · ${row.archiveBy[id]} ta arxiv`:''}</em></span>`).join('')}</div>`;}
-  function shortageDetails(row){if(!row.shortages.length)return '<span class="hetk-se-complete"><i class="fas fa-circle-check"></i> Kamchilik yo‘q</span>';const shown=row.shortages.slice(0,5).map(x=>`<span><b>${esc(x.unitName&&analyticsLevel!=='unit'?x.unitName+' — ':'')}${esc(x.name)}</b>: ${x.missing} ta kam</span>`).join('');return `<div class="hetk-se-short-list">${shown}${row.shortages.length>5?`<em>yana ${row.shortages.length-5} tur</em>`:''}</div>`;}
+  function shortageDetails(row){if(!row.shortages.length)return '<span class="hetk-se-complete"><i class="fas fa-circle-check"></i> Kamchilik yo‘q</span>';return `<div class="hetk-se-short-list">${row.shortages.map(x=>`<span><b>${esc(x.name)}</b>: ${x.missing} dona kam</span>`).join('')}</div>`;}
   function analyticsTable(rows){
     if(!rows.length)return `<div class="hetk-se-empty"><i class="fas fa-chart-column"></i><h3>Tanlangan kesimda ma’lumot yo‘q</h3><p>Filtrlarni o‘zgartiring yoki avval himoya vositalari me’yorini kiriting.</p></div>`;
     const title=analyticsLevel==='unit'?'Bo‘linma':analyticsLevel==='district'?'Tuman / shahar':'Viloyat';
