@@ -190,7 +190,9 @@ KL = kabel liniyasi`;
   const LEGACY_TELEGRAM_WORKER='https://hetk-telegram.husniddin-99-02.workers.dev';
   const TRAINING_TELEGRAM_WORKER='https://hetk-training-media.husniddin-99-02.workers.dev';
   const TRAINING_MEDIA_MAX_BYTES=18*1024*1024;
-  const TTS_MAX_CHARS=1500;
+  const TTS_TARGET_CHARS=2000;
+  const TTS_MIN_CHARS=1400;
+  const TTS_MAX_CHARS=2200;
   const TTS_REQUEST_BITRATE=48000;
   function mediaSize(bytes){return `${(Number(bytes||0)/1024/1024).toFixed(1)} MB`;}
   function estimateTtsBytes(text,speed){const chars=String(text||'').replace(/\s+/g,' ').trim().length,seconds=chars/(13*Math.max(.5,Number(speed)||1));return Math.ceil(seconds*(TTS_REQUEST_BITRATE/8));}
@@ -210,9 +212,22 @@ KL = kabel liniyasi`;
     if(current)out.push(current);return out;
   }
   function splitTextForTts(text,maxChars){
-    const limit=Math.max(300,Number(maxChars)||TTS_MAX_CHARS),paragraphs=String(text||'').replace(/\r\n?/g,'\n').split(/\n\s*\n+/).map(x=>x.trim()).filter(Boolean),parts=[];let current='';
-    for(const paragraph of paragraphs){for(const unit of splitParagraphForTts(paragraph,limit)){const separator=current?'\n\n':'',next=current+separator+unit;if(next.length<=limit)current=next;else{if(current)parts.push(current);current=unit;}}}
-    if(current)parts.push(current);return parts;
+    const limit=Math.max(600,Number(maxChars)||TTS_MAX_CHARS),clean=String(text||'').replace(/\r\n?/g,'\n').replace(/[ \t]+/g,' ').replace(/\n{3,}/g,'\n\n').trim();
+    if(!clean)return [];
+    const count=Math.max(1,Math.ceil(clean.length/TTS_TARGET_CHARS)),parts=[];let rest=clean;
+    for(let index=0;index<count-1;index++){
+      const left=count-index,target=Math.min(limit,Math.max(TTS_MIN_CHARS,Math.round(rest.length/left))),low=Math.min(target,Math.max(600,Math.round(target*.78))),high=Math.min(limit,Math.max(target,Math.round(target*1.10)));
+      let cut=-1,best=Infinity;
+      const sentenceRe=/[.!?…][”"')\]]*(?:\s+|\n+)/g;let m;
+      while((m=sentenceRe.exec(rest))&&m.index<high){const pos=m.index+m[0].length;if(pos>=low){const score=Math.abs(pos-target);if(score<best){best=score;cut=pos;}}}
+      if(cut<0){for(let pos=Math.min(high,rest.length-1);pos>=low;pos--){if(/\s/.test(rest[pos])){cut=pos+1;break;}}}
+      if(cut<0){for(let pos=Math.min(limit,rest.length-1);pos>0;pos--){if(/\s/.test(rest[pos])){cut=pos+1;break;}}}
+      if(cut<=0||cut>=rest.length)break;
+      parts.push(rest.slice(0,cut).trim());rest=rest.slice(cut).trim();
+    }
+    if(rest)parts.push(rest);
+    if(parts.some(p=>p.length>limit)){const safe=[];for(const part of parts)safe.push(...splitParagraphForTts(part,limit));return safe;}
+    return parts;
   }
   function ttsPlan(text,speed){const parts=splitTextForTts(text,TTS_MAX_CHARS),estimated=parts.reduce((n,p)=>n+estimateTtsBytes(p,speed),0);return {parts,estimated};}
   function revokeTtsParts(){for(const part of state.ttsParts||[]){if(part.url)URL.revokeObjectURL(part.url);}state.ttsParts=[];state.ttsPreview=null;state.pendingChapterAudio=null;state.pendingChapterAudioParts=null;}
@@ -233,6 +248,13 @@ KL = kabel liniyasi`;
     if(res.status===401){token=await getIdToken(true);res=await fetch(`${TRAINING_TELEGRAM_WORKER}/admin/upload`,{method:'POST',headers:{Authorization:`Bearer ${token}`},body});}
     const data=await res.json().catch(()=>({}));if(!res.ok||!data.ok||!data.media)throw new Error(data.error||data.telegramError||'O‘quv markazi media kanaliga yuklanmadi');
     return {...data.media,storage:'training-media'};
+  }
+  async function trainingMediaDelete(messageId){
+    const id=Number(messageId);if(!Number.isInteger(id)||id<=0)return false;
+    let token=await getIdToken(false),res=await fetch(`${TRAINING_TELEGRAM_WORKER}/admin/delete`,{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({messageId:id})});
+    if(res.status===401){token=await getIdToken(true);res=await fetch(`${TRAINING_TELEGRAM_WORKER}/admin/delete`,{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({messageId:id})});}
+    const data=await res.json().catch(()=>({}));if(!res.ok||!data.ok)throw new Error(data.error||'Eski audio media kanalidan o‘chirilmadi');
+    return true;
   }
   async function trainingMediaObjectUrl(fileId){
     if(state.mediaObjectUrls[fileId])return state.mediaObjectUrls[fileId];
@@ -348,7 +370,7 @@ KL = kabel liniyasi`;
         <input type="hidden" name="bookId" value="${esc(state.bookAdminBookId||'')}"><input type="hidden" name="chapterId" value="${esc(state.bookAdminChapterId||'')}"><input type="hidden" name="chapterOrder" value="${order}">
         <section class="hetk-book-studio-card hetk-book-meta-card"><h4><span>1</span> Kitob ma’lumotlari</h4><div class="hetk-book-meta-layout"><div class="hetk-book-cover-editor"><div class="hetk-cover-preview">${bookCoverMarkup(book,'Muqova')}</div><label class="hetk-cover-file-button"><i class="fas fa-image"></i><span>Muqova rasmini tanlash</span><input type="file" accept="image/*" data-cover-file></label><small>Rasm to‘liq ko‘rinadi. Fayl 18 MB dan oshmasin.</small></div><div class="hetk-training-form-grid hetk-book-meta-fields"><label class="wide">Kitob nomi *<input name="title" required maxlength="180" value="${esc(d.title)}" placeholder="Masalan: Elektr qurilmalarida xavfsizlik qoidalari"></label><label>Tur / bo‘lim<input name="category" maxlength="80" value="${esc(d.category)}" placeholder="Qo‘llanma"></label><label class="wide">Qisqa izoh<textarea name="description" rows="5" maxlength="700" placeholder="Kitob haqida qisqa ma’lumot">${esc(d.description)}</textarea></label></div></div></section>
         <section class="hetk-book-studio-card"><div class="hetk-book-card-title"><h4><span>2</span> Bob va asl matn</h4>${book?`<em>${order}-bob ustida ishlayapsiz</em>`:''}</div><div class="hetk-training-form-grid"><label class="wide">Bob sarlavhasi *<input name="chapterTitle" required maxlength="180" value="${esc(d.chapterTitle)}" placeholder="${order}-bob. Umumiy qoidalar"></label><label class="wide">Asl matn *<textarea name="sourceText" rows="9" required placeholder="Kitobdagi asl matnni shu yerga kiriting...">${esc(d.sourceText)}</textarea></label></div><p class="hetk-book-help"><i class="fas fa-book-open"></i> Xodim “O‘qish”ni tanlaganda aynan shu matn ko‘rsatiladi.</p></section>
-        <section class="hetk-book-studio-card"><h4><span>3</span> Audio uchun matn</h4>${ttsStatusHtml()}<div class="hetk-training-form-grid"><label class="wide">TTS matni *<textarea name="ttsText" rows="9" required placeholder="110 kV → 110 kilovolt kabi ovozga moslashtirilgan matn...">${esc(d.ttsText)}</textarea><small>Butun bob matnini bir marta kiriting. Tizim uni abzats yoki gap oxiridan avtomatik qismlarga ajratadi; so‘z o‘rtasidan bo‘lmaydi.</small></label></div><details class="hetk-tts-dictionary"><summary><i class="fas fa-spell-check"></i><span><b>Shu kitobning qisqartmalar lug‘ati</b><small>Yangi qisqartmalarni saytning o‘zida qo‘shish yoki o‘zgartirish</small></span><i class="fas fa-chevron-down"></i></summary><label>Har qatorga: <b>qisqartma = qanday o‘qilishi</b><textarea name="ttsDictionary" rows="8" spellcheck="false">${esc(d.ttsDictionary)}</textarea></label><small>Masalan: ATS = avtomatik telefon stansiyasi. Bu lug‘at faqat shu kitob uchun saqlanadi.</small></details><div class="hetk-tts-text-metrics" data-tts-metrics>Matn kiritilganda qismlar va taxminiy hajm shu yerda ko‘rsatiladi.</div><div class="hetk-tts-normalize-row"><button type="button" data-tts-normalize><i class="fas fa-wand-magic-sparkles"></i> TTS matnini tayyorlash</button><span>O‘lchov birliklari avtomatik ochiladi, boshqa qisqartmalar yuqoridagi lug‘atdan olinadi.</span></div><div class="hetk-tts-controls"><label>Ovoz<select name="voice">${voiceOptions(d.voice)}</select></label><label>Tezlik<select name="speed"><option value="0.9" ${d.speed==='0.9'?'selected':''}>0.9 — sekinroq</option><option value="1" ${d.speed==='1'?'selected':''}>1.0 — odatiy</option><option value="1.1" ${d.speed==='1.1'?'selected':''}>1.1 — tezroq</option></select></label><button type="button" data-tts-preview><i class="fas fa-headphones"></i> Barcha audiolarni yaratish</button><button type="button" class="hetk-tts-upload" data-tts-upload ${state.ttsParts.length?'':'disabled'}><i class="fas fa-cloud-arrow-up"></i> Barcha audiolarni yuklash</button></div><div class="hetk-tts-local-note"><i class="fas fa-computer"></i><div><b>Navoiy TTS lokal ulanishi</b><span>Har qism 1 500 belgigacha tayyorlanadi. Tayyor faylning haqiqiy hajmi 18 MB dan oshmasligi yana tekshiriladi.</span></div></div><div class="hetk-tts-parts" data-tts-parts></div><div class="hetk-audio-upload-status ${chapterHasAudio(ch)?'is-saved':''}" data-audio-status>${chapterHasAudio(ch)?`<i class="fas fa-circle-check"></i><span><b>Bu bobda ${chapterAudioParts(ch).length} ta audio qism saqlangan</b><small>Quyida hammasini eshitishingiz mumkin. Yangi qismlarni yuklasangiz, saqlashda shu bobning audiolari yangilanadi.</small></span>`:'<i class="fas fa-circle-info"></i><span><b>Audio hali yuklanmagan</b><small>Barcha audiolarni yarating, eshitib ko‘ring va keyin yuklang.</small></span>'}</div>${chapterHasAudio(ch)?renderChapterAudioList(ch,'admin'):''}</section>
+        <section class="hetk-book-studio-card"><h4><span>3</span> Audio uchun matn</h4>${ttsStatusHtml()}<div class="hetk-training-form-grid"><label class="wide">TTS matni *<textarea name="ttsText" rows="9" required placeholder="110 kV → 110 kilovolt kabi ovozga moslashtirilgan matn...">${esc(d.ttsText)}</textarea><small>Butun bob matnini bir marta kiriting. Tizim uni abzats yoki gap oxiridan avtomatik qismlarga ajratadi; so‘z o‘rtasidan bo‘lmaydi.</small></label></div><details class="hetk-tts-dictionary"><summary><i class="fas fa-spell-check"></i><span><b>Shu kitobning qisqartmalar lug‘ati</b><small>Yangi qisqartmalarni saytning o‘zida qo‘shish yoki o‘zgartirish</small></span><i class="fas fa-chevron-down"></i></summary><label>Har qatorga: <b>qisqartma = qanday o‘qilishi</b><textarea name="ttsDictionary" rows="8" spellcheck="false">${esc(d.ttsDictionary)}</textarea></label><small>Masalan: ATS = avtomatik telefon stansiyasi. Bu lug‘at faqat shu kitob uchun saqlanadi.</small></details><div class="hetk-tts-text-metrics" data-tts-metrics>Matn kiritilganda qismlar va taxminiy hajm shu yerda ko‘rsatiladi.</div><div class="hetk-tts-normalize-row"><button type="button" data-tts-normalize><i class="fas fa-wand-magic-sparkles"></i> TTS matnini tayyorlash</button><span>O‘lchov birliklari avtomatik ochiladi, boshqa qisqartmalar yuqoridagi lug‘atdan olinadi.</span></div><div class="hetk-tts-controls"><label>Ovoz<select name="voice">${voiceOptions(d.voice)}</select></label><label>Tezlik<select name="speed"><option value="0.9" ${d.speed==='0.9'?'selected':''}>0.9 — sekinroq</option><option value="1" ${d.speed==='1'?'selected':''}>1.0 — odatiy</option><option value="1.1" ${d.speed==='1.1'?'selected':''}>1.1 — tezroq</option></select></label><button type="button" data-tts-preview><i class="fas fa-headphones"></i> Barcha audiolarni yaratish</button><button type="button" class="hetk-tts-upload" data-tts-upload ${state.ttsParts.length?'':'disabled'}><i class="fas fa-cloud-arrow-up"></i> Barcha audiolarni yuklash</button></div><div class="hetk-tts-local-note"><i class="fas fa-computer"></i><div><b>Navoiy TTS lokal ulanishi</b><span>Qismlar taxminan 2 000 belgi atrofida muvozanatli tayyorlanadi. Juda qisqa 30–40 soniyalik bo‘laklar qolib ketmasligi uchun matn qismlarga tengroq taqsimlanadi; har bir tayyor fayl 18 MB bo‘yicha alohida tekshiriladi.</span></div></div><div class="hetk-tts-parts" data-tts-parts></div><div class="hetk-audio-upload-status ${chapterHasAudio(ch)?'is-saved':''}" data-audio-status>${chapterHasAudio(ch)?`<i class="fas fa-circle-check"></i><span><b>Bu bobda ${chapterAudioParts(ch).length} ta audio qism saqlangan</b><small>Quyida hammasini eshitishingiz mumkin. Yangi qismlarni yuklasangiz, saqlashda shu bobning audiolari yangilanadi.</small></span>`:'<i class="fas fa-circle-info"></i><span><b>Audio hali yuklanmagan</b><small>Barcha audiolarni yarating, eshitib ko‘ring va keyin yuklang.</small></span>'}</div>${chapterHasAudio(ch)?renderChapterAudioList(ch,'admin'):''}</section>
         <section class="hetk-book-studio-card"><div class="hetk-book-card-title"><h4><span>4</span> Bob testi</h4><em>${chapterTest.questions.length} ta savol</em></div><p class="hetk-book-help"><i class="fas fa-list-check"></i> Xodim bobni o‘qib yoki tinglab bo‘lgach shu testni yechadi. O‘tish foiziga yetmasa keyingi bob ochilmaydi.</p><div class="hetk-training-form-grid"><label>O‘tish bali (%)<input name="chapterPassPercent" type="number" min="1" max="100" value="${chapterTest.passPercent||70}"></label></div><div data-chapter-question-list>${chapterTest.questions.map((q,i)=>chapterQuestionEditor(q,i,chapterTest.questions.length)).join('')}</div><button type="button" class="hetk-training-secondary" data-add-chapter-question><i class="fas fa-plus"></i> Savol qo‘shish</button></section>
         ${book&&ch?`<section class="hetk-chapter-visibility-note"><i class="fas ${ch.published===true?'fa-eye':'fa-eye-slash'}"></i><div><b>${ch.published===true?'Bu bob xodimlarga ochilgan':'Bu bob hozir xodimlardan yashirin'}</b><span>Bob ko‘rinishini “O‘quv materiallari” bo‘limidagi boshqaruvdan alohida yoqasiz.</span></div></section>`:''}
         <footer><div><i class="fas fa-gauge-high"></i> Matn, bob va audio faqat kerak bo‘lganda yuklanadigan qilib quriladi.</div>${book?'<button type="button" class="hetk-training-secondary" data-new-admin-chapter><i class="fas fa-plus"></i> Yangi bob</button>':''}<button class="primary" type="submit"><i class="fas fa-floppy-disk"></i> ${book&&ch?'O‘zgarishlarni saqlash':'Kitob va bobni saqlash'}</button></footer>
@@ -444,13 +466,58 @@ KL = kabel liniyasi`;
     const oldBook=state.books[bookId]||{},oldChapters=oldBook.chapters||{};let coverUrl=oldBook.coverUrl||'',coverFileId=oldBook.coverFileId||'',coverMessageId=oldBook.coverMessageId||'',coverStorage=oldBook.coverStorage||'';const coverInput=form.querySelector('[data-cover-file]'),coverFile=coverInput&&coverInput.files&&coverInput.files[0];if(coverFile){if(coverFile.size>TRAINING_MEDIA_MAX_BYTES)return toast(`Muqova ${mediaSize(coverFile.size)}. 18 MB dan katta fayl yuklanmaydi.`,'error');try{toast('Muqova O‘quv markazi media kanaliga yuklanmoqda...');const uploaded=await uploadBookCover(coverFile);coverUrl='';coverFileId=uploaded.fileId;coverMessageId=uploaded.messageId;coverStorage=uploaded.storage;}catch(err){return toast('Muqova saqlanmadi: '+err.message,'error');}}
     const order=Number(fd.get('chapterOrder'))||nextChapterOrder(oldBook);
     if(!chapterId)chapterId=db().ref(`TrainingBooks/${bookId}/chapters`).push().key;
-    const oldChapter=oldChapters[chapterId]||{},stamp=Date.now();
+    const oldChapter=oldChapters[chapterId]||{},oldAudioParts=chapterAudioParts(oldChapter),stamp=Date.now();
     syncChapterTestDraft();const ct=state.chapterTestDraft||{passPercent:70,questions:[]};const cleanQuestions=(ct.questions||[]).map(q=>({text:String(q.text||'').trim(),options:(q.options||[]).map(x=>String(x||'').trim()),correctIndex:Number(q.correctIndex)||0,explanation:String(q.explanation||'').trim(),source:String(q.source||'').trim(),timeSeconds:Math.max(30,Math.min(600,Number(q.timeSeconds)||90))})).filter(q=>q.text&&q.options.length===4&&q.options.every(Boolean));const chapterTest={passPercent:Number(ct.passPercent)||70,questions:cleanQuestions,questionCount:cleanQuestions.length,updatedAt:stamp};
-    const storedAudioParts=state.pendingChapterAudioParts||chapterAudioParts(oldChapter),storedAudio=storedAudioParts[0]||state.pendingChapterAudio||oldChapter.audio||null;
+
+    // Tahrirlashda yangi TTS audiolari yaratilgan bo‘lsa, saqlash tugmasining o‘zi
+    // ularni media kanaliga yuklaydi. Eski audio faqat yangi qismlar Firebase'ga
+    // muvaffaqiyatli yozilib, qayta tekshirilgandan keyin Telegramdan o‘chiriladi.
+    const generatedParts=Array.isArray(state.ttsParts)?state.ttsParts:[];
+    const replacingAudio=generatedParts.length>0;
+    let storedAudioParts=[];
+    if(replacingAudio){
+      try{
+        const uploadedParts=[];
+        toast(`${generatedParts.length} ta yangi audio saqlanmoqda...`);
+        for(let i=0;i<generatedParts.length;i++){
+          const part=generatedParts[i];
+          if(!part||!part.blob)throw new Error(`${i+1}-qism audio topilmadi`);
+          if(part.blob.size>TRAINING_MEDIA_MAX_BYTES)throw new Error(`${i+1}-qism ${mediaSize(part.blob.size)}. 18 MB dan katta.`);
+          if(part.uploaded&&part.uploaded.fileId){uploadedParts.push(part.uploaded);continue;}
+          const type=part.blob.type||'audio/wav',ext=type.includes('mpeg')?'mp3':type.includes('mp4')?'m4a':type.includes('ogg')?'ogg':'wav',file=new File([part.blob],`hetk-${Date.now()}-${i+1}.${ext}`,{type}),kind=/audio\/(mpeg|mp4|x-m4a|ogg)/i.test(type)?'audio':'document';
+          const uploaded=await trainingMediaUpload(file,kind,bookId,chapterId,`HETK O‘quv markazi — ${title} — ${chapterTitle} — ${i+1}/${generatedParts.length}-qism`),saved={...uploaded,voice:part.voice,speed:part.speed,partNumber:i+1,textLength:part.text.length,uploadedAt:Date.now()};
+          part.uploaded=saved;uploadedParts.push(saved);
+        }
+        storedAudioParts=uploadedParts;
+        state.pendingChapterAudioParts=uploadedParts;
+        state.pendingChapterAudio=uploadedParts[0]||null;
+      }catch(err){return toast('Yangi audio saqlanmadi. Eski audio o‘z joyida qoldi: '+err.message,'error');}
+    }else storedAudioParts=state.pendingChapterAudioParts||oldAudioParts;
+
+    const storedAudio=storedAudioParts[0]||state.pendingChapterAudio||oldChapter.audio||null;
     const chapter={...oldChapter,id:chapterId,titleUz:chapterTitle,sourceTextUz:sourceText,ttsTextUz:ttsText,ttsVoice:String(fd.get('voice')||'navoiy'),ttsSpeed:String(fd.get('speed')||'1'),order,published:oldChapter.published===true,audio:storedAudio,audioParts:storedAudioParts,testId:oldChapter.testId||'',chapterTest,updatedAt:stamp};
     const payload={...oldBook,id:bookId,titleUz:title,descriptionUz:String(fd.get('description')||'').trim(),category:String(fd.get('category')||'Qo‘llanma').trim(),ttsDictionaryText:String(fd.get('ttsDictionary')||DEFAULT_TTS_DICTIONARY).trim(),coverUrl,coverFileId,coverMessageId,coverStorage,published:oldBook.published===true,createdBy:oldBook.createdBy||uid(),createdAt:oldBook.createdAt||stamp,updatedAt:stamp,chapters:{...oldChapters,[chapterId]:chapter}};
-    try{await db().ref(`TrainingBooks/${bookId}`).set(payload);state.books[bookId]=payload;state.booksLoaded=true;state.bookAdminBookId=bookId;state.bookAdminChapterId=chapterId;state.bookAdminNewMode=false;state.bookAdminNewChapterMode=false;revokeTtsParts();state.ttsContextKey=`${bookId}:${chapterId}`;state.chapterTestDraftKey='';state.chapterTestDraft=null;toast('Saqlandi. Yangi kitob va bob xodimlarga avtomatik ko‘rsatilmaydi.','success');repaint();}
-    catch(err){toast('Kitob saqlanmadi: '+err.message,'error');}
+    try{
+      await db().ref(`TrainingBooks/${bookId}`).set(payload);
+      const verifySnap=await db().ref(`TrainingBooks/${bookId}/chapters/${chapterId}`).once('value'),verified=verifySnap.val()||{},verifiedParts=chapterAudioParts(verified);
+      if(replacingAudio&&verifiedParts.length!==storedAudioParts.length)throw new Error(`Firebase tekshiruvida ${storedAudioParts.length} ta o‘rniga ${verifiedParts.length} ta audio topildi`);
+      state.books[bookId]=payload;state.booksLoaded=true;state.bookAdminBookId=bookId;state.bookAdminChapterId=chapterId;state.bookAdminNewMode=false;state.bookAdminNewChapterMode=false;
+
+      let deleteFailed=0;
+      if(replacingAudio&&oldAudioParts.length){
+        const newMessageIds=new Set(storedAudioParts.map(x=>Number(x&&x.messageId)||0).filter(Boolean));
+        const obsolete=oldAudioParts.filter(x=>x&&x.storage==='training-media'&&Number(x.messageId)>0&&!newMessageIds.has(Number(x.messageId)));
+        if(obsolete.length){const results=await Promise.allSettled(obsolete.map(x=>trainingMediaDelete(x.messageId)));deleteFailed=results.filter(x=>x.status==='rejected').length;}
+      }
+
+      const savedCount=verifiedParts.length;
+      revokeTtsParts();state.ttsContextKey=`${bookId}:${chapterId}`;state.chapterTestDraftKey='';state.chapterTestDraft=null;
+      if(replacingAudio){
+        if(deleteFailed)toast(`Saqlandi: ${savedCount} ta yangi audio biriktirildi. ${deleteFailed} ta eski Telegram audio o‘chmadi.`,'warning');
+        else toast(`Saqlandi. ${savedCount} ta yangi audio biriktirildi, eski audio o‘chirildi.`,'success');
+      }else toast('Saqlandi. Yangi kitob va bob xodimlarga avtomatik ko‘rsatilmaydi.','success');
+      repaint();
+    }catch(err){toast('Kitob saqlanmadi: '+err.message,'error');}
   }
 
 
