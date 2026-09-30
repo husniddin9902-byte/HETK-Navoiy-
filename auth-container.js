@@ -597,6 +597,13 @@
       return merged;
     }catch(e){
       if(String(e.message||'').toLowerCase().includes('message is not modified')) return merged;
+      const telegramError=String(e.message||'').toLowerCase();
+      // Oddiy tahrirda eski post mavjud bo'lsa, yangi nusxa yubormaymiz.
+      // Aks holda vaqtinchalik Telegram xatosi kanalda bir hodimning ikki
+      // post bo'lib qolishiga sabab bo'ladi. Faqat eski post haqiqatan
+      // topilmagandagina yangisini yaratish xavfsiz.
+      const oldPostMissing=telegramError.includes('message to edit not found') || telegramError.includes('message_id_invalid') || telegramError.includes('message id invalid');
+      if(!oldPostMissing) throw e;
       const oldMessageId=merged.telegramEmployeeMessageId || null;
       const sent=await sendEmployeePhotoPost(merged,merged.telegramPhotoFileId || null);
       const photos=(sent.result && sent.result.photo) || [];
