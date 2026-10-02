@@ -1639,9 +1639,11 @@
       if(window.HETKData&&typeof window.HETKData.syncUserField==='function'){
         await window.HETKData.syncUserField(uid,changedTarget,'safety',safety);
       }
-      const verifySnapshot=await databaseRef.ref('users/'+uid+'/safety').once('value');
-      const verifiedSafety=verifySnapshot.val()||{};
-      if(Number(verifiedSafety.updatedAt)!==Number(now)) throw new Error('Guvohnoma bazaga yozilgani tasdiqlanmadi. Telegram yangilanmadi.');
+      // Viloyat/tuman TB profili boshqa hodimning safety yozuvini yangilashi
+      // mumkin, ammo xavfsizlik qoidasi bo‘yicha users/$uid dan bevosita
+      // qayta o‘qiy olmaydi. Yuqoridagi update() va syncUserField() promise-lari
+      // muvaffaqiyatli tugashi saqlanganini tasdiqlaydi; qayta read qilish
+      // noto‘g‘ri PERMISSION_DENIED chiqarardi.
       teamUsersCache[uid]=changedTarget;
       refreshTeamUI(uid);
       // Guvohnoma saytda saqlangandan keyin eski Telegram messageId topilmasa
