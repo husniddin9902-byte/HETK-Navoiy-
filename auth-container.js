@@ -545,8 +545,14 @@
     return await employeeTelegramFetch('sendPhoto',form,true);
   }
   async function deleteEmployeePost(messageId){
-    if(!messageId) return;
-    try{ await employeeTelegramFetch('deleteMessage',{message_id:messageId},false); }catch(e){ console.warn('Eski hodim posti o‘chirilmadi:',e); }
+    if(!messageId) return true;
+    let lastError=null;
+    for(let attempt=0;attempt<2;attempt++){
+      try{await employeeTelegramFetch('deleteMessage',{message_id:messageId},false);return true;}
+      catch(e){lastError=e;}
+    }
+    console.warn('Eski hodim posti o‘chirilmadi:',lastError);
+    return false;
   }
   async function latestEmployeeTelegramAccount(uid,account){
     const merged=Object.assign({uid},account || {});
@@ -560,6 +566,11 @@
       ['telegramEmployeeMessageId','telegramPhotoFileId','telegramPhotoKind','telegramUpdatedAt'].forEach(key=>{
         if(Object.prototype.hasOwnProperty.call(live,key)) merged[key]=live[key];
       });
+      // Eski data-URL avvalgi ro‘yxat xotirasida qolib ketgan bo‘lsa, har bir
+      // guvohnoma tahririni yangi rasm deb qabul qilib qayta post yubormasin.
+      // Firebase'dagi qiymat bu maydon uchun asosiy va eng yangi manba.
+      if(Object.prototype.hasOwnProperty.call(live,'photoData')) merged.photoData=live.photoData;
+      else if(live.telegramPhotoFileId) merged.photoData=null;
     }catch(error){
       console.warn('Hodimning Telegram holati bazadan tekshirilmadi:',error);
     }
@@ -568,7 +579,11 @@
   async function syncEmployeeTelegram(uid, account, options){
     options=options || {};
     const merged=await latestEmployeeTelegramAccount(uid,account);
-    const legacyBlob=merged.photoData ? await blobFromDataUrl(merged.photoData) : null;
+    // Legacy photoData faqat hali Telegram posti yoki rasmi yaratilmagan eski
+    // profilni bir martalik ko‘chirish uchun ishlatiladi. Mavjud post borida
+    // guvohnoma tahriri rasmni qayta yubormaydi.
+    const useLegacyPhoto=!!merged.photoData && (!merged.telegramEmployeeMessageId || !merged.telegramPhotoFileId);
+    const legacyBlob=useLegacyPhoto ? await blobFromDataUrl(merged.photoData) : null;
     const newPhoto=options.photoBlob || legacyBlob || null;
     const mustRepost=!!newPhoto || !merged.telegramEmployeeMessageId || options.replaceDefaultPhoto;
     if(mustRepost){
