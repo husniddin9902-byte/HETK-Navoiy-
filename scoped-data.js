@@ -183,13 +183,16 @@
   }
   async function syncUserField(uid,user,field,value){
     if(!uid||!user||!field)throw new Error('Hodim indeksi uchun ma’lumot yetarli emas.');
-    const values=await Promise.all([readFolders(),db().ref('WorkZones').once('value')]);
+    const account=me();
+    const values=await Promise.all([readFolders(),db().ref('WorkZones').once('value'),account?db().ref('DelegatedFolderAccess/'+account.uid+'/folders').once('value'):Promise.resolve(snapshot({}))]);
     const folders=values[0],zones=values[1].val()||{},updates={};
+    const allowed=globalAccount(account)?null:new Set(accessibleFolderIds(folders).concat(keysTrue(values[2].val()||{})));
+    const canSyncFolder=function(folderId){return !allowed||allowed.has(folderId);};
     const roots=userFolderRoots(user,zones);
-    roots.forEach(function(folderId){updates['UsersByFolder/'+folderId+'/'+uid+'/'+field]=value==null?null:value;});
+    roots.forEach(function(folderId){if(canSyncFolder(folderId))updates['UsersByFolder/'+folderId+'/'+uid+'/'+field]=value==null?null:value;});
     const indexedAncestors=new Set();
     roots.forEach(function(folderId){ancestors(folderId,folders).forEach(function(parentId){indexedAncestors.add(parentId);});});
-    indexedAncestors.forEach(function(folderId){updates['UsersByAncestor/'+folderId+'/'+uid+'/'+field]=value==null?null:value;});
+    indexedAncestors.forEach(function(folderId){if(canSyncFolder(folderId))updates['UsersByAncestor/'+folderId+'/'+uid+'/'+field]=value==null?null:value;});
     if(Object.keys(updates).length)await db().ref().update(updates);
     if(userCache[uid])userCache[uid]=Object.assign({},userCache[uid],{[field]:value});userCacheAt=Date.now();
     document.dispatchEvent(new CustomEvent('hetk-scoped-data-changed',{detail:{type:'users',id:uid,field:field}}));
