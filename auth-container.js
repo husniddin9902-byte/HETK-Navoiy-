@@ -1286,7 +1286,10 @@
     if(isRegionalSafetyOfficer(currentAccount)){
       // TChB elektromontyor ruxsatnomasini viloyat TB hodimi,
       // haydovchinikini esa tuman va viloyat TB hodimlari yuritadi.
-      const protectedManager=TERRITORIAL_MANAGER_ROLES.has(target.role) && target.role!=='district_director';
+      // Viloyat MMQ/XT (TB) xodimlari o'z hududidagi tuman/shahar
+      // boshlig'i va bosh muhandisining guvohnomasini tahrirlay oladi.
+      const regionalEditableDistrictManager=['district_director','district_chief_engineer'].includes(target.role);
+      const protectedManager=TERRITORIAL_MANAGER_ROLES.has(target.role) && !regionalEditableDistrictManager;
       if(isRegionalSafetyChief(currentAccount)) return target.role!=='super_admin' && target.role!=='republic_tb_engineer' && !protectedManager && !MANAGEMENT_ROLES.has(target.role) && target.role!=='regional_tb_chief';
       return target.role!=='super_admin' && target.role!=='republic_tb_engineer' && !protectedManager && !MANAGEMENT_ROLES.has(target.role) && !['regional_tb_chief','regional_tb_operations_engineer','regional_tb_engineer','regional_fire_safety_engineer'].includes(target.role);
     }
