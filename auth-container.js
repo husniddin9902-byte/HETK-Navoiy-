@@ -582,7 +582,10 @@
     // Legacy photoData faqat hali Telegram posti yoki rasmi yaratilmagan eski
     // profilni bir martalik ko‘chirish uchun ishlatiladi. Mavjud post borida
     // guvohnoma tahriri rasmni qayta yubormaydi.
-    const useLegacyPhoto=!!merged.photoData && (!merged.telegramEmployeeMessageId || !merged.telegramPhotoFileId);
+    // Postning messageId qiymati bor ekan, telegramPhotoFileId eski profilda
+    // yozilmagan bo‘lsa ham mavjud postni qayta yaratmaymiz. Guvohnoma kabi
+    // matnli o‘zgarishlar faqat editMessageCaption orqali yangilanadi.
+    const useLegacyPhoto=!!merged.photoData && !merged.telegramEmployeeMessageId;
     const legacyBlob=useLegacyPhoto ? await blobFromDataUrl(merged.photoData) : null;
     const newPhoto=options.photoBlob || legacyBlob || null;
     const mustRepost=!!newPhoto || !merged.telegramEmployeeMessageId || options.replaceDefaultPhoto;
