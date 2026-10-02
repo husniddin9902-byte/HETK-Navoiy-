@@ -195,10 +195,13 @@
     roots.forEach(function(folderId){if(canSyncFolder(folderId))updates['UsersByFolder/'+folderId+'/'+uid+'/'+field]=value==null?null:value;});
     const indexedAncestors=new Set();
     roots.forEach(function(folderId){ancestors(folderId,folders).forEach(function(parentId){indexedAncestors.add(parentId);});});
-    indexedAncestors.forEach(function(folderId){if(canSyncFolder(folderId))updates['UsersByAncestor/'+folderId+'/'+uid+'/'+field]=value==null?null:value;});
+    // Safety yozuvi pastki hududda tahrirlanganda yuqori (tuman/viloyat/
+    // respublika) ro‘yxatlarida ham darhol bir xil bo‘lishi kerak.
+    // Boshqa maydonlarda avvalgi hududiy cheklov saqlanadi.
+    indexedAncestors.forEach(function(folderId){if(field==='safety'||canSyncFolder(folderId))updates['UsersByAncestor/'+folderId+'/'+uid+'/'+field]=value==null?null:value;});
     const paths=Object.keys(updates);
     if(paths.length){
-      if(globalAccount(account)) await db().ref().update(updates);
+      if(globalAccount(account)||field==='safety') await db().ref().update(updates);
       else{
         // Bir ruxsatsiz eski indeks manzili qolgan bo‘lsa, Firebase ko‘p
         // manzilli update'ning hammasini bekor qiladi. Hududiy profillarda
