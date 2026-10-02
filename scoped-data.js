@@ -196,7 +196,21 @@
     const indexedAncestors=new Set();
     roots.forEach(function(folderId){ancestors(folderId,folders).forEach(function(parentId){indexedAncestors.add(parentId);});});
     indexedAncestors.forEach(function(folderId){if(canSyncFolder(folderId))updates['UsersByAncestor/'+folderId+'/'+uid+'/'+field]=value==null?null:value;});
-    if(Object.keys(updates).length)await db().ref().update(updates);
+    const paths=Object.keys(updates);
+    if(paths.length){
+      if(globalAccount(account)) await db().ref().update(updates);
+      else{
+        // Bir ruxsatsiz eski indeks manzili qolgan bo‘lsa, Firebase ko‘p
+        // manzilli update'ning hammasini bekor qiladi. Hududiy profillarda
+        // nusxalarni alohida yozib, ruxsatli nusxalarni saqlab qolamiz.
+        let saved=0,lastError=null;
+        for(const path of paths){
+          try{await db().ref(path).set(updates[path]);saved++;}
+          catch(error){lastError=error;console.warn('Hodim indeksi yozilmadi:',path,error);}
+        }
+        if(!saved&&lastError)throw new Error('Hududiy hodim nusxasi saqlanmadi: '+(lastError.message||'ruxsat yo‘q'));
+      }
+    }
     if(userCache[uid])userCache[uid]=Object.assign({},userCache[uid],{[field]:value});userCacheAt=Date.now();
     document.dispatchEvent(new CustomEvent('hetk-scoped-data-changed',{detail:{type:'users',id:uid,field:field}}));
   }
