@@ -53,7 +53,10 @@
  .hetk-v11-reader .chapter select{min-width:0;flex:1;padding:8px 9px}
  .hetk-v11-reader .chapter button{padding:8px 11px}
  .hetk-v11-reader .modes{width:auto;gap:6px}
- .hetk-v11-reader .modes button{padding:8px 10px;font-size:13px;white-space:nowrap}
+ .hetk-v11-reader .modes button{display:inline-flex!important;align-items:center;justify-content:center;gap:7px;padding:9px 12px;font-size:13px;white-space:nowrap}
+ /* Telefonda faol rejimni takroran ko‘rsatmaymiz: uning o‘rniga
+    boshqa rejimga o‘tish tugmasi doimo ko‘rinadi. */
+ .hetk-v11-reader .modes button.on{display:none!important}
  .hetk-v11-reader .tools{top:97px;justify-content:center;gap:6px;flex-wrap:nowrap;padding:7px 8px;font-size:13px}
  .hetk-v11-reader .tools button{padding:7px 10px}
  .hetk-v11-reader .tools .dot{width:26px;height:26px;padding:0}
@@ -63,7 +66,8 @@
 }
 @media(max-width:480px){
  .hetk-v11-reader .reader-controls{grid-template-columns:1fr}
- .hetk-v11-reader .modes{justify-content:flex-start}
+ .hetk-v11-reader .modes{justify-content:stretch}
+ .hetk-v11-reader .modes button:not(.on){width:100%}
  .hetk-v11-reader .tools{top:137px}
 }
 
