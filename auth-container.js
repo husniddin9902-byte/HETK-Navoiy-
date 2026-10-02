@@ -1629,15 +1629,22 @@
       if(safetyExamChanged(before.exam1,exam1) || safetyExamChanged(before.exam2,exam2) || JSON.stringify(before.extraordinaryExam)!==JSON.stringify(extraordinaryExam)) history=addSafetyHistory(history,before,editorName,roleLabel,now);
       Object.keys(specialWorks).forEach(id=>{specialWorks[id]=Object.assign({},specialWorks[id],{updatedAt:now,updatedBy:currentAccount.uid,updatedByName:editorName});});
       const safety={group,certificateNo,examDate:exam1.examDate,validUntil:exam1.nextExamDate,exam1,exam2,extraordinaryExam,specialWorks,history,publicCode,publicEnabled,publicIssuedAt:before.publicIssuedAt||(publicEnabled?now:0),publicIssuedBy:before.publicIssuedBy||(publicEnabled?currentAccount.uid:''),notes,updatedAt:now,updatedBy:currentAccount.uid,updatedByName:editorName,updatedByRole:roleLabel};
-      const updates={};updates['users/'+uid+'/safety']=safety;
-      if(publicCode) updates['PublicPermits/'+publicCode]=publicPermitPayload(uid,target,safety);
-      await databaseRef.ref().update(updates);
+      // Asosiy yozuvni QR va indekslardan alohida saqlaymiz. Qo‘shimcha
+      // nusxalardan bittasida ruxsat muammosi bo‘lsa, guvohnomaning o‘zi
+      // bekor bo‘lib ketmasligi kerak.
+      try{await databaseRef.ref('users/'+uid+'/safety').set(safety);}
+      catch(error){throw new Error('Asosiy guvohnoma bazaga saqlanmadi: '+(error.message||'ruxsat yo‘q'));}
+      if(publicCode){
+        try{await databaseRef.ref('PublicPermits/'+publicCode).set(publicPermitPayload(uid,target,safety));}
+        catch(error){console.warn('Ochiq QR nusxasi yangilanmadi:',error);}
+      }
       const changedTarget=Object.assign({},target,{safety,updatedAt:now});
       // Telegram faqat saytning asosiy yozuvi va hududiy indeks nusxalari
       // muvaffaqiyatli saqlangandan keyin yangilanadi. Indeks xatosini yashirish
       // Telegramda yangi, saytda eski ma’lumot ko‘rinishiga sabab bo‘lardi.
       if(window.HETKData&&typeof window.HETKData.syncUserField==='function'){
-        await window.HETKData.syncUserField(uid,changedTarget,'safety',safety);
+        try{await window.HETKData.syncUserField(uid,changedTarget,'safety',safety);}
+        catch(error){throw new Error('Guvohnoma bazaga saqlandi, lekin hodimlar ro‘yxatidagi nusxasi yangilanmadi: '+(error.message||'ruxsat yo‘q'));}
       }
       // Viloyat/tuman TB profili boshqa hodimning safety yozuvini yangilashi
       // mumkin, ammo xavfsizlik qoidasi bo‘yicha users/$uid dan bevosita
