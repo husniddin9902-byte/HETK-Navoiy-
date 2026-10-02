@@ -184,9 +184,12 @@
   async function syncUserField(uid,user,field,value){
     if(!uid||!user||!field)throw new Error('Hodim indeksi uchun ma’lumot yetarli emas.');
     const account=me();
-    const values=await Promise.all([readFolders(),db().ref('WorkZones').once('value'),account?db().ref('DelegatedFolderAccess/'+account.uid+'/folders').once('value'):Promise.resolve(snapshot({}))]);
+    const values=await Promise.all([readFolders(),db().ref('WorkZones').once('value'),account?db().ref('FolderAccess/'+account.uid).once('value'):Promise.resolve(snapshot({})),account?db().ref('DelegatedFolderAccess/'+account.uid+'/folders').once('value'):Promise.resolve(snapshot({}))]);
     const folders=values[0],zones=values[1].val()||{},updates={};
-    const allowed=globalAccount(account)?null:new Set(accessibleFolderIds(folders).concat(keysTrue(values[2].val()||{})));
+    // Firebase qoidasidagi aynan o‘sha ruxsat ro‘yxatidan foydalanamiz.
+    // JS hisoblagan avlod papkalari eski indeksda hali yaratilmagan bo‘lsa,
+    // ko‘p manzilli update to‘liq PERMISSION_DENIED bilan qaytmasligi kerak.
+    const allowed=globalAccount(account)?null:new Set(keysTrue(values[2].val()||{}).concat(keysTrue(values[3].val()||{})));
     const canSyncFolder=function(folderId){return !allowed||allowed.has(folderId);};
     const roots=userFolderRoots(user,zones);
     roots.forEach(function(folderId){if(canSyncFolder(folderId))updates['UsersByFolder/'+folderId+'/'+uid+'/'+field]=value==null?null:value;});
