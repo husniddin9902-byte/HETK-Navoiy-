@@ -470,7 +470,9 @@
     if(isDispatcherRole(account)) return account.region || 'Biriktirilgan dispetcherlik hududi';
     const ids=Object.keys((account && account.folders) || {}).filter(id=>account.folders[id]);
     if(!ids.length) return 'Biriktirilmagan';
-    return shortText(ids.map(id=>folderPath(id) || ((teamFoldersCache[id]||{}).name) || id).join('; '),170);
+    // Telegram postida joyni tejash uchun bir nechta ruxsatdan faqat
+    // birinchisini to‘liq ko‘rsatamiz. Barcha ruxsatlar sayt profilida qoladi.
+    return folderPath(ids[0]) || ((teamFoldersCache[ids[0]]||{}).name) || ids[0];
   }
   function employeePermissionsText(account){
     const labels={
@@ -496,9 +498,9 @@
       '👤 HODIM PROFILI',
       '',
       `🪪 F.I.Sh: ${account.fullName || '—'}`,
+      `🆔 UID: ${account.uid || '—'}`,
       `⚧ Jinsi: ${genderLabel(account.gender)}`,
       `📞 Telefon: ${account.phone || '—'}`,
-      `🔐 Login: ${account.login || '—'}`,
       `💼 Lavozim: ${getRoleLabel(account)}`,
       `📍 Hudud / U/J: ${account.workZoneName || account.region || '—'}`,
       `📌 Holati: ${account.active===false ? 'Nofaol' : 'Faol'}`,
@@ -512,15 +514,13 @@
       `2️⃣ Elektr qurilmalar / Yong‘in XQ: ${formatProfileDate(exam2.examDate)} · ${exam2.grade || '—'} · keyingi ${formatProfileDate(exam2.nextExamDate)}`,
       `⚖️ Navbatdan tashqari: ${rec.extraordinaryExam.status==='none'?'Belgilanmagan':extraordinaryScopeLabel(rec.extraordinaryExam.scope)+' · '+rec.extraordinaryExam.status+' · '+formatProfileDate(rec.extraordinaryExam.dueDate)}`,
       `🧰 Maxsus ishlar: ${special.length ? shortText(special.map(item=>item.decision).join(', '),120) : '—'}`,
-      `✅ Ruxsatnoma holati: ${state.text || '—'}`,
       `🔳 QR ruxsatnoma: ${rec.publicEnabled && rec.publicCode ? rec.publicCode : 'Faollashtirilmagan'}`,
       `📝 Izoh: ${shortText(rec.notes || '—',100)}`,
       `⚠️ Intizomiy holat: ${activeDisciplineText(account)}`,
       '',
       `➕ Yaratgan: ${account.createdByName || '—'}`,
       `🕒 Yaratilgan: ${formatProfileDate(account.createdAt)}`,
-      `🔄 Yangilangan: ${formatProfileDate(account.updatedAt)}`,
-      `🆔 UID: ${account.uid || '—'}`
+      `🔄 Yangilangan: ${formatProfileDate(account.updatedAt)}`
     ];
     return lines.join('\n').slice(0,1024);
   }
@@ -588,7 +588,14 @@
     const useLegacyPhoto=!!merged.photoData && !merged.telegramEmployeeMessageId;
     const legacyBlob=useLegacyPhoto ? await blobFromDataUrl(merged.photoData) : null;
     const newPhoto=options.photoBlob || legacyBlob || null;
-    const mustRepost=!!newPhoto || !merged.telegramEmployeeMessageId || options.replaceDefaultPhoto;
+    // Guvohnoma yoki oddiy profil ma’lumoti tahririda messageId yo‘qolgan
+    // bo‘lsa yangi post yaratmaymiz: Telegram Bot API eski kanal tarixidan
+    // hodim postini UID bo‘yicha qidira olmaydi va aks holda nusxalar ko‘payadi.
+    const allowCreate=options.allowCreate===true || !!options.photoBlob;
+    if(!merged.telegramEmployeeMessageId && !allowCreate){
+      throw new Error('Telegramdagi eski hodim postining messageId raqami bazada topilmadi. Yangi nusxa yuborilmadi.');
+    }
+    const mustRepost=!!newPhoto || (!merged.telegramEmployeeMessageId && allowCreate) || (!!options.replaceDefaultPhoto && !!merged.telegramEmployeeMessageId);
     if(mustRepost){
       const oldMessageId=merged.telegramEmployeeMessageId || null;
       const source=newPhoto || (merged.telegramPhotoFileId && !options.replaceDefaultPhoto ? merged.telegramPhotoFileId : null);
@@ -622,6 +629,10 @@
       // topilmagandagina yangisini yaratish xavfsiz.
       const oldPostMissing=telegramError.includes('message to edit not found') || telegramError.includes('message_id_invalid') || telegramError.includes('message id invalid');
       if(!oldPostMissing) throw e;
+      // Oddiy guvohnoma tahririda eski ID noto‘g‘ri bo‘lsa ham qayta post
+      // yubormaymiz. Bu kanalda eski va yangi nusxalar yig‘ilib qolishining
+      // oldini oladi. Yangi post faqat aniq rasm yuklash/yaratish jarayonida.
+      if(!allowCreate) throw new Error('Telegramdagi mavjud hodim posti topilmadi. Takroriy post yuborilmadi.');
       const oldMessageId=merged.telegramEmployeeMessageId || null;
       const sent=await sendEmployeePhotoPost(merged,merged.telegramPhotoFileId || null);
       const photos=(sent.result && sent.result.photo) || [];
@@ -1632,7 +1643,10 @@
       }
       teamUsersCache[uid]=changedTarget;
       refreshTeamUI(uid);
-      const syncedTarget=await safeSyncEmployeeTelegram(uid,changedTarget,{showError:true});
+      // Guvohnoma saytda saqlangandan keyin eski Telegram messageId topilmasa
+      // foydalanuvchini alert bilan to‘xtatmaymiz. Yangi takroriy post ham
+      // yuborilmaydi; xato faqat konsolda qayd etiladi.
+      const syncedTarget=await safeSyncEmployeeTelegram(uid,changedTarget,{showError:false});
       teamUsersCache[uid]=Object.assign({},changedTarget,syncedTarget);
       refreshTeamUI(uid);
       try{await notifySafetyUpdated(uid,target,before,safety);}catch(noticeError){console.warn('Ruxsatnoma bildirishnomasi yuborilmadi:',noticeError);}
@@ -4673,7 +4687,7 @@
           teamUsersCache[uid]=account;
           selectedTeamUid=uid;
           refreshTeamUI(uid);
-          Object.assign(account,await safeSyncEmployeeTelegram(uid,account,{replaceDefaultPhoto:true,showError:true}));
+          Object.assign(account,await safeSyncEmployeeTelegram(uid,account,{replaceDefaultPhoto:true,allowCreate:true,showError:true}));
           teamUsersCache[uid]=account;
           refreshTeamUI(uid);
           for(const oldUid of Object.keys(replacementAffected)) await safeSyncEmployeeTelegram(oldUid,replacementAffected[oldUid],{showError:false});
