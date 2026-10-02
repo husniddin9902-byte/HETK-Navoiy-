@@ -1633,14 +1633,15 @@
       if(publicCode) updates['PublicPermits/'+publicCode]=publicPermitPayload(uid,target,safety);
       await databaseRef.ref().update(updates);
       const changedTarget=Object.assign({},target,{safety,updatedAt:now});
-      // Asosiy guvohnoma users/$uid/safety ichida allaqachon saqlandi.
-      // Ayrim hududiy profillarda indeks nusxalarining barcha ajdod papkalariga
-      // yozish huquqi bo'lmasligi mumkin. Bu yordamchi sinxronlash xatosi asosiy
-      // saqlashni muvaffaqiyatsiz deb ko'rsatmasligi kerak.
+      // Telegram faqat saytning asosiy yozuvi va hududiy indeks nusxalari
+      // muvaffaqiyatli saqlangandan keyin yangilanadi. Indeks xatosini yashirish
+      // Telegramda yangi, saytda eski ma’lumot ko‘rinishiga sabab bo‘lardi.
       if(window.HETKData&&typeof window.HETKData.syncUserField==='function'){
-        try{await window.HETKData.syncUserField(uid,changedTarget,'safety',safety);}
-        catch(indexError){console.warn('Guvohnoma saqlandi, hodim indeks nusxasi yangilanmadi:',indexError);}
+        await window.HETKData.syncUserField(uid,changedTarget,'safety',safety);
       }
+      const verifySnapshot=await databaseRef.ref('users/'+uid+'/safety').once('value');
+      const verifiedSafety=verifySnapshot.val()||{};
+      if(Number(verifiedSafety.updatedAt)!==Number(now)) throw new Error('Guvohnoma bazaga yozilgani tasdiqlanmadi. Telegram yangilanmadi.');
       teamUsersCache[uid]=changedTarget;
       refreshTeamUI(uid);
       // Guvohnoma saytda saqlangandan keyin eski Telegram messageId topilmasa
