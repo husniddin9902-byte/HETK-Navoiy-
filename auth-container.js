@@ -248,6 +248,11 @@
   let teamRenderFrame = 0;
   let teamDetailRefreshPending = false;
   let teamCommunicationRefreshPending = false;
+  // Hodimlar oynasi qayta ochilganda Firebase tinglovchilarini uzib-qayta
+  // ulash butun Folders/WorkZones ma'lumotini yana yuklatardi. Bir sessiyada
+  // ularni faqat bir marta ulaymiz va keyingi ochilishlarda tayyor keshdan
+  // foydalanamiz.
+  let teamDataBoundUid = '';
 
   const TELEGRAM_WORKER_URL = 'https://hetk-telegram.husniddin-99-02.workers.dev';
   const SESSION_WORKER_URL = 'https://hetk-consumer-bot.husniddin-99-02.workers.dev';
@@ -3474,37 +3479,47 @@
         </div>
       </div>`;
 
-    if(usersTeamRef) usersTeamRef.off('value');
-    if(foldersTeamRef) foldersTeamRef.off('value');
-    if(workZonesTeamRef) workZonesTeamRef.off('value');
-    if(delegationsTeamRef) delegationsTeamRef.off('value');
-    usersTeamRef=window.HETKData ? null : databaseRef.ref('users');
-    foldersTeamRef=databaseRef.ref('Folders');
-    workZonesTeamRef=databaseRef.ref('WorkZones');
-    delegationsTeamRef=databaseRef.ref('TemporaryDelegations');
-    const applyTeamUsers=snap=>{
-      teamUsersCache=snap.val() || {};
-      if(selectedTeamUid && !teamUsersCache[selectedTeamUid]) selectedTeamUid=null;
+    const bindUid=String((baseCurrentAccount&&baseCurrentAccount.uid)||(currentAccount&&currentAccount.uid)||'');
+    if(teamDataBoundUid!==bindUid){
+      if(usersTeamRef) usersTeamRef.off('value');
+      if(foldersTeamRef) foldersTeamRef.off('value');
+      if(workZonesTeamRef) workZonesTeamRef.off('value');
+      if(delegationsTeamRef) delegationsTeamRef.off('value');
+      usersTeamRef=window.HETKData ? null : databaseRef.ref('users');
+      foldersTeamRef=databaseRef.ref('Folders');
+      workZonesTeamRef=databaseRef.ref('WorkZones');
+      delegationsTeamRef=databaseRef.ref('TemporaryDelegations');
+      teamDataBoundUid=bindUid;
+      const applyTeamUsers=snap=>{
+        teamUsersCache=snap.val() || {};
+        if(selectedTeamUid && !teamUsersCache[selectedTeamUid]) selectedTeamUid=null;
+        scheduleTeamUiRefresh(true,communicationTab==='chats');
+      };
+      // readUsers(false): shu sessiyada mavjud kesh bo'lsa qayta o'qimaydi.
+      if(window.HETKData)window.HETKData.readUsers(false).then(applyTeamUsers).catch(error=>{console.error('SCOPED USERS LOAD ERROR',error);});
+      else usersTeamRef.on('value',applyTeamUsers);
+      foldersTeamRef.on('value', snap => {
+        teamFoldersCache=snap.val() || {};
+        scheduleTeamUiRefresh(true,communicationTab==='chats');
+        const editor=byId('hetk-user-editor');
+        if(editor&&!editor.hidden) renderUserFolderPicker(getEditorSelectedFolders());
+      });
+      workZonesTeamRef.on('value', snap => {
+        teamWorkZonesCache=snap.val() || {};
+        Object.keys(teamWorkZonesCache).forEach(id => { if(teamWorkZonesCache[id]) teamWorkZonesCache[id].id=id; });
+        scheduleTeamUiRefresh(true,communicationTab==='chats');
+        const editor=byId('hetk-user-editor');
+        if(editor&&!editor.hidden) refreshWorkZoneEditor();
+        if(byId('hetk-workzone-editor')&&!byId('hetk-workzone-editor').hidden) renderWorkZoneManagerTree();
+      });
+      delegationsTeamRef.on('value',snap=>{
+        activeDelegationsCache=snap.val()||{};
+        scheduleTeamUiRefresh(true,false);
+      });
+    }else{
+      // Oyna qayta chizildi, ammo Firebase'dan qayta yuklamaymiz.
       scheduleTeamUiRefresh(true,communicationTab==='chats');
-    };
-    if(window.HETKData)window.HETKData.readUsers(true).then(applyTeamUsers).catch(error=>{console.error('SCOPED USERS LOAD ERROR',error);});
-    else usersTeamRef.on('value',applyTeamUsers);
-    foldersTeamRef.on('value', snap => {
-      teamFoldersCache=snap.val() || {};
-      scheduleTeamUiRefresh(true,communicationTab==='chats');
-      if(!byId('hetk-user-editor').hidden) renderUserFolderPicker(getEditorSelectedFolders());
-    });
-    workZonesTeamRef.on('value', snap => {
-      teamWorkZonesCache=snap.val() || {};
-      Object.keys(teamWorkZonesCache).forEach(id => { if(teamWorkZonesCache[id]) teamWorkZonesCache[id].id=id; });
-      scheduleTeamUiRefresh(true,communicationTab==='chats');
-      if(!byId('hetk-user-editor').hidden) refreshWorkZoneEditor();
-      if(byId('hetk-workzone-editor')&&!byId('hetk-workzone-editor').hidden) renderWorkZoneManagerTree();
-    });
-    delegationsTeamRef.on('value',snap=>{
-      activeDelegationsCache=snap.val()||{};
-      scheduleTeamUiRefresh(true,false);
-    });
+    }
     const search=byId('hetk-team-search');
     if(search) search.addEventListener('input',()=>{clearTimeout(teamSearchTimer);teamSearchTimer=setTimeout(renderTeamList,220);});
     const safetyFilter=byId('hetk-safety-filter'); if(safetyFilter) safetyFilter.addEventListener('change',renderTeamList);
@@ -5226,6 +5241,11 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
         await handleSignedIn(user);
       }else{
         endLoginTracking(false);
+        if(usersTeamRef){usersTeamRef.off('value');usersTeamRef=null;}
+        if(foldersTeamRef){foldersTeamRef.off('value');foldersTeamRef=null;}
+        if(workZonesTeamRef){workZonesTeamRef.off('value');workZonesTeamRef=null;}
+        if(delegationsTeamRef){delegationsTeamRef.off('value');delegationsTeamRef=null;}
+        teamDataBoundUid='';teamUsersCache={};teamFoldersCache={};teamWorkZonesCache={};
         if(currentUserLiveRef){ currentUserLiveRef.off('value'); currentUserLiveRef=null; }
         if(currentDelegationsRef){currentDelegationsRef.off('value');currentDelegationsRef=null;}
         stopUserNotifications();
