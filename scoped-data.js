@@ -13,7 +13,10 @@
   let tpCacheAt=0,userCacheAt=0;
   let tpRequest=null,userRequest=null;
   let foldersCache=null,foldersCacheAt=0,foldersRequest=null;
-  const READ_CACHE_MS=15000;
+  // Bir oynadan boshqasiga o'tganda bir xil yirik tugunlarni qayta o'qimaslik
+  // uchun keshni uzoqroq saqlaymiz. Saqlash funksiyalari keshni o'zlari darhol
+  // yangilaydi; shu sabab foydalanuvchi o'z o'zgarishini kutmasdan ko'radi.
+  const READ_CACHE_MS=10*60*1000;
 
   function db(){return firebase.database();}
   function me(){return window.HETKAuth&&window.HETKAuth.currentUser;}
