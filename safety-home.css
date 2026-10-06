@@ -41,7 +41,7 @@
     font-size: 13px;
     font-weight: 800;
     letter-spacing: .025em;
-    backdrop-filter: blur(8px);
+    backdrop-filter: none;
 }
 
 .hetk-safety-home-copy h1 {
@@ -124,7 +124,8 @@
     font-size: clamp(14px, 1.25vw, 18px);
     font-weight: 900;
     cursor: pointer;
-    backdrop-filter: blur(12px);
+    backdrop-filter: none;
+    contain: layout paint style;
     transition: transform .16s ease, box-shadow .16s ease, background .16s ease;
 }
 
@@ -179,6 +180,11 @@ body.hetk-safety-home-active #map-type-btn {
 body.hetk-safety-home-active .header-panel {
     background: linear-gradient(90deg,#032a46,#073f65);
     box-shadow: 0 3px 16px rgba(0,0,0,.28);
+}
+
+body.hetk-profile-open .hetk-safety-home,
+body.hetk-training-open .hetk-safety-home {
+    visibility: hidden;
 }
 
 @media (max-width: 720px) {
