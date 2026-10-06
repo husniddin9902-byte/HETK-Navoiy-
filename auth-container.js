@@ -5268,6 +5268,21 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
     loadProfilePane(event.detail.tab).catch(error=>console.error('Profil bo‘limi yuklanmadi:',error));
   });
 
+  document.addEventListener('hetk-manual-data-refreshed',event=>{
+    const detail=event&&event.detail||{};
+    if(detail.users){
+      teamUsersCache=detail.users;
+      accessibleFolderCache=new WeakMap();
+      if(selectedTeamUid&&!teamUsersCache[selectedTeamUid])selectedTeamUid=null;
+      scheduleTeamUiRefresh(true,communicationTab==='chats');
+    }
+    if(detail.folders){
+      teamFoldersCache=detail.folders;
+      accessibleFolderCache=new WeakMap();
+      scheduleTeamUiRefresh(true,communicationTab==='chats');
+    }
+  });
+
   window.HETKAuth = {
     currentUser:null,
     baseUser:null,
