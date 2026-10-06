@@ -245,6 +245,9 @@
   let loginHistoryLoading = false;
   let accessibleFolderCache = new WeakMap();
   let teamSearchTimer = null;
+  let teamRenderFrame = 0;
+  let teamDetailRefreshPending = false;
+  let teamCommunicationRefreshPending = false;
 
   const TELEGRAM_WORKER_URL = 'https://hetk-telegram.husniddin-99-02.workers.dev';
   const SESSION_WORKER_URL = 'https://hetk-consumer-bot.husniddin-99-02.workers.dev';
@@ -3097,15 +3100,24 @@
     const rootsKey=roots.slice().sort().join('|')+'::'+String(acc.role||'')+'::'+String(!!acc.rootAccess);
     const cached=accessibleFolderCache.get(acc);
     if(cached&&cached.folders===folders&&cached.rootsKey===rootsKey)return cached.ids.slice();
-    if(MINIMAL_SUPPORT_ROLES.has(acc.role)){accessibleFolderCache.set(acc,{folders,rootsKey,ids:[]});return [];}
-    if(acc.rootAccess || ['super_admin','republic_tb_engineer'].includes(acc.role)){const ids=Object.keys(folders);accessibleFolderCache.set(acc,{folders,rootsKey,ids});return ids.slice();}
+    if(MINIMAL_SUPPORT_ROLES.has(acc.role)){accessibleFolderCache.set(acc,{folders,rootsKey,ids:[],set:new Set()});return [];}
+    if(acc.rootAccess || ['super_admin','republic_tb_engineer'].includes(acc.role)){const ids=Object.keys(folders);accessibleFolderCache.set(acc,{folders,rootsKey,ids,set:new Set(ids)});return ids.slice();}
     const set = new Set();
     roots.forEach(id => {
       if(!folders[id]) return;
       set.add(id);
       getChildrenFolderIds(id, folders).forEach(child => set.add(child));
     });
-    const ids=Array.from(set);accessibleFolderCache.set(acc,{folders,rootsKey,ids});return ids.slice();
+    const ids=Array.from(set);accessibleFolderCache.set(acc,{folders,rootsKey,ids,set});return ids.slice();
+  }
+
+  function getAccessibleFolderSet(account, folderMap){
+    const acc=account||currentAccount;
+    const folders=folderMap||teamFoldersCache||{};
+    if(!acc)return new Set();
+    getAccessibleFolderIds(acc,folders);
+    const cached=accessibleFolderCache.get(acc);
+    return cached&&cached.folders===folders&&cached.set ? cached.set : new Set();
   }
 
   function getVisibleFolderIds(account, folderMap){
@@ -3178,7 +3190,7 @@
     if(!currentAccount || !target) return false;
     if(['super_admin','republic_tb_engineer'].includes(currentAccount.role) || currentAccount.rootAccess) return true;
     if(target.rootAccess) return false;
-    const mySet=new Set(getAccessibleFolderIds(currentAccount, teamFoldersCache));
+    const mySet=getAccessibleFolderSet(currentAccount,teamFoldersCache);
     const targetRoots=accountFolderRoots(target);
     if(!targetRoots.length) return false;
     return targetRoots.every(id => mySet.has(id));
@@ -3473,30 +3485,25 @@
     const applyTeamUsers=snap=>{
       teamUsersCache=snap.val() || {};
       if(selectedTeamUid && !teamUsersCache[selectedTeamUid]) selectedTeamUid=null;
-      renderTeamList();if(selectedTeamUid)renderTeamDetail(selectedTeamUid);if(communicationTab==='chats')renderCommunicationContent();
+      scheduleTeamUiRefresh(true,communicationTab==='chats');
     };
     if(window.HETKData)window.HETKData.readUsers(true).then(applyTeamUsers).catch(error=>{console.error('SCOPED USERS LOAD ERROR',error);});
     else usersTeamRef.on('value',applyTeamUsers);
     foldersTeamRef.on('value', snap => {
       teamFoldersCache=snap.val() || {};
-      renderTeamList();
-      if(selectedTeamUid) renderTeamDetail(selectedTeamUid);
+      scheduleTeamUiRefresh(true,communicationTab==='chats');
       if(!byId('hetk-user-editor').hidden) renderUserFolderPicker(getEditorSelectedFolders());
-      if(communicationTab==='chats') renderCommunicationContent();
     });
     workZonesTeamRef.on('value', snap => {
       teamWorkZonesCache=snap.val() || {};
       Object.keys(teamWorkZonesCache).forEach(id => { if(teamWorkZonesCache[id]) teamWorkZonesCache[id].id=id; });
-      renderTeamList();
-      if(selectedTeamUid) renderTeamDetail(selectedTeamUid);
+      scheduleTeamUiRefresh(true,communicationTab==='chats');
       if(!byId('hetk-user-editor').hidden) refreshWorkZoneEditor();
       if(byId('hetk-workzone-editor')&&!byId('hetk-workzone-editor').hidden) renderWorkZoneManagerTree();
-      if(communicationTab==='chats') renderCommunicationContent();
     });
     delegationsTeamRef.on('value',snap=>{
       activeDelegationsCache=snap.val()||{};
-      renderTeamList();
-      if(selectedTeamUid)renderTeamDetail(selectedTeamUid);
+      scheduleTeamUiRefresh(true,false);
     });
     const search=byId('hetk-team-search');
     if(search) search.addEventListener('input',()=>{clearTimeout(teamSearchTimer);teamSearchTimer=setTimeout(renderTeamList,220);});
@@ -3550,7 +3557,7 @@
     const q=String((byId('hetk-team-search') && byId('hetk-team-search').value) || '').trim().toLowerCase();
     const permitFilter=String((byId('hetk-safety-filter')&&byId('hetk-safety-filter').value)||'all');
     const groupFilter=String((byId('hetk-safety-group-filter')&&byId('hetk-safety-group-filter').value)||'all');
-    return Object.keys(teamUsersCache).map(uid => {const row=Object.assign({uid},teamUsersCache[uid] || {});row.__permitState=permitState(row);return row;}).filter(u=>u.role!=='super_admin'&&u.rootAccess!==true).filter(canViewTarget).filter(u => {
+    return Object.keys(teamUsersCache).map(uid => Object.assign({uid},teamUsersCache[uid] || {})).filter(u=>u.role!=='super_admin'&&u.rootAccess!==true).filter(canViewTarget).map(u=>{u.__permitState=permitState(u);return u;}).filter(u => {
       if(q){
         const roots=accountFolderRoots(u);
         const paths=roots.map(id=>folderPath(id)).join(' ');
@@ -3739,6 +3746,23 @@
       html+=children.map(ch=>renderTeamTreeNode(nodes,ch,childDepth,searching)).join('');
     }
     return html;
+  }
+
+  function scheduleTeamUiRefresh(refreshDetail,refreshCommunication){
+    teamDetailRefreshPending=teamDetailRefreshPending||!!refreshDetail;
+    teamCommunicationRefreshPending=teamCommunicationRefreshPending||!!refreshCommunication;
+    if(teamRenderFrame)return;
+    const run=()=>{
+      teamRenderFrame=0;
+      const detail=teamDetailRefreshPending;
+      const communication=teamCommunicationRefreshPending;
+      teamDetailRefreshPending=false;
+      teamCommunicationRefreshPending=false;
+      renderTeamList();
+      if(detail&&selectedTeamUid)renderTeamDetail(selectedTeamUid);
+      if(communication&&communicationTab==='chats')renderCommunicationContent();
+    };
+    teamRenderFrame=typeof requestAnimationFrame==='function'?requestAnimationFrame(run):setTimeout(run,16);
   }
 
   function renderTeamList(){
@@ -5205,7 +5229,7 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
         stopNotificationSettings();
         if(loginHistoryTimer){clearInterval(loginHistoryTimer);loginHistoryTimer=null;}
         loginHistoryRows=[];loginHistoryLoadedAt=0;
-        currentAccount=null;baseCurrentAccount=null;effectiveDelegation=null;activeDelegationsCache={};accessibleFolderCache=new WeakMap();clearTimeout(teamSearchTimer);teamSearchTimer=null;
+        currentAccount=null;baseCurrentAccount=null;effectiveDelegation=null;activeDelegationsCache={};accessibleFolderCache=new WeakMap();clearTimeout(teamSearchTimer);teamSearchTimer=null;if(teamRenderFrame){if(typeof cancelAnimationFrame==='function')cancelAnimationFrame(teamRenderFrame);else clearTimeout(teamRenderFrame);}teamRenderFrame=0;teamDetailRefreshPending=false;teamCommunicationRefreshPending=false;
         window.HETKAuth.currentUser=null;
         window.HETKAuth.baseUser=null;window.HETKAuth.effectiveDelegation=null;
         document.dispatchEvent(new CustomEvent('hetk-auth-cleared'));
