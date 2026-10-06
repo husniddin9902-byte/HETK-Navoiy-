@@ -3771,7 +3771,11 @@
     const users=getVisibleUsers();
     const count=byId('hetk-team-count');
     const q=String((byId('hetk-team-search') && byId('hetk-team-search').value) || '').trim();
-    if(count) count.textContent=users.length + ' ta foydalanuvchi' + (q ? ' topildi' : '');
+    const permitFilter=String((byId('hetk-safety-filter')&&byId('hetk-safety-filter').value)||'all');
+    const groupFilter=String((byId('hetk-safety-group-filter')&&byId('hetk-safety-group-filter').value)||'all');
+    const filtering=!!q||permitFilter!=='all'||groupFilter!=='all';
+    const autoExpand=!!q||permitFilter==='expired'||permitFilter==='10';
+    if(count) count.textContent=users.length + ' ta foydalanuvchi' + (filtering ? ' topildi' : '');
     if(!users.length){
       box.innerHTML='<div class="hetk-team-no-users">Hozircha ko‘rinadigan hodimlar yo‘q.</div>';
       return;
@@ -3787,7 +3791,7 @@
       }
       teamTreeAutoInitialized=true;
     }
-    box.innerHTML=renderTeamTreeNode(nodes,'__root__',0,!!q);
+    box.innerHTML=renderTeamTreeNode(nodes,'__root__',0,autoExpand);
     box.querySelectorAll('[data-team-tree-toggle]').forEach(btn=>btn.addEventListener('click',()=>{
       const id=btn.dataset.teamTreeToggle;
       if(teamTreeExpanded.has(id)) teamTreeExpanded.delete(id); else teamTreeExpanded.add(id);
