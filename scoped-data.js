@@ -249,8 +249,15 @@
     await db().ref('AccessIndexMeta').set({version:INDEX_VERSION,completedAt:Date.now(),completedBy:account.uid,tpCount:Object.keys(tps).length,userCount:Object.keys(users).length});
     indexVersionCache=INDEX_VERSION;tpCache={};userCache={};tpCacheReady=false;userCacheReady=false;tpCacheAt=0;userCacheAt=0;return {tpCount:Object.keys(tps).length,userCount:Object.keys(users).length};
   }
+  async function refreshAll(){
+    clear();
+    const values=await Promise.all([readUsers(true),readTPs(true),readFolders()]);
+    const detail={users:values[0].val()||{},tps:values[1].val()||{},folders:values[2]||{},refreshedAt:Date.now()};
+    document.dispatchEvent(new CustomEvent('hetk-manual-data-refreshed',{detail:detail}));
+    return detail;
+  }
   function clear(){tpCache={};userCache={};indexVersionCache=null;indexVersionRequest=null;tpCacheReady=false;userCacheReady=false;tpCacheAt=0;userCacheAt=0;tpRequest=null;userRequest=null;foldersCache=null;foldersCacheAt=0;foldersRequest=null;}
   document.addEventListener('hetk-auth-cleared',clear);
   document.addEventListener('hetk-auth-user-updated',clear);
-  window.HETKData={INDEX_VERSION,readTPs,readTP,readUsers,saveTP,removeTP,syncUserAccess,syncUserField,syncDelegation,migrate,clear,isGlobal:function(){const account=me();return !!(account&&(account.rootAccess||account.role==='super_admin'));}};
+  window.HETKData={INDEX_VERSION,readTPs,readTP,readUsers,saveTP,removeTP,syncUserAccess,syncUserField,syncDelegation,migrate,clear,refreshAll,isGlobal:function(){const account=me();return !!(account&&(account.rootAccess||account.role==='super_admin'));}};
 })();
