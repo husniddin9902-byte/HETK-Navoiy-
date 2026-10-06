@@ -1,0 +1,10 @@
+.hetk-header-tool{display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(255,255,255,.24);background:rgba(255,255,255,.12);color:#fff;border-radius:12px;padding:9px 12px;font:700 13px/1 system-ui;cursor:pointer;white-space:nowrap}
+.hetk-header-tool:hover{background:rgba(255,255,255,.22)}
+.hetk-header-tool:disabled{opacity:.65;cursor:wait}
+.hetk-header-tool.is-working i{animation:hetkRefreshSpin .8s linear infinite}
+@keyframes hetkRefreshSpin{to{transform:rotate(360deg)}}
+.hetk-app-toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);z-index:1000000;max-width:min(92vw,520px);padding:13px 17px;border-radius:14px;background:#082f49;color:#fff;box-shadow:0 16px 45px rgba(2,18,31,.32);font:700 14px/1.4 system-ui;opacity:0;pointer-events:none;transition:.22s ease;text-align:center}
+.hetk-app-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.hetk-update-banner{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:999999;display:flex;align-items:center;gap:12px;width:min(92vw,560px);padding:12px 14px;border-radius:16px;background:#fff;color:#0c4a6e;box-shadow:0 18px 55px rgba(2,18,31,.35);font:700 14px/1.35 system-ui}
+.hetk-update-banner button{margin-left:auto;border:0;border-radius:11px;background:#0284c7;color:#fff;padding:10px 14px;font-weight:800;cursor:pointer}
+@media(max-width:700px){.hetk-header-tool{width:40px;height:40px;padding:0;justify-content:center;border-radius:11px}.hetk-header-tool span{display:none}.header-right{gap:6px}}
