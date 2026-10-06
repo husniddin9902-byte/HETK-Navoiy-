@@ -13,3 +13,13 @@ firebase.initializeApp({
 });
 
 firebase.messaging();
+
+// PWA yangilanishi: yangi worker tayyor bo'lganda sayt ichidagi tugma orqali
+// faollashtiriladi. Hech qanday Firebase ma'lumoti offline keshga yozilmaydi.
+self.addEventListener('message', function(event) {
+  if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
+});
+
+self.addEventListener('activate', function(event) {
+  event.waitUntil(self.clients.claim());
+});
