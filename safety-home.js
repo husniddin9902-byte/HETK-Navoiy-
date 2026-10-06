@@ -10,9 +10,6 @@
     'tb_engineer'
   ]);
 
-  let notificationRef = null;
-  let notificationHandler = null;
-
   function byId(id){ return document.getElementById(id); }
   function account(){ return window.HETKAuth && window.HETKAuth.currentUser; }
   function enabledFor(user){ return !!(user && user.active !== false && SAFETY_HOME_ROLES.has(user.role)); }
@@ -40,27 +37,6 @@
     if(label) label.textContent = n ? `${n} ta yangi bildirishnoma` : 'Yangi bildirishnoma yo‘q';
   }
 
-  function stopNotifications(){
-    if(notificationRef && notificationHandler){
-      try{ notificationRef.off('value', notificationHandler); }catch(_e){}
-    }
-    notificationRef = null;
-    notificationHandler = null;
-    updateNoticeCount(0);
-  }
-
-  function startNotifications(user){
-    stopNotifications();
-    if(!enabledFor(user) || !window.firebase || !firebase.apps || !firebase.apps.length) return;
-    notificationRef = firebase.database().ref(`UserNotifications/${user.uid}`);
-    notificationHandler = snap=>{
-      let unread = 0;
-      snap.forEach(child=>{ const row=child.val()||{}; if(row.read !== true) unread++; });
-      updateNoticeCount(unread);
-    };
-    notificationRef.on('value', notificationHandler, ()=>updateNoticeCount(0));
-  }
-
   function apply(user){
     const show = enabledFor(user);
     const home = byId('hetk-safety-home');
@@ -73,9 +49,8 @@
     if(show){
       const list = byId('list-container');
       if(list) list.style.display = 'none';
-      startNotifications(user);
     }else{
-      stopNotifications();
+      updateNoticeCount(0);
       if(window.map && typeof window.map.invalidateSize === 'function') setTimeout(()=>window.map.invalidateSize(), 80);
     }
   }
@@ -127,6 +102,9 @@
     document.addEventListener('hetk-auth-ready',event=>apply(event.detail && event.detail.user));
     document.addEventListener('hetk-auth-user-updated',event=>apply(event.detail && event.detail.user));
     document.addEventListener('hetk-auth-cleared',()=>apply(null));
+    document.addEventListener('hetk-notification-count-changed',event=>{
+      if(enabledFor(account()))updateNoticeCount(event.detail&&event.detail.notifications||0);
+    });
     if(account()) apply(account());
   }
 
