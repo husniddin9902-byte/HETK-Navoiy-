@@ -12,7 +12,7 @@
   const ONLINE_LIMIT_MS=150000;
   const ACTIVE_LIMIT_MS=5*60*1000;
   const SAFETY_OFFICER_ROLES=new Set(['super_admin','republic_tb_engineer','regional_tb_chief','regional_tb_operations_engineer','regional_tb_engineer','regional_fire_safety_engineer','tb_engineer']);
-  const PERMIT_EXEMPT_ROLES=new Set(['document_technician','contract_service_engineer','execution_discipline_inspector','warehouse_manager','gardener','cleaner','guard','regional_hr_head','regional_training_specialist','regional_hr_engineer','regional_press_secretary','askue_group_operator']);
+  const PERMIT_EXEMPT_ROLES=new Set(['document_technician','execution_discipline_inspector','warehouse_manager','gardener','cleaner','guard','regional_hr_head','regional_training_specialist','regional_hr_engineer','regional_press_secretary','askue_group_operator']);
   const REPORT_DISPATCHER_ROLES=new Set(['chief_dispatcher','dispatcher','tchb_electrician','tchb_driver']);
   const REPORT_ASKUE_ROLES=new Set(['askue_sales_deputy','energy_flow_control_engineer','askue_group_head','askue_group_engineer','askue_group_operator','askue_group_electrician']);
   const REPORT_MANAGEMENT_ROLES=new Set(['regional_director','regional_chief_engineer','regional_energy_flow_deputy','regional_capital_construction_deputy','regional_deputy_chief_engineer','regional_special_department_head','regional_secret_mobilization_engineer','regional_hr_head','regional_training_specialist','regional_hr_engineer','regional_press_secretary']);
