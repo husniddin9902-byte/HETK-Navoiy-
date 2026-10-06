@@ -171,7 +171,7 @@
   const MANAGEMENT_ROLES=new Set(['regional_director','regional_chief_engineer','regional_energy_flow_deputy','regional_capital_construction_deputy','regional_deputy_chief_engineer','regional_special_department_head','regional_secret_mobilization_engineer','regional_hr_head','regional_training_specialist','regional_hr_engineer','regional_press_secretary']);
   const SUPPORT_ROLES=new Set(['document_technician','contract_service_engineer','execution_discipline_inspector','warehouse_manager','gardener','cleaner','guard']);
   const MINIMAL_SUPPORT_ROLES=new Set(['execution_discipline_inspector','warehouse_manager','gardener','cleaner','guard']);
-  const PERMIT_EXEMPT_ROLES=new Set(['document_technician','contract_service_engineer','execution_discipline_inspector','warehouse_manager','gardener','cleaner','guard','regional_hr_head','regional_training_specialist','regional_hr_engineer','regional_press_secretary','askue_group_operator']);
+  const PERMIT_EXEMPT_ROLES=new Set(['document_technician','execution_discipline_inspector','warehouse_manager','gardener','cleaner','guard','regional_hr_head','regional_training_specialist','regional_hr_engineer','regional_press_secretary','askue_group_operator']);
   // Oddiy haydovchi ham traktorchi kabi o‘ziga biriktirilgan RES/U/Jni
   // ko‘radi va izoh qoldiradi, lekin elementlarni o‘zgartirmaydi.
   const READ_ONLY_COMMENT_ROLES=new Set(['tractor_operator','driver']);
@@ -243,6 +243,8 @@
   let loginHistoryRows = [];
   let loginHistoryLoadedAt = 0;
   let loginHistoryLoading = false;
+  let accessibleFolderCache = new WeakMap();
+  let teamSearchTimer = null;
 
   const TELEGRAM_WORKER_URL = 'https://hetk-telegram.husniddin-99-02.workers.dev';
   const SESSION_WORKER_URL = 'https://hetk-consumer-bot.husniddin-99-02.workers.dev';
@@ -1987,10 +1989,11 @@
 
   function updateOuterMessageBadge(){
     const badge=document.querySelector('.hetk-profile-tab[data-profile-tab="messages"] .hetk-profile-badge');
-    if(!badge) return;
     const unreadNotices=Object.values(userNotificationsCache).filter(item=>item && !item.read).length;
     const unreadMessages=Object.values(userMessagesCache).filter(item=>item && item.direction!=='sent' && !item.read).length;
     const unread=unreadNotices+unreadMessages;
+    document.dispatchEvent(new CustomEvent('hetk-notification-count-changed',{detail:{notifications:unreadNotices,messages:unreadMessages,total:unread}}));
+    if(!badge) return;
     badge.textContent=unread>99 ? '99+' : String(unread);
     badge.hidden=unread===0;
     badge.style.display=unread===0 ? 'none' : '';
@@ -3090,16 +3093,19 @@
     // Bosh dispetcher va dispetcherga tezkor nazorat uchun butun daraxt ochiq.
     // Bu faqat ko'rish/tahrirlash doirasini kengaytiradi; yaratish va o'chirish
     // huquqlari hasPermission() ichida alohida bloklangan.
-    if(MINIMAL_SUPPORT_ROLES.has(acc.role)) return [];
-    if(acc.rootAccess || ['super_admin','republic_tb_engineer'].includes(acc.role)) return Object.keys(folders);
     const roots = Object.keys(acc.folders || {}).filter(id => acc.folders[id]);
+    const rootsKey=roots.slice().sort().join('|')+'::'+String(acc.role||'')+'::'+String(!!acc.rootAccess);
+    const cached=accessibleFolderCache.get(acc);
+    if(cached&&cached.folders===folders&&cached.rootsKey===rootsKey)return cached.ids.slice();
+    if(MINIMAL_SUPPORT_ROLES.has(acc.role)){accessibleFolderCache.set(acc,{folders,rootsKey,ids:[]});return [];}
+    if(acc.rootAccess || ['super_admin','republic_tb_engineer'].includes(acc.role)){const ids=Object.keys(folders);accessibleFolderCache.set(acc,{folders,rootsKey,ids});return ids.slice();}
     const set = new Set();
     roots.forEach(id => {
       if(!folders[id]) return;
       set.add(id);
       getChildrenFolderIds(id, folders).forEach(child => set.add(child));
     });
-    return Array.from(set);
+    const ids=Array.from(set);accessibleFolderCache.set(acc,{folders,rootsKey,ids});return ids.slice();
   }
 
   function getVisibleFolderIds(account, folderMap){
@@ -3493,7 +3499,7 @@
       if(selectedTeamUid)renderTeamDetail(selectedTeamUid);
     });
     const search=byId('hetk-team-search');
-    if(search) search.addEventListener('input', renderTeamList);
+    if(search) search.addEventListener('input',()=>{clearTimeout(teamSearchTimer);teamSearchTimer=setTimeout(renderTeamList,220);});
     const safetyFilter=byId('hetk-safety-filter'); if(safetyFilter) safetyFilter.addEventListener('change',renderTeamList);
     const safetyGroupFilter=byId('hetk-safety-group-filter'); if(safetyGroupFilter) safetyGroupFilter.addEventListener('change',renderTeamList);
     const add=byId('hetk-add-user');
@@ -3544,7 +3550,7 @@
     const q=String((byId('hetk-team-search') && byId('hetk-team-search').value) || '').trim().toLowerCase();
     const permitFilter=String((byId('hetk-safety-filter')&&byId('hetk-safety-filter').value)||'all');
     const groupFilter=String((byId('hetk-safety-group-filter')&&byId('hetk-safety-group-filter').value)||'all');
-    return Object.keys(teamUsersCache).map(uid => Object.assign({uid},teamUsersCache[uid] || {})).filter(u=>u.role!=='super_admin'&&u.rootAccess!==true).filter(canViewTarget).filter(u => {
+    return Object.keys(teamUsersCache).map(uid => {const row=Object.assign({uid},teamUsersCache[uid] || {});row.__permitState=permitState(row);return row;}).filter(u=>u.role!=='super_admin'&&u.rootAccess!==true).filter(canViewTarget).filter(u => {
       if(q){
         const roots=accountFolderRoots(u);
         const paths=roots.map(id=>folderPath(id)).join(' ');
@@ -3552,7 +3558,7 @@
       }
       if(groupFilter!=='all' && effectiveSafetyGroup(u)!==groupFilter) return false;
       if(permitFilter!=='all'){
-        const st=permitState(u);
+        const st=u.__permitState;
         if(permitFilter==='expired' && st.kind!=='expired') return false;
         if(permitFilter==='none' && st.kind!=='none') return false;
         if(permitFilter==='valid' && (st.kind==='expired'||st.kind==='none')) return false;
@@ -3564,7 +3570,7 @@
       return true;
     }).sort((a,b) => {
       if(isSafetyOfficer(currentAccount)){
-        const ax=permitState(a), bx=permitState(b);
+        const ax=a.__permitState, bx=b.__permitState;
         const av=ax.kind==='expired'?-1:(ax.days===null?999999:ax.days);
         const bv=bx.kind==='expired'?-1:(bx.days===null?999999:bx.days);
         if(av!==bv) return av-bv;
@@ -3704,7 +3710,7 @@
     return `<button class="hetk-team-user hetk-team-tree-user${selected}" style="--team-depth:${depth}" type="button" data-team-uid="${escapeAttr(u.uid)}">
       <span class="hetk-team-user-avatar"><img src="${escapeAttr(accountAvatarUrl(u))}" alt=""></span>
       <span class="hetk-team-user-main"><b>${escapeHtml(u.fullName || 'Nomsiz hodim')}</b><small>${escapeHtml(getRoleLabel(u))}</small></span>
-      <span class="hetk-team-user-side">${PERMIT_EXEMPT_ROLES.has(u.role)?'':`<span class="hetk-team-safety-badge ${permitState(u).kind}">XTB ${escapeHtml(effectiveSafetyGroup(u))}</span>`}<span class="hetk-team-user-state ${u.active===false?'off':'on'}">${u.active===false?'Nofaol':'Faol'}</span></span>
+      <span class="hetk-team-user-side">${PERMIT_EXEMPT_ROLES.has(u.role)?'':`<span class="hetk-team-safety-badge ${(u.__permitState||permitState(u)).kind}">XTB ${escapeHtml(effectiveSafetyGroup(u))}</span>`}<span class="hetk-team-user-state ${u.active===false?'off':'on'}">${u.active===false?'Nofaol':'Faol'}</span></span>
     </button>`;
   }
 
@@ -5199,7 +5205,7 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
         stopNotificationSettings();
         if(loginHistoryTimer){clearInterval(loginHistoryTimer);loginHistoryTimer=null;}
         loginHistoryRows=[];loginHistoryLoadedAt=0;
-        currentAccount=null;baseCurrentAccount=null;effectiveDelegation=null;activeDelegationsCache={};
+        currentAccount=null;baseCurrentAccount=null;effectiveDelegation=null;activeDelegationsCache={};accessibleFolderCache=new WeakMap();clearTimeout(teamSearchTimer);teamSearchTimer=null;
         window.HETKAuth.currentUser=null;
         window.HETKAuth.baseUser=null;window.HETKAuth.effectiveDelegation=null;
         document.dispatchEvent(new CustomEvent('hetk-auth-cleared'));
