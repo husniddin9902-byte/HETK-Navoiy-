@@ -5,6 +5,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>HETK Navoiy</title>
+    <meta name="theme-color" content="#075985">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="HETK Navoiy">
+    <link rel="manifest" href="manifest.webmanifest?v=1.0">
+    <link rel="apple-touch-icon" href="icons/hetk-192.png">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="style.css?v=10.4">
@@ -24,6 +30,7 @@
     <link rel="stylesheet" href="training-center.css?v=4.5">
     <link rel="stylesheet" href="training-center-theme.css?v=1.5">
     <link rel="stylesheet" href="safety-home.css?v=1.2">
+    <link rel="stylesheet" href="app-install.css?v=1.0">
 </head>
 <body>
 
@@ -43,6 +50,12 @@
         </div>
         <div class="header-title">Joylashuvni saqlash</div>
         <div class="header-right">
+            <button id="hetk-data-refresh" class="hetk-header-tool" type="button" title="Ma’lumotlarni yangilash" aria-label="Ma’lumotlarni yangilash">
+                <i class="fas fa-rotate"></i><span>Yangilash</span>
+            </button>
+            <button id="hetk-app-install" class="hetk-header-tool" type="button" title="Ilovani o‘rnatish" aria-label="Ilovani o‘rnatish" hidden>
+                <i class="fas fa-download"></i><span>O‘rnatish</span>
+            </button>
             <i class="fas fa-list-ul" id="list-btn"></i>
             <div class="map-type-preview" id="map-type-btn"></div>
         </div>
@@ -1669,8 +1682,9 @@ gap:8px;
     <script src="profile-container.js?v=3.6"></script>
     <script src="training-center.js?v=4.5"></script>
     <script src="ui-settings.js?v=1.4"></script>
-    <script src="auth-container.js?v=12.4"></script>
-    <script src="scoped-data.js?v=2.2"></script>
+    <script src="auth-container.js?v=12.5"></script>
+    <script src="scoped-data.js?v=2.3"></script>
+    <script src="app-install.js?v=1.0"></script>
     <script src="safety-equipment.js?v=4.2"></script>
     <script src="naryad-module.js?v=2.2"></script>
     <script src="statistics.js?v=3.9"></script>
