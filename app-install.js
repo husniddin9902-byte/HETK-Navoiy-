@@ -31,19 +31,22 @@
     if(Notification.permission==='denied'){
       throw new Error('Bildirishnoma bloklangan. Avval brauzer sozlamasidan ruxsat bering.');
     }
-    if(!window.HETKPush||typeof window.HETKPush.enable!=='function'){
-      throw new Error('Bildirishnoma xizmati hali tayyor emas. Tizimga kirib, qayta urinib ko\u2018ring.');
-    }
-    const enabled=await window.HETKPush.enable();
-    if(!enabled||Notification.permission!=='granted'){
+    let permission=Notification.permission;
+    if(permission!=='granted')permission=await Notification.requestPermission();
+    if(permission!=='granted'){
       throw new Error('Ilovani o\u2018rnatish uchun bildirishnomaga ruxsat berish majburiy.');
+    }
+    // FCM kalitini bazaga yozish o'rnatish oynasini to'sib qo'ymasligi kerak.
+    // Bildirishnoma ruxsati yetarli; token ulanishi orqa fonda davom etadi.
+    if(window.HETKPush&&typeof window.HETKPush.enable==='function'){
+      Promise.resolve(window.HETKPush.enable()).catch(error=>console.warn('Bildirishnoma ulanishi:',error));
     }
     return true;
   }
   async function installApp(){
     // Tugma faqat brauzer haqiqiy o'rnatish oynasini bera olganda ko'rinadi.
     // Yorliq yoki brauzer menyusi bo'yicha ko'rsatma chiqarilmaydi.
-    if(!installPrompt)return;
+    if(!installPrompt){toast('Brauzer o\u2018rnatish oynasini hali tayyorlamadi. Sahifani yangilab qayta bosing.');return;}
     const btn=byId('hetk-app-install'),label=btn&&btn.querySelector('span');
     if(btn&&btn.disabled)return;
     if(btn){btn.disabled=true;btn.classList.add('is-working');}
