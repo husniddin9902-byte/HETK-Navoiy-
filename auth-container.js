@@ -5231,6 +5231,9 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
     }
     auth = firebase.auth();
     databaseRef = firebase.database();
+    // Android va Windows ilovasida foydalanuvchi tizimdan chiqmaguncha
+    // aynan kirgan profilining sessiyasini qurilmada saqlab qoladi.
+    try{await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);}catch(error){console.warn('Login holatini saqlash:',error);}
     await openPublicPermitFromUrl();
     await checkUsersExist();
 

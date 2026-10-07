@@ -23,7 +23,7 @@
     finally{btn.disabled=false;btn.classList.remove('is-working');if(label)label.textContent='Yangilash';}
   }
 
-  function showInstallButton(){const btn=byId('hetk-app-install');if(btn&&!standalone()&&installPrompt)btn.hidden=false;}
+  function showInstallButton(){const btn=byId('hetk-app-install');if(btn)btn.hidden=standalone();}
   async function requireNotifications(){
     if(!('Notification' in window)||!('serviceWorker' in navigator)){
       throw new Error('Bu brauzer bildirishnomalarni qo\u2018llamaydi. Ilovani o\u2018rnatib bo\u2018lmaydi.');
@@ -44,9 +44,6 @@
     return true;
   }
   async function installApp(){
-    // Tugma faqat brauzer haqiqiy o'rnatish oynasini bera olganda ko'rinadi.
-    // Yorliq yoki brauzer menyusi bo'yicha ko'rsatma chiqarilmaydi.
-    if(!installPrompt){toast('Brauzer o\u2018rnatish oynasini hali tayyorlamadi. Sahifani yangilab qayta bosing.');return;}
     const btn=byId('hetk-app-install'),label=btn&&btn.querySelector('span');
     if(btn&&btn.disabled)return;
     if(btn){btn.disabled=true;btn.classList.add('is-working');}
@@ -54,30 +51,35 @@
     try{
       const permissionWasGranted=('Notification' in window)&&Notification.permission==='granted';
       await requireNotifications();
-      // Chrome Android va Windows bir foydalanuvchi bosishida ketma-ket
-      // bildirishnoma hamda PWA o'rnatish oynasini ochishni bloklashi mumkin.
-      // Ruxsat hozirgina berilgan bo'lsa, installPromptni saqlab qolamiz va
-      // keyingi bosishda bevosita o'rnatish oynasini ochamiz.
       if(!permissionWasGranted){
-        toast('Bildirishnomaga ruxsat berildi. Endi O\u2018rnatish tugmasini yana bir marta bosing.');
+        toast('Bildirishnomaga ruxsat berildi. Endi Yuklash tugmasini yana bir marta bosing.');
         return;
       }
-      const prompt=installPrompt;installPrompt=null;
-      if(label)label.textContent='O\u2018rnatish';
-      await prompt.prompt();
-      const choice=await prompt.userChoice;
-      if(choice&&choice.outcome==='accepted'){
-        if(btn)btn.hidden=true;
+      const ua=String(navigator.userAgent||'').toLowerCase();
+      let file='';
+      if(/android/.test(ua)) file='HETK-Navoiy-Android-v1.0.apk';
+      else if(/windows/.test(ua)) file='HETK-Navoiy-Windows-v1.0.zip';
+      else if(installPrompt){
+        const prompt=installPrompt;installPrompt=null;
+        await prompt.prompt();
+        await prompt.userChoice;
+        return;
       }else{
-        toast('Ilovani o\u2018rnatish bekor qilindi');
-        if(btn)btn.hidden=true;
+        toast('iPhone uchun hozircha saytning o\u2018zidan foydalaniladi.');
+        return;
       }
+      if(label)label.textContent='Yuklanmoqda';
+      const link=document.createElement('a');
+      link.href=new URL(file,document.baseURI).href;
+      link.download=file;
+      document.body.appendChild(link);link.click();link.remove();
+      toast('Ilova fayli yuklanmoqda');
     }catch(error){
       console.warn('O\u2018rnatish to\u2018xtatildi:',error);
       toast(error&&error.message?error.message:'Bildirishnomaga ruxsat berilmagani uchun o\u2018rnatilmadi.');
     }finally{
       if(btn){btn.disabled=false;btn.classList.remove('is-working');}
-      if(label)label.textContent='O\u2018rnatish';
+      if(label)label.textContent='Yuklash';
     }
   }
 
@@ -101,11 +103,12 @@
     }catch(_e){}
   }
 
-  window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();installPrompt=event;showInstallButton();});
+  window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();installPrompt=event;});
   window.addEventListener('appinstalled',()=>{const btn=byId('hetk-app-install');if(btn)btn.hidden=true;toast('HETK ilovasi o‘rnatildi');});
   document.addEventListener('DOMContentLoaded',()=>{
     const refresh=byId('hetk-data-refresh');if(refresh)refresh.addEventListener('click',refreshData);
     const install=byId('hetk-app-install');if(install)install.addEventListener('click',installApp);
+    showInstallButton();
     checkAppVersion();
     if('serviceWorker' in navigator){
       navigator.serviceWorker.register('firebase-messaging-sw.js',{scope:'./',updateViaCache:'none'}).then(reg=>{
