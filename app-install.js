@@ -23,11 +23,15 @@
     finally{btn.disabled=false;btn.classList.remove('is-working');if(label)label.textContent='Yangilash';}
   }
 
-  function showInstallButton(){const btn=byId('hetk-app-install');if(btn&&!standalone())btn.hidden=false;}
+  function showInstallButton(){const btn=byId('hetk-app-install');if(btn&&!standalone()&&installPrompt)btn.hidden=false;}
   async function installApp(){
-    if(installPrompt){installPrompt.prompt();const choice=await installPrompt.userChoice;installPrompt=null;if(choice.outcome==='accepted')byId('hetk-app-install').hidden=true;return;}
-    if(isIOS())toast('iPhone: Ulashish tugmasi → “Bosh ekranga qo‘shish”ni tanlang.');
-    else toast('Brauzer menyusidan “Ilovani o‘rnatish” yoki “Bosh ekranga qo‘shish”ni tanlang.');
+    // Tugma faqat brauzer haqiqiy o'rnatish oynasini bera olganda ko'rinadi.
+    // Yorliq yoki brauzer menyusi bo'yicha ko'rsatma chiqarilmaydi.
+    if(!installPrompt)return;
+    const prompt=installPrompt;installPrompt=null;
+    const btn=byId('hetk-app-install');if(btn)btn.hidden=true;
+    await prompt.prompt();
+    await prompt.userChoice;
   }
 
   function showUpdate(registration,nextVersion){
@@ -55,7 +59,6 @@
   document.addEventListener('DOMContentLoaded',()=>{
     const refresh=byId('hetk-data-refresh');if(refresh)refresh.addEventListener('click',refreshData);
     const install=byId('hetk-app-install');if(install)install.addEventListener('click',installApp);
-    if(isIOS()&&!standalone())showInstallButton();
     checkAppVersion();
     if('serviceWorker' in navigator){
       navigator.serviceWorker.register('firebase-messaging-sw.js',{scope:'./',updateViaCache:'none'}).then(reg=>{
