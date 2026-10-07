@@ -1,4 +1,5 @@
 .hetk-header-tool{display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(255,255,255,.24);background:rgba(255,255,255,.12);color:#fff;border-radius:12px;padding:9px 12px;font:700 13px/1 system-ui;cursor:pointer;white-space:nowrap}
+.hetk-header-tool[hidden]{display:none!important}
 .hetk-header-tool:hover{background:rgba(255,255,255,.22)}
 .hetk-header-tool:disabled{opacity:.65;cursor:wait}
 .hetk-header-tool.is-working i{animation:hetkRefreshSpin .8s linear infinite}
