@@ -24,14 +24,49 @@
   }
 
   function showInstallButton(){const btn=byId('hetk-app-install');if(btn&&!standalone()&&installPrompt)btn.hidden=false;}
+  async function requireNotifications(){
+    if(!('Notification' in window)||!('serviceWorker' in navigator)){
+      throw new Error('Bu brauzer bildirishnomalarni qo\u2018llamaydi. Ilovani o\u2018rnatib bo\u2018lmaydi.');
+    }
+    if(Notification.permission==='denied'){
+      throw new Error('Bildirishnoma bloklangan. Avval brauzer sozlamasidan ruxsat bering.');
+    }
+    if(!window.HETKPush||typeof window.HETKPush.enable!=='function'){
+      throw new Error('Bildirishnoma xizmati hali tayyor emas. Tizimga kirib, qayta urinib ko\u2018ring.');
+    }
+    const enabled=await window.HETKPush.enable();
+    if(!enabled||Notification.permission!=='granted'){
+      throw new Error('Ilovani o\u2018rnatish uchun bildirishnomaga ruxsat berish majburiy.');
+    }
+    return true;
+  }
   async function installApp(){
     // Tugma faqat brauzer haqiqiy o'rnatish oynasini bera olganda ko'rinadi.
     // Yorliq yoki brauzer menyusi bo'yicha ko'rsatma chiqarilmaydi.
     if(!installPrompt)return;
-    const prompt=installPrompt;installPrompt=null;
-    const btn=byId('hetk-app-install');if(btn)btn.hidden=true;
-    await prompt.prompt();
-    await prompt.userChoice;
+    const btn=byId('hetk-app-install'),label=btn&&btn.querySelector('span');
+    if(btn&&btn.disabled)return;
+    if(btn){btn.disabled=true;btn.classList.add('is-working');}
+    if(label)label.textContent='Ruxsat';
+    try{
+      await requireNotifications();
+      const prompt=installPrompt;installPrompt=null;
+      if(label)label.textContent='O\u2018rnatish';
+      await prompt.prompt();
+      const choice=await prompt.userChoice;
+      if(choice&&choice.outcome==='accepted'){
+        if(btn)btn.hidden=true;
+      }else{
+        toast('Ilovani o\u2018rnatish bekor qilindi');
+        if(btn)btn.hidden=true;
+      }
+    }catch(error){
+      console.warn('O\u2018rnatish to\u2018xtatildi:',error);
+      toast(error&&error.message?error.message:'Bildirishnomaga ruxsat berilmagani uchun o\u2018rnatilmadi.');
+    }finally{
+      if(btn){btn.disabled=false;btn.classList.remove('is-working');}
+      if(label)label.textContent='O\u2018rnatish';
+    }
   }
 
   function showUpdate(registration,nextVersion){
