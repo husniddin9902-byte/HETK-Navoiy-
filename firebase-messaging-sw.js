@@ -23,3 +23,10 @@ self.addEventListener('message', function(event) {
 self.addEventListener('activate', function(event) {
   event.waitUntil(self.clients.claim());
 });
+
+// Chromium qurilmalari saytni to'liq o'rnatiladigan PWA sifatida tanishi
+// uchun tarmoq so'rovlarini worker orqali o'tkazamiz. Javob keshga olinmaydi,
+// shuning uchun saytning eski versiyasi qotib qolmaydi.
+self.addEventListener('fetch', function(event) {
+  if (event.request.method === 'GET') event.respondWith(fetch(event.request));
+});
