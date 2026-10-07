@@ -49,7 +49,16 @@
     if(btn){btn.disabled=true;btn.classList.add('is-working');}
     if(label)label.textContent='Ruxsat';
     try{
+      const permissionWasGranted=('Notification' in window)&&Notification.permission==='granted';
       await requireNotifications();
+      // Chrome Android va Windows bir foydalanuvchi bosishida ketma-ket
+      // bildirishnoma hamda PWA o'rnatish oynasini ochishni bloklashi mumkin.
+      // Ruxsat hozirgina berilgan bo'lsa, installPromptni saqlab qolamiz va
+      // keyingi bosishda bevosita o'rnatish oynasini ochamiz.
+      if(!permissionWasGranted){
+        toast('Bildirishnomaga ruxsat berildi. Endi O\u2018rnatish tugmasini yana bir marta bosing.');
+        return;
+      }
       const prompt=installPrompt;installPrompt=null;
       if(label)label.textContent='O\u2018rnatish';
       await prompt.prompt();
