@@ -3852,10 +3852,12 @@
         ${canEdit ? `<button type="button" id="hetk-edit-team-user" class="primary"><i class="fas ${currentAccount.role==='document_technician'?'fa-id-card':'fa-user-shield'}"></i> ${currentAccount.role==='document_technician'?'Hodim ma’lumotlarini tahrirlash':'Lavozim / papka ruxsatlari'}</button>` : ''}
         ${canDeactivate ? `<button type="button" id="hetk-toggle-team-user" class="${u.active===false?'restore':'danger'}"${activeTogglePending?' disabled':''}><i class="fas ${activeTogglePending?'fa-circle-notch fa-spin':u.active===false?'fa-user-check':'fa-user-slash'}"></i> ${activeTogglePending?'Saqlanmoqda...':u.active===false?'Qayta faollashtirish':'Bloklash'}</button>` : ''}
         ${(canDeactivate && u.active===false) ? '<button type="button" id="hetk-delete-team-user" class="permanent"><i class="fas fa-trash-alt"></i> Butunlay o‘chirish</button>' : ''}
+        ${currentAccount.role==='super_admin' ? '<button type="button" id="hetk-reset-device-sessions"><i class="fas fa-mobile-alt"></i> Qurilma seanslarini tozalash</button>' : ''}
       </div>` : ((!canSafetyEdit && !canDiscipline) ? '<div class="hetk-team-readonly"><i class="fas fa-lock"></i> Bu foydalanuvchining lavozim/papka ma’lumotlarini boshqarish huquqi yo‘q.</div>' : '')}`;
     const edit=byId('hetk-edit-team-user'); if(edit) edit.addEventListener('click', () => openEditUserEditor(uid));
     const toggle=byId('hetk-toggle-team-user'); if(toggle) toggle.addEventListener('click', () => toggleUserActive(uid));
     const del=byId('hetk-delete-team-user'); if(del) del.addEventListener('click', () => deleteUserPermanently(uid));
+    const resetSessions=byId('hetk-reset-device-sessions');if(resetSessions)resetSessions.addEventListener('click',()=>{if(window.HETKDeviceSessions)window.HETKDeviceSessions.adminReset(uid,u.fullName||u.login||'Hodim');});
     const assign=box.querySelector('[data-delegation-assign]');if(assign)assign.addEventListener('click',()=>openDelegationDialog(assign.dataset.delegationAssign));
     const end=box.querySelector('[data-delegation-end]');if(end)end.addEventListener('click',()=>endDelegation(end.dataset.delegationEnd));
     bindSafetyActions(box);

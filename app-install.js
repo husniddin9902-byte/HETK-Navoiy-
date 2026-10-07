@@ -58,7 +58,7 @@
       const ua=String(navigator.userAgent||'').toLowerCase();
       let file='';
       if(/android/.test(ua)) file='HETK-Navoiy-Android-v1.0.apk';
-      else if(/windows/.test(ua)) file='HETK-Navoiy-Windows-v1.0.zip';
+      else if(/windows/.test(ua)) file='HETK-Navoiy-Setup.exe';
       else if(installPrompt){
         const prompt=installPrompt;installPrompt=null;
         await prompt.prompt();
