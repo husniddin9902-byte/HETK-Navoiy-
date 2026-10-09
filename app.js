@@ -7546,3 +7546,60 @@ function updateSearchLayout() {
     const h = resultsBox.offsetHeight;
     foldersBox.style.height = `calc(100% - ${h}px)`;
 }
+
+// Telefon va ilova ichidagi barcha matn maydonlarida katta-kichik harfni
+// foydalanuvchining o‘zi erkin tanlashi uchun yagona klaviatura sozlamasi.
+// Qiymatning o‘zi o‘zgartirilmaydi: toUpperCase/toLowerCase ishlatilmaydi.
+(function installHETKTextEntryKeyboardSupport(){
+    const selector = 'input, textarea, [contenteditable="true"]';
+    const excludedTypes = new Set([
+        'password','number','date','datetime-local','time','month','week',
+        'checkbox','radio','file','range','color','button','submit','reset','hidden'
+    ]);
+
+    function isSearchField(el){
+        const id = String(el.id || '').toLowerCase();
+        const name = String(el.name || '').toLowerCase();
+        const placeholder = String(el.getAttribute('placeholder') || '').toLowerCase();
+        return String(el.type || '').toLowerCase() === 'search' ||
+            id.includes('search') || name.includes('search') ||
+            placeholder.includes('qidir') || placeholder.includes('izlash');
+    }
+
+    function prepare(el){
+        if(!el || el.nodeType !== 1) return;
+        const tag = String(el.tagName || '').toLowerCase();
+        const type = String(el.type || '').toLowerCase();
+        if(tag === 'input' && excludedTypes.has(type)) return;
+
+        // Login, e-mail, telefon va qidiruv maydonlari avvalgi tartibda qoladi.
+        const technical = isSearchField(el) || type === 'email' || type === 'tel' ||
+            /login|email|phone|telefon|code|kod/.test(String(el.id || '') + ' ' + String(el.name || ''));
+
+        el.style.setProperty('text-transform','none','important');
+        el.style.setProperty('font-variant','normal','important');
+        el.setAttribute('autocapitalize','off');
+        if(!technical){
+            el.setAttribute('autocorrect','on');
+            el.setAttribute('spellcheck','true');
+            if(tag === 'input' && (!type || type === 'text')) el.setAttribute('inputmode','text');
+        }
+        el.dataset.hetkCaseReady = '1';
+    }
+
+    function prepareAll(root){
+        if(!root) return;
+        if(root.matches && root.matches(selector)) prepare(root);
+        if(root.querySelectorAll) root.querySelectorAll(selector).forEach(prepare);
+    }
+
+    const start = () => {
+        prepareAll(document);
+        new MutationObserver(list => list.forEach(change =>
+            change.addedNodes.forEach(node => prepareAll(node))
+        )).observe(document.documentElement,{childList:true,subtree:true});
+        document.addEventListener('focusin',event => prepare(event.target),true);
+    };
+    if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded',start,{once:true});
+    else start();
+})();

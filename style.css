@@ -1380,4 +1380,21 @@ min-width:max-content;
 #open-add-folder{
     flex-shrink:0;
 }
+
+/* Mobil ilova va brauzerda matn kiritish bir xil ishlaydi.
+   Katta-kichik harf faqat klaviaturadan boshqariladi. */
+input:not([type="password"]):not([type="number"]):not([type="date"]):not([type="time"]),
+textarea,
+[contenteditable="true"]{
+    text-transform:none!important;
+    font-variant:normal!important;
+}
+@media (max-width:700px){
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+    textarea,
+    select,
+    [contenteditable="true"]{
+        font-size:16px!important;
+    }
+}
  
