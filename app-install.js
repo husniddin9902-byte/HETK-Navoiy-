@@ -1,122 +1,24 @@
 (function(){
   'use strict';
-  let installPrompt=null;
-  let toastTimer=0;
-
-  function byId(id){return document.getElementById(id);}
-  function standalone(){return window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;}
-  function isIOS(){return /iphone|ipad|ipod/i.test(navigator.userAgent);}
-  function toast(message){
-    let el=byId('hetk-app-toast');
-    if(!el){el=document.createElement('div');el.id='hetk-app-toast';el.className='hetk-app-toast';document.body.appendChild(el);}
-    el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),3200);
-  }
-
-  async function refreshData(){
-    const btn=byId('hetk-data-refresh');if(!btn||btn.disabled)return;
-    const label=btn.querySelector('span');btn.disabled=true;btn.classList.add('is-working');if(label)label.textContent='Yangilanmoqda';
-    try{
-      if(window.HETKData&&typeof window.HETKData.refreshAll==='function')await window.HETKData.refreshAll();
-      else document.dispatchEvent(new CustomEvent('hetk-manual-refresh'));
-      toast('Ma’lumotlar yangilandi');
-    }catch(error){console.error('Yangilash xatosi:',error);toast('Ma’lumotlarni yangilab bo‘lmadi. Internetni tekshiring.');}
-    finally{btn.disabled=false;btn.classList.remove('is-working');if(label)label.textContent='Yangilash';}
-  }
-
+  let installPrompt=null,toastTimer=0,authenticated=false,notificationBusy=false;
+  const byId=id=>document.getElementById(id);
+  const standalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+  function toast(message){let el=byId('hetk-app-toast');if(!el){el=document.createElement('div');el.id='hetk-app-toast';el.className='hetk-app-toast';document.body.appendChild(el);}el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),3200);}
+  async function refreshData(){const btn=byId('hetk-data-refresh');if(!btn||btn.disabled)return;const label=btn.querySelector('span');btn.disabled=true;btn.classList.add('is-working');if(label)label.textContent='Yangilanmoqda';try{if(window.HETKData&&typeof window.HETKData.refreshAll==='function')await window.HETKData.refreshAll();else document.dispatchEvent(new CustomEvent('hetk-manual-refresh'));toast('Ma’lumotlar yangilandi');}catch(error){console.error(error);toast('Ma’lumotlarni yangilab bo‘lmadi. Internetni tekshiring.');}finally{btn.disabled=false;btn.classList.remove('is-working');if(label)label.textContent='Yangilash';}}
   function showInstallButton(){const btn=byId('hetk-app-install');if(btn)btn.hidden=standalone();}
-  async function requireNotifications(){
-    if(!('Notification' in window)||!('serviceWorker' in navigator)){
-      throw new Error('Bu brauzer bildirishnomalarni qo\u2018llamaydi. Ilovani o\u2018rnatib bo\u2018lmaydi.');
-    }
-    if(Notification.permission==='denied'){
-      throw new Error('Bildirishnoma bloklangan. Avval brauzer sozlamasidan ruxsat bering.');
-    }
-    let permission=Notification.permission;
-    if(permission!=='granted')permission=await Notification.requestPermission();
-    if(permission!=='granted'){
-      throw new Error('Ilovani o\u2018rnatish uchun bildirishnomaga ruxsat berish majburiy.');
-    }
-    // FCM kalitini bazaga yozish o'rnatish oynasini to'sib qo'ymasligi kerak.
-    // Bildirishnoma ruxsati yetarli; token ulanishi orqa fonda davom etadi.
-    if(window.HETKPush&&typeof window.HETKPush.enable==='function'){
-      Promise.resolve(window.HETKPush.enable()).catch(error=>console.warn('Bildirishnoma ulanishi:',error));
-    }
-    return true;
-  }
-  async function installApp(){
-    const btn=byId('hetk-app-install'),label=btn&&btn.querySelector('span');
-    if(btn&&btn.disabled)return;
-    if(btn){btn.disabled=true;btn.classList.add('is-working');}
-    if(label)label.textContent='Ruxsat';
-    try{
-      const permissionWasGranted=('Notification' in window)&&Notification.permission==='granted';
-      await requireNotifications();
-      if(!permissionWasGranted){
-        toast('Bildirishnomaga ruxsat berildi. Endi Yuklash tugmasini yana bir marta bosing.');
-        return;
-      }
-      const ua=String(navigator.userAgent||'').toLowerCase();
-      let file='';
-      if(/android/.test(ua)) file='HETK-Navoiy-Android-v1.0.apk';
-      else if(/windows/.test(ua)) file='HETK-Navoiy-Setup.exe';
-      else if(installPrompt){
-        const prompt=installPrompt;installPrompt=null;
-        await prompt.prompt();
-        await prompt.userChoice;
-        return;
-      }else{
-        toast('iPhone uchun hozircha saytning o\u2018zidan foydalaniladi.');
-        return;
-      }
-      if(label)label.textContent='Yuklanmoqda';
-      const link=document.createElement('a');
-      link.href=new URL(file,document.baseURI).href;
-      link.download=file;
-      document.body.appendChild(link);link.click();link.remove();
-      toast('Ilova fayli yuklanmoqda');
-    }catch(error){
-      console.warn('O\u2018rnatish to\u2018xtatildi:',error);
-      toast(error&&error.message?error.message:'Bildirishnomaga ruxsat berilmagani uchun o\u2018rnatilmadi.');
-    }finally{
-      if(btn){btn.disabled=false;btn.classList.remove('is-working');}
-      if(label)label.textContent='Yuklash';
-    }
-  }
-
-  function showUpdate(registration,nextVersion){
-    if(byId('hetk-update-banner'))return;
-    const box=document.createElement('div');box.id='hetk-update-banner';box.className='hetk-update-banner';box.innerHTML='<span>Yangi versiya tayyor</span><button type="button">Yangilash</button>';
-    box.querySelector('button').addEventListener('click',()=>{
-      if(nextVersion)try{localStorage.setItem('hetk-app-version',nextVersion);}catch(_e){}
-      if(registration&&registration.waiting)registration.waiting.postMessage({type:'SKIP_WAITING'});else location.reload();
-    });
-    document.body.appendChild(box);
-  }
-
-  async function checkAppVersion(){
-    try{
-      const response=await fetch('app-version.json?ts='+Date.now(),{cache:'no-store'});if(!response.ok)return;
-      const data=await response.json(),next=String(data.version||'');if(!next)return;
-      const key='hetk-app-version',current=localStorage.getItem(key);
-      if(!current){localStorage.setItem(key,next);return;}
-      if(current!==next)showUpdate(null,next);
-    }catch(_e){}
-  }
-
-  window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();installPrompt=event;});
-  window.addEventListener('appinstalled',()=>{const btn=byId('hetk-app-install');if(btn)btn.hidden=true;toast('HETK ilovasi o‘rnatildi');});
-  document.addEventListener('DOMContentLoaded',()=>{
-    const refresh=byId('hetk-data-refresh');if(refresh)refresh.addEventListener('click',refreshData);
-    const install=byId('hetk-app-install');if(install)install.addEventListener('click',installApp);
-    showInstallButton();
-    checkAppVersion();
-    if('serviceWorker' in navigator){
-      navigator.serviceWorker.register('firebase-messaging-sw.js',{scope:'./',updateViaCache:'none'}).then(reg=>{
-        reg.update().catch(()=>{});
-        if(reg.waiting&&navigator.serviceWorker.controller)showUpdate(reg);
-        reg.addEventListener('updatefound',()=>{const worker=reg.installing;if(worker)worker.addEventListener('statechange',()=>{if(worker.state==='installed'&&navigator.serviceWorker.controller)showUpdate(reg);});});
-      }).catch(error=>console.warn('Ilova xizmati ulanmagan:',error));
-      let refreshing=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(refreshing)return;refreshing=true;location.reload();});
-    }
-  });
+  function permission(){return !('Notification'in window)||!('serviceWorker'in navigator)?'unsupported':Notification.permission;}
+  function statusText(state){return state==='granted'?'Yoqilgan':state==='denied'?'Bloklangan':state==='unsupported'?'Qo‘llanmaydi':'O‘chirilgan';}
+  function updateStatus(){const btn=byId('hetk-notification-status');if(!btn)return;const state=permission(),label=btn.querySelector('span'),icon=btn.querySelector('i');btn.hidden=!authenticated;btn.classList.remove('is-on','is-off','is-blocked','is-unsupported','is-working');btn.classList.add(state==='granted'?'is-on':state==='denied'?'is-blocked':state==='unsupported'?'is-unsupported':'is-off');if(notificationBusy)btn.classList.add('is-working');if(label)label.textContent=notificationBusy?'Ulanmoqda':statusText(state);if(icon)icon.className=state==='granted'?'fas fa-bell':state==='unsupported'?'fas fa-circle-exclamation':'fas fa-bell-slash';btn.title=state==='granted'?'Bildirishnomalar yoqilgan':state==='denied'?'Bildirishnoma bloklangan — ochish tartibini ko‘rish':'Bildirishnomani yoqish';btn.setAttribute('aria-label',btn.title);}
+  function closeDialog(){const el=byId('hetk-notification-dialog');if(el)el.remove();}
+  function showDialog(state,firstRun){closeDialog();const blocked=state==='denied',unsupported=state==='unsupported',box=document.createElement('div');box.id='hetk-notification-dialog';box.className='hetk-notification-dialog';const title=blocked?'Bildirishnoma bloklangan':unsupported?'Bildirishnoma qo‘llanmaydi':'Bildirishnomalarni yoqing';const message=blocked?'Brauzer yoki telefon sozlamasidan ushbu ilova uchun bildirishnomaga ruxsat bering. So‘ng ilovaga qaytib holatni tekshiring.':unsupported?'Bu brauzer bildirishnomalarni qo‘llamaydi. Ilovani Chrome yoki Edge orqali ochib ko‘ring.':'Muhim imtihon, ruxsatnoma va himoya vositalari muddatlari haqida o‘z vaqtida xabar olish uchun bildirishnomani yoqing.';box.innerHTML=`<div class="hetk-notification-card" role="dialog" aria-modal="true"><button class="hetk-notification-close" type="button">×</button><div class="hetk-notification-icon ${blocked?'blocked':unsupported?'unsupported':'off'}"><i class="fas ${blocked?'fa-bell-slash':unsupported?'fa-circle-exclamation':'fa-bell'}"></i></div><h3>${title}</h3><p>${message}</p><div class="hetk-notification-actions">${!blocked&&!unsupported?'<button type="button" class="primary" data-notification-enable><i class="fas fa-bell"></i> Bildirishnomani yoqish</button>':''}<button type="button" class="secondary" data-notification-close>${firstRun?'Hozir emas':'Yopish'}</button></div></div>`;box.addEventListener('click',e=>{if(e.target===box||e.target.closest('[data-notification-close]')||e.target.closest('.hetk-notification-close'))closeDialog();});const enable=box.querySelector('[data-notification-enable]');if(enable)enable.addEventListener('click',enableNotifications);document.body.appendChild(box);}
+  async function enableNotifications(){if(notificationBusy)return;const state=permission();if(state==='denied'||state==='unsupported'){showDialog(state,false);return;}notificationBusy=true;updateStatus();try{let enabled=false;if(window.HETKPush&&typeof window.HETKPush.enable==='function')enabled=await window.HETKPush.enable();else enabled=(await Notification.requestPermission())==='granted';closeDialog();toast(enabled?'Bildirishnomalar yoqildi':'Bildirishnomaga ruxsat berilmadi');}catch(error){console.warn(error);if(permission()==='denied')showDialog('denied',false);else toast(error&&error.message?error.message:'Bildirishnomani yoqib bo‘lmadi.');}finally{notificationBusy=false;updateStatus();}}
+  function maybeOffer(){updateStatus();if(!authenticated||!standalone()||permission()!=='default')return;try{if(sessionStorage.getItem('hetk_notification_offer_shown'))return;sessionStorage.setItem('hetk_notification_offer_shown','1');}catch(_e){}setTimeout(()=>showDialog('default',true),900);}
+  async function installApp(){const btn=byId('hetk-app-install'),label=btn&&btn.querySelector('span');if(btn&&btn.disabled)return;if(btn){btn.disabled=true;btn.classList.add('is-working');}if(label)label.textContent='Tayyorlanmoqda';try{const ua=String(navigator.userAgent||'').toLowerCase();let file='';if(/android/.test(ua))file='HETK-Navoiy-Android-v1.0.apk';else if(/windows/.test(ua))file='HETK-Navoiy-Setup.exe';else if(installPrompt){const prompt=installPrompt;installPrompt=null;await prompt.prompt();await prompt.userChoice;return;}else{toast('iPhone uchun hozircha saytning o‘zidan foydalaniladi.');return;}if(label)label.textContent='Yuklanmoqda';const link=document.createElement('a');link.href=new URL(file,document.baseURI).href;link.download=file;document.body.appendChild(link);link.click();link.remove();toast('Ilova fayli yuklanmoqda');}catch(error){console.warn(error);toast(error&&error.message?error.message:'Ilovani yuklab bo‘lmadi.');}finally{if(btn){btn.disabled=false;btn.classList.remove('is-working');}if(label)label.textContent='Yuklash';}}
+  function showUpdate(registration,nextVersion){if(byId('hetk-update-banner'))return;const box=document.createElement('div');box.id='hetk-update-banner';box.className='hetk-update-banner';box.innerHTML='<span>Yangi versiya tayyor</span><button type="button">Yangilash</button>';box.querySelector('button').onclick=()=>{if(nextVersion)try{localStorage.setItem('hetk-app-version',nextVersion);}catch(_e){}if(registration&&registration.waiting)registration.waiting.postMessage({type:'SKIP_WAITING'});else location.reload();};document.body.appendChild(box);}
+  async function checkVersion(){try{const response=await fetch('app-version.json?ts='+Date.now(),{cache:'no-store'});if(!response.ok)return;const data=await response.json(),next=String(data.version||''),key='hetk-app-version',current=localStorage.getItem(key);if(!next)return;if(!current)localStorage.setItem(key,next);else if(current!==next)showUpdate(null,next);}catch(_e){}}
+  addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e;});
+  addEventListener('appinstalled',()=>{const btn=byId('hetk-app-install');if(btn)btn.hidden=true;toast('HETK ilovasi o‘rnatildi');setTimeout(maybeOffer,700);});
+  document.addEventListener('hetk-auth-ready',()=>{authenticated=true;updateStatus();maybeOffer();});
+  addEventListener('focus',updateStatus);document.addEventListener('visibilitychange',()=>{if(!document.hidden)updateStatus();});
+  document.addEventListener('DOMContentLoaded',()=>{const refresh=byId('hetk-data-refresh'),install=byId('hetk-app-install'),notification=byId('hetk-notification-status');if(refresh)refresh.onclick=refreshData;if(install)install.onclick=installApp;if(notification)notification.onclick=()=>{const state=permission();if(state==='default')enableNotifications();else if(state!=='granted')showDialog(state,false);else toast('Bildirishnomalar yoqilgan');};showInstallButton();updateStatus();checkVersion();if('serviceWorker'in navigator){navigator.serviceWorker.register('firebase-messaging-sw.js',{scope:'./',updateViaCache:'none'}).then(reg=>{reg.update().catch(()=>{});if(reg.waiting&&navigator.serviceWorker.controller)showUpdate(reg);reg.addEventListener('updatefound',()=>{const worker=reg.installing;if(worker)worker.addEventListener('statechange',()=>{if(worker.state==='installed'&&navigator.serviceWorker.controller)showUpdate(reg);});});}).catch(error=>console.warn('Ilova xizmati ulanmagan:',error));let refreshing=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!refreshing){refreshing=true;location.reload();}});}});
 })();
