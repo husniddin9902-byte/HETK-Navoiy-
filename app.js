@@ -5789,21 +5789,8 @@ document.addEventListener('DOMContentLoaded', () => {
         listContainer.style.display = 'none'; // Uni vizual yashiramiz
     }
 
-    // 3. 1.5 sekund "Baza yuklanmoqda..." oynasi turadi (baza xotiraga ma'lumotlarni to'liq yuklaydi)
-    setTimeout(() => {
-        // Yuklanish oynasini o'chiramiz va xodim shundoq toza Glavniy ekranda (Xaritada) qoladi
-        const loader = document.getElementById('app-loader');
-        if (loader) {
-            loader.style.display = 'none';
-        }
-        
-        // Panel 100% yopiq turishi shart
-        if (listContainer) {
-            listContainer.style.display = 'none';
-        }
-        
-        console.log("Yuklanish tugadi. Faqat toza Glavniy ekran faol!");
-    }, 1500); // 1.5 sekund Firebase'dan guruhlar kelib tushishi uchun ideal vaqt
+    // Yuklanish oynasini auth + qurilma seansi + qurilma qulfi birgalikda
+    // boshqaradi. Vaqt bo‘yicha majburan yopilmaydi.
 });                                                 
 
 // =========================================================================
