@@ -1,7 +1,7 @@
 (function(){
   'use strict';
   const APP_LIMIT=2, WEB_LIMIT=1, ROOT='UserDeviceSessions';
-  let uid='', deviceId='', mode='', ownRef=null, allRef=null, allSessions={}, currentStatus='';
+  let uid='', deviceId='', mode='', ownRef=null, allRef=null, allSessions={}, currentStatus='',approvedAnnounced=false;
   const $=id=>document.getElementById(id);
   const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   function isApp(){return matchMedia('(display-mode: standalone)').matches||navigator.standalone===true||/[?&]source=(android|windows-app)/.test(location.search);}
@@ -21,14 +21,18 @@
     $('hetk-sessions-close').onclick=()=>$('hetk-sessions-modal').classList.add('hetk-sessions-hidden');
     $('hetk-sessions-end-others').onclick=endOthers;
   }
-  function showGate(title,text){$('hetk-session-gate-title').textContent=title;$('hetk-session-gate-text').textContent=text;$('hetk-session-gate').classList.remove('hetk-sessions-hidden');}
+  function hideBoot(){const loader=$('app-loader');if(loader)loader.style.display='none';}
+  function showGate(title,text){hideBoot();$('hetk-session-gate-title').textContent=title;$('hetk-session-gate-text').textContent=text;$('hetk-session-gate').classList.remove('hetk-sessions-hidden');}
   function hideGate(){$('hetk-session-gate').classList.add('hetk-sessions-hidden');}
   async function signOut(){try{if(ownRef)await ownRef.remove();}catch(_e){}try{await firebase.auth().signOut();}catch(_e){}location.reload();}
-  function handleOwn(row){currentStatus=row&&row.status||'revoked';if(currentStatus==='active'){hideGate();return;}if(currentStatus==='pending')showGate('Tasdiqlash kutilmoqda','Ushbu qurilma asosiy qurilmadan tasdiqlanishi kerak. Asosiy qurilmadagi “Faol qurilmalar” oynasini oching.');else if(currentStatus==='limit')showGate('Qurilmalar limiti to‘lgan',mode==='app'?'Ikki ilova seansi band. Avval ulardan birini tugating.':'Sayt seansi band. Avval eski brauzer seansini tugating.');else if(currentStatus==='rejected')showGate('Kirish rad etildi','Asosiy qurilma ushbu kirishni rad etdi.');else showGate('Seans tugatilgan','Ushbu qurilmaning seansi tugatilgan. Qayta kirishingiz mumkin.');}
+  function handleOwn(row){currentStatus=row&&row.status||'revoked';if(currentStatus==='active'){hideGate();if(!approvedAnnounced){approvedAnnounced=true;document.dispatchEvent(new CustomEvent('hetk-session-approved',{detail:{uid,deviceId,mode}}));}return;}approvedAnnounced=false;document.dispatchEvent(new CustomEvent('hetk-session-denied',{detail:{status:currentStatus}}));if(currentStatus==='pending')showGate('Tasdiqlash kutilmoqda','Ushbu qurilma asosiy qurilmadan tasdiqlanishi kerak. Asosiy qurilmadagi “Faol qurilmalar” oynasini oching.');else if(currentStatus==='limit')showGate('Qurilmalar limiti to‘lgan',mode==='app'?'Ikki ilova seansi band. Avval ulardan birini tugating.':'Sayt seansi band. Avval eski brauzer seansini tugating.');else if(currentStatus==='rejected')showGate('Kirish rad etildi','Asosiy qurilma ushbu kirishni rad etdi.');else showGate('Seans tugatilgan','Ushbu qurilmaning seansi tugatilgan. Qayta kirishingiz mumkin.');}
   async function register(){
     const ref=firebase.database().ref(ROOT+'/'+uid);mode=channel();deviceId=getDeviceId();
     const result=await ref.transaction(rows=>{rows=rows||{};const old=rows[deviceId];if(old&&old.status==='active'){old.lastSeenAt=Date.now();old.name=deviceName();old.type=mode;rows[deviceId]=old;return rows;}const any=Object.values(rows).some(x=>x&&x.status==='active');if(!any){rows[deviceId]=baseRecord('active',true);return rows;}const used=activeRows(rows,mode).length,limit=mode==='app'?APP_LIMIT:WEB_LIMIT;rows[deviceId]=baseRecord(used>=limit?'limit':'pending',false);return rows;},undefined,false);
     if(!result.committed)throw new Error('Qurilma seansini yaratib bo‘lmadi.');
+    const committedRows=result.snapshot&&result.snapshot.val?result.snapshot.val()||{}:{};
+    allSessions=committedRows;
+    handleOwn(committedRows[deviceId]);
     ownRef=ref.child(deviceId);allRef=ref;ownRef.on('value',s=>handleOwn(s.val()));allRef.on('value',s=>{allSessions=s.val()||{};render();notifyPending();});
     setInterval(()=>{if(currentStatus==='active'&&ownRef)ownRef.update({lastSeenAt:now()}).catch(()=>{});},5*60*1000);
   }
@@ -40,12 +44,12 @@
   async function action(act,id){const root=firebase.database().ref(ROOT+'/'+uid),row=allSessions[id];if(!row)return;if(act==='approve'){const used=activeRows(allSessions,row.type).length,limit=row.type==='app'?APP_LIMIT:WEB_LIMIT;if(used>=limit){alert('Bu turdagi qurilma limiti to‘lgan. Avval eski seansni tugating.');return;}await root.child(id).update({status:'active',approvedAt:now(),approvedBy:deviceId,lastSeenAt:now()});}else if(act==='reject')await root.child(id).update({status:'rejected',endedAt:now(),endedBy:deviceId});else if(act==='end')await root.child(id).update({status:'revoked',endedAt:now(),endedBy:deviceId,isPrimary:false});else if(act==='primary'){const p=primary(allSessions);const updates={};if(p)updates[p[0]+'/isPrimary']=false;updates[id+'/isPrimary']=true;updates[id+'/promotedAt']=now();await root.update(updates);} }
   async function endOthers(){if(!confirm('Ushbu qurilmadan tashqari barcha seanslar tugatilsinmi?'))return;const u={};Object.entries(allSessions).forEach(([id,x])=>{if(id!==deviceId&&x&&x.status!=='revoked'){u[id+'/status']='revoked';u[id+'/isPrimary']=false;u[id+'/endedAt']=now();u[id+'/endedBy']=deviceId;}});await firebase.database().ref(ROOT+'/'+uid).update(u);}
   function notifyPending(){if(!isCurrentPrimary())return;const pending=Object.entries(allSessions).filter(([,x])=>x&&x.status==='pending');let n=$('hetk-session-notice');if(!pending.length){if(n)n.remove();return;}if(!n){n=document.createElement('div');n.id='hetk-session-notice';n.className='hetk-session-notice';document.body.appendChild(n);}n.innerHTML='<b>Yangi qurilma tasdiq kutmoqda</b><span>'+esc(pending[0][1].name||'Qurilma')+'</span><div class="hetk-sessions-actions"><button class="hetk-sessions-btn primary">Ko‘rish</button></div>';n.querySelector('button').onclick=()=>{n.remove();openManager();};}
-  function cleanup(){if(ownRef)ownRef.off();if(allRef)allRef.off();ownRef=null;allRef=null;uid='';allSessions={};hideGate();}
+  function cleanup(){if(ownRef)ownRef.off();if(allRef)allRef.off();ownRef=null;allRef=null;uid='';allSessions={};approvedAnnounced=false;hideGate();}
   async function adminReset(targetUid,targetName){const me=window.HETKAuth&&window.HETKAuth.currentUser;if(!me||me.role!=='super_admin')return alert('Bu amal faqat bosh administrator uchun.');if(!targetUid)return;if(!confirm((targetName||'Hodim')+' profilining barcha qurilma seanslari tugatilsinmi?'))return;await firebase.database().ref(ROOT+'/'+targetUid).remove();alert('Barcha qurilma seanslari tugatildi. Hodim qayta kirganda yangi asosiy qurilma yaratiladi.');}
-  function start(e){const user=e&&e.detail&&e.detail.user;if(!user||!user.uid||uid===user.uid)return;cleanup();uid=user.uid;showGate('Qurilma tekshirilmoqda','Faol seans va qurilma limiti tekshirilmoqda...');register().catch(err=>showGate('Seans xatosi',err.message||'Qurilmani tekshirib bo‘lmadi.'));}
+  function start(e){const user=e&&e.detail&&e.detail.user;if(!user||!user.uid||uid===user.uid)return;cleanup();uid=user.uid;register().catch(err=>showGate('Seans xatosi',err.message||'Qurilmani tekshirib bo‘lmadi.'));}
   document.addEventListener('DOMContentLoaded',()=>{ui();setInterval(addMenu,1000);});
   document.addEventListener('hetk-auth-ready',start);
   document.addEventListener('hetk-auth-cleared',cleanup);
   document.addEventListener('click',e=>{if(e.target&&e.target.closest&&e.target.closest('#hetk-profile-logout')&&ownRef)ownRef.remove().catch(()=>{});},true);
-  window.HETKDeviceSessions={open:openManager,adminReset};
+  window.HETKDeviceSessions={open:openManager,adminReset,isApproved:()=>currentStatus==='active'};
 })();
