@@ -938,6 +938,14 @@
     document.body.style.overflow = visible ? 'hidden' : '';
   }
 
+  function setBootLoaderVisible(visible, text){
+    const loader=byId('app-loader');
+    if(!loader)return;
+    loader.style.display=visible?'flex':'none';
+    const label=loader.querySelector('p');
+    if(label&&text)label.textContent=text;
+  }
+
   async function checkUsersExist(){
     try{
       const snap = await databaseRef.ref('users').once('value');
@@ -5167,9 +5175,12 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
 
   async function handleSignedIn(user){
     try{
+      setOverlayVisible(false);
+      setBootLoaderVisible(true,'Ilova yuklanmoqda...');
       currentAccount = await loadAccount(user);
       if(!currentAccount){
         await auth.signOut();
+        setBootLoaderVisible(false);
         setOverlayVisible(true);
         setMessage('error','Bu login uchun foydalanuvchi profili topilmadi. Administratorga murojaat qiling.');
         return;
@@ -5178,6 +5189,7 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
       baseCurrentAccount=currentAccount;
       if(baseCurrentAccount.active === false){
         await auth.signOut();
+        setBootLoaderVisible(false);
         setOverlayVisible(true);
         setMessage('error','Bu foydalanuvchi bloklangan.');
         return;
@@ -5212,6 +5224,7 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
       document.dispatchEvent(new CustomEvent('hetk-auth-ready',{detail:{user:currentAccount}}));
       setTimeout(openPushDestination,0);
     }catch(e){
+      setBootLoaderVisible(false);
       setOverlayVisible(true);
       setMessage('error','Foydalanuvchi ma’lumotlarini yuklab bo‘lmadi: ' + friendlyAuthError(e));
     }
@@ -5221,13 +5234,19 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
     buildAuthUI();
     bindAuthUI();
     bindLoginAuditEvents();
-    setOverlayVisible(true);
+    // Firebase saqlangan seansni tekshirguncha login oynasi ko‘rsatilmaydi.
+    setOverlayVisible(false);
+    setBootLoaderVisible(true,'Ilova yuklanmoqda...');
 
     if(typeof firebase === 'undefined' || !firebase.apps || !firebase.apps.length){
+      setBootLoaderVisible(false);
+      setOverlayVisible(true);
       setMessage('error','Firebase yuklanmadi. app.js ichidagi Firebase ulanishini tekshirish kerak.');
       return;
     }
     if(typeof firebase.auth !== 'function'){
+      setBootLoaderVisible(false);
+      setOverlayVisible(true);
       setMessage('error','Firebase Authentication moduli yuklanmadi.');
       return;
     }
@@ -5262,6 +5281,7 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
         window.HETKAuth.currentUser=null;
         window.HETKAuth.baseUser=null;window.HETKAuth.effectiveDelegation=null;
         document.dispatchEvent(new CustomEvent('hetk-auth-cleared'));
+        setBootLoaderVisible(false);
         setOverlayVisible(!publicPermitMode);
         await checkUsersExist();
       }
