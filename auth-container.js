@@ -946,6 +946,72 @@
     if(label&&text)label.textContent=text;
   }
 
+  function closeTemporaryPasswordGate(){
+    const gate=byId('hetk-temporary-password-gate');
+    if(gate)gate.remove();
+  }
+
+  function requireNewPassword(user,account){
+    return new Promise((resolve,reject)=>{
+      closeTemporaryPasswordGate();
+      setBootLoaderVisible(false);
+      const expiresAt=Number(account.temporaryPasswordExpiresAt||0);
+      const wrap=document.createElement('div');
+      wrap.id='hetk-temporary-password-gate';
+      wrap.className='hetk-temp-password-overlay';
+      wrap.innerHTML=`<div class="hetk-temp-password-card"><div class="hetk-temp-password-icon"><i class="fas fa-key"></i></div><h2>Yangi parol yarating</h2><p>Siz vaqtinchalik parol bilan kirdingiz. Davom etish uchun yangi doimiy parol belgilang.</p><div class="hetk-temp-password-expiry"><i class="fas fa-clock"></i> Vaqtinchalik parol: ${expiresAt?new Date(expiresAt).toLocaleString('uz-UZ'):'24 soat'}gacha</div><label>Yangi parol<input id="hetk-temp-new-password" type="password" autocomplete="new-password" placeholder="Kamida 6 ta belgi"></label><label>Yangi parolni takrorlang<input id="hetk-temp-new-password2" type="password" autocomplete="new-password"></label><div id="hetk-temp-password-error" class="hetk-temp-password-error"></div><button id="hetk-temp-password-save" type="button"><i class="fas fa-lock"></i> Yangi parolni saqlash</button><button id="hetk-temp-password-logout" class="light" type="button">Tizimdan chiqish</button></div>`;
+      document.body.appendChild(wrap);
+      const save=byId('hetk-temp-password-save'),error=byId('hetk-temp-password-error');
+      save.onclick=async()=>{
+        const first=String(byId('hetk-temp-new-password').value||''),second=String(byId('hetk-temp-new-password2').value||'');
+        error.textContent='';
+        if(first.length<6){error.textContent='Yangi parol kamida 6 ta belgidan iborat bo‘lsin.';return;}
+        if(first!==second){error.textContent='Yangi parollar bir xil emas.';return;}
+        save.disabled=true;save.innerHTML='<i class="fas fa-circle-notch fa-spin"></i> Saqlanmoqda...';
+        try{
+          await user.updatePassword(first);
+          const now=Date.now();
+          await databaseRef.ref('users/'+user.uid).update({
+            temporaryPasswordRequired:false,
+            temporaryPasswordCompletedAt:now,
+            temporaryPasswordExpiresAt:null,
+            temporaryPasswordIssuedAt:null,
+            temporaryPasswordIssuedBy:null,
+            temporaryPasswordIssuedByName:null,
+            updatedAt:now
+          });
+          closeTemporaryPasswordGate();
+          setBootLoaderVisible(true,'Ilova yuklanmoqda...');
+          resolve(Object.assign({},account,{temporaryPasswordRequired:false,temporaryPasswordCompletedAt:now,temporaryPasswordExpiresAt:null,temporaryPasswordIssuedAt:null}));
+        }catch(e){
+          error.textContent=friendlyAuthError(e);
+          save.disabled=false;save.innerHTML='<i class="fas fa-lock"></i> Yangi parolni saqlash';
+        }
+      };
+      byId('hetk-temp-password-logout').onclick=async()=>{closeTemporaryPasswordGate();try{await auth.signOut();}catch(_e){}reject(Object.assign(new Error('Tizimdan chiqildi.'),{handled:true}));};
+    });
+  }
+
+  async function enforceTemporaryPassword(user,account){
+    if(!account||account.temporaryPasswordRequired!==true)return account;
+    const now=Date.now(),expiresAt=Number(account.temporaryPasswordExpiresAt||0),issuedAt=Number(account.temporaryPasswordIssuedAt||0);
+    let authAt=0;
+    try{const result=await user.getIdTokenResult();authAt=Number(result&&result.claims&&result.claims.auth_time||0)*1000;}catch(_e){}
+    if(issuedAt&&authAt&&authAt+5000<issuedAt){
+      await auth.signOut();
+      setBootLoaderVisible(false);setOverlayVisible(true);
+      setMessage('error','Parolingiz administrator tomonidan yangilangan. Yangi vaqtinchalik parol bilan kiring.');
+      throw Object.assign(new Error('Yangi vaqtinchalik parol bilan kirish talab qilinadi.'),{handled:true});
+    }
+    if(expiresAt&&now>expiresAt){
+      await auth.signOut();
+      setBootLoaderVisible(false);setOverlayVisible(true);
+      setMessage('error','Vaqtinchalik parolning 24 soatlik muddati tugagan. Bosh administratorga murojaat qiling.');
+      throw Object.assign(new Error('Vaqtinchalik parol muddati tugagan.'),{handled:true});
+    }
+    return await requireNewPassword(user,account);
+  }
+
   async function checkUsersExist(){
     try{
       const snap = await databaseRef.ref('users').once('value');
@@ -3827,6 +3893,49 @@
     }));
   }
 
+  function closePasswordResetDialog(){const el=byId('hetk-password-reset-dialog');if(el)el.remove();}
+  function passwordResetMessage(result){
+    return `HETK tizimiga kirish ma’lumotlaringiz tiklandi.
+
+Login: ${result.login}
+Vaqtinchalik parol: ${result.temporaryPassword}
+
+Ushbu parol 24 soat amal qiladi va faqat birinchi kirish uchun mo‘ljallangan. Tizimga kirgach yangi doimiy parol yarating.
+
+Agar bu so‘rovni siz bermagan bo‘lsangiz, Bosh administratorga murojaat qiling.`;
+  }
+  function copyText(value){
+    if(navigator.clipboard&&navigator.clipboard.writeText)return navigator.clipboard.writeText(value);
+    const area=document.createElement('textarea');area.value=value;area.style.position='fixed';area.style.opacity='0';document.body.appendChild(area);area.select();document.execCommand('copy');area.remove();return Promise.resolve();
+  }
+  function openShareLink(url){const link=document.createElement('a');link.href=url;link.target='_blank';link.rel='noopener';document.body.appendChild(link);link.click();link.remove();}
+  async function createTemporaryPassword(uid,user){
+    const button=byId('hetk-password-reset-confirm'),error=byId('hetk-password-reset-error');
+    if(button){button.disabled=true;button.innerHTML='<i class="fas fa-circle-notch fa-spin"></i> Yaratilmoqda...';}
+    if(error)error.textContent='';
+    try{
+      const result=await sessionWorkerRequest('/auth/temporary-password',{body:{uid}});
+      const message=passwordResetMessage(result),phone=String(result.phone||user.phone||'').replace(/[^+0-9]/g,'');
+      const card=byId('hetk-password-reset-card');
+      card.innerHTML=`<button type="button" class="hetk-reset-close" data-reset-close>×</button><div class="hetk-reset-success"><i class="fas fa-check"></i></div><h2>Vaqtinchalik parol tayyor</h2><p><b>${escapeHtml(result.fullName||user.fullName||'Hodim')}</b> uchun eski parol bekor qilindi va qurilma seanslari tugatildi.</p><div class="hetk-reset-credentials"><span>Login</span><b>${escapeHtml(result.login)}</b><span>Vaqtinchalik parol</span><strong>${escapeHtml(result.temporaryPassword)}</strong><small><i class="fas fa-clock"></i> ${new Date(result.expiresAt).toLocaleString('uz-UZ')} gacha amal qiladi</small></div><div class="hetk-reset-share"><button type="button" data-reset-copy><i class="fas fa-copy"></i> Nusxalash</button><button type="button" data-reset-sms><i class="fas fa-comment-sms"></i> SMS</button><button type="button" data-reset-telegram><i class="fab fa-telegram"></i> Telegram</button></div><p class="hetk-reset-warning"><i class="fas fa-triangle-exclamation"></i> Bu parol qayta ko‘rsatilmaydi. Yuboring yoki nusxalab oling.</p>`;
+      card.querySelector('[data-reset-close]').onclick=closePasswordResetDialog;
+      card.querySelector('[data-reset-copy]').onclick=async e=>{await copyText(message);e.currentTarget.innerHTML='<i class="fas fa-check"></i> Nusxalandi';};
+      card.querySelector('[data-reset-sms]').onclick=()=>openShareLink(`sms:${encodeURIComponent(phone)}?body=${encodeURIComponent(message)}`);
+      card.querySelector('[data-reset-telegram]').onclick=()=>openShareLink(`https://t.me/share/url?url=${encodeURIComponent(location.origin)}&text=${encodeURIComponent(message)}`);
+    }catch(e){
+      if(error)error.textContent=e.message||'Vaqtinchalik parol yaratilmadi.';
+      if(button){button.disabled=false;button.innerHTML='<i class="fas fa-key"></i> Parolni yaratish';}
+    }
+  }
+  function openPasswordResetDialog(uid,user){
+    closePasswordResetDialog();
+    const wrap=document.createElement('div');wrap.id='hetk-password-reset-dialog';wrap.className='hetk-password-reset-overlay';
+    wrap.innerHTML=`<div id="hetk-password-reset-card" class="hetk-password-reset-card"><button type="button" class="hetk-reset-close" data-reset-close>×</button><div class="hetk-reset-key"><i class="fas fa-key"></i></div><h2>Kirishni tiklash</h2><p><b>${escapeHtml(user.fullName||user.login||'Hodim')}</b> uchun yangi vaqtinchalik parol yaratiladi.</p><ul><li>Eski parol darhol bekor qilinadi</li><li>Barcha eski qurilma seanslari tugatiladi</li><li>Yangi parol 24 soat amal qiladi</li><li>Birinchi kirishda doimiy parol talab qilinadi</li></ul><div id="hetk-password-reset-error" class="hetk-password-reset-error"></div><div class="hetk-reset-confirm-actions"><button type="button" class="light" data-reset-close>Bekor qilish</button><button type="button" id="hetk-password-reset-confirm"><i class="fas fa-key"></i> Parolni yaratish</button></div></div>`;
+    wrap.addEventListener('click',event=>{if(event.target===wrap||event.target.closest('[data-reset-close]'))closePasswordResetDialog();});
+    document.body.appendChild(wrap);
+    byId('hetk-password-reset-confirm').onclick=()=>createTemporaryPassword(uid,user);
+  }
+
   function renderTeamDetail(uid){
     const box=byId('hetk-team-detail');
     const raw=teamUsersCache[uid];
@@ -3860,12 +3969,13 @@
         ${canEdit ? `<button type="button" id="hetk-edit-team-user" class="primary"><i class="fas ${currentAccount.role==='document_technician'?'fa-id-card':'fa-user-shield'}"></i> ${currentAccount.role==='document_technician'?'Hodim ma’lumotlarini tahrirlash':'Lavozim / papka ruxsatlari'}</button>` : ''}
         ${canDeactivate ? `<button type="button" id="hetk-toggle-team-user" class="${u.active===false?'restore':'danger'}"${activeTogglePending?' disabled':''}><i class="fas ${activeTogglePending?'fa-circle-notch fa-spin':u.active===false?'fa-user-check':'fa-user-slash'}"></i> ${activeTogglePending?'Saqlanmoqda...':u.active===false?'Qayta faollashtirish':'Bloklash'}</button>` : ''}
         ${(canDeactivate && u.active===false) ? '<button type="button" id="hetk-delete-team-user" class="permanent"><i class="fas fa-trash-alt"></i> Butunlay o‘chirish</button>' : ''}
-        ${currentAccount.role==='super_admin' ? '<button type="button" id="hetk-reset-device-sessions"><i class="fas fa-mobile-alt"></i> Qurilma seanslarini tozalash</button>' : ''}
+        ${currentAccount.role==='super_admin' ? '<button type="button" id="hetk-reset-login-password" class="hetk-reset-login-password"><i class="fas fa-key"></i> Kirishni tiklash</button><button type="button" id="hetk-reset-device-sessions"><i class="fas fa-mobile-alt"></i> Qurilma seanslarini tozalash</button>' : ''}
       </div>` : ((!canSafetyEdit && !canDiscipline) ? '<div class="hetk-team-readonly"><i class="fas fa-lock"></i> Bu foydalanuvchining lavozim/papka ma’lumotlarini boshqarish huquqi yo‘q.</div>' : '')}`;
     const edit=byId('hetk-edit-team-user'); if(edit) edit.addEventListener('click', () => openEditUserEditor(uid));
     const toggle=byId('hetk-toggle-team-user'); if(toggle) toggle.addEventListener('click', () => toggleUserActive(uid));
     const del=byId('hetk-delete-team-user'); if(del) del.addEventListener('click', () => deleteUserPermanently(uid));
     const resetSessions=byId('hetk-reset-device-sessions');if(resetSessions)resetSessions.addEventListener('click',()=>{if(window.HETKDeviceSessions)window.HETKDeviceSessions.adminReset(uid,u.fullName||u.login||'Hodim');});
+    const resetLogin=byId('hetk-reset-login-password');if(resetLogin)resetLogin.addEventListener('click',()=>openPasswordResetDialog(uid,u));
     const assign=box.querySelector('[data-delegation-assign]');if(assign)assign.addEventListener('click',()=>openDelegationDialog(assign.dataset.delegationAssign));
     const end=box.querySelector('[data-delegation-end]');if(end)end.addEventListener('click',()=>endDelegation(end.dataset.delegationEnd));
     bindSafetyActions(box);
@@ -5194,6 +5304,8 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
         setMessage('error','Bu foydalanuvchi bloklangan.');
         return;
       }
+      currentAccount=await enforceTemporaryPassword(user,currentAccount);
+      baseCurrentAccount=currentAccount;
       const delegationSnap=await databaseRef.ref('TemporaryDelegations').once('value');
       activeDelegationsCache=delegationSnap.val()||{};
       await refreshEffectiveAccount(false);
@@ -5224,6 +5336,7 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
       document.dispatchEvent(new CustomEvent('hetk-auth-ready',{detail:{user:currentAccount}}));
       setTimeout(openPushDestination,0);
     }catch(e){
+      if(e&&e.handled)return;
       setBootLoaderVisible(false);
       setOverlayVisible(true);
       setMessage('error','Foydalanuvchi ma’lumotlarini yuklab bo‘lmadi: ' + friendlyAuthError(e));
