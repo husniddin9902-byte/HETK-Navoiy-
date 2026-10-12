@@ -15,7 +15,7 @@
   const RU_TEXT={
     'Bosh sahifa':'Главная','Natijalarim':'Мои результаты','Yangi test yaratish':'Создать новый тест','Yaratgan testlarim':'Мои тесты','Asosiy ma’lumotlar':'Основные сведения','Test nomi *':'Название теста *','Ko‘rinishi *':'Вид объявления *','Oldindan ko‘rinadi':'Видно заранее','Boshlanguncha yashirin':'Скрыто до начала','Kimlar qatnashadi?':'Кто участвует?','Qamrov *':'Охват *','Butun respublika':'Вся республика','Tanlangan hududlar':'Выбранные регионы','Boshlanish vaqti *':'Время начала *','Test davomiyligi *':'Продолжительность *','Har xodimga savollar soni *':'Число вопросов каждому','daqiqa':'минут','Savollar banki':'Банк вопросов','Savol qo‘shish':'Добавить вопрос','Savol matni *':'Текст вопроса *','Jonli testni birdan boshlash mumkin emas.':'Нельзя запускать онлайн-тест сразу.','Testlar markazi':'Центр тестирования','Barcha testlar':'Все тесты','Jonli':'Идёт сейчас','Rejalashtirilgan':'Запланирован','Yakunlangan':'Завершён','Kitoblar kutubxonasi':'Библиотека','Tilni tanlang, onlayn o‘qing yoki audio shaklida tinglang.':'Выберите язык, читайте онлайн или слушайте аудио.','Natijalarim':'Мои результаты','O‘rtacha natija':'Средний результат','Topshirilgan test':'Пройдено тестов','Muvaffaqiyatli':'Успешно','Keyingi onlayn test':'Следующий онлайн-тест','Tezkor bo‘limlar':'Быстрые разделы','Mavjud kitob':'Доступно книг','Onlayn test':'Онлайн-тест','Topshirilgan':'Пройдено','Test haqida izoh *':'Описание теста *','Hudud tanlanmagan':'Регион не выбран','Lavozim tanlanmagan':'Должность не выбрана','Qatnashchilar hudud va lavozim bo‘yicha tanlanadi.':'Участники выбираются по региону и должности.','Mening testlarim':'Мои тесты','Yangi test':'Новый тест','Statistika':'Статистика','Bekor qilish':'Отменить','Qoralama':'Черновик','Ishtirok etmadi':'Не участвовал','qolgan vaqt':'осталось','boshlanadi':'начало','TEST NATIJASI':'РЕЗУЛЬТАТ ТЕСТА','Sizning javobingiz:':'Ваш ответ:','To‘g‘ri javob:':'Правильный ответ:','Manba:':'Источник:'
   };
-  const state={books:{},tests:{},results:{},access:{},statisticsPeriods:{},adminSecurity:{},questionBanks:{},answerDetails:{},bookProgress:{},bookProgressLoaded:false,chapterQuiz:null,activeTab:'home',activeTestId:'',activeBookId:'',activeChapterId:'',activeTopicId:'',readerEdition:localStorage.getItem('hetkReaderEdition')==='cyrillic'?'cyrillic':'latin',booksLoaded:false,booksRealtime:false,testsLoaded:false,resultsLoaded:false,bookDraft:null,bookAdminBookId:'',bookAdminChapterId:'',bookAdminTopicId:'',topicEdition:'latin',topicDraft:null,topicDraftKey:'',topicRemovedMedia:[],pendingTopicAudioParts:null,listeners:[],timer:null,questionDrafts:[],editorDraft:null,lang:localStorage.getItem('hetkTrainingLang')==='ru'?'ru':'uz',examIndex:0,examAnswers:{},examQuestions:[],adminPinFailures:0,adminPinLockedUntil:0,ttsPreview:null,ttsParts:[],ttsGenerating:false,ttsContextKey:'',pendingChapterAudio:null,pendingChapterAudioParts:null,chapterTestDraft:null,chapterTestDraftKey:'',readerMode:'read',readerTheme:localStorage.getItem('hetkReaderTheme')||'dark',readerFont:Number(localStorage.getItem('hetkReaderFont')||19),ttsOnline:null,ttsChecking:false,ttsVoices:[{id:'navoiy',name:'Navoiy — asosiy ovoz'}],mediaObjectUrls:{},archiveJson:{},bookAdminNewMode:false,bookAdminNewChapterMode:false};
+  const state={books:{},tests:{},results:{},access:{},statisticsPeriods:{},adminSecurity:{},questionBanks:{},answerDetails:{},bookProgress:{},bookProgressLoaded:false,chapterQuiz:null,activeTab:'home',activeTestId:'',activeBookId:'',activeChapterId:'',activeTopicId:'',readerEdition:localStorage.getItem('hetkReaderEdition')==='cyrillic'?'cyrillic':'latin',booksLoaded:false,booksRealtime:false,testsLoaded:false,resultsLoaded:false,bookDraft:null,bookAdminBookId:'',bookAdminChapterId:'',bookAdminTopicId:'',topicEdition:'latin',topicDraft:null,topicDraftKey:'',topicRemovedMedia:[],pendingTopicAudioParts:null,listeners:[],timer:null,questionDrafts:[],editorDraft:null,lang:localStorage.getItem('hetkTrainingLang')==='ru'?'ru':'uz',examIndex:0,examAnswers:{},examQuestions:[],adminPinFailures:0,adminPinLockedUntil:0,ttsPreview:null,ttsParts:[],ttsGenerating:false,ttsContextKey:'',pendingChapterAudio:null,pendingChapterAudioParts:null,chapterTestDraft:null,chapterTestDraftKey:'',readerMode:'read',readerTheme:localStorage.getItem('hetkReaderTheme')||'dark',readerFont:Number(localStorage.getItem('hetkReaderFont')||19),ttsOnline:null,ttsChecking:false,ttsVoices:[{id:'navoiy',name:'Navoiy — asosiy ovoz'}],mediaObjectUrls:{},mediaLoadPromises:{},archiveJson:{},bookAdminNewMode:false,bookAdminNewChapterMode:false};
 
   const DEFAULT_TTS_DICTIONARY=`TCHB = tezkor chiqish brigadasi
 YOTQ = yopiq taqsimlovchi qurilma
@@ -138,10 +138,11 @@ KL = kabel liniyasi`;
   }
   function chapterHasAudio(ch){return chapterAudioParts(ch).length>0;}
   function audioPartUrl(part){return part&&part.fileId&&part.storage!=='training-media'?`${LEGACY_TELEGRAM_WORKER}/telegram/file?file_id=${encodeURIComponent(part.fileId)}`:'';}
-  function audioPartAttrs(part){if(!part||!part.fileId)return '';return part.storage==='training-media'?`data-training-media-file="${esc(part.fileId)}"`:`src="${esc(audioPartUrl(part))}"`;}
+  function audioPartAttrs(part){if(!part||!part.fileId)return '';const size=`data-media-size="${Number(part.size)||0}"`;return part.storage==='training-media'?`data-training-media-file="${esc(part.fileId)}" ${size}`:`src="${esc(audioPartUrl(part))}" ${size}`;}
+  function audioLoadingMarkup(index){return `<small class="hetk-media-loading ${index?'is-waiting':''}" data-media-loading><span>${index?'Navbatda':'Yuklanmoqda: 0%'}</span><i><b style="width:0%"></b></i></small>`;}
   function renderChapterAudioList(ch,context){
     const parts=chapterAudioParts(ch),total=parts.length;if(!total)return '';
-    return `<div class="hetk-chapter-audio-list ${context==='admin'?'is-admin':''}" data-audio-playlist>${parts.map((part,i)=>`<article><div><b><i class="fas fa-volume-high"></i> ${total===1?'Bob audiosi':`${i+1}-audio qism`}</b><small>${part.size?mediaSize(part.size):''}</small></div><audio controls controlsList="nodownload" oncontextmenu="return false" preload="metadata" data-playlist-index="${i}" ${audioPartAttrs(part)}></audio><small class="hetk-media-loading" data-media-loading>Audio yuklanmoqda...</small></article>`).join('')}</div>`;
+    return `<div class="hetk-chapter-audio-list ${context==='admin'?'is-admin':''}" data-audio-playlist>${parts.map((part,i)=>`<article><div><b><i class="fas fa-volume-high"></i> ${total===1?'Bob audiosi':`${i+1}-audio qism`}</b><small>${part.size?mediaSize(part.size):''}</small></div><audio controls controlsList="nodownload" oncontextmenu="return false" preload="none" data-playlist-index="${i}" ${audioPartAttrs(part)}></audio>${audioLoadingMarkup(i)}</article>`).join('')}</div>`;
   }
   function topicEntries(ch){return Object.entries((ch&&ch.topics)||{}).sort((a,b)=>(Number(a[1].order)||0)-(Number(b[1].order)||0));}
   function topicAudioParts(topic){let parts=topic&&topic.audioParts||[];if(!Array.isArray(parts)&&parts&&typeof parts==='object')parts=Object.values(parts);return (parts||[]).filter(x=>x&&x.fileId).sort((a,b)=>(Number(a.partNumber)||0)-(Number(b.partNumber)||0));}
@@ -155,8 +156,8 @@ KL = kabel liniyasi`;
   }
   function chapterRichHtml(ch){return safeRichHtml(ch&&ch.sourceHtmlUz)||plainTextToRichHtml(ch&&ch.sourceTextUz||'Matn kiritilmagan.');}
   function renderContentBlocks(topic,edition){const blocks=topicBlocks(topic,edition);if(!blocks.length)return `<p class="hetk-topic-empty">Bu nashr uchun matn kiritilmagan.</p>`;return `<div class="hetk-topic-content-blocks">${blocks.map(block=>{if(block.type==='image'&&block.fileId)return `<figure class="layout-${esc(block.layout||'auto')}"><img data-training-media-file="${esc(block.fileId)}" alt="${esc(block.caption||'Mavzu rasmi')}">${block.caption?`<figcaption>${esc(block.caption)}</figcaption>`:''}</figure>`;if(block.type==='heading')return `<h3 style="text-align:${esc(block.align||'left')};color:${esc(block.color||'#123c55')}">${esc(block.text||'')}</h3>`;return `<p style="font-size:${Math.max(14,Math.min(28,Number(block.fontSize)||19))}px;text-align:${esc(block.align||'left')};color:${esc(block.color||'inherit')}">${esc(block.text||'').replace(/\n/g,'<br>')}</p>`;}).join('')}</div>`;}
-  function renderTopicAudioList(topic){const parts=topicAudioParts(topic);if(!parts.length)return `<div class="hetk-topic-no-audio"><i class="fas fa-volume-xmark"></i> Bu mavzu audiosi tayyorlanmagan.</div>`;return `<div class="hetk-chapter-audio-list" data-audio-playlist>${parts.map((part,i)=>`<article><div><b><i class="fas fa-volume-high"></i> ${parts.length===1?'Mavzu audiosi':`${i+1}-audio qism`}</b><small>${part.size?mediaSize(part.size):''}</small></div><audio controls controlsList="nodownload" oncontextmenu="return false" preload="metadata" data-playlist-index="${i}" ${audioPartAttrs(part)}></audio><small class="hetk-media-loading" data-media-loading>Audio yuklanmoqda...</small></article>`).join('')}</div>`;}
-  function renderChapterTopicAudio(topics,edition){let index=0;const sections=topics.map(([,topic],topicIndex)=>{const parts=topicAudioParts(topic);if(!parts.length)return '';const between=topic.interludeText||topic.interludeImage&&topic.interludeImage.fileId?`<div class="hetk-audio-interlude">${topic.interludeText?`<div class="hetk-audio-interlude-text">${esc(topic.interludeText).replace(/\n/g,'<br>')}</div>`:''}${topic.interludeImage&&topic.interludeImage.fileId?`<img data-training-media-file="${esc(topic.interludeImage.fileId)}" alt="${esc(topicTitle(topic,edition))} rasmi">`:''}</div>`:'';return `<section class="hetk-topic-playlist-section"><h3><span>${topicIndex+1}</span>${esc(topicTitle(topic,edition))}</h3>${parts.map((part,partIndex)=>{const current=index++;return `<article><div><b>${partIndex+1}-qism</b><small>${mediaSize(part.size||0)}</small></div><audio controls preload="${current===0?'metadata':'none'}" data-training-media-file="${esc(part.fileId||'')}" data-playlist-index="${current}"></audio></article>`;}).join('')}${between}</section>`;}).join('');return sections?`<div class="hetk-topic-full-playlist" data-audio-playlist>${sections}</div>`:'<div class="hetk-training-empty">Bu bob mavzulariga audio hali yuklanmagan.</div>';}
+  function renderTopicAudioList(topic){const parts=topicAudioParts(topic);if(!parts.length)return `<div class="hetk-topic-no-audio"><i class="fas fa-volume-xmark"></i> Bu mavzu audiosi tayyorlanmagan.</div>`;return `<div class="hetk-chapter-audio-list" data-audio-playlist>${parts.map((part,i)=>`<article><div><b><i class="fas fa-volume-high"></i> ${parts.length===1?'Mavzu audiosi':`${i+1}-audio qism`}</b><small>${part.size?mediaSize(part.size):''}</small></div><audio controls controlsList="nodownload" oncontextmenu="return false" preload="none" data-playlist-index="${i}" ${audioPartAttrs(part)}></audio>${audioLoadingMarkup(i)}</article>`).join('')}</div>`;}
+  function renderChapterTopicAudio(topics,edition){let index=0;const sections=topics.map(([,topic],topicIndex)=>{const parts=topicAudioParts(topic);if(!parts.length)return '';const between=topic.interludeText||topic.interludeImage&&topic.interludeImage.fileId?`<div class="hetk-audio-interlude">${topic.interludeText?`<div class="hetk-audio-interlude-text">${esc(topic.interludeText).replace(/\n/g,'<br>')}</div>`:''}${topic.interludeImage&&topic.interludeImage.fileId?`<img data-training-media-file="${esc(topic.interludeImage.fileId)}" alt="${esc(topicTitle(topic,edition))} rasmi">`:''}</div>`:'';return `<section class="hetk-topic-playlist-section"><h3><span>${topicIndex+1}</span>${esc(topicTitle(topic,edition))}</h3>${parts.map((part,partIndex)=>{const current=index++;return `<article><div><b>${partIndex+1}-qism</b><small>${mediaSize(part.size||0)}</small></div><div class="hetk-sequential-audio"><audio controls controlsList="nodownload" oncontextmenu="return false" preload="none" data-training-media-file="${esc(part.fileId||'')}" data-media-size="${Number(part.size)||0}" data-playlist-index="${current}"></audio>${audioLoadingMarkup(current)}</div></article>`;}).join('')}${between}</section>`;}).join('');return sections?`<div class="hetk-topic-full-playlist" data-audio-playlist>${sections}</div>`:'<div class="hetk-training-empty">Bu bob mavzulariga audio hali yuklanmagan.</div>';}
   function renderTopicReader(ch,mode){const topics=topicEntries(ch).filter(([,t])=>t.published!==false);if(!topics.length)return '';if(!state.activeTopicId||!topics.some(([id])=>id===state.activeTopicId))state.activeTopicId=topics[0][0];const row=topics.find(([id])=>id===state.activeTopicId)||topics[0],topic=row[1],edition=state.readerEdition;return `<section class="hetk-topic-reader"><header><div><span>${topics.findIndex(x=>x[0]===row[0])+1}/${topics.length}-mavzu</span><h2>${esc(topicTitle(topic,edition))}</h2></div><div class="hetk-edition-switch"><button type="button" class="${edition==='latin'?'on':''}" data-reader-edition="latin">Lotin</button><button type="button" class="${edition==='cyrillic'?'on':''}" data-reader-edition="cyrillic">Кирилл</button></div></header><div class="hetk-topic-reader-layout"><nav>${topics.map(([id,t],i)=>`<button type="button" class="${id===row[0]?'on':''}" data-reader-topic="${id}"><span>${i+1}</span><b>${esc(topicTitle(t,edition))}</b>${topicAudioParts(t).length?'<i class="fas fa-headphones"></i>':''}</button>`).join('')}</nav><main>${mode==='listen'?renderChapterTopicAudio(topics,edition):renderContentBlocks(topic,edition)}</main></div></section>`;}
   function renderChapterGate(bookId,chapters,index,ch){
     const questions=chapterTestQuestions(ch),progress=chapterProgress(bookId,chapters[index][0]),next=chapters[index+1];
@@ -288,6 +289,22 @@ KL = kabel liniyasi`;
     if(!res.ok){const data=await res.json().catch(()=>({}));throw new Error(data.error||'Media fayli ochilmadi');}
     const url=URL.createObjectURL(await res.blob());state.mediaObjectUrls[fileId]=url;return url;
   }
+  async function trainingMediaObjectUrlWithProgress(fileId,onProgress){
+    if(state.mediaObjectUrls[fileId]){if(onProgress)onProgress(100,0,0);return state.mediaObjectUrls[fileId];}
+    if(state.mediaLoadPromises[fileId]){const cached=await state.mediaLoadPromises[fileId];if(onProgress)onProgress(100,0,0);return cached;}
+    const task=(async()=>{
+      let token=await getIdToken(false),res=await fetch(`${TRAINING_TELEGRAM_WORKER}/media/${encodeURIComponent(fileId)}`,{headers:{Authorization:`Bearer ${token}`}});
+      if(res.status===401){token=await getIdToken(true);res=await fetch(`${TRAINING_TELEGRAM_WORKER}/media/${encodeURIComponent(fileId)}`,{headers:{Authorization:`Bearer ${token}`}});}
+      if(!res.ok){const data=await res.json().catch(()=>({}));throw new Error(data.error||'Audio fayli ochilmadi');}
+      const total=Math.max(0,Number(res.headers.get('content-length')||0));
+      if(!res.body||!res.body.getReader){const blob=await res.blob();if(onProgress)onProgress(100,blob.size,blob.size);const url=URL.createObjectURL(blob);state.mediaObjectUrls[fileId]=url;return url;}
+      const reader=res.body.getReader(),chunks=[];let loaded=0;
+      while(true){const row=await reader.read();if(row.done)break;chunks.push(row.value);loaded+=row.value.byteLength;if(onProgress)onProgress(total?Math.min(99,Math.round(loaded/total*100)):null,loaded,total);}
+      const blob=new Blob(chunks,{type:res.headers.get('content-type')||'audio/mpeg'}),url=URL.createObjectURL(blob);state.mediaObjectUrls[fileId]=url;if(onProgress)onProgress(100,blob.size,total||blob.size);return url;
+    })();
+    state.mediaLoadPromises[fileId]=task;
+    try{return await task;}finally{delete state.mediaLoadPromises[fileId];}
+  }
   function safeArchiveName(value){return String(value||'test').normalize('NFKD').replace(/[^A-Za-z0-9_-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,70)||'test';}
   async function jsonContentHash(value){const bytes=new TextEncoder().encode(JSON.stringify(value)),digest=await crypto.subtle.digest('SHA-256',bytes);return [...new Uint8Array(digest)].map(x=>x.toString(16).padStart(2,'0')).join('');}
   async function uploadTrainingJson(value,fileName,caption,bookId,chapterId){
@@ -318,12 +335,49 @@ KL = kabel liniyasi`;
     const jobs=[];Object.values(books||{}).forEach(book=>Object.values((book&&book.chapters)||{}).forEach(ch=>Object.values((ch&&ch.topics)||{}).forEach(topic=>{const archive=topic&&topic.contentArchive;if(!archive||!archive.fileId||topic.editions)return;jobs.push(async()=>{const data=await readTrainingJson(archive);topic.editions=data.editions||{latin:{blocks:[]},cyrillic:{blocks:[]}};topic.ttsText=data.ttsText||topic.ttsText||'';topic.interludeText=data.interludeText||topic.interludeText||'';topic.interludeImage=data.interludeImage||topic.interludeImage||null;});})));
     for(let i=0;i<jobs.length;i+=4)await Promise.all(jobs.slice(i,i+4).map(job=>job().catch(err=>console.warn('Mavzu matni Telegramdan yuklanmadi:',err))));
   }
+  function audioProgressNote(audio){return audio&&audio.parentElement&&audio.parentElement.querySelector('[data-media-loading]');}
+  function updateAudioProgress(audio,percent,loaded,total,text){
+    const note=audioProgressNote(audio);if(!note)return;const label=note.querySelector('span'),bar=note.querySelector('b'),expected=Math.max(Number(total)||0,Number(audio.dataset.mediaSize)||0),calculated=expected&&loaded?Math.min(99,Math.round(loaded/expected*100)):null,value=Number.isFinite(percent)?Math.max(0,Math.min(100,percent)):calculated;
+    note.classList.remove('is-waiting','is-error','is-ready');
+    if(value===100)note.classList.add('is-ready');
+    if(label)label.textContent=text||(value===null?`Yuklanmoqda: ${(loaded/1024/1024).toFixed(1)} MB`:`Yuklanmoqda: ${value}%`);
+    if(bar)bar.style.width=(value===null?12:value)+'%';
+  }
+  async function loadAudioElement(audio,autoplay){
+    if(!audio)return false;
+    if(audio.dataset.mediaReady==='1'){
+      updateAudioProgress(audio,100,0,0,'100% — tinglashga tayyor');
+      if(autoplay)await audio.play().catch(()=>{});return true;
+    }
+    if(!audio._hetkLoadPromise){
+      audio.dataset.mediaReady='loading';updateAudioProgress(audio,0,0,0,'Yuklanmoqda: 0%');
+      audio._hetkLoadPromise=(async()=>{
+        try{
+          const fileId=audio.dataset.trainingMediaFile;
+          if(fileId)audio.src=await trainingMediaObjectUrlWithProgress(fileId,(percent,loaded,total)=>updateAudioProgress(audio,percent,loaded,total));
+          else if(audio.getAttribute('src'))audio.load();
+          else throw new Error('Audio manzili topilmadi');
+          audio.dataset.mediaReady='1';updateAudioProgress(audio,100,0,0,'100% — tinglashga tayyor');return true;
+        }catch(err){audio.dataset.mediaReady='error';const note=audioProgressNote(audio);if(note){note.classList.add('is-error');const label=note.querySelector('span');if(label)label.textContent='Audio ochilmadi: '+err.message;}return false;}
+      })();
+    }
+    const ready=await audio._hetkLoadPromise;audio._hetkLoadPromise=null;if(autoplay&&ready)await audio.play().catch(()=>{});return ready;
+  }
   async function hydrateTrainingMedia(){
-    const nodes=[...document.querySelectorAll('#hetk-training-overlay [data-training-media-file]')];
-    await Promise.all(nodes.map(async el=>{if(el.dataset.mediaReady==='1')return;el.dataset.mediaReady='loading';try{el.src=await trainingMediaObjectUrl(el.dataset.trainingMediaFile);el.dataset.mediaReady='1';const note=el.parentElement&&el.parentElement.querySelector('[data-media-loading]');if(note)note.remove();}catch(err){el.dataset.mediaReady='error';const note=el.parentElement&&el.parentElement.querySelector('[data-media-loading]');if(note)note.textContent='Media ochilmadi: '+err.message;}}));bindAudioPlaylists(document);
+    const nodes=[...document.querySelectorAll('#hetk-training-overlay [data-training-media-file]:not(audio)')];
+    await Promise.all(nodes.map(async el=>{if(el.dataset.mediaReady==='1')return;el.dataset.mediaReady='loading';try{el.src=await trainingMediaObjectUrl(el.dataset.trainingMediaFile);el.dataset.mediaReady='1';}catch(err){el.dataset.mediaReady='error';}}));bindAudioPlaylists(document);
   }
   function bindAudioPlaylists(root){
-    (root||document).querySelectorAll('[data-audio-playlist]').forEach(list=>{list.querySelectorAll('audio').forEach(audio=>{if(audio.dataset.playlistBound==='1')return;audio.dataset.playlistBound='1';audio.addEventListener('play',()=>{list.querySelectorAll('audio').forEach(other=>{if(other!==audio&&!other.paused)other.pause();});});audio.addEventListener('ended',()=>{const index=Number(audio.dataset.playlistIndex),next=list.querySelector(`audio[data-playlist-index="${index+1}"]`);if(next)next.play().catch(()=>{});else list.dataset.waitingNext=String(index+1);});});});
+    (root||document).querySelectorAll('[data-audio-playlist]').forEach(list=>{
+      const audios=[...list.querySelectorAll('audio')];if(!audios.length)return;
+      audios.forEach((audio,index)=>{
+        if(audio.dataset.playlistBound==='1')return;audio.dataset.playlistBound='1';
+        audio.addEventListener('pointerdown',()=>{if(audio.dataset.mediaReady!=='1')loadAudioElement(audio,false);},{passive:true});
+        audio.addEventListener('play',()=>{audios.forEach(other=>{if(other!==audio&&!other.paused)other.pause();});const next=audios[index+1];if(next)loadAudioElement(next,false);});
+        audio.addEventListener('ended',async()=>{const next=audios[index+1];if(next)await loadAudioElement(next,true);else list.dataset.waitingNext=String(index+1);});
+      });
+      loadAudioElement(audios[0],false);
+    });
   }
   async function uploadBookCover(file){
     if(!file)return null;return trainingMediaUpload(file,'cover',state.bookAdminBookId||'new-book','cover','HETK O‘quv markazi — kitob muqovasi');
