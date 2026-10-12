@@ -186,7 +186,55 @@ function onLocation(p) {
     updateAddress(lat, lng, false);
 }
 
-navigator.geolocation.watchPosition(onLocation, (e) => console.log(e), { enableHighAccuracy: true });
+function closeLocationPermissionDialog() {
+    const old = document.getElementById('hetk-location-permission-dialog');
+    if (old) old.remove();
+}
+
+function showLocationPermissionDialog(error) {
+    closeLocationPermissionDialog();
+    const denied = error && Number(error.code) === 1;
+    const dialog = document.createElement('div');
+    dialog.id = 'hetk-location-permission-dialog';
+    dialog.style.cssText = 'position:fixed;inset:0;z-index:2147483645;background:rgba(5,24,38,.72);display:grid;place-items:center;padding:18px;font-family:system-ui,-apple-system,Segoe UI,sans-serif';
+    dialog.innerHTML = `<section role="dialog" aria-modal="true" style="width:min(430px,100%);background:#fff;border-radius:22px;padding:24px;box-shadow:0 22px 70px rgba(0,0,0,.32);color:#15384f">
+        <div style="width:58px;height:58px;border-radius:18px;background:#e4f3ff;color:#087bd1;display:grid;place-items:center;font-size:25px;margin-bottom:16px"><i class="fas fa-location-crosshairs"></i></div>
+        <h2 style="margin:0 0 9px;font-size:21px">Joylashuvga ruxsat kerak</h2>
+        <p style="margin:0;color:#567186;line-height:1.55;font-size:14px">${denied ? 'Telefon sozlamasidan <b>HETK Navoiy</b> ilovasi uchun <b>Joylashuv → Ilovadan foydalanayotganda ruxsat berish</b>ni yoqing.' : 'Aniq turgan joyingizni topish uchun telefon joylashuvini (GPS) yoqing va ilovaga ruxsat bering.'}</p>
+        <div style="margin-top:16px;padding:12px 14px;border-radius:13px;background:#f0f7fc;color:#365b73;font-size:13px;line-height:1.5"><b>Android:</b> Sozlamalar → Ilovalar → HETK Navoiy → Ruxsatlar → Joylashuv</div>
+        <div style="display:flex;gap:10px;margin-top:18px"><button type="button" data-location-close style="flex:1;border:0;border-radius:12px;padding:12px;background:#edf3f7;color:#36566b;font-weight:750">Yopish</button><button type="button" data-location-retry style="flex:1;border:0;border-radius:12px;padding:12px;background:#087bd1;color:#fff;font-weight:800"><i class="fas fa-rotate"></i> Qayta tekshirish</button></div>
+    </section>`;
+    dialog.querySelector('[data-location-close]').onclick = closeLocationPermissionDialog;
+    dialog.querySelector('[data-location-retry]').onclick = () => { closeLocationPermissionDialog(); requestCurrentLocation(true); };
+    document.body.appendChild(dialog);
+}
+
+function requestCurrentLocation(showError) {
+    const button = document.getElementById('locate-btn');
+    if (!navigator.geolocation) {
+        if (showError) showLocationPermissionDialog({code:0});
+        return;
+    }
+    if (button) {
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>';
+    }
+    navigator.geolocation.getCurrentPosition(position => {
+        closeLocationPermissionDialog();
+        isUserInteracting = false;
+        isManualSelection = false;
+        if (selectedMarker) { map.removeLayer(selectedMarker); selectedMarker = null; }
+        onLocation(position);
+        if (button) { button.disabled = false; button.innerHTML = '<i class="fas fa-crosshairs"></i>'; }
+    }, error => {
+        if (button) { button.disabled = false; button.innerHTML = '<i class="fas fa-crosshairs"></i>'; }
+        if (showError) showLocationPermissionDialog(error);
+    }, {enableHighAccuracy:true, timeout:25000, maximumAge:0});
+}
+
+if (navigator.geolocation) {
+    navigator.geolocation.watchPosition(onLocation, () => {}, { enableHighAccuracy: true, timeout: 30000, maximumAge: 15000 });
+}
 
 // 5. Xaritadan nuqta tanlash (Context Menu)
 map.on('contextmenu', function(e) { 
@@ -246,6 +294,7 @@ if(document.getElementById('locate-btn')) {
             updatePanelValues(lastPos.lat, lastPos.lng, null, true);
             updateAddress(lastPos.lat, lastPos.lng, true);
         }
+        requestCurrentLocation(true);
     });
 }
 
