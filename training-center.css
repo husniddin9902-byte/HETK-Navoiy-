@@ -103,3 +103,4 @@
 .hetk-rich-toolbar{position:static!important;top:auto!important;z-index:1!important}
 .hetk-rich-editor{cursor:text!important;user-select:text!important;-webkit-user-select:text!important}
 .hetk-rich-editor-label{display:block;margin:0 0 8px;font-weight:800;color:#183b50}
+.hetk-training-form-grid>.hetk-rich-editor-wrap{grid-column:1/-1;width:100%;min-width:0;box-sizing:border-box}
