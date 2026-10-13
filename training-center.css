@@ -102,3 +102,4 @@
 /* v4.7 — tabiiy matn kursori va to‘sib qo‘ymaydigan muharrir paneli */
 .hetk-rich-toolbar{position:static!important;top:auto!important;z-index:1!important}
 .hetk-rich-editor{cursor:text!important;user-select:text!important;-webkit-user-select:text!important}
+.hetk-rich-editor-label{display:block;margin:0 0 8px;font-weight:800;color:#183b50}
