@@ -154,3 +154,33 @@
 #hetk-training-overlay .hetk-training-owner-actions button{border-radius:10px;padding:10px 14px;font-weight:700}
 #hetk-training-overlay .hetk-training-test-side button.primary,#hetk-training-overlay .hetk-training-editor button.primary{background:linear-gradient(120deg,#1769d4,#2989e9);color:white;border:0;border-radius:11px;box-shadow:0 5px 14px rgba(23,105,212,.18)}
 @media(max-width:820px){#hetk-training-overlay .hetk-training-page-head{padding:16px}#hetk-training-overlay .hetk-training-page-head select{width:100%}#hetk-training-overlay .hetk-training-test-card{padding:15px}#hetk-training-overlay .hetk-training-editor>section{padding:15px}#hetk-training-overlay .hetk-training-owner-actions button{flex:1 1 135px}}
+
+/* V8: mockup-inspired light management workspace; scoped to training center */
+#hetk-training-overlay .hetk-training-main{background:#f4f8fd}
+#hetk-training-overlay .hetk-training-content{color:#142e47}
+#hetk-training-overlay .hetk-training-page-head{background:#fff;border:1px solid #dce7f3;border-radius:14px;padding:17px 20px;margin-bottom:14px;box-shadow:0 3px 15px #1639560a}
+#hetk-training-overlay .hetk-training-page-head h3{color:#0e2846;font-size:20px}
+#hetk-training-overlay .hetk-v8-filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+#hetk-training-overlay .hetk-v8-filters input{min-width:210px;max-width:310px;border:1px solid #d5e2f0;background:#fff;border-radius:9px;padding:11px 13px}
+#hetk-training-overlay .hetk-v8-filters select{border:1px solid #d5e2f0;background:#fff;border-radius:9px;padding:11px}
+#hetk-training-overlay .hetk-v8-test-list{display:grid;gap:9px}
+#hetk-training-overlay .hetk-v8-test-row{display:grid;grid-template-columns:120px minmax(0,1fr) 60px auto;align-items:center;gap:14px;padding:17px 18px;background:#fff;border:1px solid #dbe7f4;border-radius:12px;box-shadow:0 3px 12px #16395608}
+#hetk-training-overlay .hetk-v8-test-info{min-width:0;display:grid;gap:6px}
+#hetk-training-overlay .hetk-v8-test-info b{font-size:14px;color:#15344e;line-height:1.35;overflow-wrap:anywhere}
+#hetk-training-overlay .hetk-v8-test-info small{font-size:12px;color:#6b8196}
+#hetk-training-overlay .hetk-v8-test-score{font-size:18px;font-weight:800;color:#0873df;text-align:center}
+#hetk-training-overlay .hetk-v8-status{border-radius:8px;padding:9px 10px;text-align:center;font-size:12px;font-weight:750;background:#eaf0f8;color:#526a85}
+#hetk-training-overlay .hetk-v8-status.draft{background:#fff2db;color:#94601a}
+#hetk-training-overlay .hetk-v8-status.live{background:#dff7e8;color:#157b3f}
+#hetk-training-overlay .hetk-v8-status.scheduled{background:#e2eeff;color:#1766c2}
+#hetk-training-overlay .hetk-training-editor>section{background:#fff;border:1px solid #dbe7f4;border-radius:15px;box-shadow:0 4px 16px #16395608;margin-bottom:15px}
+#hetk-training-overlay .hetk-training-question{background:#fbfdff;border:1px solid #dbe7f4;border-radius:12px;margin-bottom:12px}
+#hetk-training-overlay .hetk-training-editor textarea{min-height:64px;line-height:1.5;resize:vertical}
+#hetk-training-overlay .hetk-exam-actions{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+#hetk-training-overlay .hetk-exam-actions button{flex:0 1 auto;white-space:normal}
+#hetk-training-overlay .hetk-exam-accept{background:#118b51;color:#fff;border:0;border-radius:9px;padding:12px 15px;font-weight:750}
+#hetk-training-overlay .hetk-exam-accept:disabled{background:#d9f2e4;color:#16764c}
+#hetk-training-overlay .hetk-exam-finish{background:#f0e8e8;color:#b33333;border:1px solid #edc9c9;border-radius:9px;padding:12px 15px;font-weight:750}
+#hetk-training-overlay .hetk-exam-note{font-size:12px;color:#688199;padding:8px 12px}
+#hetk-training-overlay [data-test-card][hidden]{display:none!important}
+@media(max-width:800px){#hetk-training-overlay .hetk-v8-test-row{grid-template-columns:1fr auto;gap:10px}#hetk-training-overlay .hetk-v8-test-info{grid-column:1/-1;grid-row:1}#hetk-training-overlay .hetk-v8-status{grid-column:1;grid-row:2;justify-self:start}#hetk-training-overlay .hetk-v8-test-score{grid-column:2;grid-row:2}#hetk-training-overlay .hetk-v8-test-row>.primary{grid-column:1/-1;width:100%}#hetk-training-overlay .hetk-v8-filters input{min-width:0;width:100%;max-width:none}#hetk-training-overlay .hetk-exam-actions button{flex:1 1 140px}}
