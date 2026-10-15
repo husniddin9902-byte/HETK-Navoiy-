@@ -341,10 +341,19 @@
   function bindForegroundPush(){
     if(!pushMessaging || pushForegroundBound) return;
     pushForegroundBound=true;
-    pushMessaging.onMessage(payload=>{
+    pushMessaging.onMessage(async payload=>{
       const kind=String((payload && payload.data && payload.data.kind) || 'notifications');
       if(!notificationPreferenceEnabled(kind)) return;
       document.dispatchEvent(new CustomEvent('hetk-push-received',{detail:payload || {}}));
+      const notice=payload&&payload.notification||{},data=payload&&payload.data||{},notificationId=String(data.notificationId||data.noticeId||data.id||`${Date.now()}-${Math.random().toString(36).slice(2)}`);
+      try{
+        const registration=pushServiceWorkerRegistration||await navigator.serviceWorker.ready;
+        await registration.showNotification(notice.title||data.title||'HETK',{
+          body:notice.body||data.body||'Yangi bildirishnoma',icon:'icons/hetk-192.png',badge:'icons/hetk-192.png',
+          data:{url:data.link||data.url||pushOpenLink(kind),kind,notificationId},tag:`hetk-${notificationId}`,
+          renotify:true,silent:false,vibrate:[220,100,220],timestamp:Number(data.sentAt||Date.now())
+        });
+      }catch(error){console.warn('HETK bildirishnomasi ko‘rsatilmadi:',error);}
     });
   }
 
@@ -365,7 +374,7 @@
         if(!supported) throw new Error('Bu brauzer Firebase bildirishnomasini qo‘llamaydi.');
       }
       if(!pushServiceWorkerRegistration){
-        const workerUrl=new URL('firebase-messaging-sw.js',document.baseURI).href;
+        const workerUrl=new URL('firebase-messaging-sw.js?v=1.1',document.baseURI).href;
         pushServiceWorkerRegistration=await navigator.serviceWorker.register(workerUrl,{scope:'./'});
         await navigator.serviceWorker.ready;
       }
@@ -419,14 +428,14 @@
     if(!currentAccount || !databaseRef) return {sent:0};
     const recipients=Array.from(new Set((recipientUids || []).filter(Boolean)));
     if(!recipients.length) return {sent:0};
-    let sent=0;let registeredDevices=false;
+    let sent=0;let registeredDevices=false;const sentAt=Date.now(),notificationId=String(data&&data.notificationId||data&&data.noticeId||data&&data.id||`${sentAt}-${Math.random().toString(36).slice(2)}`);
     for(let index=0;index<recipients.length;index+=20){
       const batch=recipients.slice(index,index+20);
       const result=await pushWorkerFetch({
         recipientUids:batch,
         title:String(title || 'HETK'),body:String(body || 'Yangi bildirishnoma'),
-        link:pushOpenLink(kind),
-        data:Object.assign({},data || {},{kind})
+        link:pushOpenLink(kind),ttlSeconds:7*24*60*60,
+        data:Object.assign({},data || {},{kind,notificationId,sentAt:String(sentAt)})
       });
       sent+=Number(result.sent || 0);
       if(!result.noRegisteredDevices) registeredDevices=true;
