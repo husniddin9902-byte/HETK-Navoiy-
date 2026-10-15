@@ -131,3 +131,26 @@
 @media(max-width:820px){.hetk-training-test-card{gap:9px}.hetk-training-test-side{flex-wrap:wrap;min-width:0}.hetk-training-test-side small{width:100%;overflow-wrap:anywhere}.hetk-training-owner-actions{justify-content:stretch}.hetk-training-owner-actions button{flex:1 1 130px}.hetk-training-result-hero{flex-wrap:wrap}.hetk-training-ranking article{min-width:0}.hetk-training-editor{min-width:0}.hetk-training-options label{grid-template-columns:20px 30px minmax(0,1fr)}.hetk-training-editor>footer{position:relative!important;bottom:auto!important}.hetk-training-form-error:not([hidden]){margin-bottom:18px}}
 
 .hetk-training-practice-history{margin-top:20px;padding:16px;background:#fff;border:1px solid #d8e5ee;border-radius:15px}.hetk-training-practice-history h3{font-size:17px;margin:0 0 12px}.hetk-training-practice-history article{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid #e3edf3;padding:12px 0}.hetk-training-practice-history article>div{min-width:0}.hetk-training-practice-history small{display:block;color:#6e8596;margin-top:5px}.hetk-training-practice-history strong{font-size:19px;color:#0877c5}
+
+/* Training center V7 — coherent contemporary visual system */
+#hetk-training-overlay{--tc-blue:#1769d4;--tc-dark:#102b4c;--tc-border:#e0e8f4;--tc-muted:#60758f}
+#hetk-training-overlay .hetk-training-content{background:#f5f8fd}
+#hetk-training-overlay .hetk-training-page-head{background:#fff;border:1px solid var(--tc-border);border-radius:18px;padding:20px 22px;margin-bottom:20px;box-shadow:0 5px 22px rgba(20,51,95,.045)}
+#hetk-training-overlay .hetk-training-page-head h3{font-size:23px;font-weight:800;color:var(--tc-dark);letter-spacing:-.45px;margin:0 0 6px}
+#hetk-training-overlay .hetk-training-page-head p{color:var(--tc-muted);font-size:13px;line-height:1.55}
+#hetk-training-overlay .hetk-training-page-head select{appearance:auto;min-width:190px;min-height:44px;padding:9px 14px;border:1px solid #cbd9ef;border-radius:12px;background:#fff;color:#1a426e;font-weight:700;cursor:pointer}
+#hetk-training-overlay .hetk-training-test-list{display:grid;gap:14px}
+#hetk-training-overlay .hetk-training-test-card{background:#fff;border:1px solid var(--tc-border);border-radius:18px;padding:20px;box-shadow:0 7px 25px rgba(22,55,99,.05);transition:box-shadow .2s,border-color .2s}
+#hetk-training-overlay .hetk-training-test-card:hover{border-color:#b2ccef;box-shadow:0 12px 32px rgba(22,55,99,.09)}
+#hetk-training-overlay .hetk-training-test-copy h4{color:var(--tc-dark);font-size:17px;font-weight:800}
+#hetk-training-overlay .hetk-training-test-copy p{color:var(--tc-muted);line-height:1.55}
+#hetk-training-overlay .hetk-training-editor>section{background:#fff;border:1px solid var(--tc-border);border-radius:18px;padding:22px;margin-bottom:16px;box-shadow:0 6px 24px rgba(22,55,99,.045)}
+#hetk-training-overlay .hetk-training-question{background:#f8fbff;border:1px solid #dce7f7;border-radius:15px;padding:18px}
+#hetk-training-overlay .hetk-training-options label{border-radius:12px;border-color:#d7e4f5;min-width:0}
+#hetk-training-overlay .hetk-training-options textarea{min-width:0;line-height:1.55;min-height:62px;resize:vertical}
+#hetk-training-overlay .hetk-training-form-error:not([hidden]){position:relative;z-index:5;margin:16px 0 24px;padding:16px;border:1px solid #f2a4a4;border-radius:13px;background:#fff1f1;color:#aa1c1c;font-size:14px;font-weight:700;overflow-wrap:anywhere}
+#hetk-training-overlay .hetk-training-editor>footer{position:relative!important;bottom:auto!important;z-index:1;padding:18px 0;margin-top:12px;flex-wrap:wrap}
+#hetk-training-overlay .hetk-training-owner-actions{display:flex;gap:8px;flex-wrap:wrap}
+#hetk-training-overlay .hetk-training-owner-actions button{border-radius:10px;padding:10px 14px;font-weight:700}
+#hetk-training-overlay .hetk-training-test-side button.primary,#hetk-training-overlay .hetk-training-editor button.primary{background:linear-gradient(120deg,#1769d4,#2989e9);color:white;border:0;border-radius:11px;box-shadow:0 5px 14px rgba(23,105,212,.18)}
+@media(max-width:820px){#hetk-training-overlay .hetk-training-page-head{padding:16px}#hetk-training-overlay .hetk-training-page-head select{width:100%}#hetk-training-overlay .hetk-training-test-card{padding:15px}#hetk-training-overlay .hetk-training-editor>section{padding:15px}#hetk-training-overlay .hetk-training-owner-actions button{flex:1 1 135px}}
