@@ -34,12 +34,17 @@ self.addEventListener('push', function(event) {
   const notice = payload.notification || {};
   const data = payload.data || {};
   const title = notice.title || data.title || 'HETK';
+  const notificationId = String(data.notificationId || data.noticeId || data.id || (Date.now() + '-' + Math.random().toString(36).slice(2)));
   const options = {
     body: notice.body || data.body || 'Yangi bildirishnoma',
     icon: notice.icon || 'icons/hetk-192.png',
     badge: 'icons/hetk-192.png',
-    data: {url: data.link || data.url || './'},
-    tag: data.tag || data.kind || 'hetk-notification'
+    data: {url: data.link || data.url || './', kind: data.kind || 'notifications', notificationId: notificationId},
+    tag: 'hetk-' + notificationId,
+    renotify: true,
+    silent: false,
+    vibrate: [220, 100, 220],
+    timestamp: Number(data.sentAt || Date.now())
   };
   event.waitUntil(self.registration.showNotification(title, options));
 });
