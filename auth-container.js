@@ -2807,7 +2807,8 @@
     try{
       await sessionWorkerRequest('/session/start',{body:Object.assign({sessionId:loginSessionId},detectLoginDevice())});
       loginHeartbeatTimer=setInterval(()=>sendLoginHeartbeat(document.hidden ? 'away' : 'online'),LOGIN_HEARTBEAT_MS);
-      requestPreciseLoginLocation(loginSessionId);
+      // Vaqtincha GPS ruxsat so‘ralmaydi; login auditi va heartbeat saqlanadi.
+      // requestPreciseLoginLocation(loginSessionId);
     }catch(error){
       console.warn('HETK login tracking:',error && error.message ? error.message : error);
     }
