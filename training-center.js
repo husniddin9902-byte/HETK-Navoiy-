@@ -287,9 +287,9 @@ KL = kabel liniyasi`;
     const data=await res.json().catch(()=>({}));if(!res.ok||!data.ok||!data.media)throw new Error(data.error||data.telegramError||'O‘quv markazi media kanaliga yuklanmadi');
     return {...data.media,storage:'training-media'};
   }
-  async function trainingMediaReplace(file,kind,messageId,caption){
+  async function trainingMediaReplace(file,kind,messageId,caption,testId){
     if(!file||!file.size)throw new Error('Fayl topilmadi');if(file.size>TRAINING_MEDIA_MAX_BYTES)throw new Error(`Fayl ${mediaSize(file.size)}. 18 MB dan oshmasligi kerak.`);
-    const body=new FormData();body.append('file',file);body.append('kind',kind||'document');body.append('messageId',String(messageId||''));body.append('caption',caption||'HETK O‘quv markazi');
+    const body=new FormData();body.append('file',file);body.append('kind',kind||'document');body.append('messageId',String(messageId||''));body.append('caption',caption||'HETK O‘quv markazi');if(testId){body.append('purpose','test-archive');body.append('testId',testId);}
     let token=await getIdToken(false),res=await fetch(`${TRAINING_TELEGRAM_WORKER}/admin/replace`,{method:'POST',headers:{Authorization:`Bearer ${token}`},body});
     if(res.status===401){token=await getIdToken(true);res=await fetch(`${TRAINING_TELEGRAM_WORKER}/admin/replace`,{method:'POST',headers:{Authorization:`Bearer ${token}`},body});}
     const data=await res.json().catch(()=>({}));if(!res.ok||!data.ok||!data.media)throw new Error(data.telegramError||data.error||'Telegram posti yangilanmadi');return {...data.media,storage:'training-media'};
@@ -790,7 +790,7 @@ KL = kabel liniyasi`;
       if(oldArchive&&oldArchive.fileId){
         if(!Number(oldArchive.messageId))throw new Error('Eski Telegram xabar raqami topilmadi. Dublikat yaratmaslik uchun saqlash to‘xtatildi.');
         const file=new File([JSON.stringify(archiveBody,null,2)],safeArchiveName(`test-${title}-${id}`)+'.json',{type:'application/json'});
-        const media=await trainingMediaReplace(file,'document',oldArchive.messageId,caption);
+        const media=await trainingMediaReplace(file,'document',oldArchive.messageId,caption,id);
         if(Number(media.messageId)&&Number(media.messageId)!==Number(oldArchive.messageId))throw new Error('Telegram eski xabarni joyida almashtirmadi. Tekshirish zarur.');
         questionArchive={...media,messageId:oldArchive.messageId,storage:'training-media',format:'json',fileName:file.name,recordCount:archiveBody.questions.length,archivedAt:Date.now()};
         state.archiveJson[media.fileId]=archiveBody;
