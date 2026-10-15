@@ -374,7 +374,10 @@
         if(!supported) throw new Error('Bu brauzer Firebase bildirishnomasini qo‘llamaydi.');
       }
       if(!pushServiceWorkerRegistration){
-        const workerUrl=new URL('firebase-messaging-sw.js?v=1.1',document.baseURI).href;
+        // app-install.js bilan aynan bitta service worker URL ishlatiladi.
+        // Turli URLlar (?v=... bilan va usiz) bir scope uchun navbatma-navbat
+        // faollashib, sahifani cheksiz qayta yuklashiga sabab bo'ladi.
+        const workerUrl=new URL('firebase-messaging-sw.js',document.baseURI).href;
         pushServiceWorkerRegistration=await navigator.serviceWorker.register(workerUrl,{scope:'./'});
         await navigator.serviceWorker.ready;
       }
