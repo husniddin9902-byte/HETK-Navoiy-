@@ -184,3 +184,13 @@
 #hetk-training-overlay .hetk-exam-note{font-size:12px;color:#688199;padding:8px 12px}
 #hetk-training-overlay [data-test-card][hidden]{display:none!important}
 @media(max-width:800px){#hetk-training-overlay .hetk-v8-test-row{grid-template-columns:1fr auto;gap:10px}#hetk-training-overlay .hetk-v8-test-info{grid-column:1/-1;grid-row:1}#hetk-training-overlay .hetk-v8-status{grid-column:1;grid-row:2;justify-self:start}#hetk-training-overlay .hetk-v8-test-score{grid-column:2;grid-row:2}#hetk-training-overlay .hetk-v8-test-row>.primary{grid-column:1/-1;width:100%}#hetk-training-overlay .hetk-v8-filters input{min-width:0;width:100%;max-width:none}#hetk-training-overlay .hetk-exam-actions button{flex:1 1 140px}}
+
+/* V9: compact attempt history and readable results */
+.hetk-training-practice-history{margin-top:20px;background:#fff;border:1px solid #dbe6f3;border-radius:16px;padding:18px;box-shadow:0 5px 20px rgba(18,52,86,.045)}
+.hetk-training-practice-history>h3{font-size:16px;margin:0 0 12px;color:#163957}
+.hetk-training-practice-history article{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:12px 14px;border:1px solid #e5edf5;border-radius:11px;margin:8px 0;background:#f9fbfe}
+.hetk-training-practice-history article>div{min-width:0;display:grid;gap:5px}
+.hetk-training-practice-history article b{font-size:13px;line-height:1.4;overflow-wrap:anywhere}
+.hetk-training-practice-history article small{color:#647d94;font-size:12px}
+.hetk-training-practice-history article strong{font-size:18px;color:#0879dc;white-space:nowrap}
+@media(max-width:650px){.hetk-training-practice-history{padding:12px}.hetk-training-practice-history article{padding:11px;gap:10px}}
