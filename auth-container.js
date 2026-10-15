@@ -2192,7 +2192,7 @@
   function messageDirectCandidates(){
     if(!currentAccount) return [];
     return Object.keys(teamUsersCache).map(uid=>Object.assign({uid},teamUsersCache[uid] || {}))
-      .filter(user=>user.uid!==currentAccount.uid && user.active!==false && messageSameTerritory(currentAccount,user))
+      .filter(user=>user.uid!==currentAccount.uid && user.active!==false && canDirectMessageTarget(currentAccount,user))
       .sort((a,b)=>messageLevel(b)-messageLevel(a) || String(a.fullName||a.login||'').localeCompare(String(b.fullName||b.login||'')));
   }
 
@@ -2216,7 +2216,7 @@
       const raw=teamUsersCache[selectedMessageRecipientUid];
       if(!raw) return [];
       const user=Object.assign({uid:selectedMessageRecipientUid},raw);
-      return user.active===false || !messageSameTerritory(currentAccount,user) ? [] : [user];
+      return user.active===false || !canDirectMessageTarget(currentAccount,user) ? [] : [user];
     }
     const base=messageBroadcastBaseRecipients();
     if(currentAccount && currentAccount.role==='master') return base;
@@ -3287,10 +3287,29 @@
     return targetRoots.every(id => mySet.has(id));
   }
 
+  // Xodimlar ro'yxati va yakka xabarlar uchun bir xil bo'lim chegarasi.
+  function isPeerInDepartment(viewer,target){
+    if(!viewer||!target) return false;
+    if(viewer.uid===target.uid) return true;
+    if(viewer.role==='electrician') return !!viewer.workZoneId && viewer.workZoneId===target.workZoneId;
+    if(DISPATCHER_GROUP_ROLES.has(viewer.role)){
+      if(viewer.role==='dispatcher'||viewer.role==='chief_dispatcher') return true;
+      return DISPATCHER_GROUP_ROLES.has(target.role) && messageSameTerritory(viewer,target);
+    }
+    if(ASKUE_DEPARTMENT_ROLES.has(viewer.role)) return ASKUE_DEPARTMENT_ROLES.has(target.role) && messageSameTerritory(viewer,target);
+    return null;
+  }
+  function canDirectMessageTarget(viewer,target){
+    const department=isPeerInDepartment(viewer,target);
+    return department===null ? messageSameTerritory(viewer,target) : department;
+  }
+
   function canViewTarget(target){
     if(!currentAccount || !target) return false;
     if(target.uid === currentAccount.uid) return true;
     if(currentAccount.role === 'super_admin') return true;
+    const department=isPeerInDepartment(currentAccount,target);
+    if(department!==null) return department;
     if(currentAccount.role === 'document_technician') return isTargetWithinScope(target);
     // MMQXT va E muhandisi o‘z hududidagi barcha hodimlarni, lavozimidan qat’i nazar ko‘radi.
     if(isSafetyOfficer(currentAccount)) return isTargetWithinScope(target);
