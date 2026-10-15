@@ -104,3 +104,15 @@
 .hetk-rich-editor{cursor:text!important;user-select:text!important;-webkit-user-select:text!important}
 .hetk-rich-editor-label{display:block;margin:0 0 8px;font-weight:800;color:#183b50}
 .hetk-training-form-grid>.hetk-rich-editor-wrap{grid-column:1/-1;width:100%;min-width:0;box-sizing:border-box}
+
+/* Test muharriri: 2026-10-15 mobil va katta savollar banki */
+.hetk-training-options label{min-width:0;align-items:flex-start!important;gap:9px!important}
+.hetk-training-options label textarea[data-q-option]{flex:1;min-width:0;width:100%;box-sizing:border-box;resize:vertical;min-height:58px;height:auto;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;padding:9px 10px;border:1px solid #d6e4ef;border-radius:9px;background:#fff;font:inherit;color:#173d57}
+.hetk-training-options label textarea[data-q-option]:focus{outline:2px solid #83c6ff;outline-offset:1px}
+.hetk-training-add-bottom{width:100%;margin-top:14px;padding:15px;border:1px solid #067cdb;border-radius:12px;background:#087fe1;color:#fff;font-weight:800;cursor:pointer;box-shadow:0 4px 12px rgba(8,127,225,.15)}
+.hetk-training-add-bottom:hover{background:#076dc0}
+.hetk-training-form-error:not([hidden]){display:block;position:relative;z-index:5;padding:13px 16px;margin:16px 0;background:#fff0f0;border:2px solid #e94b4b;border-radius:12px;color:#a32020;font-weight:750;line-height:1.5;overflow-wrap:anywhere}
+.hetk-training-invalid-question{border:2px solid #e94b4b!important}
+.hetk-training-editor>footer{position:relative!important;bottom:auto!important;z-index:1!important;flex-wrap:wrap;gap:10px;padding-bottom:16px}
+.hetk-training-toast.error{bottom:90px;z-index:99;max-height:45vh;overflow:auto;white-space:normal;overflow-wrap:anywhere}
+@media(max-width:820px){.hetk-training-editor>footer{bottom:auto!important;padding:14px 0 90px!important}.hetk-training-editor>footer button{flex:1;min-width:130px}.hetk-training-toast.error{bottom:86px;left:12px;right:12px}.hetk-training-options label textarea[data-q-option]{min-height:72px}}
