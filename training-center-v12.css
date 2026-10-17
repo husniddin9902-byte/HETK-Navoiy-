@@ -1,0 +1,37 @@
+
+/* V12 — O‘quv markazi: professional blue / paper reader */
+#hetk-training-overlay .hetk-v12-book-filters{display:flex;gap:9px;flex-wrap:wrap;margin:14px 0 20px}
+#hetk-training-overlay .hetk-v12-book-filters button{border:1px solid #d8e4f5;background:#f4f7fc;color:#26415f;padding:11px 18px;border-radius:12px;font-weight:800;cursor:pointer}
+#hetk-training-overlay .hetk-v12-book-filters button.active{background:#1969e9;border-color:#1969e9;color:white;box-shadow:0 6px 20px #1969e933}
+#hetk-training-overlay .hetk-v12-type-tag{display:inline-flex;background:#e8f1ff;color:#1a5db9;border-radius:9px;padding:5px 9px;font-size:12px;font-weight:800;margin-bottom:8px}
+#hetk-training-overlay .hetk-v12-reader{--v12-blue:#2176ee;--v12-ink:#10233b;--v12-border:#dce6f3}
+#hetk-training-overlay .hetk-v12-reader .body{overflow:auto}
+#hetk-training-overlay .hetk-v12-reading-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(350px,.85fr);gap:18px;align-items:stretch;padding:15px;min-height:0}
+#hetk-training-overlay .hetk-v12-text-pane,#hetk-training-overlay .hetk-v12-audio-pane{min-width:0;min-height:0}
+#hetk-training-overlay .hetk-v12-reader .hetk-v12-text-pane .hetk-v11-page{max-width:none;width:100%;min-height:520px;height:auto;overflow:visible;box-sizing:border-box;border-radius:16px;box-shadow:0 5px 25px #00000012}
+#hetk-training-overlay .hetk-v12-reader .hetk-v12-text-pane .hetk-v11-text{overflow:visible;max-height:none}
+#hetk-training-overlay .hetk-v12-player{background:linear-gradient(150deg,#fff,#f6f9ff);color:#142c49;border:1px solid var(--v12-border);border-radius:20px;padding:24px;box-shadow:0 8px 30px #0b3d7d13;position:relative}
+#hetk-training-overlay .hetk-v12-player-icon{width:58px;height:58px;display:grid;place-items:center;background:#e7f1ff;color:#1466e8;border-radius:18px;font-size:25px;margin-bottom:14px}
+#hetk-training-overlay .hetk-v12-eyebrow{font-size:11px;font-weight:900;letter-spacing:1.6px;color:#3679cf}
+#hetk-training-overlay .hetk-v12-player h2{font-size:21px;color:#142c49;margin:8px 0}
+#hetk-training-overlay .hetk-v12-player p{color:#60738b;font-size:13px;margin:6px 0 18px}
+#hetk-training-overlay .hetk-v12-player-core{background:#fff;border:1px solid #e4ebf5;padding:20px;border-radius:16px}
+#hetk-training-overlay .hetk-v12-player-progress input{width:100%;accent-color:#1975f6;cursor:pointer}
+#hetk-training-overlay .hetk-v12-player-progress>div{display:flex;justify-content:space-between;font-size:12px;color:#71829b;font-variant-numeric:tabular-nums;margin-top:5px}
+#hetk-training-overlay .hetk-v12-player-actions{display:flex;justify-content:center;align-items:center;gap:22px;margin:18px 0}
+#hetk-training-overlay .hetk-v12-player-actions button{background:#eaf2ff;color:#1755a4;border:0;border-radius:50%;width:44px;height:44px;cursor:pointer;position:relative;font-size:18px}
+#hetk-training-overlay .hetk-v12-player-actions button small{font-size:9px;position:absolute;top:17px;left:17px}
+#hetk-training-overlay .hetk-v12-player-actions .hetk-v12-main-play{width:68px;height:68px;background:linear-gradient(135deg,#2688ff,#145ce9);color:white;font-size:23px;box-shadow:0 7px 20px #1769e951}
+#hetk-training-overlay .hetk-v12-player-options{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:12px;color:#36516e}
+#hetk-training-overlay .hetk-v12-player-options select{border:1px solid #d5e2f4;border-radius:9px;background:#f6f9ff;padding:7px}
+#hetk-training-overlay .hetk-v12-player-options input{accent-color:#1674ec}
+#hetk-training-overlay .hetk-v12-parts{margin-top:22px}
+#hetk-training-overlay .hetk-v12-parts h3{font-size:15px;color:#1c3351;margin:0 0 10px}
+#hetk-training-overlay .hetk-v12-parts button{display:flex;align-items:center;gap:12px;width:100%;padding:12px;border:0;border-bottom:1px solid #e5ebf4;background:transparent;color:#2b4361;text-align:left;cursor:pointer;border-radius:9px}
+#hetk-training-overlay .hetk-v12-parts button.active{background:#e6f0ff;color:#125be0;font-weight:800}
+#hetk-training-overlay .hetk-v12-parts button small{margin-left:auto;color:#8192a8}
+#hetk-training-overlay .hetk-v12-player audio{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+#hetk-training-overlay .hetk-v12-protected{margin:17px 0 0!important;color:#6d829b!important}
+#hetk-training-overlay .hetk-v12-no-audio{border:1px dashed #a9bdd5;border-radius:16px;padding:50px 18px;text-align:center;color:#607d9f}
+#hetk-training-overlay .hetk-v12-test-editor[hidden]{display:none!important}
+@media(max-width:850px){#hetk-training-overlay .hetk-v12-reading-grid{display:block;padding:8px}#hetk-training-overlay .hetk-v12-reading-grid .mobile-hidden{display:none!important}#hetk-training-overlay .hetk-v12-reader .hetk-v12-text-pane .hetk-v11-page{min-height:300px}#hetk-training-overlay .hetk-v12-player{padding:16px;border-radius:14px}#hetk-training-overlay .hetk-v12-book-filters button{padding:9px 11px;font-size:12px}}
