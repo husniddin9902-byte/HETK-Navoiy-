@@ -173,3 +173,15 @@
 .hetk-topic-reader .hetk-topic-content-blocks figure img{height:auto;max-width:100%}
 .hetk-topic-reader .hetk-chapter-audio-list article{min-width:0}
 @media(max-width:680px){.hetk-topic-reader-layout{grid-template-columns:minmax(0,1fr)}.hetk-topic-reader-layout nav{max-height:none;flex-direction:row;overflow-x:auto;padding-bottom:5px}.hetk-topic-reader-layout nav button{min-width:170px;max-width:230px;flex:0 0 auto}.hetk-v11-text .hetk-topic-reader{padding:12px}}
+
+/* V20: bob matni va mavzu matni uzluksiz, ortiqcha karta va yon menyusiz. */
+#hetk-training-overlay .hetk-v20-topic-text{display:block;margin:1.2em 0 0;padding:0;border:0;background:transparent;box-shadow:none;color:inherit;max-width:none;width:100%}
+#hetk-training-overlay .hetk-v20-topic-text>h2{font-size:1.18em;line-height:1.5;margin:1.25em 0 .7em;font-weight:700;color:inherit}
+#hetk-training-overlay .hetk-v20-topic-text .hetk-topic-content-blocks{width:100%;max-width:none}
+#hetk-training-overlay .hetk-v20-topic-text .hetk-topic-content-blocks p{max-width:none}
+#hetk-training-overlay .hetk-v20-audio-container{max-width:920px;margin:0 auto;padding:20px 14px}
+#hetk-training-overlay .hetk-v20-audio-select{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:0 auto 18px;max-width:920px;color:#e6f2fb}
+#hetk-training-overlay .hetk-v20-audio-select label{font-size:14px;font-weight:700}
+#hetk-training-overlay .hetk-v20-audio-select select{flex:1 1 260px;min-width:0;padding:12px 15px;border:1px solid #51758a;border-radius:12px;background:#12354a;color:#fff;font:inherit}
+#hetk-training-overlay .hetk-v20-audio-container .hetk-v12-player{margin:0 auto}
+@media(max-width:600px){#hetk-training-overlay .hetk-v20-audio-container{padding:12px 4px}#hetk-training-overlay .hetk-v20-audio-select{gap:8px}#hetk-training-overlay .hetk-v20-audio-select select{flex-basis:100%}}
