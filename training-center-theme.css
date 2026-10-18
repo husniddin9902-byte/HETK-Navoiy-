@@ -157,3 +157,19 @@
 .hetk-topic-studio .hetk-topic-audio-note{font-size:12px;color:#526b80;margin:10px 0 0}
 .hetk-topic-studio .hetk-topic-editor{min-width:0}
 @media(max-width:760px){.hetk-topic-studio .hetk-topic-workspace{display:block}.hetk-topic-studio .hetk-topic-workspace aside{margin-bottom:12px;max-height:230px;overflow:auto}}
+
+/* V19: bob mavzulari - mustaqil matn va audio navigatsiyasi */
+.hetk-v11-text .hetk-topic-reader{margin:26px 0 10px;border:1px solid rgba(99,125,153,.22);border-radius:18px;padding:18px;background:rgba(127,148,173,.06)}
+.hetk-topic-reader>header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.hetk-topic-reader>header h2{margin:5px 0 0;font-size:1.12em}
+.hetk-topic-reader-layout{display:grid;grid-template-columns:minmax(150px,220px) minmax(0,1fr);gap:16px;align-items:start}
+.hetk-topic-reader-layout nav{display:flex;flex-direction:column;gap:8px;max-height:420px;overflow:auto}
+.hetk-topic-reader-layout nav button{display:flex;align-items:center;gap:9px;width:100%;padding:12px;border:1px solid rgba(120,140,165,.25);border-radius:12px;text-align:left;background:rgba(127,148,173,.08);color:inherit;cursor:pointer;transition:background .18s,border-color .18s,transform .18s}
+.hetk-topic-reader-layout nav button:hover{background:rgba(58,148,224,.15);transform:translateY(-1px)}
+.hetk-topic-reader-layout nav button.on{border-color:#2787cb;background:rgba(39,135,203,.16);box-shadow:inset 3px 0 #2787cb}
+.hetk-topic-reader-layout nav button span{flex:0 0 26px;height:26px;display:grid;place-items:center;border-radius:8px;background:rgba(100,130,160,.17)}
+.hetk-topic-reader-layout nav button b{flex:1;min-width:0;overflow-wrap:anywhere;font-size:.9em}
+.hetk-topic-reader-layout main{min-width:0}
+.hetk-topic-reader .hetk-topic-content-blocks figure img{height:auto;max-width:100%}
+.hetk-topic-reader .hetk-chapter-audio-list article{min-width:0}
+@media(max-width:680px){.hetk-topic-reader-layout{grid-template-columns:minmax(0,1fr)}.hetk-topic-reader-layout nav{max-height:none;flex-direction:row;overflow-x:auto;padding-bottom:5px}.hetk-topic-reader-layout nav button{min-width:170px;max-width:230px;flex:0 0 auto}.hetk-v11-text .hetk-topic-reader{padding:12px}}
