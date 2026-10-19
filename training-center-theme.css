@@ -185,3 +185,12 @@
 #hetk-training-overlay .hetk-v20-audio-select select{flex:1 1 260px;min-width:0;padding:12px 15px;border:1px solid #51758a;border-radius:12px;background:#12354a;color:#fff;font:inherit}
 #hetk-training-overlay .hetk-v20-audio-container .hetk-v12-player{margin:0 auto}
 @media(max-width:600px){#hetk-training-overlay .hetk-v20-audio-container{padding:12px 4px}#hetk-training-overlay .hetk-v20-audio-select{gap:8px}#hetk-training-overlay .hetk-v20-audio-select select{flex-basis:100%}}
+
+/* V22: stable audio topic choice on desktop and touch screens */
+#hetk-training-overlay .hetk-v22-audio-picker{display:block;max-width:920px;margin:0 auto 18px}
+#hetk-training-overlay .hetk-v22-audio-picker>strong{display:block;margin-bottom:10px;font-size:14px}
+#hetk-training-overlay .hetk-v22-audio-options{display:flex;flex-wrap:wrap;gap:8px}
+#hetk-training-overlay .hetk-v22-audio-options button{font:inherit;cursor:pointer;border:1px solid #55798d;background:#15374b;color:#fff;border-radius:10px;padding:10px 14px;text-align:left;min-height:42px}
+#hetk-training-overlay .hetk-v22-audio-options button.on{background:#0b84dc;border-color:#0b84dc;color:white;font-weight:700}
+#hetk-training-overlay .hetk-v22-audio-options button:disabled{opacity:.45;cursor:not-allowed}
+@media(max-width:600px){#hetk-training-overlay .hetk-v22-audio-options{display:grid;grid-template-columns:1fr}#hetk-training-overlay .hetk-v22-audio-options button{width:100%}}
