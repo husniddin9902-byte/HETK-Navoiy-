@@ -145,8 +145,34 @@
 #hetk-training-overlay .hetk-v15-note-popup{position:fixed;z-index:100001;max-width:min(380px,calc(100vw - 24px));max-height:65vh;overflow:auto;background:#fff;color:#19384d;border:1px solid #a6cce5;box-shadow:0 12px 45px #0005;border-radius:14px;padding:17px 18px;line-height:1.6;white-space:pre-wrap}
 #hetk-training-overlay .hetk-v15-note-popup>button{float:right;margin:-7px -7px 5px 8px;border:0;background:#e7f1f8;border-radius:8px;font-size:22px;width:32px;height:32px;cursor:pointer}
 #hetk-training-overlay .hetk-v15-note-popup img{max-width:100%;max-height:40vh;display:block;margin-top:10px;border-radius:8px}
+#hetk-training-overlay .hetk-v15-note-editor{position:fixed;z-index:100002;width:min(460px,calc(100vw - 18px));max-height:min(82vh,720px);overflow:auto;background:#fff;border:1px solid #a8cee4;border-radius:18px;box-shadow:0 24px 60px rgba(9,35,54,.28);padding:16px}
+#hetk-training-overlay .hetk-v15-note-editor-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
+#hetk-training-overlay .hetk-v15-note-editor-head strong{display:block;font-size:18px;color:#18384d}
+#hetk-training-overlay .hetk-v15-note-editor-head small{display:block;margin-top:4px;color:#5c7284;line-height:1.45}
+#hetk-training-overlay .hetk-v15-note-editor-head .close{border:1px solid #d4e4ef;background:#f4f9fc;color:#1a3e5a;border-radius:10px;width:38px;height:38px;font-size:24px;cursor:pointer}
+#hetk-training-overlay .hetk-v15-note-editor-body{display:flex;flex-direction:column;gap:14px}
+#hetk-training-overlay .hetk-v15-note-label{display:flex;flex-direction:column;gap:7px;color:#19384d;font-weight:700}
+#hetk-training-overlay .hetk-v15-note-label span,#hetk-training-overlay .hetk-v15-note-upload>div>span{font-size:13px;letter-spacing:.02em;text-transform:uppercase;color:#4a6477}
+#hetk-training-overlay .hetk-v15-note-selected{padding:12px 13px;border:1px dashed #bad4e6;border-radius:12px;background:#f7fbfe;color:#16384f;font-weight:600;white-space:pre-wrap}
+#hetk-training-overlay .hetk-v15-note-editor textarea{width:100%;min-height:110px;border:1px solid #bdd6e8;border-radius:12px;padding:12px 13px;font:inherit;color:#18384d;resize:vertical;background:#fff}
+#hetk-training-overlay .hetk-v15-note-editor textarea:focus{outline:2px solid #2792d0;border-color:#2792d0}
+#hetk-training-overlay .hetk-v15-note-upload{border:1px solid #d5e6f1;border-radius:14px;padding:13px;background:#fbfdff}
+#hetk-training-overlay .hetk-v15-note-upload small{display:block;margin-top:4px;color:#657b8d;line-height:1.45}
+#hetk-training-overlay .hetk-v15-note-upload .actions{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 12px}
+#hetk-training-overlay .hetk-v15-note-upload .actions button,#hetk-training-overlay .hetk-v15-note-actions button{border:1px solid #bcd6e7;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;background:#fff;color:#16384f}
+#hetk-training-overlay .hetk-v15-note-upload .actions button i,#hetk-training-overlay .hetk-v15-note-actions button i{margin-right:6px}
+#hetk-training-overlay .hetk-v15-note-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+#hetk-training-overlay .hetk-v15-note-actions .primary{background:#0b83d4;border-color:#0b83d4;color:#fff}
+#hetk-training-overlay .hetk-v15-note-upload .actions .danger,#hetk-training-overlay .hetk-v15-note-actions .danger{background:#fff5f5;border-color:#f2c8c8;color:#a33a3a}
+#hetk-training-overlay .hetk-v15-note-actions .secondary{background:#f6fbff}
+#hetk-training-overlay .hetk-v15-note-preview{min-height:120px;border:1px dashed #c6dcea;border-radius:14px;background:#fff;display:flex;align-items:center;justify-content:center;padding:12px;overflow:hidden}
+#hetk-training-overlay .hetk-v15-note-preview.has-image{border-style:solid;background:#fafdff}
+#hetk-training-overlay .hetk-v15-note-preview .placeholder{display:flex;flex-direction:column;align-items:center;gap:8px;color:#7290a3;text-align:center}
+#hetk-training-overlay .hetk-v15-note-preview .placeholder i{font-size:28px}
+#hetk-training-overlay .hetk-v15-note-preview img{max-width:100%;max-height:280px;border-radius:12px;display:block}
+#hetk-training-overlay .hetk-rich-selection-tools [data-float-note],#hetk-training-overlay .hetk-rich-selection-tools [data-float-note-image]{display:grid;place-items:center;min-width:36px;padding-inline:10px}
 #hetk-training-overlay .hetk-topic-content-blocks figure img{height:auto;object-fit:contain}
-@media(max-width:600px){#hetk-training-overlay.hetk-v15-search-active .hetk-v13-reader .hetk-v13-searchbar{top:4px!important;width:calc(100vw - 10px);padding:7px!important}#hetk-training-overlay .hetk-v15-note-popup{max-width:calc(100vw - 24px)}}
+@media(max-width:600px){#hetk-training-overlay.hetk-v15-search-active .hetk-v13-reader .hetk-v13-searchbar{top:4px!important;width:calc(100vw - 10px);padding:7px!important}#hetk-training-overlay .hetk-v15-note-popup{max-width:calc(100vw - 24px)}#hetk-training-overlay .hetk-v15-note-editor{width:calc(100vw - 12px);padding:13px;max-height:86vh}#hetk-training-overlay .hetk-v15-note-actions{justify-content:stretch}#hetk-training-overlay .hetk-v15-note-actions button,#hetk-training-overlay .hetk-v15-note-upload .actions button{width:100%}}
 
 @media(hover:hover){#hetk-training-overlay .hetk-v15-book-note[data-book-note]:hover::after{content:attr(data-book-note);position:absolute;z-index:10;transform:translate(-35%,26px);max-width:310px;width:max-content;white-space:pre-wrap;background:#fff;color:#17364c;border:1px solid #afd2e9;padding:10px 13px;border-radius:10px;box-shadow:0 8px 22px #0003;font-size:14px;font-weight:400;text-decoration:none;pointer-events:none}}
 
