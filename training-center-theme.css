@@ -239,3 +239,38 @@
 #hetk-training-overlay .hetk-v24-topic-text .hetk-topic-content-blocks{width:100%;max-width:none;color:inherit}
 #hetk-training-overlay .hetk-v24-topic-text .hetk-topic-content-blocks p{max-width:none;line-height:inherit;color:inherit}
 @media(max-width:760px){#hetk-training-overlay .hetk-v24-primary-help{padding:13px;gap:8px}#hetk-training-overlay .hetk-v24-primary-help>i{flex-basis:28px;width:28px;font-size:19px}#hetk-training-overlay .hetk-v24-preview-audio{width:100%;justify-content:center}}
+
+/* V25 — mavzu kartasidan mustaqil, tasdiqlanadigan to‘liq o‘chirish. */
+#hetk-training-overlay .hetk-v25-topic-row{display:flex;align-items:stretch;gap:6px;min-width:0}
+#hetk-training-overlay .hetk-topic-workspace>aside .hetk-v25-topic-pick,
+#hetk-training-overlay .hetk-v24-legacy-topics .hetk-v25-topic-pick{display:grid;grid-template-columns:32px minmax(0,1fr);gap:9px;align-items:center;flex:1;min-width:0;text-align:left;border:1px solid #d6e3eb;border-radius:11px;padding:9px;background:#fff;color:#173f57;cursor:pointer;transition:background .2s,border-color .2s}
+#hetk-training-overlay .hetk-v25-topic-pick>span{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;background:#e2f2fc;color:#0879c3;font-weight:900}
+#hetk-training-overlay .hetk-v25-topic-pick>div{min-width:0}
+#hetk-training-overlay .hetk-v25-topic-pick b,
+#hetk-training-overlay .hetk-v25-topic-pick small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#hetk-training-overlay .hetk-v25-topic-pick small{color:#71889a;font-size:10px;margin-top:3px}
+#hetk-training-overlay .hetk-v25-topic-pick.on{outline:2px solid #0b83d4;outline-offset:1px;border-color:#1688d2;background:#e8f5ff}
+#hetk-training-overlay .hetk-v25-topic-delete{flex:0 0 39px;display:grid;place-items:center;border:1px solid #f0cdd0;border-radius:11px;background:#fff6f7;color:#aa3446;cursor:pointer;transition:background .16s,transform .16s}
+#hetk-training-overlay .hetk-v25-topic-delete:hover{background:#ffeaec;transform:translateY(-1px)}
+#hetk-training-overlay .hetk-v25-topic-delete:focus-visible{outline:3px solid #db5865;outline-offset:2px}
+#hetk-training-overlay .hetk-v25-delete-overlay{position:fixed;inset:0;z-index:100040;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(5,22,39,.68);backdrop-filter:blur(4px)}
+#hetk-training-overlay .hetk-v25-delete-dialog{width:min(470px,100%);max-height:90vh;overflow-y:auto;background:#fff;color:#19364a;border:1px solid #dce8ef;border-radius:20px;box-shadow:0 24px 90px rgba(0,0,0,.28);padding:24px;box-sizing:border-box}
+#hetk-training-overlay .hetk-v25-delete-symbol{display:grid;place-items:center;width:58px;height:58px;border-radius:18px;background:#fff0f1;color:#ca3b4a;font-size:25px;margin-bottom:14px}
+#hetk-training-overlay .hetk-v25-delete-dialog h3{color:#17374f;font-size:21px;line-height:1.3;margin:0 0 9px}
+#hetk-training-overlay .hetk-v25-delete-dialog>p{margin:0 0 14px;font-size:14px;line-height:1.65}
+#hetk-training-overlay .hetk-v25-delete-details{display:grid;gap:9px;background:#f4f8fb;border:1px solid #d7e5ee;border-radius:13px;padding:13px;margin:14px 0}
+#hetk-training-overlay .hetk-v25-delete-details span{display:flex;align-items:center;gap:11px;font-size:13px;color:#3f6176}
+#hetk-training-overlay .hetk-v25-delete-details i{width:18px;text-align:center;color:#277dad}
+#hetk-training-overlay .hetk-v25-delete-dialog .hetk-v25-delete-warning{display:flex;align-items:flex-start;gap:9px;padding:12px;border-radius:12px;background:#fff7e9;color:#836122;border:1px solid #f2ddb3;font-size:12px;line-height:1.6}
+#hetk-training-overlay .hetk-v25-delete-warning i{margin-top:3px}
+#hetk-training-overlay .hetk-v25-delete-status{padding:9px 12px;border-radius:10px;background:#eef6ff;color:#174d72;font-size:12px;line-height:1.5;margin:12px 0}
+#hetk-training-overlay .hetk-v25-delete-dialog footer{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:18px}
+#hetk-training-overlay .hetk-v25-delete-dialog footer button{min-height:43px;border-radius:11px;padding:10px 17px;font:inherit;font-size:13px;font-weight:800;cursor:pointer;border:1px solid #ccdde7}
+#hetk-training-overlay .hetk-v25-delete-cancel{background:#f2f7fa;color:#36576c}
+#hetk-training-overlay .hetk-v25-delete-confirm{background:#c8374b;border-color:#c8374b!important;color:#fff}
+#hetk-training-overlay .hetk-v25-delete-dialog footer button:disabled{opacity:.65;cursor:wait}
+@media(max-width:600px){#hetk-training-overlay .hetk-v25-delete-dialog{padding:17px;border-radius:17px}#hetk-training-overlay .hetk-v25-delete-dialog footer{display:grid;grid-template-columns:1fr}#hetk-training-overlay .hetk-v25-delete-dialog footer button{width:100%}}
+
+#hetk-training-overlay .hetk-v25-delete-topic-wide{display:inline-flex;align-items:center;gap:8px;justify-content:center;border:1px solid #e5bec4;border-radius:10px;background:#fff7f8;color:#b23649;padding:12px 14px;font-weight:800;cursor:pointer;min-height:43px}
+#hetk-training-overlay .hetk-v25-delete-topic-wide:hover{background:#ffecef}
+@media(max-width:760px){#hetk-training-overlay .hetk-topic-editor>footer .hetk-v25-delete-topic-wide{width:100%}}
