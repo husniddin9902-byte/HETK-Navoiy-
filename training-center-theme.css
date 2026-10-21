@@ -220,3 +220,22 @@
 #hetk-training-overlay .hetk-v22-audio-options button.on{background:#0b84dc;border-color:#0b84dc;color:white;font-weight:700}
 #hetk-training-overlay .hetk-v22-audio-options button:disabled{opacity:.45;cursor:not-allowed}
 @media(max-width:600px){#hetk-training-overlay .hetk-v22-audio-options{display:grid;grid-template-columns:1fr}#hetk-training-overlay .hetk-v22-audio-options button{width:100%}}
+
+/* V24 — bobning 1-mavzusi eski chapter maydonlari bilan mos ishlaydi. */
+#hetk-training-overlay .hetk-v24-primary-help{display:flex;gap:14px;align-items:flex-start;padding:20px;min-width:0;border:1px solid #c6deed;border-radius:14px;background:#f5fbff;color:#153c56}
+#hetk-training-overlay .hetk-v24-primary-help>i{display:grid;place-items:center;flex:0 0 38px;width:38px;height:38px;color:#0c83c5;font-size:24px}
+#hetk-training-overlay .hetk-v24-primary-help>div{min-width:0}
+#hetk-training-overlay .hetk-v24-primary-help b{font-size:17px}
+#hetk-training-overlay .hetk-v24-primary-help p{font-size:13px;line-height:1.65;color:#476a7f;margin:8px 0 12px}
+#hetk-training-overlay .hetk-v24-primary-help button{min-height:40px}
+#hetk-training-overlay .hetk-v24-legacy-topics{border:1px solid #dfebf2;border-radius:11px;padding:8px;background:#f9fcff}
+#hetk-training-overlay .hetk-v24-legacy-topics summary{font-size:12px;color:#406579;font-weight:700;cursor:pointer;line-height:1.45}
+#hetk-training-overlay .hetk-v24-legacy-topics>small{display:block;color:#688396;padding:7px 2px;line-height:1.45}
+#hetk-training-overlay .hetk-v24-legacy-topics button{margin:5px 0 0;width:100%;font-size:12px;min-height:40px}
+#hetk-training-overlay .hetk-v24-preview-audio{display:inline-flex;align-items:center;gap:7px;border:1px solid #7bbadf;border-radius:10px;padding:8px 12px;min-height:38px;font-size:13px;font-weight:700;background:#eaf7ff;color:#125d8b;cursor:pointer;margin:6px 0 8px;transition:background .15s}
+#hetk-training-overlay .hetk-v24-preview-audio:hover{background:#d7efff}
+#hetk-training-overlay .hetk-v24-preview-audio:disabled{cursor:wait;opacity:.7}
+#hetk-training-overlay .hetk-v24-topic-text{display:block;margin:.6em 0 0;padding:0;width:100%;max-width:none;border:none!important;background:transparent!important;box-shadow:none!important;color:inherit}
+#hetk-training-overlay .hetk-v24-topic-text .hetk-topic-content-blocks{width:100%;max-width:none;color:inherit}
+#hetk-training-overlay .hetk-v24-topic-text .hetk-topic-content-blocks p{max-width:none;line-height:inherit;color:inherit}
+@media(max-width:760px){#hetk-training-overlay .hetk-v24-primary-help{padding:13px;gap:8px}#hetk-training-overlay .hetk-v24-primary-help>i{flex-basis:28px;width:28px;font-size:19px}#hetk-training-overlay .hetk-v24-preview-audio{width:100%;justify-content:center}}
