@@ -186,7 +186,7 @@
 #hetk-training-overlay .hetk-topic-content-blocks figure img{height:auto;object-fit:contain}
 @media(max-width:600px){#hetk-training-overlay.hetk-v15-search-active .hetk-v13-reader .hetk-v13-searchbar{top:4px!important;width:calc(100vw - 10px);padding:7px!important}#hetk-training-overlay .hetk-v15-note-popup{max-width:calc(100vw - 24px)}#hetk-training-overlay .hetk-v15-note-editor{width:calc(100vw - 12px);padding:13px;max-height:86vh}#hetk-training-overlay .hetk-v15-note-actions{justify-content:stretch}#hetk-training-overlay .hetk-v15-note-actions button,#hetk-training-overlay .hetk-v15-note-upload .actions button{width:100%}}
 
-@media(hover:hover){#hetk-training-overlay .hetk-v15-book-note[data-book-note]:hover::after{content:attr(data-book-note);position:absolute;z-index:10;transform:translate(-35%,26px);max-width:310px;width:max-content;white-space:pre-wrap;background:#fff;color:#17364c;border:1px solid #afd2e9;padding:10px 13px;border-radius:10px;box-shadow:0 8px 22px #0003;font-size:14px;font-weight:400;text-decoration:none;pointer-events:none}}
+/* V28: eski CSS hover-izohi olib tashlandi. Izoh faqat yagona JS popup orqali ochiladi; ikki marta chiqmaydi. */
 
 /* V16: mavzu kartalari va mavjud audio uchun aniq tahrir interfeysi */
 .hetk-topic-studio .hetk-topic-workspace aside button.on{outline:2px solid #0b83d4;outline-offset:1px;background:#e8f5ff}
