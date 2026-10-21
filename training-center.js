@@ -108,7 +108,7 @@ KL = kabel liniyasi`;
   }
   function navButton(tab,icon,label){const active=state.activeTab===tab||(tab==='results'&&state.activeTab==='annual'),locked=!!state.activeBookId;return `<button class="hetk-training-nav ${active?'is-active':''} ${locked?'is-reader-locked':''}" type="button" data-training-tab="${tab}" ${locked?'disabled aria-disabled="true"':''}><i class="fas ${icon}"></i><span>${label}</span></button>`;}
   function renderActive(){if(state.activeTestId)return renderTest();if(state.activeBookId)return renderBookReader();if(state.activeTab==='books')return renderBooks();if(state.activeTab==='bookAdmin')return renderBookAdmin();if(state.activeTab==='tests')return renderTests();if(state.activeTab==='results')return renderResults();if(state.activeTab==='annual')return renderAnnualStatistics();if(state.activeTab==='manage')return state.createdListOpen?renderCreated():renderManage();return renderHome();}
-  function repaint(){const o=document.getElementById('hetk-training-overlay'),content=o&&o.querySelector('[data-training-content]');if(!content)return;if(typeof state.richEditorCleanup==='function'){state.richEditorCleanup();state.richEditorCleanup=null;}const shellEl=o.querySelector('.hetk-training-shell');if(shellEl){shellEl.classList.toggle('is-book-reader',!!state.activeBookId);shellEl.classList.toggle('is-book-editing',state.activeTab==='bookAdmin');}content.innerHTML=renderActive();o.querySelectorAll('[data-training-tab]').forEach(b=>b.classList.toggle('is-active',(b.dataset.trainingTab===state.activeTab||(b.dataset.trainingTab==='results'&&state.activeTab==='annual'))&&!state.activeTestId));applyUiLanguage(content);bindDynamic();const bookForm=content.querySelector('[data-book-form]');if(bookForm)enhanceBookRichEditor(bookForm);bindAudioTopicTools(content);const filter=content.querySelector('[data-test-filter]');if(filter){filter.value=state.testFilter;filter.dispatchEvent(new Event('change',{bubbles:false}));content.querySelectorAll('[data-test-card]').forEach(c=>c.hidden=(state.testFilter!=='all'&&c.dataset.status!==state.testFilter));}}
+  function repaint(){closeBookNoteViewer();const o=document.getElementById('hetk-training-overlay'),content=o&&o.querySelector('[data-training-content]');if(!content)return;if(typeof state.richEditorCleanup==='function'){state.richEditorCleanup();state.richEditorCleanup=null;}const shellEl=o.querySelector('.hetk-training-shell');if(shellEl){shellEl.classList.toggle('is-book-reader',!!state.activeBookId);shellEl.classList.toggle('is-book-editing',state.activeTab==='bookAdmin');}content.innerHTML=renderActive();o.querySelectorAll('[data-training-tab]').forEach(b=>b.classList.toggle('is-active',(b.dataset.trainingTab===state.activeTab||(b.dataset.trainingTab==='results'&&state.activeTab==='annual'))&&!state.activeTestId));applyUiLanguage(content);bindDynamic();const bookForm=content.querySelector('[data-book-form]');if(bookForm)enhanceBookRichEditor(bookForm);bindAudioTopicTools(content);const filter=content.querySelector('[data-test-filter]');if(filter){filter.value=state.testFilter;filter.dispatchEvent(new Event('change',{bubbles:false}));content.querySelectorAll('[data-test-card]').forEach(c=>c.hidden=(state.testFilter!=='all'&&c.dataset.status!==state.testFilter));}}
   function visibleTests(){return Object.entries(state.tests).map(([id,t])=>({...t,id})).filter(testVisible).sort((a,b)=>(b.startAt||0)-(a.startAt||0));}
   function isPractice(t){return t&&t.status==='draft'&&t.announcementMode==='visible';}
   function canPractice(t){return isPractice(t)||!!(t&&t.status==='draft'&&(t.createdBy===uid()||isSuperAdmin()));}
@@ -944,7 +944,7 @@ KL = kabel liniyasi`;
 
   function ensureOverlay(){let o=document.getElementById('hetk-training-overlay');if(o)return o;o=document.createElement('div');o.id='hetk-training-overlay';o.className='hetk-training-overlay';o.setAttribute('aria-hidden','true');document.body.appendChild(o);o.addEventListener('mousedown',e=>{if(e.target.closest('[data-topic-format],[data-topic-note],[data-float-note],[data-float-note-image]'))e.preventDefault();});o.addEventListener('mouseover',e=>{if(window.matchMedia('(hover:hover)').matches){const note=e.target.closest('[data-book-note]');if(note&&!note.closest('[contenteditable]'))showBookNote(note);}});o.addEventListener('click',handleClick);o.addEventListener('submit',handleSubmit);o.addEventListener('input',handleInput);o.addEventListener('change',handleChange);return o;}
   function open(){const o=ensureOverlay();state.activeTab='home';state.activeTestId='';o.innerHTML=shell();applyUiLanguage(o);o.classList.add('is-open');o.setAttribute('aria-hidden','false');document.body.classList.add('hetk-training-open');listen();bindDynamic();}
-  function close(){const o=document.getElementById('hetk-training-overlay');if(!o)return;if(state.activeTab==='bookAdmin'&&!canNavigateFromAudio())return;if(typeof state.noteEditorCleanup==='function'){state.noteEditorCleanup();state.noteEditorCleanup=null;}o.classList.remove('is-open');o.setAttribute('aria-hidden','true');document.body.classList.remove('hetk-training-open');stopListeners();}
+  function close(){const o=document.getElementById('hetk-training-overlay');if(!o)return;closeBookNoteViewer();if(state.activeTab==='bookAdmin'&&!canNavigateFromAudio())return;if(typeof state.noteEditorCleanup==='function'){state.noteEditorCleanup();state.noteEditorCleanup=null;}o.classList.remove('is-open');o.setAttribute('aria-hidden','true');document.body.classList.remove('hetk-training-open');stopListeners();}
   function stopListeners(){state.listeners.forEach(({ref,fn})=>ref.off('value',fn));state.listeners=[];state.booksRealtime=false;clearInterval(state.timer);state.timer=null;}
   function onValue(path,cb){const ref=db().ref(path),fn=s=>cb(s.val()||{});ref.on('value',fn,e=>toast('Ma’lumot yuklanmadi: '+e.message,'error'));state.listeners.push({ref,fn});}
   function listen(){stopListeners();if(!db()){toast('Firebase ulanmagan.','error');return;}state.timer=setInterval(()=>{updateTimes();updateChapterQuizTime();},1000);}
@@ -1066,6 +1066,7 @@ KL = kabel liniyasi`;
     const request=(Number(popup.dataset.imageRequest)||0)+1;
     popup.dataset.imageRequest=String(request);
     photo.hidden=true;
+    const zoomBtn=popup.querySelector('[data-v27-open-viewer]');if(zoomBtn)zoomBtn.disabled=true;
     status.hidden=false;
     status.innerHTML='<i class="fas fa-spinner fa-spin" aria-hidden="true"></i><span>Rasm yuklanmoqda...</span>';
     try{
@@ -1078,6 +1079,8 @@ KL = kabel liniyasi`;
         if(!popup.isConnected||popup.dataset.imageRequest!==String(request))return;
         photo.hidden=false;
         status.hidden=true;
+        const btn=popup.querySelector('[data-v27-open-viewer]');if(btn)btn.disabled=false;
+        positionBookNote(popup);
       };
       photo.onerror=()=>{
         if(!popup.isConnected||popup.dataset.imageRequest!==String(request))return;
@@ -1092,6 +1095,132 @@ KL = kabel liniyasi`;
       status.hidden=false;
       status.innerHTML='<i class="fas fa-triangle-exclamation" aria-hidden="true"></i><span>Rasm yuklanmadi: '+esc(err&&err.message||'Noma’lum xato')+'</span><button type="button" data-retry-book-note-image><i class="fas fa-rotate-right" aria-hidden="true"></i> Qayta yuklash</button>';
     }
+  }
+  // V27: izohdagi rasmni o‘qish uchun kattalashtirish. O‘quvchi matni o‘zgarmaydi.
+  function positionBookNote(popup){
+    if(!popup||!popup.isConnected)return;
+    const node=popup._bookNoteAnchor;
+    if(!node||!node.isConnected)return;
+    if(window.matchMedia('(max-width:640px)').matches){
+      popup.style.left='50%';popup.style.top='50%';return;
+    }
+    const rect=node.getBoundingClientRect(),width=popup.offsetWidth||330,height=popup.offsetHeight||120;
+    const vw=window.innerWidth,vh=window.innerHeight;
+    const x=Math.max(12,Math.min(vw-width-12,rect.left));
+    const y=rect.bottom+12+height<=vh-12?rect.bottom+12:
+      rect.top-12-height>=12?rect.top-12:Math.max(12,Math.min(vh-height-12,rect.bottom+12));
+    popup.style.left=x+'px';popup.style.top=y+'px';
+  }
+  function closeBookNoteViewer(){
+    const root=document.querySelector('#hetk-training-overlay');
+    const viewer=root&&root.querySelector('.hetk-v27-image-viewer');
+    if(viewer&&typeof viewer._close==='function')viewer._close();
+    else viewer?.remove();
+  }
+  function openBookNoteViewer(popup){
+    if(!popup||!popup.isConnected)return;
+    const preview=popup.querySelector('[data-book-note-preview]');
+    if(!preview||!preview.complete||!preview.naturalWidth){toast('Rasm yuklanishini kuting.','warning');return;}
+    const root=document.querySelector('#hetk-training-overlay');if(!root)return;
+    closeBookNoteViewer();
+    const viewer=document.createElement('div');
+    viewer.className='hetk-v27-image-viewer';viewer.setAttribute('role','dialog');
+    viewer.setAttribute('aria-modal','true');viewer.setAttribute('aria-label','Izoh rasmini kattalashtirib ko‘rish');viewer.tabIndex=-1;
+    viewer.innerHTML=`<div class="hetk-v27-viewer-head"><div class="hetk-v27-viewer-name"><i class="fas fa-image" aria-hidden="true"></i><span>Izoh rasmi <small>Kattalashtirish va surish</small></span></div><div class="hetk-v27-viewer-tools"><button type="button" data-v27-zoom-out title="Kichraytirish" aria-label="Kichraytirish"><i class="fas fa-minus"></i></button><output data-v27-zoom-label aria-live="off">100%</output><button type="button" data-v27-zoom-in title="Kattalashtirish" aria-label="Kattalashtirish"><i class="fas fa-plus"></i></button><button type="button" class="fit" data-v27-fit title="Rasmni ekranga moslash"><i class="fas fa-expand-arrows-alt"></i><span>Sig‘dirish</span></button><button type="button" class="close" data-v27-close title="Yopish" aria-label="Rasm oynasini yopish"><i class="fas fa-times"></i></button></div></div><div class="hetk-v27-viewer-stage" data-v27-stage aria-label="Rasm. Kattalashtirgach surishingiz mumkin"><img draggable="false" alt="Kattalashtirilgan izoh rasmi" data-v27-photo></div><div class="hetk-v27-viewer-foot"><i class="fas fa-hand-pointer" aria-hidden="true"></i><span>Kompyuterda: g‘ildirak bilan kattalashtiring, sichqoncha bilan suring. Telefonda: ikki barmoq bilan kattalashtiring va suring.</span></div>`;
+    root.appendChild(viewer);
+    const stage=viewer.querySelector('[data-v27-stage]'),photo=viewer.querySelector('[data-v27-photo]');
+    const zoomLabel=viewer.querySelector('[data-v27-zoom-label]');
+    const naturalWidth=preview.naturalWidth,naturalHeight=preview.naturalHeight;
+    const pointers=new Map();
+    let zoom=1,panX=0,panY=0,closed=false;
+    const LIMIT=12;
+    const baseScale=()=>Math.min(stage.clientWidth/naturalWidth,stage.clientHeight/naturalHeight);
+    const update=()=>{
+      if(closed||!stage.isConnected)return;
+      zoom=Math.max(1,Math.min(LIMIT,zoom));
+      const actualScale=baseScale()*zoom;
+      const maxX=Math.max(0,(naturalWidth*actualScale-stage.clientWidth)/2);
+      const maxY=Math.max(0,(naturalHeight*actualScale-stage.clientHeight)/2);
+      panX=Math.max(-maxX,Math.min(maxX,panX));panY=Math.max(-maxY,Math.min(maxY,panY));
+      photo.style.width=naturalWidth+'px';photo.style.height=naturalHeight+'px';
+      photo.style.transform=`translate(-50%,-50%) translate(${panX}px,${panY}px) scale(${actualScale})`;
+      zoomLabel.textContent=Math.round(zoom*100)+'%';
+      viewer.querySelector('[data-v27-zoom-out]').disabled=zoom<=1.001;
+      viewer.querySelector('[data-v27-zoom-in]').disabled=zoom>=LIMIT-.001;
+      stage.classList.toggle('is-zoomed',zoom>1.001);
+    };
+    const zoomTo=(value,x=null,y=null)=>{
+      const next=Math.max(1,Math.min(LIMIT,value)),previous=zoom;
+      if(x!==null&&y!==null&&previous){
+        const r=stage.getBoundingClientRect(),pointX=x-r.left-r.width/2,pointY=y-r.top-r.height/2,k=next/previous;
+        panX=pointX-(pointX-panX)*k;panY=pointY-(pointY-panY)*k;
+      }else if(next<=1.001){panX=0;panY=0;}
+      zoom=next;update();
+    };
+    const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+    const midpoint=(a,b)=>({x:(a.x+b.x)/2,y:(a.y+b.y)/2});
+    const handlePointerDown=e=>{
+      if(e.pointerType==='mouse'&&e.button!==0)return;
+      e.preventDefault();try{stage.setPointerCapture?.(e.pointerId);}catch(_){ }
+      pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    };
+    const handlePointerMove=e=>{
+      if(!pointers.has(e.pointerId))return;
+      const old=new Map(pointers);
+      pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+      if(pointers.size>=2){
+        const keys=[...pointers.keys()].slice(0,2),before=[old.get(keys[0]),old.get(keys[1])],after=[pointers.get(keys[0]),pointers.get(keys[1])];
+        if(before[0]&&before[1]){
+          const prevDist=distance(before[0],before[1]),nextDist=distance(after[0],after[1]);
+          const oldCenter=midpoint(before[0],before[1]),newCenter=midpoint(after[0],after[1]);
+          panX+=newCenter.x-oldCenter.x;panY+=newCenter.y-oldCenter.y;
+          if(prevDist>0)zoomTo(zoom*nextDist/prevDist,newCenter.x,newCenter.y);else update();
+        }
+      }else{
+        const prev=old.get(e.pointerId);if(!prev)return;
+        panX+=e.clientX-prev.x;panY+=e.clientY-prev.y;update();
+      }
+    };
+    const handlePointerUp=e=>{pointers.delete(e.pointerId);try{stage.releasePointerCapture?.(e.pointerId);}catch(_){}};
+    const handleWheel=e=>{e.preventDefault();zoomTo(zoom*(e.deltaY<0?1.25:1/1.25),e.clientX,e.clientY);};
+    const handleDouble=e=>{e.preventDefault();zoomTo(zoom>1.5?1:2.5,e.clientX,e.clientY);};
+    const handleKeyboard=e=>{
+      if(closed||!viewer.isConnected)return;
+      if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();closeViewer();return;}
+      if(e.key==='+'||e.key==='='){e.preventDefault();zoomTo(zoom*1.25);}
+      else if(e.key==='-'||e.key==='_'){e.preventDefault();zoomTo(zoom/1.25);}
+      else if(e.key==='0'){e.preventDefault();zoomTo(1);}
+      else if(e.key==='ArrowUp'||e.key==='ArrowDown'||e.key==='ArrowLeft'||e.key==='ArrowRight'){
+        e.preventDefault();const step=72;if(e.key==='ArrowUp')panY+=step;if(e.key==='ArrowDown')panY-=step;if(e.key==='ArrowLeft')panX+=step;if(e.key==='ArrowRight')panX-=step;update();
+      }
+    };
+    const resize=()=>update();
+    const observer=typeof ResizeObserver!=='undefined'?new ResizeObserver(resize):null;
+    const closeViewer=()=>{
+      if(closed)return;closed=true;observer?.disconnect();window.removeEventListener('resize',resize);
+      document.removeEventListener('keydown',handleKeyboard,true);
+      viewer.remove();
+      if(popup.isConnected)popup.querySelector('[data-v27-open-viewer]')?.focus({preventScroll:true});
+    };
+    viewer._close=closeViewer;
+    stage.addEventListener('pointerdown',handlePointerDown);
+    stage.addEventListener('pointermove',handlePointerMove);
+    stage.addEventListener('pointerup',handlePointerUp);
+    stage.addEventListener('pointercancel',handlePointerUp);
+    stage.addEventListener('wheel',handleWheel,{passive:false});
+    stage.addEventListener('dblclick',handleDouble);
+    viewer.addEventListener('click',e=>{
+      e.stopPropagation();
+      if(e.target.closest('[data-v27-close]')){closeViewer();return;}
+      if(e.target.closest('[data-v27-zoom-in]')){zoomTo(zoom*1.5);return;}
+      if(e.target.closest('[data-v27-zoom-out]')){zoomTo(zoom/1.5);return;}
+      if(e.target.closest('[data-v27-fit]')){zoomTo(1);return;}
+    });
+    document.addEventListener('keydown',handleKeyboard,true);
+    window.addEventListener('resize',resize);
+    observer?.observe(stage);
+    photo.src=preview.currentSrc||preview.src;
+    update();viewer.focus({preventScroll:true});
   }
   function showBookNote(node){
     const root=document.querySelector('#hetk-training-overlay');if(!root||!node)return;
@@ -1110,17 +1239,21 @@ KL = kabel liniyasi`;
     if(file){
       popup.dataset.noteImage=file;
       const media=document.createElement('div');media.className='hetk-v15-note-media';
-      const img=document.createElement('img');img.setAttribute('data-book-note-preview','');img.alt='Izoh rasmi';img.hidden=true;
+      const img=document.createElement('img');img.setAttribute('data-book-note-preview','');img.alt='Izoh rasmi';img.setAttribute('tabindex','0');img.setAttribute('role','button');img.setAttribute('aria-label','Rasmni kattalashtirib ko‘rish');img.hidden=true;
+      img.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openBookNoteViewer(popup);}});
       const status=document.createElement('div');status.className='hetk-v15-note-image-status';status.setAttribute('data-book-note-image-status','');
       media.appendChild(img);media.appendChild(status);popup.appendChild(media);
+      const actions=document.createElement('div');actions.className='hetk-v27-preview-actions';
+      actions.innerHTML='<button type="button" data-v27-open-viewer disabled title="Rasmni kattalashtirib ko‘rish"><i class="fas fa-expand" aria-hidden="true"></i> Kattalashtirib ko‘rish</button>';
+      popup.appendChild(actions);
     }
     root.appendChild(popup); // Dastlab sahifaga joylanadi, keyin rasm yuklanadi.
-    const r=node.getBoundingClientRect(),w=popup.offsetWidth||320;
-    popup.style.left=Math.max(12,Math.min(window.innerWidth-w-12,r.left))+'px';
-    popup.style.top=Math.max(12,Math.min(window.innerHeight-popup.offsetHeight-12,r.bottom+8))+'px';
+    positionBookNote(popup);
     if(file)loadBookNoteImage(popup);
   }
   function handleClick(e){
+    const openNoteViewer=e.target.closest('[data-v27-open-viewer],[data-book-note-preview]');
+    if(openNoteViewer){e.preventDefault();e.stopPropagation();openBookNoteViewer(openNoteViewer.closest('.hetk-v15-note-popup'));return;}
     const retryNoteImage=e.target.closest('[data-retry-book-note-image]');
     if(retryNoteImage){e.preventDefault();loadBookNoteImage(retryNoteImage.closest('.hetk-v15-note-popup'),true);return;}
     if(e.target.closest('[data-close-book-note]')){e.target.closest('.hetk-v15-note-popup')?.remove();return;}
