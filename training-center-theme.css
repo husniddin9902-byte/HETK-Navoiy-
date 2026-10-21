@@ -286,3 +286,45 @@
 #hetk-training-overlay .hetk-v25-delete-topic-wide{display:inline-flex;align-items:center;gap:8px;justify-content:center;border:1px solid #e5bec4;border-radius:10px;background:#fff7f8;color:#b23649;padding:12px 14px;font-weight:800;cursor:pointer;min-height:43px}
 #hetk-training-overlay .hetk-v25-delete-topic-wide:hover{background:#ffecef}
 @media(max-width:760px){#hetk-training-overlay .hetk-topic-editor>footer .hetk-v25-delete-topic-wide{width:100%}}
+
+/* V27 — kitob izohining ko‘rish oynasi: matn/audio/test interfeysiga ta'sir qilmaydi. */
+#hetk-training-overlay .hetk-v15-note-popup{box-sizing:border-box;}
+#hetk-training-overlay .hetk-v15-note-popup img[data-book-note-preview]{cursor:zoom-in;max-height:min(38vh,320px);max-height:min(38dvh,320px);}
+#hetk-training-overlay .hetk-v27-preview-actions{display:flex;justify-content:stretch;margin-top:12px;}
+#hetk-training-overlay .hetk-v27-preview-actions button{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;min-height:43px;border:1px solid #a2cde7;border-radius:11px;background:#edf7fe;color:#0a679e;cursor:pointer;font-size:13px;font-weight:800;letter-spacing:0;}
+#hetk-training-overlay .hetk-v27-preview-actions button:hover:not(:disabled){background:#dceffc;border-color:#6cb2df;}
+#hetk-training-overlay .hetk-v27-preview-actions button:disabled{opacity:.55;cursor:wait;}
+#hetk-training-overlay .hetk-v27-preview-actions button:focus-visible{outline:3px solid #2097da;outline-offset:2px;}
+#hetk-training-overlay .hetk-v27-image-viewer{position:fixed;inset:0;z-index:100100;display:flex;flex-direction:column;box-sizing:border-box;width:100%;height:100vh;height:100dvh;background:#091925;color:#f7fbff;font-family:Arial,sans-serif;overflow:hidden;overscroll-behavior:contain;}
+#hetk-training-overlay .hetk-v27-viewer-head{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;flex:0 0 auto;box-sizing:border-box;padding:13px 20px;background:#0b2d45;border-bottom:1px solid #31536a;z-index:1;}
+#hetk-training-overlay .hetk-v27-viewer-name{display:flex;align-items:center;gap:11px;min-width:0;font-size:16px;font-weight:800;}
+#hetk-training-overlay .hetk-v27-viewer-name>i{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:#166fa9;color:#fff;}
+#hetk-training-overlay .hetk-v27-viewer-name small{display:block;margin-top:4px;color:#b9d2e2;font-size:12px;font-weight:500;}
+#hetk-training-overlay .hetk-v27-viewer-tools{display:flex;align-items:center;justify-content:flex-end;gap:9px;flex-wrap:wrap;}
+#hetk-training-overlay .hetk-v27-viewer-tools button{display:flex;align-items:center;justify-content:center;gap:8px;box-sizing:border-box;min-width:42px;min-height:42px;border:1px solid #4c7794;border-radius:11px;background:#173b56;color:#fff;font-size:14px;font-weight:700;cursor:pointer;}
+#hetk-training-overlay .hetk-v27-viewer-tools button.fit{padding:0 14px;}
+#hetk-training-overlay .hetk-v27-viewer-tools button.close{background:#b73341;border-color:#d6505b;}
+#hetk-training-overlay .hetk-v27-viewer-tools button:disabled{opacity:.35;cursor:not-allowed;}
+#hetk-training-overlay .hetk-v27-viewer-tools button:hover:not(:disabled){filter:brightness(1.17);}
+#hetk-training-overlay .hetk-v27-viewer-tools button:focus-visible{outline:3px solid #87cfff;outline-offset:2px;}
+#hetk-training-overlay .hetk-v27-viewer-tools output{min-width:60px;text-align:center;white-space:nowrap;font-size:14px;font-weight:800;color:#fff;}
+#hetk-training-overlay .hetk-v27-viewer-stage{position:relative;flex:1 1 auto;min-height:0;width:100%;overflow:hidden;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;overscroll-behavior:contain;background-color:#172532;background-image:linear-gradient(45deg,rgba(255,255,255,.025) 25%,transparent 25%),linear-gradient(-45deg,rgba(255,255,255,.025) 25%,transparent 25%);background-size:24px 24px;}
+#hetk-training-overlay .hetk-v27-viewer-stage.is-zoomed{cursor:grab;}
+#hetk-training-overlay .hetk-v27-viewer-stage:active{cursor:grabbing;}
+#hetk-training-overlay .hetk-v27-viewer-stage img{position:absolute;left:50%;top:50%;max-width:none!important;max-height:none!important;object-fit:fill;transform-origin:center center;box-shadow:0 4px 42px rgba(0,0,0,.55);pointer-events:none;user-select:none;-webkit-user-drag:none;will-change:transform;}
+#hetk-training-overlay .hetk-v27-viewer-foot{flex:0 0 auto;display:flex;align-items:center;justify-content:center;gap:10px;padding:10px 16px;box-sizing:border-box;background:#0b2d45;color:#c1d7e7;text-align:center;font-size:12px;line-height:1.45;}
+#hetk-training-overlay .hetk-v27-image-viewer:focus{outline:none;}
+@media(max-width:640px){
+  #hetk-training-overlay .hetk-v15-note-popup{left:50%!important;top:50%!important;transform:translate(-50%,-50%);width:calc(100vw - 24px);max-width:calc(100vw - 24px);max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px);overflow-y:auto;}
+  #hetk-training-overlay .hetk-v15-note-popup img[data-book-note-preview]{max-height:34vh;max-height:34dvh;}
+  #hetk-training-overlay .hetk-v27-viewer-head{padding:9px 10px;gap:10px;}
+  #hetk-training-overlay .hetk-v27-viewer-name{font-size:13px;gap:7px;}
+  #hetk-training-overlay .hetk-v27-viewer-name>i{width:32px;height:32px;border-radius:9px;}
+  #hetk-training-overlay .hetk-v27-viewer-name small{font-size:10px;}
+  #hetk-training-overlay .hetk-v27-viewer-tools{width:100%;justify-content:space-between;gap:4px;flex-wrap:nowrap;}
+  #hetk-training-overlay .hetk-v27-viewer-tools button{min-width:42px;min-height:42px;}
+  #hetk-training-overlay .hetk-v27-viewer-tools output{min-width:48px;font-size:12px;}
+  #hetk-training-overlay .hetk-v27-viewer-tools button.fit{padding:0 10px;}
+  #hetk-training-overlay .hetk-v27-viewer-foot{padding:7px 10px;font-size:10px;}
+}
+@media(max-width:360px){#hetk-training-overlay .hetk-v27-viewer-tools button.fit span{display:none;}#hetk-training-overlay .hetk-v27-viewer-tools button{min-width:40px;}}
