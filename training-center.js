@@ -1056,8 +1056,73 @@ KL = kabel liniyasi`;
     addEventListener('resize',reposition);addEventListener('scroll',reposition,true);
     state.noteEditorCleanup=()=>{document.removeEventListener('mousedown',outside,true);removeEventListener('resize',reposition);removeEventListener('scroll',reposition,true);if(preview._tempUrl)URL.revokeObjectURL(preview._tempUrl);};
   }
-  function showBookNote(node){let popup=document.querySelector('#hetk-training-overlay .hetk-v15-note-popup');if(popup)popup.remove();popup=document.createElement('div');popup.className='hetk-v15-note-popup';const content=document.createElement('div');content.textContent=node.getAttribute('data-book-note')||'';popup.innerHTML='<button type="button" data-close-book-note aria-label="Yopish">×</button>';popup.appendChild(content);const file=node.getAttribute('data-book-note-image');if(file){const img=document.createElement('img');img.setAttribute('data-training-media-file',file);img.alt='Izoh rasmi';popup.appendChild(img);hydrateTrainingMedia(popup);}document.querySelector('#hetk-training-overlay')?.appendChild(popup);const r=node.getBoundingClientRect(),w=popup.offsetWidth||300;popup.style.left=Math.max(12,Math.min(window.innerWidth-w-12,r.left))+'px';popup.style.top=Math.max(12,Math.min(window.innerHeight-popup.offsetHeight-12,r.bottom+8))+'px';}
+  // Izohdagi surat faqat izoh oynasi DOM ga qo‘shilgandan SO‘NG yuklanishi kerak.
+  // Oldingi kodda hydrateTrainingMedia() oynani qo‘shishdan oldin chaqirilgan;
+  // natijada rasm qidiruvda topilmagan va "Izoh rasmi" singan belgisi chiqqan.
+  async function loadBookNoteImage(popup,forceRetry=false){
+    if(!popup||!popup.isConnected)return;
+    const fileId=popup.dataset.noteImage,photo=popup.querySelector('[data-book-note-preview]'),status=popup.querySelector('[data-book-note-image-status]');
+    if(!fileId||!photo||!status)return;
+    const request=(Number(popup.dataset.imageRequest)||0)+1;
+    popup.dataset.imageRequest=String(request);
+    photo.hidden=true;
+    status.hidden=false;
+    status.innerHTML='<i class="fas fa-spinner fa-spin" aria-hidden="true"></i><span>Rasm yuklanmoqda...</span>';
+    try{
+      // Qayta urinishda eskirgan blob URL ishlatilmaydi, lekin boshqa joyda ochiq
+      // bo‘lgan rasmning mavjud object URL i bekor qilinmaydi.
+      if(forceRetry)delete state.mediaObjectUrls[fileId];
+      const url=await trainingMediaObjectUrl(fileId);
+      if(!popup.isConnected||popup.dataset.imageRequest!==String(request))return;
+      photo.onload=()=>{
+        if(!popup.isConnected||popup.dataset.imageRequest!==String(request))return;
+        photo.hidden=false;
+        status.hidden=true;
+      };
+      photo.onerror=()=>{
+        if(!popup.isConnected||popup.dataset.imageRequest!==String(request))return;
+        photo.hidden=true;
+        status.hidden=false;
+        status.innerHTML='<i class="fas fa-image" aria-hidden="true"></i><span>Rasm ochilmadi.</span><button type="button" data-retry-book-note-image><i class="fas fa-rotate-right" aria-hidden="true"></i> Qayta yuklash</button>';
+      };
+      photo.src=url;
+    }catch(err){
+      if(!popup.isConnected||popup.dataset.imageRequest!==String(request))return;
+      photo.hidden=true;
+      status.hidden=false;
+      status.innerHTML='<i class="fas fa-triangle-exclamation" aria-hidden="true"></i><span>Rasm yuklanmadi: '+esc(err&&err.message||'Noma’lum xato')+'</span><button type="button" data-retry-book-note-image><i class="fas fa-rotate-right" aria-hidden="true"></i> Qayta yuklash</button>';
+    }
+  }
+  function showBookNote(node){
+    const root=document.querySelector('#hetk-training-overlay');if(!root||!node)return;
+    let popup=root.querySelector('.hetk-v15-note-popup');
+    // Hover hodisasi bir xil matnda qayta-qayta ishlashi mumkin.
+    // Mavjud oynani buzib qayta yaratmaymiz, ayniqsa surat yuklanayotganida.
+    if(popup&&popup._bookNoteAnchor===node)return;
+    if(popup)popup.remove();
+    popup=document.createElement('div');popup.className='hetk-v15-note-popup';
+    popup.setAttribute('role','dialog');popup.setAttribute('aria-label','Kitob matniga biriktirilgan izoh');
+    popup._bookNoteAnchor=node;
+    const note=node.getAttribute('data-book-note')||'';
+    const file=node.getAttribute('data-book-note-image')||'';
+    popup.innerHTML='<button type="button" data-close-book-note aria-label="Izohni yopish">×</button>';
+    if(note){const content=document.createElement('div');content.className='hetk-v15-note-body';content.textContent=note;popup.appendChild(content);}
+    if(file){
+      popup.dataset.noteImage=file;
+      const media=document.createElement('div');media.className='hetk-v15-note-media';
+      const img=document.createElement('img');img.setAttribute('data-book-note-preview','');img.alt='Izoh rasmi';img.hidden=true;
+      const status=document.createElement('div');status.className='hetk-v15-note-image-status';status.setAttribute('data-book-note-image-status','');
+      media.appendChild(img);media.appendChild(status);popup.appendChild(media);
+    }
+    root.appendChild(popup); // Dastlab sahifaga joylanadi, keyin rasm yuklanadi.
+    const r=node.getBoundingClientRect(),w=popup.offsetWidth||320;
+    popup.style.left=Math.max(12,Math.min(window.innerWidth-w-12,r.left))+'px';
+    popup.style.top=Math.max(12,Math.min(window.innerHeight-popup.offsetHeight-12,r.bottom+8))+'px';
+    if(file)loadBookNoteImage(popup);
+  }
   function handleClick(e){
+    const retryNoteImage=e.target.closest('[data-retry-book-note-image]');
+    if(retryNoteImage){e.preventDefault();loadBookNoteImage(retryNoteImage.closest('.hetk-v15-note-popup'),true);return;}
     if(e.target.closest('[data-close-book-note]')){e.target.closest('.hetk-v15-note-popup')?.remove();return;}
     const bookNote=e.target.closest('[data-book-note],[data-book-note-image]');if(bookNote&&bookNote.closest('[contenteditable]')){openBookNoteEditor({editor:bookNote.closest('[contenteditable]'),node:bookNote,preferImage:!!bookNote.getAttribute('data-book-note-image')});return;}if(bookNote&&!bookNote.closest('[contenteditable]')){showBookNote(bookNote);return;}
     const imageNote=e.target.closest('[data-topic-note-image]');if(imageNote){const row=imageNote.closest('[data-topic-block]'),editor=row?.querySelector('[data-block-rich]'),selection=window.getSelection();if(!editor||!selection||selection.isCollapsed||!editor.contains(selection.anchorNode)||!editor.contains(selection.focusNode))return toast('Avval rasm biriktiriladigan matnni belgilang.','warning');openBookNoteEditor({editor,range:selection.getRangeAt(0).cloneRange(),preferImage:true});return;}
