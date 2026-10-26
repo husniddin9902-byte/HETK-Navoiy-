@@ -85,6 +85,14 @@
     return pointFolderIds(tp).some(function(id){return isInside(id,folderId);});
   }
   function zoneFolderIds(zone){return Object.keys((zone&&zone.folders)||{}).filter(function(id){return zone.folders[id];});}
+  // Xodim statistikasi: faqat tanlangan hududning o'zi va uning ostidagi papkalar.
+  // Yuqori tashkilotga biriktirilgan xodim quyi ShET ga avtomatik tegishli EMAS.
+  // Aks yo'nalish (isInside(folderId,id)) Navoiy HF xodimlarini barcha ShET da
+  // takror hisoblashga sabab bo'lgan. Boshqa modullarning hudud huquqlariga tegilmaydi.
+  function employeeFolderMatch(folderIds,selectedFolderId){
+    if(selectedFolderId==='root')return true;
+    return (folderIds||[]).some(function(id){return !!id&&isInside(id,selectedFolderId);});
+  }
   function zoneVisible(zone,folderId){
     const account=me();if(!account)return false;
     const roots=zoneFolderIds(zone);
@@ -105,7 +113,7 @@
     if(folderId==='root')return true;
     let roots=userFolderIds(user);
     if(user.workZoneId&&state.zones[user.workZoneId])roots=roots.concat(zoneFolderIds(state.zones[user.workZoneId]));
-    return roots.some(function(id){return isInside(id,folderId)||isInside(folderId,id);});
+    return employeeFolderMatch(roots,folderId);
   }
   function monthKey(date){const d=date||new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
   function recentMonths(){const out=[],names=['Yanvar','Fevral','Mart','Aprel','May','Iyun','Iyul','Avgust','Sentabr','Oktabr','Noyabr','Dekabr'],now=new Date();for(let i=0;i<6;i++){const d=new Date(now.getFullYear(),now.getMonth()-i,1);out.push({key:monthKey(d),label:names[d.getMonth()]+' '+d.getFullYear()});}return out;}
@@ -113,7 +121,7 @@
     const api=window.HETKAuth,st=api&&api.getPermitState?api.getPermitState(user):{kind:'none',days:null};
     return {uid:user.uid||'',fullName:user.fullName||user.login||'Hodim',role:user.role||'',active:user.active!==false,group:String(((user.safety||{}).group)||'').toUpperCase(),permitKind:st.kind||'none',days:st.days==null?null:Number(st.days),folderIds:userFolderIds(user),workZoneId:user.workZoneId||'',capturedAt:Date.now()};
   }
-  function snapshotFolderMatch(row,folderId){if(folderId==='root')return true;let roots=Array.isArray(row.folderIds)?row.folderIds:Object.keys(row.folderIds||{}).filter(id=>row.folderIds[id]);if(row.workZoneId&&state.zones[row.workZoneId])roots=roots.concat(zoneFolderIds(state.zones[row.workZoneId]));return roots.some(id=>isInside(id,folderId)||isInside(folderId,id));}
+  function snapshotFolderMatch(row,folderId){if(folderId==='root')return true;let roots=Array.isArray(row.folderIds)?row.folderIds:Object.keys(row.folderIds||{}).filter(id=>row.folderIds[id]);if(row.workZoneId&&state.zones[row.workZoneId])roots=roots.concat(zoneFolderIds(state.zones[row.workZoneId]));return employeeFolderMatch(roots,folderId);}
   function safetyRows(folderId,unit,period){
     const current=period===monthKey(),source=current?Object.keys(state.users).map(uid=>permitSnapshot(Object.assign({uid},state.users[uid]||{}))):Object.values((((state.safetyMonthly[period]||{}).users)||{})),account=me(),global=account&&(account.role==='super_admin'||account.rootAccess),accessible=global?null:new Set(window.HETKAuth&&window.HETKAuth.getAccessibleFolderIds?window.HETKAuth.getAccessibleFolderIds(state.folders):[]);
     return source.filter(row=>{if(!row||row.active===false||PERMIT_EXEMPT_ROLES.has(row.role))return false;if(!global){const roots=Array.isArray(row.folderIds)?row.folderIds:Object.keys(row.folderIds||{}).filter(id=>row.folderIds[id]);if(row.workZoneId&&state.zones[row.workZoneId])roots.push(...zoneFolderIds(state.zones[row.workZoneId]));if(!roots.some(id=>accessible.has(id)))return false;}return snapshotFolderMatch(row,folderId);}).filter(row=>{if(!unit||unit==='all')return true;const parts=unit.split(':'),kind=parts.shift(),id=parts.join(':');if(kind==='work_zone')return row.workZoneId===id;if(kind==='role_group'){if(id==='dispatcher')return REPORT_DISPATCHER_ROLES.has(row.role);if(id==='askue')return REPORT_ASKUE_ROLES.has(row.role);if(id==='management')return REPORT_MANAGEMENT_ROLES.has(row.role);if(id==='res')return !row.workZoneId&&!REPORT_DISPATCHER_ROLES.has(row.role)&&!REPORT_ASKUE_ROLES.has(row.role)&&!REPORT_MANAGEMENT_ROLES.has(row.role);return true;}return true;});
@@ -356,7 +364,7 @@
     let roots=[];
     if(Array.isArray(row.folderIds))roots=row.folderIds.slice();else roots=userFolderIds(user);
     if(row.workZoneId&&state.zones[row.workZoneId])roots=roots.concat(zoneFolderIds(state.zones[row.workZoneId]));
-    return roots.some(function(id){return isInside(id,folderId)||isInside(folderId,id);});
+    return employeeFolderMatch(roots,folderId);
   }
   function activityBars(days){
     const max=Math.max(1,...days.map(function(d){return d.seconds;}));
@@ -389,7 +397,7 @@
     const folderId=state.adminFolderId,options=['<option value="all">Barcha bo‘limlar</option>'];
     const zoneRows=Object.keys(state.zones).map(function(id){return Object.assign({id:id},state.zones[id]||{});}).filter(function(zone){return zoneVisible(zone,folderId);}).sort(function(a,b){return String(a.name||'').localeCompare(String(b.name||''),'uz');});
     if(zoneRows.length)options.push('<optgroup label="U/J lar">'+zoneRows.map(function(zone){return `<option value="work_zone:${esc(zone.id)}"${state.adminUnit==='work_zone:'+zone.id?' selected':''}>${esc(zone.name||'Nomsiz U/J')}</option>`;}).join('')+'</optgroup>');
-    const dispatcherFolders=new Map();Object.keys(state.users).forEach(function(uid){const u=state.users[uid]||{};if(!DISPATCHER_ROLES.has(u.role)||u.active===false)return;userFolderIds(u).forEach(function(id){if(state.folders[id]&&(folderId==='root'||isInside(id,folderId)||isInside(folderId,id)))dispatcherFolders.set(id,folderPath(id)||folderName(id));});});
+    const dispatcherFolders=new Map();Object.keys(state.users).forEach(function(uid){const u=state.users[uid]||{};if(!DISPATCHER_ROLES.has(u.role)||u.active===false)return;userFolderIds(u).forEach(function(id){if(state.folders[id]&&employeeFolderMatch([id],folderId))dispatcherFolders.set(id,folderPath(id)||folderName(id));});});
     const dispatcherRows=Array.from(dispatcherFolders.entries()).sort(function(a,b){return a[1].localeCompare(b[1],'uz');});
     if(dispatcherRows.length)options.push('<optgroup label="Dispetcherliklar">'+dispatcherRows.map(function(row){return `<option value="dispatcher:${esc(row[0])}"${state.adminUnit==='dispatcher:'+row[0]?' selected':''}>${esc(row[1])} — Dispetcherlik</option>`;}).join('')+'</optgroup>');
     return options.join('');
@@ -397,7 +405,7 @@
   function userMatchesAdminUnit(user){
     if(state.adminUnit==='all')return true;const parts=state.adminUnit.split(':'),kind=parts.shift(),id=parts.join(':');
     if(kind==='work_zone')return user.workZoneId===id;
-    if(kind==='dispatcher')return DISPATCHER_ROLES.has(user.role)&&userFolderIds(user).some(function(folderId){return isInside(folderId,id)||isInside(id,folderId);});
+    if(kind==='dispatcher')return DISPATCHER_ROLES.has(user.role)&&employeeFolderMatch(userFolderIds(user),id);
     return true;
   }
   function safetyGroupStats(){
@@ -436,7 +444,7 @@
   }
   function userInAdminFolder(user,folderId){
     let roots=userFolderIds(user);if(user.workZoneId&&state.zones[user.workZoneId])roots=roots.concat(zoneFolderIds(state.zones[user.workZoneId]));
-    return roots.some(function(id){return isInside(id,folderId)||isInside(folderId,id);});
+    return employeeFolderMatch(roots,folderId);
   }
   function bindAdminDashboard(){
     const year=byId('hetk-stat-year'),month=byId('hetk-stat-month');
