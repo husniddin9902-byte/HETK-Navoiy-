@@ -4030,15 +4030,24 @@ Agar bu so‘rovni siz bermagan bo‘lsangiz, Bosh administratorga murojaat qili
       const books=booksSnap.val() || {};
       const progress=progressSnap.val() || {};
       const rows=Object.keys(books).map(bookId=>{
-        const book=books[bookId] || {};
-        const chapters=book.chapters || {};
-        const tested=Object.keys(chapters).filter(chapterId=>Object.keys((chapters[chapterId]||{}).testQuestions||{}).length>0);
-        const chapterProgress=(progress[bookId]&&progress[bookId].chapters)||{};
-        const passed=tested.filter(chapterId=>chapterProgress[chapterId]&&chapterProgress[chapterId].passed===true).length;
-        const percent=tested.length ? Math.round(passed/tested.length*100) : 0;
-        return {title:book.titleUz||book.title||'Nomsiz kitob',passed,total:tested.length,percent};
-      }).filter(row=>row.total>0);
-      panel.innerHTML=`<h4><i class="fas fa-graduation-cap"></i> O‘quv markazi statistikasi</h4>${rows.length?`<div class="hetk-training-progress-list">${rows.map(row=>`<div class="hetk-training-progress-row"><div><b title="${escapeAttr(row.title)}">${escapeHtml(row.title)}</b><span>${row.passed}/${row.total} ta bob testi bajarilgan</span></div><strong>${row.percent}%</strong><i><em style="width:${row.percent}%"></em></i></div>`).join('')}</div>`:'<div class="hetk-training-progress-empty">Hozircha bob testlari bo‘yicha natija yo‘q.</div>'}`;
+        const book=books[bookId]||{}, saved=progress[bookId]||{}, chapters=book.chapters||{};
+        // Published boblar va xodim ilgari ishlagan (hozir yashirilgan) boblar tarixda qoladi.
+        const relevant=Object.entries(chapters).filter(([id,ch])=>ch&&(ch.published===true||
+          !!((saved.readChapters||{})[id]||(saved.chapters||{})[id])));
+        const opened=relevant.filter(([chapterId])=>!!(saved.readChapters||{})[chapterId]).length;
+        const checked=relevant.filter(([chapterId,chapter])=>{
+          const legacy=chapter.testQuestions||{}, test=chapter.chapterTest||{};
+          const count=Number(test.questionCount)||Object.keys(test.questions||{}).length||Object.keys(legacy).length;
+          return count>0||Number(((saved.chapters||{})[chapterId]||{}).questionCount)>0;
+        });
+        const passed=checked.filter(([chapterId])=>((saved.chapters||{})[chapterId]||{}).passed===true).length;
+        const attempts=checked.reduce((sum,[chapterId])=>sum+(Number(((saved.chapters||{})[chapterId]||{}).attempts)||0),0);
+        const hasActivity=opened>0||attempts>0||passed>0;
+        if(!hasActivity)return null;
+        const total=relevant.length;
+        return {title:book.titleUz||book.title||'Nomsiz kitob',opened,total,passed,tests:checked.length,attempts,percent:total?Math.round(opened/total*100):0};
+      }).filter(Boolean);
+      panel.innerHTML=`<h4><i class="fas fa-graduation-cap"></i> O‘quv markazi statistikasi</h4>${rows.length?`<div class="hetk-training-progress-list">${rows.map(row=>`<div class="hetk-training-progress-row"><div><b title="${escapeAttr(row.title)}">${escapeHtml(row.title)}</b><span>Ochilgan boblar: ${row.opened}/${row.total} · ${row.tests?`Bob testlari: ${row.passed}/${row.tests} · ${row.attempts} ta urinish`:'Bob testi belgilanmagan'}</span></div><strong title="Ochilgan boblar ulushi">${row.percent}%</strong><i title="Ochilgan boblar ulushi"><em style="width:${row.percent}%"></em></i></div>`).join('')}</div><p class="hetk-training-progress-footnote">Foiz faqat ochilgan boblarni bildiradi, kitob to‘liq o‘qilganini yoki bilim bahosini emas. Test natijasi alohida ko‘rsatiladi.</p>`:'<div class="hetk-training-progress-empty">Hozircha bob ochilishi yoki bob testi natijasi qayd etilmagan. Yangi hisob kelgusi ochilgan boblardan boshlanadi.</div>'}`;
     }catch(err){
       if(selectedTeamUid!==uid || !byId('hetk-team-training-progress')) return;
       panel.innerHTML='<h4><i class="fas fa-graduation-cap"></i> O‘quv markazi statistikasi</h4><div class="hetk-training-progress-empty">Statistikani yuklab bo‘lmadi.</div>';
