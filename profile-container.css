@@ -324,3 +324,6 @@ body.hetk-profile-open{overflow:hidden;}
     .hetk-profile-employees-layout{grid-template-columns:1fr;}
     .hetk-profile-personal-grid{grid-template-columns:1fr;}
 }
+
+/* V32: bob ochilishi va test natijasi alohida ekanini ko‘rsatuvchi izoh */
+.hetk-training-progress-footnote{margin:9px 2px 2px;color:#668094;font-size:11px;line-height:1.45}
