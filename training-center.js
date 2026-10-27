@@ -108,7 +108,7 @@ KL = kabel liniyasi`;
   }
   function navButton(tab,icon,label){const active=state.activeTab===tab||(tab==='results'&&state.activeTab==='annual'),locked=!!state.activeBookId;return `<button class="hetk-training-nav ${active?'is-active':''} ${locked?'is-reader-locked':''}" type="button" data-training-tab="${tab}" ${locked?'disabled aria-disabled="true"':''}><i class="fas ${icon}"></i><span>${label}</span></button>`;}
   function renderActive(){if(state.activeTestId)return renderTest();if(state.activeBookId)return renderBookReader();if(state.activeTab==='books')return renderBooks();if(state.activeTab==='bookAdmin')return renderBookAdmin();if(state.activeTab==='tests')return renderTests();if(state.activeTab==='results')return renderResults();if(state.activeTab==='annual')return renderAnnualStatistics();if(state.activeTab==='manage')return state.createdListOpen?renderCreated():renderManage();return renderHome();}
-  function repaint(){closeBookNoteViewer();const o=document.getElementById('hetk-training-overlay'),content=o&&o.querySelector('[data-training-content]');if(!content)return;if(typeof state.richEditorCleanup==='function'){state.richEditorCleanup();state.richEditorCleanup=null;}const shellEl=o.querySelector('.hetk-training-shell');if(shellEl){shellEl.classList.toggle('is-book-reader',!!state.activeBookId);shellEl.classList.toggle('is-book-editing',state.activeTab==='bookAdmin');}content.innerHTML=renderActive();o.querySelectorAll('[data-training-tab]').forEach(b=>b.classList.toggle('is-active',(b.dataset.trainingTab===state.activeTab||(b.dataset.trainingTab==='results'&&state.activeTab==='annual'))&&!state.activeTestId));applyUiLanguage(content);bindDynamic();const bookForm=content.querySelector('[data-book-form]');if(bookForm)enhanceBookRichEditor(bookForm);bindAudioTopicTools(content);const filter=content.querySelector('[data-test-filter]');if(filter){filter.value=state.testFilter;filter.dispatchEvent(new Event('change',{bubbles:false}));content.querySelectorAll('[data-test-card]').forEach(c=>c.hidden=(state.testFilter!=='all'&&c.dataset.status!==state.testFilter));}}
+  function repaint(){closeBookNoteViewer();const o=document.getElementById('hetk-training-overlay'),content=o&&o.querySelector('[data-training-content]');if(!content)return;if(typeof state.richEditorCleanup==='function'){state.richEditorCleanup();state.richEditorCleanup=null;}const shellEl=o.querySelector('.hetk-training-shell');if(shellEl){shellEl.classList.toggle('is-book-reader',!!state.activeBookId);shellEl.classList.toggle('is-book-editing',state.activeTab==='bookAdmin');}content.innerHTML=renderActive();o.querySelectorAll('[data-training-tab]').forEach(b=>b.classList.toggle('is-active',(b.dataset.trainingTab===state.activeTab||(b.dataset.trainingTab==='results'&&state.activeTab==='annual'))&&!state.activeTestId));applyUiLanguage(content);bindDynamic();const bookForm=content.querySelector('[data-book-form]');if(bookForm)enhanceBookRichEditor(bookForm);bindAudioTopicTools(content);const filter=content.querySelector('[data-test-filter]');if(filter){filter.value=state.testFilter;filter.dispatchEvent(new Event('change',{bubbles:false}));content.querySelectorAll('[data-test-card]').forEach(c=>c.hidden=(state.testFilter!=='all'&&c.dataset.status!==state.testFilter));}if(content.querySelector('.hetk-v13-read-only')&&state.activeBookId&&state.activeChapterId)recordChapterOpen();}
   function visibleTests(){return Object.entries(state.tests).map(([id,t])=>({...t,id})).filter(testVisible).sort((a,b)=>(b.startAt||0)-(a.startAt||0));}
   function isPractice(t){return t&&t.status==='draft'&&t.announcementMode==='visible';}
   function canPractice(t){return isPractice(t)||!!(t&&t.status==='draft'&&(t.createdBy===uid()||isSuperAdmin()));}
@@ -119,6 +119,32 @@ KL = kabel liniyasi`;
 
   function isIndustryBook(book){return !!(book&&book.bookType==='industry');}
   function chapterProgress(bookId,chapterId){return (((state.bookProgress||{})[bookId]||{}).chapters||{})[chapterId]||{};}
+  // V32: bobni ochish — bu bobni to‘liq o‘qib bo‘lish yoki test topshirish emas.
+  // Har bir bob uchun bir marta yoziladi; har qayta chizishda Firebase so‘rovi ketmaydi.
+  const chapterOpenPending=new Set();
+  function recordChapterOpen(){
+    const accountId=uid(),bookId=state.activeBookId,chapterId=state.activeChapterId;
+    if(!accountId||!bookId||!chapterId||!state.bookProgressLoaded||state.bookProgressUid!==accountId||!db())return;
+    const book=state.books[bookId],chapter=book&&book.chapters&&book.chapters[chapterId];
+    if(!chapter||(!isSuperAdmin()&&(book.published!==true||chapter.published!==true)))return;
+    const bookProgress=(state.bookProgress||{})[bookId]||{};
+    if(bookProgress.readChapters&&bookProgress.readChapters[chapterId])return;
+    const key=[accountId,bookId,chapterId].join(':');
+    if(chapterOpenPending.has(key))return;
+    chapterOpenPending.add(key);
+    const path=`TrainingBookProgress/${accountId}/${bookId}/readChapters/${chapterId}`;
+    db().ref(path).transaction(old=>old||{openedAt:firebase.database.ServerValue.TIMESTAMP},undefined,false)
+      .then(result=>{
+        if(!result.committed&&!result.snapshot.exists())return;
+        if(uid()!==accountId)return;
+        state.bookProgress[bookId]=state.bookProgress[bookId]||{};
+        state.bookProgress[bookId].readChapters=state.bookProgress[bookId].readChapters||{};
+        state.bookProgress[bookId].readChapters[chapterId]=result.snapshot.val()||{openedAt:Date.now()};
+      })
+      .catch(err=>console.warn('Bob ochilganini qayd etib bo‘lmadi:',err&&err.message||err))
+      .finally(()=>chapterOpenPending.delete(key));
+  }
+
   function chapterTestQuestions(ch){const saved=ch&&ch.chapterTest||{},rows=Array.isArray(saved.questions)?saved.questions:Object.values(saved.questions||{});return rows.filter(q=>q&&q.text&&Array.isArray(q.options)&&q.options.length>=2);}
   function chapterPassed(bookId,chapterId,ch){return !chapterTestQuestions(ch).length||chapterProgress(bookId,chapterId).passed===true;}
   function chapterUnlocked(bookId,chapters,index){if(isIndustryBook(state.books[bookId])||isSuperAdmin()||index<=0)return true;const previous=chapters[index-1];return !!(previous&&chapterPassed(bookId,previous[0],previous[1]));}
@@ -950,7 +976,7 @@ KL = kabel liniyasi`;
   function listen(){stopListeners();if(!db()){toast('Firebase ulanmagan.','error');return;}state.timer=setInterval(()=>{updateTimes();updateChapterQuizTime();},1000);}
   function updateChapterQuizTime(){const quiz=state.chapterQuiz,el=document.querySelector('#hetk-training-overlay [data-chapter-quiz-countdown]');if(!quiz||quiz.result||!el)return;const left=quiz.deadlineAt-now();el.textContent=durationText(left);if(left<=0)advanceChapterQuiz(true);}
   async function loadBooksOnce(){if(state.booksLoaded)return;try{const snap=await db().ref('TrainingBooks').once('value');state.books=snap.val()||{};await Promise.all([hydrateBookTestArchives(state.books),hydrateBookTopicArchives(state.books)]);state.booksLoaded=true;}catch(e){toast('Kitoblar yuklanmadi: '+e.message,'error');}}
-  async function loadBookProgress(){if(state.bookProgressLoaded||!uid())return;try{const snap=await db().ref(`TrainingBookProgress/${uid()}`).once('value');state.bookProgress=snap.val()||{};state.bookProgressLoaded=true;}catch(e){toast('Kitobdagi natijalar yuklanmadi: '+e.message,'error');}}
+  async function loadBookProgress(){const accountId=uid();if(!accountId||(state.bookProgressLoaded&&state.bookProgressUid===accountId))return;try{const snap=await db().ref(`TrainingBookProgress/${accountId}`).once('value');if(uid()!==accountId)return;state.bookProgress=snap.val()||{};state.bookProgressUid=accountId;state.bookProgressLoaded=true;}catch(e){toast('Kitobdagi natijalar yuklanmadi: '+e.message,'error');}}
   function startBooksRealtime(){if(state.booksRealtime||!db())return;const ref=db().ref('TrainingBooks'),fn=async snap=>{const books=snap.val()||{};await Promise.all([hydrateBookTestArchives(books),hydrateBookTopicArchives(books)]);state.books=books;state.booksLoaded=true;if(state.activeTab==='books'||state.activeTab==='bookAdmin'||state.activeBookId)repaint();};ref.on('value',fn,e=>toast('Kitoblar jonli yangilanmadi: '+e.message,'error'));state.listeners.push({ref,fn});state.booksRealtime=true;}
   async function loadTestsOnce(){if(state.testsLoaded)return;try{const t=await db().ref('TrainingTests').once('value');state.tests=t.val()||{};state.testsLoaded=true;}catch(e){toast('Testlar yuklanmadi: '+e.message,'error');return;}const [r,a]=await Promise.allSettled([db().ref('TrainingResults').once('value'),db().ref(`TrainingTestAccessByUser/${uid()}`).once('value')]);if(r.status==='fulfilled'){state.results=r.value.val()||{};state.resultsLoaded=true;}else toast('Natijalar yuklanmadi: '+r.reason.message,'error');if(a.status==='fulfilled')state.access=a.value.val()||{};await loadPracticeAttempts();repaint();}
   async function loadPracticeAttempts(){if(state.practiceLoaded)return;state.practiceLoaded=true;const tests=visibleTests();for(let i=0;i<tests.length;i+=10){await Promise.all(tests.slice(i,i+10).map(async t=>{const mine=t.createdBy===uid()||isSuperAdmin(),path=mine?t.id:`${t.id}/${uid()}`;for(const [node,key] of [['TrainingPracticeAttempts','practiceAttempts'],['TrainingLiveAttempts','liveAttempts']]){try{const snap=await db().ref(`${node}/${path}`).once('value'),data=snap.val()||{};state[key][t.id]=mine?data:{[uid()]:data};}catch(err){console.warn('Test urinishlari yuklanmadi',t.id,err);}}}));}}
