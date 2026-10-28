@@ -4859,37 +4859,58 @@ function hetkHasRootAccess(){
     return !!(window.HETKAuth && window.HETKAuth.currentUser && window.HETKAuth.currentUser.rootAccess);
 }
 
+// U/J ga biriktirilgan xizmat hududlari ham shu U/J ning masteri va
+// elektromontyoriga ko'rinishi kerak. Faqat WorkZones dagi aniq U/J ID
+// orqali ruxsat beriladi; begona U/J ning elementlari ochilmaydi.
+function hetkOwnZoneFolderRoots(){
+    const me=hetkCurrentAccount();
+    if(!me || (me.role!=='master' && me.role!=='electrician') || !me.workZoneId) return [];
+    const zone=elementWorkZonesCache[me.workZoneId];
+    if(!zone || zone.active===false) return [];
+    return Object.keys(zone.folders||{}).filter(id=>!!zone.folders[id] && !!currentFolders[id]);
+}
+
+function hetkOwnZoneContainsFolder(folderId,includeAncestors){
+    if(!folderId || folderId==='root') return false;
+    return hetkOwnZoneFolderRoots().some(rootId=>
+        hetkFolderIsInside(folderId,rootId) ||
+        (includeAncestors && hetkFolderIsInside(rootId,folderId))
+    );
+}
+
 function hetkCanAccessFolder(folderId){
     if(!window.HETKAuth || !window.HETKAuth.currentUser || !window.HETKAuth.canAccessFolder) return false;
+    // WorkZones.folders ma'lumotiga asoslangan U/J hududi. Eski xodimning
+    // users/{uid}/folders nusxasi bo'sh qolgan bo'lsa ham daraxt yashirilmaydi.
+    if(hetkOwnZoneContainsFolder(folderId,false)) return true;
     return !!window.HETKAuth.canAccessFolder(folderId,currentFolders);
 }
 
 function hetkCanSeeFolder(folderId){
     if(!window.HETKAuth || !window.HETKAuth.currentUser || !window.HETKAuth.canSeeFolder) return false;
+    if(hetkOwnZoneContainsFolder(folderId,true)) return true;
     return !!window.HETKAuth.canSeeFolder(folderId,currentFolders);
 }
 
 function hetkPointAllowedByUser(tp){
-    if(!window.HETKAuth || !window.HETKAuth.currentUser) return false;
+    if(!window.HETKAuth || !window.HETKAuth.currentUser || !tp) return false;
     const me=window.HETKAuth.currentUser;
     if(me.rootAccess) return true;
-    const allowed=new Set(window.HETKAuth.getAccessibleFolderIds ? window.HETKAuth.getAccessibleFolderIds(currentFolders) : []);
-    const tpFolders=tp && tp.folders
-        ? Object.keys(tp.folders)
-        : (tp && tp.primaryFolderId ? [tp.primaryFolderId] : (tp && tp.folderId ? [tp.folderId] : []));
-    const folderAllowed=tpFolders.some(id => allowed.has(id));
-    if(!folderAllowed) return false;
 
-    // Bitta fiderga bir nechta U/J xizmat ko'rsatishi mumkin. Master va
-    // elektromontyor uchun papka ruxsatining o'zi yetarli emas: element aynan
-    // ularning U/J iga biriktirilgan bo'lishi shart. Yuqori lavozimlar esa
-    // o'zlariga ruxsat berilgan papkadagi barcha elementlarni ko'rishda davom etadi.
+    // U/J uchun asosiy manba: server himoyasi bilan o'qilgan TPsByWorkZone
+    // va elementning haqiqiy workZone ID si. Eski users.folders ro'yxati
+    // bo'sh bo'lgani uchun U/J ga aniq biriktirilgan 60+ elementni yashirmaymiz.
+    // Shu yerda papka bo'yicha qo'shimcha tekshiruv qo'yish noto'g'ri edi.
     if(me.role==='master' || me.role==='electrician'){
-        const pointWorkZoneIds=hetkGetTPWorkZoneIds(tp);
-        return !!me.workZoneId && pointWorkZoneIds.includes(me.workZoneId);
+        return !!me.workZoneId && hetkGetTPWorkZoneIds(tp).includes(me.workZoneId);
     }
 
-    return true;
+    // Boshqa lavozimlar uchun avvalgi hududiy ruxsat sharti saqlanadi.
+    // `folders: {}` bo'lgan eski elementlarda primaryFolderId/folderId ham
+    // tekshirilishi shart.
+    const allowed=new Set(window.HETKAuth.getAccessibleFolderIds
+        ? window.HETKAuth.getAccessibleFolderIds(currentFolders) : []);
+    return hetkElementFolderIds(tp).some(id=>allowed.has(id));
 }
 
 function applyHETKAccessControls(){
@@ -4912,7 +4933,14 @@ document.addEventListener('hetk-auth-ready', function(){
     loadElementWorkZones(true).then(()=>{
         hetkFilterWorkZones=hetkVisibleWorkZonesForFilter();
         if(responsibleOptions && responsibleOptions.style.display==='block') renderResponsibleWorkZoneFilter();
-    }).catch(()=>{});
+        // U/J hududi asinxron yuklanadi. U/J ning xizmat papkalari
+        // kelgach daraxtni qayta ochib, avval bo'sh ko'ringan filiallarni chizamiz.
+        const account=hetkCurrentAccount();
+        if(account && (account.role==='master'||account.role==='electrician')){
+            if(typeof hetkRenderFolderTreePreservingState==='function') hetkRenderFolderTreePreservingState();
+            if(typeof loadFilteredPoints==='function') loadFilteredPoints();
+        }
+    }).catch(error=>console.warn('U/J hududlari yuklanmadi:',error));
     const treeRoot=document.getElementById('tree-root');
     if(treeRoot && typeof renderTree==='function') renderTree('root',treeRoot);
     if(typeof renderElementTreeDropdown==='function') renderElementTreeDropdown();
@@ -5207,17 +5235,7 @@ function isPointInSelectedFolder(tp) {
     }
     const allowedFolderIds = getAllChildFolderIds(activeFolderId);
     allowedFolderIds.push(activeFolderId);
-    const tpFolders = tp.folders
-        ? Object.keys(tp.folders)
-        : (
-            tp.primaryFolderId
-                ? [tp.primaryFolderId]
-                : (
-                    tp.folderId
-                        ? [tp.folderId]
-                        : []
-                )
-        );
+    const tpFolders=hetkElementFolderIds(tp);
     return tpFolders.some(id => allowedFolderIds.includes(id));
 }
 
@@ -5671,7 +5689,7 @@ const allowedFolderSet = new Set(allowedFolderIds);
             if (isNaN(lat) || isNaN(lng)) return;
 
             // Element tegishli bo'lgan barcha fiderlar massivi
-            let tpFoldersArr = point.folders ? Object.keys(point.folders) : (point.folderId ? [point.folderId] : []);
+            let tpFoldersArr = hetkElementFolderIds(point);
 
          
 if (!hetkPointAllowedByUser(point)) {
@@ -5817,6 +5835,9 @@ popupHtml += `</div>`;
         if (tpListContainer.innerHTML === "") {
             tpListContainer.innerHTML = "<p style='color:gray; padding:15px; text-align:center;'>Elementlar mavjud emas.</p>";
         }
+    }).catch(error => {
+        console.error('TP/KTP elementlarini yuklashda xato:', error);
+        tpListContainer.textContent = 'Elementlar yuklanmadi. Internet yoki U/J ma’lumotlariga ruxsatni tekshiring.';
     });
                              }
 
