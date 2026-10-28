@@ -13,10 +13,9 @@
   let tpCacheAt=0,userCacheAt=0;
   let tpRequest=null,userRequest=null;
   let foldersCache=null,foldersCacheAt=0,foldersRequest=null;
-  // Bir oynadan boshqasiga o'tganda bir xil yirik tugunlarni qayta o'qimaslik
-  // uchun keshni uzoqroq saqlaymiz. Saqlash funksiyalari keshni o'zlari darhol
-  // yangilaydi; shu sabab foydalanuvchi o'z o'zgarishini kutmasdan ko'radi.
-  const READ_CACHE_MS=10*60*1000;
+  // Odatdagi o'qishda qisqa kesh. 'force' so'rovi esa Firebase'dan
+  // majburiy yangi nusxa oladi; boshqa xodimning o'zgarishi yashirinib qolmaydi.
+  const READ_CACHE_MS=15000;
 
   function db(){return firebase.database();}
   function me(){return window.HETKAuth&&window.HETKAuth.currentUser;}
@@ -26,14 +25,14 @@
   function globalTPAccount(account){return !!(account&&(account.rootAccess||GLOBAL_TP_ROLES.has(account.role)));}
   function tpFolderIds(tp){
     const ids=keysTrue(tp&&tp.folders);
-    if(!ids.length&&tp&&tp.primaryFolderId)ids.push(tp.primaryFolderId);
-    if(!ids.length&&tp&&tp.folderId)ids.push(tp.folderId);
+    if(tp&&tp.primaryFolderId)ids.push(tp.primaryFolderId);
+    if(tp&&tp.folderId)ids.push(tp.folderId);
     return Array.from(new Set(ids.filter(Boolean)));
   }
   function tpWorkZoneIds(tp){
     const ids=keysTrue(tp&&tp.workZones);
-    if(!ids.length&&tp&&tp.primaryWorkZoneId)ids.push(tp.primaryWorkZoneId);
-    if(!ids.length&&tp&&tp.workZoneId)ids.push(tp.workZoneId);
+    if(tp&&tp.primaryWorkZoneId)ids.push(tp.primaryWorkZoneId);
+    if(tp&&tp.workZoneId)ids.push(tp.workZoneId);
     return Array.from(new Set(ids.filter(Boolean)));
   }
   function ancestors(folderId,folders){
@@ -89,7 +88,7 @@
   async function readTPs(force){
     const account=me();if(!account)return snapshot({});
     if(tpRequest)return tpRequest;
-    if(tpCacheReady&&(!force||Date.now()-tpCacheAt<READ_CACHE_MS))return snapshot(tpCache);
+    if(tpCacheReady&&!force&&Date.now()-tpCacheAt<READ_CACHE_MS)return snapshot(tpCache);
     tpRequest=(async function(){
       if(globalTPAccount(account)){tpCache=(await db().ref('TPs').once('value')).val()||{};}
       else{
@@ -117,7 +116,7 @@
   async function readUsers(force){
     const account=me();if(!account)return snapshot({});
     if(userRequest)return userRequest;
-    if(userCacheReady&&(!force||Date.now()-userCacheAt<READ_CACHE_MS))return snapshot(userCache);
+    if(userCacheReady&&!force&&Date.now()-userCacheAt<READ_CACHE_MS)return snapshot(userCache);
     userRequest=(async function(){
       if(globalAccount(account))userCache=(await db().ref('users').once('value')).val()||{};
       else{
@@ -256,8 +255,40 @@
     document.dispatchEvent(new CustomEvent('hetk-manual-data-refreshed',{detail:detail}));
     return detail;
   }
+  // FAQAT BOSH ADMIN: asosiy TPs va U/J indekslarini solishtirish.
+  // Hech qanday yozuv, migratsiya yoki qayta indekslash bajarilmaydi.
+  async function auditLargeWorkZones(minExpected){
+    const account=me();
+    if(!account || !(account.rootAccess || account.role==='super_admin'))
+      throw new Error('U/J indeksini faqat bosh administrator tekshirishi mumkin.');
+    const threshold=(typeof minExpected==='number' && Number.isFinite(minExpected)) ? Math.max(0,Math.floor(minExpected)) : 50;
+    const values=await Promise.all([db().ref('TPs').once('value'),db().ref('WorkZones').once('value')]);
+    const tps=values[0].val()||{},zones=values[1].val()||{};
+    const expectedByZone={},unassigned=[];
+    Object.keys(tps).forEach(function(id){
+      const ids=tpWorkZoneIds(tps[id]);
+      if(!ids.length)unassigned.push(id);
+      ids.forEach(function(zoneId){(expectedByZone[zoneId]||(expectedByZone[zoneId]=new Set())).add(id);});
+    });
+    const zoneIds=Array.from(new Set(Object.keys(zones).concat(Object.keys(expectedByZone))))
+      .filter(function(id){return (expectedByZone[id]||new Set()).size>=threshold;});
+    const rows=[];
+    await mapLimit(zoneIds,4,async function(id){
+      const snap=await db().ref('TPsByWorkZone/'+id).once('value');
+      const indexed=snap.val()||{},expected=expectedByZone[id]||new Set();
+      const indexedIds=Object.keys(indexed),missing=Array.from(expected).filter(function(tpId){return !Object.prototype.hasOwnProperty.call(indexed,tpId);});
+      const extra=indexedIds.filter(function(tpId){return !expected.has(tpId);});
+      rows.push({zoneId:id,zoneName:(zones[id]&&zones[id].name)||'(U/J yozuvi yo‘q)',inTPs:expected.size,inIndex:indexedIds.length,missing:missing.length,extra:extra.length});
+    });
+    rows.sort(function(a,b){return b.missing-a.missing||b.inTPs-a.inTPs;});
+    console.table(rows);
+    console.info('U/J ga biriktirilmagan TPs soni:',unassigned.length,'; tekshirilgan U/J soni:',rows.length);
+    console.info('Bu tekshiruv HECH NIMA YOZMADI. "missing" > 0 bo‘lsa indeks to‘liq emas.');
+    return {zones:rows,unassignedCount:unassigned.length,checkedAt:Date.now()};
+  }
   function clear(){tpCache={};userCache={};indexVersionCache=null;indexVersionRequest=null;tpCacheReady=false;userCacheReady=false;tpCacheAt=0;userCacheAt=0;tpRequest=null;userRequest=null;foldersCache=null;foldersCacheAt=0;foldersRequest=null;}
   document.addEventListener('hetk-auth-cleared',clear);
+  document.addEventListener('hetk-auth-ready',clear);
   document.addEventListener('hetk-auth-user-updated',clear);
-  window.HETKData={INDEX_VERSION,readTPs,readTP,readUsers,saveTP,removeTP,syncUserAccess,syncUserField,syncDelegation,migrate,clear,refreshAll,isGlobal:function(){const account=me();return !!(account&&(account.rootAccess||account.role==='super_admin'));}};
+  window.HETKData={INDEX_VERSION,readTPs,readTP,readUsers,saveTP,removeTP,syncUserAccess,syncUserField,syncDelegation,migrate,clear,refreshAll,auditLargeWorkZones,isGlobal:function(){const account=me();return !!(account&&(account.rootAccess||account.role==='super_admin'));}};
 })();
