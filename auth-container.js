@@ -4,22 +4,22 @@
   const ROLE_DEFS = {
     super_admin: {
       label: 'Bosh administrator', level: 100,
-      createRoles: ['regional_director','district_director','republic_tb_engineer','regional_chief_engineer','district_chief_engineer','regional_energy_flow_deputy','regional_capital_construction_deputy','regional_deputy_chief_engineer','regional_special_department_head','regional_secret_mobilization_engineer','regional_hr_head','regional_training_specialist','regional_hr_engineer','regional_press_secretary','regional_tb_chief','regional_tb_operations_engineer','regional_tb_engineer','regional_fire_safety_engineer','tb_engineer','network_maintenance_engineer','document_technician','askue_sales_deputy','energy_flow_control_engineer','askue_group_head','askue_group_engineer','askue_group_operator','askue_group_electrician','pto_engineer','chief_dispatcher','master','dispatcher','tchb_electrician','tchb_driver','driver','tractor_operator','electrician','contract_service_engineer','execution_discipline_inspector','warehouse_manager','gardener','cleaner','guard'],
+      createRoles: ['regional_director','district_director','republic_tb_engineer','regional_chief_engineer','district_chief_engineer','regional_energy_flow_deputy','regional_capital_construction_deputy','regional_deputy_chief_engineer','regional_special_department_head','regional_secret_mobilization_engineer','regional_hr_head','regional_training_specialist','regional_hr_engineer','regional_press_secretary','regional_tb_chief','regional_tb_operations_engineer','regional_tb_engineer','regional_fire_safety_engineer','tb_engineer','network_maintenance_engineer','document_technician','askue_sales_deputy','energy_flow_control_engineer','askue_group_head','askue_group_engineer','askue_group_operator','askue_group_electrician','pto_engineer','chief_dispatcher','master','dispatcher','tchb_electrician','tchb_driver','driver','tractor_operator','electrician','duty_electrician','accountant','contract_service_engineer','execution_discipline_inspector','warehouse_manager','gardener','cleaner','guard'],
       canCreateUsers: true, canDeactivateUsers: true, canManagePermissions: true, canManageFolders: true
     },
     director: {
       label: 'Direktor (hudud bo‘yicha)', level: 90, hidden:true,
-      createRoles: ['district_chief_engineer','tb_engineer','network_maintenance_engineer','askue_chief_engineer','sales_chief','pto_engineer','chief_dispatcher','master','dispatcher','tchb_electrician','driver','tractor_operator','electrician','contract_service_engineer','execution_discipline_inspector','warehouse_manager','gardener','cleaner','guard'],
+      createRoles: ['district_chief_engineer','tb_engineer','network_maintenance_engineer','askue_chief_engineer','sales_chief','pto_engineer','chief_dispatcher','master','dispatcher','tchb_electrician','driver','tractor_operator','electrician','duty_electrician','accountant','contract_service_engineer','execution_discipline_inspector','warehouse_manager','gardener','cleaner','guard'],
       canCreateUsers: true, canDeactivateUsers: true, canManagePermissions: true, canManageFolders: true
     },
     regional_director: {
       label: 'Hududiy filial direktori', level: 92,
-      createRoles: ['district_director','regional_chief_engineer','district_chief_engineer','regional_energy_flow_deputy','regional_capital_construction_deputy','regional_deputy_chief_engineer','regional_special_department_head','regional_secret_mobilization_engineer','regional_hr_head','regional_training_specialist','regional_hr_engineer','regional_press_secretary','regional_tb_chief','regional_tb_operations_engineer','regional_tb_engineer','regional_fire_safety_engineer','tb_engineer','network_maintenance_engineer','document_technician','askue_sales_deputy','energy_flow_control_engineer','askue_group_head','askue_group_engineer','askue_group_operator','askue_group_electrician','pto_engineer','chief_dispatcher','master','dispatcher','tchb_electrician','tchb_driver','driver','tractor_operator','electrician','contract_service_engineer','execution_discipline_inspector','warehouse_manager','gardener','cleaner','guard'],
+      createRoles: ['district_director','regional_chief_engineer','district_chief_engineer','regional_energy_flow_deputy','regional_capital_construction_deputy','regional_deputy_chief_engineer','regional_special_department_head','regional_secret_mobilization_engineer','regional_hr_head','regional_training_specialist','regional_hr_engineer','regional_press_secretary','regional_tb_chief','regional_tb_operations_engineer','regional_tb_engineer','regional_fire_safety_engineer','tb_engineer','network_maintenance_engineer','document_technician','askue_sales_deputy','energy_flow_control_engineer','askue_group_head','askue_group_engineer','askue_group_operator','askue_group_electrician','pto_engineer','chief_dispatcher','master','dispatcher','tchb_electrician','tchb_driver','driver','tractor_operator','electrician','duty_electrician','accountant','contract_service_engineer','execution_discipline_inspector','warehouse_manager','gardener','cleaner','guard'],
       canCreateUsers: true, canDeactivateUsers: true, canManagePermissions: true, canManageFolders: true
     },
     district_director: {
       label: 'Boshliq (tuman/shahar)', level: 90,
-      createRoles: ['district_chief_engineer','tb_engineer','network_maintenance_engineer','document_technician','askue_sales_deputy','energy_flow_control_engineer','askue_group_head','askue_group_engineer','askue_group_operator','askue_group_electrician','pto_engineer','chief_dispatcher','master','dispatcher','tchb_electrician','tchb_driver','driver','tractor_operator','electrician','contract_service_engineer','execution_discipline_inspector','warehouse_manager','gardener','cleaner','guard'],
+      createRoles: ['district_chief_engineer','tb_engineer','network_maintenance_engineer','document_technician','askue_sales_deputy','energy_flow_control_engineer','askue_group_head','askue_group_engineer','askue_group_operator','askue_group_electrician','pto_engineer','chief_dispatcher','master','dispatcher','tchb_electrician','tchb_driver','driver','tractor_operator','electrician','duty_electrician','accountant','contract_service_engineer','execution_discipline_inspector','warehouse_manager','gardener','cleaner','guard'],
       canCreateUsers: true, canDeactivateUsers: true, canManagePermissions: true, canManageFolders: true
     },
     republic_tb_engineer: {
@@ -28,17 +28,17 @@
     },
     chief_engineer: {
       label: 'Bosh muhandis (hudud bo‘yicha)', level: 85, hidden:true,
-      createRoles: ['tb_engineer','network_maintenance_engineer','askue_chief_engineer','sales_chief','pto_engineer','chief_dispatcher','master','dispatcher','tchb_electrician','driver','tractor_operator','electrician','contract_service_engineer','execution_discipline_inspector','warehouse_manager','gardener','cleaner','guard'],
+      createRoles: ['tb_engineer','network_maintenance_engineer','askue_chief_engineer','sales_chief','pto_engineer','chief_dispatcher','master','dispatcher','tchb_electrician','driver','tractor_operator','electrician','duty_electrician','accountant','contract_service_engineer','execution_discipline_inspector','warehouse_manager','gardener','cleaner','guard'],
       canCreateUsers: true, canDeactivateUsers: true, canManagePermissions: true, canManageFolders: true
     },
     regional_chief_engineer: {
       label: 'Hududiy filial texnik masalalar bo‘yicha direktorning birinchi o‘rinbosari — bosh muhandis', level: 87,
-      createRoles: ['district_chief_engineer','regional_energy_flow_deputy','regional_capital_construction_deputy','regional_deputy_chief_engineer','regional_special_department_head','regional_secret_mobilization_engineer','regional_hr_head','regional_training_specialist','regional_hr_engineer','regional_press_secretary','regional_tb_chief','regional_tb_operations_engineer','regional_tb_engineer','regional_fire_safety_engineer','tb_engineer','network_maintenance_engineer','document_technician','askue_sales_deputy','energy_flow_control_engineer','askue_group_head','askue_group_engineer','askue_group_operator','askue_group_electrician','pto_engineer','chief_dispatcher','master','dispatcher','tchb_electrician','tchb_driver','driver','tractor_operator','electrician','contract_service_engineer','execution_discipline_inspector','warehouse_manager','gardener','cleaner','guard'],
+      createRoles: ['district_chief_engineer','regional_energy_flow_deputy','regional_capital_construction_deputy','regional_deputy_chief_engineer','regional_special_department_head','regional_secret_mobilization_engineer','regional_hr_head','regional_training_specialist','regional_hr_engineer','regional_press_secretary','regional_tb_chief','regional_tb_operations_engineer','regional_tb_engineer','regional_fire_safety_engineer','tb_engineer','network_maintenance_engineer','document_technician','askue_sales_deputy','energy_flow_control_engineer','askue_group_head','askue_group_engineer','askue_group_operator','askue_group_electrician','pto_engineer','chief_dispatcher','master','dispatcher','tchb_electrician','tchb_driver','driver','tractor_operator','electrician','duty_electrician','accountant','contract_service_engineer','execution_discipline_inspector','warehouse_manager','gardener','cleaner','guard'],
       canCreateUsers: true, canDeactivateUsers: true, canManagePermissions: true, canManageFolders: true
     },
     district_chief_engineer: {
       label: 'Bosh muhandis (tuman/shahar)', level: 85,
-      createRoles: ['tb_engineer','network_maintenance_engineer','document_technician','askue_chief_engineer','sales_chief','pto_engineer','chief_dispatcher','master','dispatcher','tchb_electrician','driver','tractor_operator','electrician','contract_service_engineer','execution_discipline_inspector','warehouse_manager','gardener','cleaner','guard'],
+      createRoles: ['tb_engineer','network_maintenance_engineer','document_technician','askue_chief_engineer','sales_chief','pto_engineer','chief_dispatcher','master','dispatcher','tchb_electrician','driver','tractor_operator','electrician','duty_electrician','accountant','contract_service_engineer','execution_discipline_inspector','warehouse_manager','gardener','cleaner','guard'],
       canCreateUsers: true, canDeactivateUsers: true, canManagePermissions: true, canManageFolders: true
     },
     regional_energy_flow_deputy: {label:'Hududiy filial elektr energiyasi oqimlari hisobi va elektr energiyasi yo‘qotishlari bo‘yicha direktor o‘rinbosari',level:86,createRoles:[],canCreateUsers:false,canDeactivateUsers:false,canManagePermissions:false,canManageFolders:false},
@@ -132,6 +132,14 @@
       label: 'Elektromontyor', level: 25,
       createRoles: [], canCreateUsers: false, canDeactivateUsers: false, canManagePermissions: false, canManageFolders: false
     },
+    duty_electrician: {
+      label: 'Navbatchi elektromontyor', level: 25,
+      createRoles: [], canCreateUsers: false, canDeactivateUsers: false, canManagePermissions: false, canManageFolders: false
+    },
+    accountant: {
+      label: 'Hisobchi', level: 24,
+      createRoles: [], canCreateUsers: false, canDeactivateUsers: false, canManagePermissions: false, canManageFolders: false
+    },
     contract_service_engineer: {
       label: 'D va SHXK muhandisi', level: 48,
       createRoles: [], canCreateUsers: false, canDeactivateUsers: false, canManagePermissions: false, canManageFolders: false
@@ -171,11 +179,13 @@
   const MANAGEMENT_ROLES=new Set(['regional_director','regional_chief_engineer','regional_energy_flow_deputy','regional_capital_construction_deputy','regional_deputy_chief_engineer','regional_special_department_head','regional_secret_mobilization_engineer','regional_hr_head','regional_training_specialist','regional_hr_engineer','regional_press_secretary']);
   const SUPPORT_ROLES=new Set(['document_technician','contract_service_engineer','execution_discipline_inspector','warehouse_manager','gardener','cleaner','guard']);
   const MINIMAL_SUPPORT_ROLES=new Set(['execution_discipline_inspector','warehouse_manager','gardener','cleaner','guard']);
-  const PERMIT_EXEMPT_ROLES=new Set(['document_technician','execution_discipline_inspector','warehouse_manager','gardener','cleaner','guard','regional_hr_head','regional_training_specialist','regional_hr_engineer','regional_press_secretary','askue_group_operator']);
+  const PERMIT_EXEMPT_ROLES=new Set(['document_technician','execution_discipline_inspector','warehouse_manager','gardener','cleaner','guard','regional_hr_head','regional_training_specialist','regional_hr_engineer','regional_press_secretary','askue_group_operator','accountant']);
   // Oddiy haydovchi ham traktorchi kabi o‘ziga biriktirilgan RES/U/Jni
   // ko‘radi va izoh qoldiradi, lekin elementlarni o‘zgartirmaydi.
   const READ_ONLY_COMMENT_ROLES=new Set(['tractor_operator','driver']);
-  const READ_ONLY_VIEW_ROLES=new Set(['network_maintenance_engineer']);
+  const READ_ONLY_VIEW_ROLES=new Set(['network_maintenance_engineer','accountant']);
+  // Navbatchi elektromontyor RES/ShET tarkibida ishlaydi; TP/KTP bilan ishlamaydi.
+  const NO_ELEMENT_ACCESS_ROLES=new Set(['duty_electrician']);
 
   let auth = null;
   let databaseRef = null;
@@ -544,6 +554,13 @@
       `🕒 Yaratilgan: ${formatProfileDate(account.createdAt)}`,
       `🔄 Yangilangan: ${formatProfileDate(account.updatedAt)}`
     ];
+    // Guvohnoma talab qilinmaydigan lavozimlarning Telegram profiliga
+    // bo'sh XTB guruh/ruxsatnoma ma'lumotlarini yubormaymiz.
+    if(PERMIT_EXEMPT_ROLES.has(account.role)){
+      const from=lines.indexOf('📜 MALAKA GUVOHNOMASI');
+      const to=lines.findIndex(line=>line.startsWith('⚠️ Intizomiy holat:'));
+      if(from>=0 && to>from)lines.splice(from,to-from);
+    }
     return lines.join('\n').slice(0,1024);
   }
 
@@ -1175,6 +1192,7 @@
     if(!account) return 'Hodim';
     if(account.role === 'master' && account.workZoneName) return account.workZoneName + ' Masteri';
     if(account.role === 'electrician' && account.workZoneName) return account.workZoneName + ' Elektromontyori';
+    if(account.role === 'duty_electrician') return 'Navbatchi elektromontyor';
     if(isSafetyOfficer(account)) return ROLE_DEFS[account.role].label;
     // Nomlari yangilangan lavozimlarda akkaunt ichidagi eski roleLabel emas,
     // tizimdagi joriy rasmiy nom ko‘rsatiladi.
@@ -1367,7 +1385,7 @@
 
   function isDistrictPermitCategory(target){
     if(!target) return false;
-    if(['electrician','driver','tchb_driver','tractor_operator','askue_group_electrician'].includes(target.role)) return true;
+    if(['electrician','duty_electrician','driver','tchb_driver','tractor_operator','askue_group_electrician'].includes(target.role)) return true;
     const text=(String(target.roleLabel||'')+' '+String(getRoleLabel(target)||'')).toLowerCase();
     return text.includes('shofyor') || text.includes('shofyor') || text.includes('haydovchi');
   }
@@ -3124,15 +3142,16 @@
     const askueEditor=ASKUE_ELEMENT_EDITOR_ROLES.has(role);
     const tpEditor=['regional_capital_construction_deputy','regional_deputy_chief_engineer'].includes(role);
     const managementViewer=MANAGEMENT_ROLES.has(role) && !['regional_director','regional_chief_engineer'].includes(role);
+    const noElements=NO_ELEMENT_ACCESS_ROLES.has(role);
     return {
       createUsers: !!def.canCreateUsers,
       deactivateUsers: !!def.canDeactivateUsers,
       managePermissions: !!def.canManagePermissions,
       manageFolders: !!def.canManageFolders,
-      createElements: !askueEditor && !managementViewer && !tbReadOnly && !dispatcherRole && !supportRole && !READ_ONLY_COMMENT_ROLES.has(role) && !READ_ONLY_VIEW_ROLES.has(role),
-      editElements: askueEditor || tpEditor || role==='contract_service_engineer' || (!managementViewer && !tbReadOnly && !supportRole && !READ_ONLY_COMMENT_ROLES.has(role) && !READ_ONLY_VIEW_ROLES.has(role)),
-      deleteElements: !askueEditor && !managementViewer && !tbReadOnly && !dispatcherRole && !supportRole && !READ_ONLY_COMMENT_ROLES.has(role) && !READ_ONLY_VIEW_ROLES.has(role),
-      commentElements: role!=='document_technician' && !MINIMAL_SUPPORT_ROLES.has(role) && !READ_ONLY_VIEW_ROLES.has(role)
+      createElements: !noElements && !askueEditor && !managementViewer && !tbReadOnly && !dispatcherRole && !supportRole && !READ_ONLY_COMMENT_ROLES.has(role) && !READ_ONLY_VIEW_ROLES.has(role),
+      editElements: !noElements && (askueEditor || tpEditor || role==='contract_service_engineer' || (!managementViewer && !tbReadOnly && !supportRole && !READ_ONLY_COMMENT_ROLES.has(role) && !READ_ONLY_VIEW_ROLES.has(role))),
+      deleteElements: !noElements && !askueEditor && !managementViewer && !tbReadOnly && !dispatcherRole && !supportRole && !READ_ONLY_COMMENT_ROLES.has(role) && !READ_ONLY_VIEW_ROLES.has(role),
+      commentElements: !noElements && role!=='document_technician' && !MINIMAL_SUPPORT_ROLES.has(role) && !READ_ONLY_VIEW_ROLES.has(role)
     };
   }
 
@@ -3140,6 +3159,8 @@
     const acc = account || currentAccount;
     if(!acc) return false;
     if(acc.role === 'super_admin') return true;
+    // Eski saqlangan permissions:true bo'lsa ham TP/KTP huquqi berilmaydi.
+    if(NO_ELEMENT_ACCESS_ROLES.has(acc.role) && ['manageFolders','createElements','editElements','deleteElements','commentElements'].includes(permission)) return false;
     const tbReadOnly=['tb_engineer','regional_tb_chief','regional_tb_operations_engineer','regional_tb_engineer','regional_fire_safety_engineer','republic_tb_engineer'].includes(acc.role);
     if(MINIMAL_SUPPORT_ROLES.has(acc.role)) return false;
     if(acc.role==='document_technician') return false;
@@ -3372,7 +3393,7 @@
   }
   function isShiftWorker(account){
     if(!account)return false;
-    if(['dispatcher','chief_dispatcher','electrician'].includes(account.role))return true;
+    if(['dispatcher','chief_dispatcher','electrician','duty_electrician'].includes(account.role))return true;
     const text=(String(account.roleLabel||'')+' '+String(account.position||'')).toLocaleLowerCase('uz');
     return /dispetch|montyor|mantyor|elektromont|tchb|tchb|shofyor|haydovchi/.test(text);
   }
@@ -3547,6 +3568,7 @@
             </div>
             <div class="hetk-user-folder-section">
               <div class="hetk-user-folder-title"><div><h4><i class="fas fa-folder-tree"></i> Papka / hudud ruxsati</h4><p>Tanlangan papka va uning ichidagi barcha pastki papkalar ko‘rinadi.</p></div><span id="hetk-selected-folder-count">0 ta tanlangan</span></div>
+              <p id="hetk-duty-folder-hint" hidden style="margin:6px 0;color:var(--text-secondary,#617286);font-size:13px">Navbatchi elektromontyor: faqat bitta tuman yoki shahar ShET/RES papkasini tanlang. U/J talab qilinmaydi.</p>
               <div class="hetk-team-search" style="margin:10px 0"><i class="fas fa-search"></i><input id="hetk-user-folder-search" placeholder="Papka nomini qidirish..."></div>
               <div id="hetk-user-folder-tree" class="hetk-user-folder-tree"></div>
             </div>
@@ -3736,7 +3758,7 @@
   function teamUserPlacementFolder(u){
     if(u.rootAccess) return '__root__';
     let roots=[];
-    if(u.workZoneId && teamWorkZonesCache[u.workZoneId]) roots=workZoneRoots(teamWorkZonesCache[u.workZoneId]);
+    if(u.role!=='duty_electrician' && u.workZoneId && teamWorkZonesCache[u.workZoneId]) roots=workZoneRoots(teamWorkZonesCache[u.workZoneId]);
     if(!roots.length) roots=accountFolderRoots(u);
     return commonFolderForIds(roots);
   }
@@ -3747,9 +3769,10 @@
     const roots=accountFolderRoots(u);
     let text=roots.map(id=>folderPath(id)).filter(Boolean).join(' · ');
     if(!text) text=u.region || 'Hudud biriktirilmagan';
-    if(u.workZoneName && !text.toLowerCase().includes(String(u.workZoneName).toLowerCase())) text+=' → '+u.workZoneName;
+    if(u.role!=='duty_electrician' && u.workZoneName && !text.toLowerCase().includes(String(u.workZoneName).toLowerCase())) text+=' → '+u.workZoneName;
     if(MANAGEMENT_ROLES.has(u.role)) text+=' → Boshqarma';
     else if(DISPATCHER_GROUP_ROLES.has(u.role)) text+=' → Dispetcherlik';
+    else if(u.role==='duty_electrician') text+=' → Navbatchi elektromontyorlar';
     else if(ASKUE_DEPARTMENT_ROLES.has(u.role)) text+=' → ASKUE bo‘limi';
     return text;
   }
@@ -3783,6 +3806,14 @@
         const dkey='__dispatcher__'+parent.id;
         if(!nodes[dkey]){nodes[dkey]={id:dkey,name:'Dispetcherlik',type:'dispatcher',parent:parent.id,children:new Set(),users:[],count:0};parent.children.add(dkey);}
         parent=nodes[dkey];
+      }else if(u.role==='duty_electrician'){
+        // Navbatchi elektromontyor tuman/shahar RES/ShET papkasida turadi,
+        // U/J bo'yicha guruhlanmaydi.
+        const districtId=districtOrCityFolderId(placementId);
+        if(districtId)parent=ensureFolder(districtId);
+        const dutyKey='__duty_electricians__'+parent.id;
+        if(!nodes[dutyKey]){nodes[dutyKey]={id:dutyKey,name:'Navbatchi elektromontyorlar',type:'duty_electricians',parent:parent.id,children:new Set(),users:[],count:0};parent.children.add(dutyKey);}
+        parent=nodes[dutyKey];
       }else if(ASKUE_DEPARTMENT_ROLES.has(u.role)){
         const akey='__askue__'+parent.id;
         if(!nodes[akey]){nodes[akey]={id:akey,name:'ASKUE bo‘limi',type:'askue',parent:parent.id,children:new Set(),users:[],count:0};parent.children.add(akey);}
@@ -3820,6 +3851,7 @@
   function teamTreeIcon(node){
     if(node.type==='management') return 'fa-briefcase';
     if(node.type==='dispatcher') return 'fa-headset';
+    if(node.type==='duty_electricians') return 'fa-user-clock';
     if(node.type==='askue') return 'fa-bolt';
     if(node.type==='res_staff') return 'fa-users-cog';
     if(node.type==='zone') return 'fa-hard-hat';
@@ -4222,6 +4254,8 @@ Agar bu so‘rovni siz bermagan bo‘lsangiz, Bosh administratorga murojaat qili
     if(!section || !roleEl || !select) return;
     const role=roleEl.value;
     const supportsZone=role==='master' || role==='electrician' || role==='tractor_operator' || role==='driver';
+    const dutyHint=byId('hetk-duty-folder-hint');
+    if(dutyHint)dutyHint.hidden=role!=='duty_electrician';
     section.hidden=!supportsZone;
     if(!supportsZone){
       editorFolderLimitRoots=null;editorFolderLocked=false;
@@ -4232,7 +4266,7 @@ Agar bu so‘rovni siz bermagan bo‘lsangiz, Bosh administratorga murojaat qili
     }
     const editing=editingTeamUid ? Object.assign({uid:editingTeamUid},teamUsersCache[editingTeamUid] || {}) : null;
     const editingCanCore = !editing || canManageTarget(editing,'edit');
-    const fixedByMaster=currentAccount && currentAccount.role==='master' && role==='electrician';
+    const fixedByMaster=currentAccount && currentAccount.role==='master' && (role==='electrician');
     const available=getAvailableWorkZones();
     const fieldLabel=byId('hetk-user-workzone-field-label');
     if(fieldLabel)fieldLabel.textContent=['tractor_operator','driver'].includes(role)?'U/J ni tanlang (ixtiyoriy)':'U/J ni tanlang *';
@@ -4829,6 +4863,8 @@ Agar bu so‘rovni siz bermagan bo‘lsangiz, Bosh administratorga murojaat qili
     const myAccessible=new Set(getAccessibleFolderIds(currentAccount,teamFoldersCache));
     if(!selectedRoots.length) return editorMessage('error','Kamida bitta papka / hududni tanlang.');
     if(role==='document_technician'&&selectedRoots.some(id=>!isDistrictOrCityScope(id))) return editorMessage('error','Hujjatlar bo‘yicha texnik faqat tuman yoki shahar papkasiga biriktiriladi.');
+    if(role==='accountant'&&selectedRoots.some(id=>!isDistrictOrCityScope(id))) return editorMessage('error','Hisobchi faqat tuman/shahar RES papkasiga biriktiriladi.');
+    if(role==='duty_electrician'&&(selectedRoots.length!==1 || districtOrCityFolderId(selectedRoots[0])!==selectedRoots[0])) return editorMessage('error','Navbatchi elektromontyor uchun faqat bitta tuman/shahar RES yoki ShET papkasini tanlang. U/J papkasi tanlanmaydi.');
     if(selectedRoots.some(id => !myAccessible.has(id))) return editorMessage('error','Sizga ruxsat berilmagan papkani biriktirib bo‘lmaydi.');
     const foldersObj={}; selectedRoots.forEach(id => foldersObj[id]=true);
     const def=roleDef(role);
@@ -4884,7 +4920,7 @@ Agar bu so‘rovni siz bermagan bo‘lsangiz, Bosh administratorga murojaat qili
           const account=Object.assign({},patch,{
             uid,login,authEmail:internalEmail,active:true,createdAt:now,createdBy:currentAccount.uid,
             createdByName:currentAccount.fullName || currentAccount.login || 'Admin',lastLoginAt:0,photoData:null,
-            safety:defaultSafetyRecord(),disciplinaryActions:{}
+            safety:role==='accountant'?null:defaultSafetyRecord(),disciplinaryActions:{}
           });
           if(supportsZone && zoneChoice){account.workZoneId=finalZoneId;account.workZoneName=zoneName;account.region=zoneName;}
           updates['users/'+uid]=account;
