@@ -234,6 +234,7 @@
   let messagesCleanupTimer = null;
   let messageComposeMode = 'direct';
   let selectedMessageRecipientUid = '';
+  let messageRecipientSearchText = '';
   let selectedBroadcastRoles = new Set();
   let messageComposerOpen = false;
   let editingMessageId = '';
@@ -355,10 +356,15 @@
     if(!pushMessaging || pushForegroundBound) return;
     pushForegroundBound=true;
     pushMessaging.onMessage(async payload=>{
-      const kind=String((payload && payload.data && payload.data.kind) || 'notifications');
+      const data=payload&&payload.data||{};
+      // V40: old or shared browser tokens must never show a different user's push.
+      const intended=String(data.recipientUid||'');
+      const signedInUid=String((auth&&auth.currentUser&&auth.currentUser.uid)||'');
+      if(!signedInUid||!currentAccount||currentAccount.uid!==signedInUid||pushLogoutPending||intended!==signedInUid)return;
+      const kind=String(data.kind||'notifications');
       if(!notificationPreferenceEnabled(kind)) return;
       document.dispatchEvent(new CustomEvent('hetk-push-received',{detail:payload || {}}));
-      const notice=payload&&payload.notification||{},data=payload&&payload.data||{},notificationId=String(data.notificationId||data.noticeId||data.id||`${Date.now()}-${Math.random().toString(36).slice(2)}`);
+      const notice=payload&&payload.notification||{},notificationId=String(data.notificationId||data.noticeId||data.id||`${Date.now()}-${Math.random().toString(36).slice(2)}`);
       try{
         const registration=pushServiceWorkerRegistration||await navigator.serviceWorker.ready;
         await registration.showNotification(notice.title||data.title||'HETK',{
@@ -496,16 +502,17 @@
       const uid=currentAccount.uid;
       if(pushLogoutPending || !auth || !auth.currentUser || auth.currentUser.uid!==uid) return false;
       const deviceId=pushDeviceId();
-      let previousUid='';
-      try{previousUid=localStorage.getItem('hetk_push_uid') || '';}catch(_e){}
-      if(previousUid && previousUid!==uid){
-        try{await databaseRef.ref(`PushTokens/${previousUid}/${deviceId}`).remove();}catch(_e){}
-      }
-      await databaseRef.ref(`PushTokens/${uid}/${deviceId}`).set({
-        token,deviceId,enabled:true,
-        userAgent:String(navigator.userAgent || '').slice(0,240),
-        updatedAt:Date.now()
+      // V40: trusted Worker first removes stale copies of this device/token
+      // from other accounts. Never enable cross-account delivery on failure.
+      const idToken=await auth.currentUser.getIdToken();
+      const response=await fetch(`${TELEGRAM_WORKER_URL}/push/device/register`,{
+        method:'POST',headers:{Authorization:'Bearer '+idToken,'Content-Type':'application/json'},
+        body:JSON.stringify({deviceId,token,userAgent:String(navigator.userAgent||'').slice(0,240)})
       });
+      let registration={};try{registration=await response.json();}catch(_e){}
+      if(!response.ok||!registration.ok||registration.registered!==true){
+        throw new Error('Qurilma push ro‘yxatidan o‘tmadi. Cloudflare V40 kodini tekshiring.');
+      }
       if(pushLogoutPending)return false;
       try{localStorage.setItem('hetk_push_uid',uid);}catch(_e){}
       await writeLocalPushSession(true,uid);
@@ -2401,12 +2408,13 @@
     }
     const isEditing=!!editingMessage;
     const candidates=messageDirectCandidates();
-    if(!selectedMessageRecipientUid || !candidates.some(user=>user.uid===selectedMessageRecipientUid)) selectedMessageRecipientUid=candidates[0] ? candidates[0].uid : '';
+    // V40: Never silently switch a private message to the first user after a refresh.
+    if(selectedMessageRecipientUid && !candidates.some(user=>user.uid===selectedMessageRecipientUid)) selectedMessageRecipientUid='';
     const availableRoles=messageAvailableBroadcastRoles();
     Array.from(selectedBroadcastRoles).forEach(role=>{if(!availableRoles.includes(role)) selectedBroadcastRoles.delete(role);});
     const selectedRecipients=messageSelectedRecipients();
     const messages=Object.keys(userMessagesCache).map(id=>Object.assign({id},userMessagesCache[id] || {})).filter(message=>message.createdAt).sort((a,b)=>Number(b.createdAt||0)-Number(a.createdAt||0));
-    const recipientList=candidates.length ? candidates.map(user=>`<button type="button" class="hetk-message-recipient ${user.uid===selectedMessageRecipientUid?'selected':''}" data-message-recipient="${escapeAttr(user.uid)}">
+    const recipientList=candidates.length ? candidates.map(user=>`<button type="button" aria-pressed="${user.uid===selectedMessageRecipientUid?'true':'false'}" class="hetk-message-recipient ${user.uid===selectedMessageRecipientUid?'selected':''}" data-message-recipient="${escapeAttr(user.uid)}">
       <span><img src="${escapeAttr(accountAvatarUrl(user))}" alt=""></span><div><b>${escapeHtml(user.fullName || user.login || 'Hodim')}</b><small>${escapeHtml(getRoleLabel(user))}</small><em>${escapeHtml(user.workZoneName || user.region || '')}</em></div>
     </button>`).join('') : communicationEmpty('fa-user-slash','Hodim topilmadi','Siz bilan bir hududdagi faol hodimlar shu yerda chiqadi.');
     const rolePicker=currentAccount && currentAccount.role==='master'
@@ -2414,8 +2422,9 @@
       : `<div class="hetk-message-role-picker"><b>Qaysi lavozimlarga?</b>${availableRoles.length ? availableRoles.map(role=>`<label><input type="checkbox" data-message-role="${escapeAttr(role)}" ${selectedBroadcastRoles.has(role)?'checked':''}><span>${escapeHtml(roleDef(role).label)}</span><em>${messageBroadcastBaseRecipients().filter(user=>user.role===role).length}</em></label>`).join('') : '<p>Quyi lavozimdagi qabul qiluvchilar topilmadi.</p>'}</div>`;
     const selectedCategory=isEditing ? (editingMessage.category || 'normal') : 'normal';
     const categoryOptions=[['normal','Oddiy xabar'],['news','Yangilik'],['order','Buyruq'],['fax','Faksogramma']].map(option=>`<option value="${option[0]}" ${selectedCategory===option[0]?'selected':''}>${option[1]}</option>`).join('');
-    const composer=messageComposerOpen ? `<div class="hetk-message-composer ${isEditing?'is-editing':''}">
-          <div class="hetk-message-composer-head"><div><h4>${isEditing?'Xabarni tahrirlash':(messageComposeMode==='broadcast'?'Ommaviy xabar':'Yakka xabar')}</h4><p>${isEditing?'Qabul qiluvchilar o‘zgarmaydi. O‘zgarish hammaga bir vaqtda ko‘rinadi.':(messageComposeMode==='broadcast'?'Tanlangan lavozimlardagi hodimlarga yuboriladi.':'Bir hududdagi tanlangan hodimga yuboriladi.')}</p></div><span>${isEditing?Number(editingMessage.recipientCount||0):selectedRecipients.length} qabul qiluvchi</span></div>
+    const composer=messageComposerOpen ? `<div class="hetk-message-composer ${isEditing?'is-editing':''}" data-editing-message-id="${escapeAttr(editingMessageId||'')}">
+          <div class="hetk-message-composer-head"><div><h4>${isEditing?'Xabarni tahrirlash':(messageComposeMode==='broadcast'?'Ommaviy xabar':'Yakka xabar')}</h4><p>${isEditing?'Qabul qiluvchilar o‘zgarmaydi. O‘zgarish hammaga bir vaqtda ko‘rinadi.':(messageComposeMode==='broadcast'?'Tanlangan lavozimlardagi hodimlarga yuboriladi.':'Bir hududdagi tanlangan hodimga yuboriladi.')}</p></div><span data-message-recipient-count>${isEditing?Number(editingMessage.recipientCount||0):selectedRecipients.length} qabul qiluvchi</span></div>
+          ${!isEditing&&messageComposeMode==='direct'?`<div class="hetk-message-selected-recipient" data-message-selected-label><i class="fas fa-user-check"></i> Tanlangan qabul qiluvchi: <b>${escapeHtml(selectedRecipients[0]&&(selectedRecipients[0].fullName||selectedRecipients[0].login)||'Tanlanmagan')}</b></div>`:''}
           ${!isEditing && messageComposeMode==='broadcast'?rolePicker:''}
           <div class="hetk-message-form-grid"><label><span>Xabar turi</span><select id="hetk-message-category">${categoryOptions}</select></label><label><span>Sarlavha *</span><input id="hetk-message-title" maxlength="120" placeholder="Xabar sarlavhasi" value="${escapeAttr(isEditing?(editingMessage.title||''):'')}"></label></div>
           <label class="hetk-message-text"><span>Xabar matni</span><textarea id="hetk-message-text" maxlength="3000" rows="4" placeholder="Xabarni yozing...">${isEditing?escapeHtml(editingMessage.text||''):''}</textarea></label>
@@ -2426,7 +2435,7 @@
     return `<div class="hetk-chat-center ${messageComposerOpen?'composer-open':'composer-closed'} ${isEditing?'composer-editing':''}">
       ${messageComposerOpen&&!isEditing?`<aside class="hetk-message-people">
         <div class="hetk-message-mode-tabs"><button type="button" data-message-mode="direct" class="${messageComposeMode==='direct'?'active':''}"><i class="fas fa-user"></i> Yakka</button>${canMass?`<button type="button" data-message-mode="broadcast" class="${messageComposeMode==='broadcast'?'active':''}"><i class="fas fa-bullhorn"></i> Ommaviy</button>`:''}</div>
-        ${messageComposeMode==='direct'?`<div class="hetk-chat-search"><i class="fas fa-search"></i><input id="hetk-message-person-search" placeholder="Hodimni qidirish..."></div><div id="hetk-message-recipient-list" class="hetk-message-recipient-list">${recipientList}</div>`:`<div class="hetk-message-mass-aside"><i class="fas fa-users"></i><b>Ommaviy yuborish</b><p>Faqat o‘zingizga qarashli hudud va quyi lavozimlar.</p><strong>${selectedRecipients.length} qabul qiluvchi</strong></div>`}
+        ${messageComposeMode==='direct'?`<div class="hetk-chat-search"><i class="fas fa-search"></i><input id="hetk-message-person-search" placeholder="Hodimni qidirish..." value="${escapeAttr(messageRecipientSearchText)}"></div><div id="hetk-message-recipient-list" class="hetk-message-recipient-list">${recipientList}</div>`:`<div class="hetk-message-mass-aside"><i class="fas fa-users"></i><b>Ommaviy yuborish</b><p>Faqat o‘zingizga qarashli hudud va quyi lavozimlar.</p><strong>${selectedRecipients.length} qabul qiluvchi</strong></div>`}
       </aside>`:''}
       <section class="hetk-message-main">
         <div class="hetk-message-compose-toolbar"><div><h4>Xabarlar</h4><p>Qabul qilingan va yuborilgan xabarlar.</p></div><button type="button" data-toggle-message-composer class="${messageComposerOpen?'close':''}"><i class="fas ${messageComposerOpen?'fa-times':'fa-plus'}"></i> ${messageComposerOpen?'Panelni yopish':'Yangi xabar yozish'}</button></div>
@@ -2485,6 +2494,7 @@
     if(title.length<3) return setMessageStatus('error','Sarlavhani kiriting.');
     if(!textValue && !file) return setMessageStatus('error','Xabar matni yoki fayl kiriting.');
     if(!recipients.length) return setMessageStatus('error','Qabul qiluvchini tanlang.');
+    if(messageComposeMode==='direct' && recipients.length!==1)return setMessageStatus('error','Yakka xabarda faqat bitta hodim tanlanishi mumkin.');
     if(messageComposeMode==='broadcast' && !canSendMassMessages(currentAccount)) return setMessageStatus('error','Ommaviy xabar yuborishga ruxsatingiz yo‘q.');
     setBusy(button,true,'Yuborilmoqda...');
     setMessageStatus('loading',file?'Fayl Telegram kanaliga yuklanmoqda...':'Xabar yuborilmoqda...');
@@ -2625,15 +2635,33 @@
       messageComposeMode=button.dataset.messageMode==='broadcast'?'broadcast':'direct';
       renderCommunicationContent();
     }));
+    const applyRecipientSearch=()=>{
+      const q=messageRecipientSearchText.trim().toLocaleLowerCase('uz');
+      content.querySelectorAll('[data-message-recipient]').forEach(button=>{
+        button.style.display=!q||button.textContent.toLocaleLowerCase('uz').includes(q)?'':'none';
+      });
+    };
     content.querySelectorAll('[data-message-recipient]').forEach(button=>button.addEventListener('click',()=>{
-      selectedMessageRecipientUid=button.dataset.messageRecipient;
-      renderCommunicationContent();
+      const target=button.dataset.messageRecipient;
+      if(!target||!teamUsersCache[target])return;
+      selectedMessageRecipientUid=target;
+      // Keep the search field, scroll position and draft unchanged.
+      content.querySelectorAll('[data-message-recipient]').forEach(row=>{
+        const selected=row.dataset.messageRecipient===target;
+        row.classList.toggle('selected',selected);
+        row.setAttribute('aria-pressed',selected?'true':'false');
+      });
+      const label=content.querySelector('[data-message-selected-label] b');
+      const selectedUser=teamUsersCache[target];
+      if(label)label.textContent=selectedUser.fullName||selectedUser.login||'Hodim';
+      const count=content.querySelector('[data-message-recipient-count]');
+      if(count)count.textContent='1 qabul qiluvchi';
     }));
     const search=byId('hetk-message-person-search');
-    if(search) search.addEventListener('input',()=>{
-      const q=search.value.trim().toLowerCase();
-      content.querySelectorAll('[data-message-recipient]').forEach(button=>{button.style.display=!q || button.textContent.toLowerCase().includes(q)?'':'none';});
-    });
+    if(search) {search.addEventListener('input',()=>{
+      messageRecipientSearchText=search.value;
+      applyRecipientSearch();
+    });applyRecipientSearch();}
     content.querySelectorAll('[data-message-role]').forEach(input=>input.addEventListener('change',()=>{
       if(input.checked) selectedBroadcastRoles.add(input.dataset.messageRole); else selectedBroadcastRoles.delete(input.dataset.messageRole);
       renderCommunicationContent();
@@ -2674,12 +2702,29 @@
   function renderCommunicationContent(){
     const content=byId('hetk-communication-content');
     if(!content) return;
+    const oldRecipientList=content.querySelector('#hetk-message-recipient-list');
+    const recipientScrollTop=oldRecipientList?oldRecipientList.scrollTop:0;
+    const oldComposer=content.querySelector('.hetk-message-composer');
+    const composerDraft=oldComposer&&messageComposerOpen&&oldComposer.dataset.editingMessageId===(editingMessageId||'')?{
+      title:(oldComposer.querySelector('#hetk-message-title')||{}).value,
+      text:(oldComposer.querySelector('#hetk-message-text')||{}).value,
+      category:(oldComposer.querySelector('#hetk-message-category')||{}).value
+    }:null;
     const items=Object.keys(userNotificationsCache).map(id=>Object.assign({id},userNotificationsCache[id]||{})).sort((a,b)=>Number(b.createdAt||0)-Number(a.createdAt||0));
     if(communicationTab==='chats') content.innerHTML=renderChatsDesign();
     else if(communicationTab==='approvals') content.innerHTML=renderNoticeCards(items.filter(item=>item.kind==='approval'),true);
     else content.innerHTML=renderNoticeCards(items.filter(item=>item.kind!=='approval'),false);
 
-    if(communicationTab==='chats') bindChatsDesign();
+    if(communicationTab==='chats'){
+      bindChatsDesign();
+      const newRecipientList=content.querySelector('#hetk-message-recipient-list');
+      if(newRecipientList)newRecipientList.scrollTop=recipientScrollTop;
+      if(composerDraft){
+        const title=content.querySelector('#hetk-message-title');if(title&&composerDraft.title!==undefined)title.value=composerDraft.title;
+        const text=content.querySelector('#hetk-message-text');if(text&&composerDraft.text!==undefined)text.value=composerDraft.text;
+        const category=content.querySelector('#hetk-message-category');if(category&&composerDraft.category!==undefined)category.value=composerDraft.category;
+      }
+    }
 
     content.querySelectorAll('[data-notice-id]').forEach(card=>card.addEventListener('click',()=>markNoticeRead(card.dataset.noticeId)));
     content.querySelectorAll('[data-approve-request],[data-reject-request]').forEach(button=>button.addEventListener('click',async event=>{
@@ -5578,7 +5623,7 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
         stopNotificationSettings();
         if(loginHistoryTimer){clearInterval(loginHistoryTimer);loginHistoryTimer=null;}
         loginHistoryRows=[];loginHistoryLoadedAt=0;
-        currentAccount=null;baseCurrentAccount=null;effectiveDelegation=null;activeDelegationsCache={};accessibleFolderCache=new WeakMap();clearTimeout(teamSearchTimer);teamSearchTimer=null;if(teamRenderFrame){if(typeof cancelAnimationFrame==='function')cancelAnimationFrame(teamRenderFrame);else clearTimeout(teamRenderFrame);}teamRenderFrame=0;teamDetailRefreshPending=false;teamCommunicationRefreshPending=false;
+        currentAccount=null;baseCurrentAccount=null;effectiveDelegation=null;activeDelegationsCache={};selectedMessageRecipientUid='';messageRecipientSearchText='';accessibleFolderCache=new WeakMap();clearTimeout(teamSearchTimer);teamSearchTimer=null;if(teamRenderFrame){if(typeof cancelAnimationFrame==='function')cancelAnimationFrame(teamRenderFrame);else clearTimeout(teamRenderFrame);}teamRenderFrame=0;teamDetailRefreshPending=false;teamCommunicationRefreshPending=false;
         window.HETKAuth.currentUser=null;
         window.HETKAuth.baseUser=null;window.HETKAuth.effectiveDelegation=null;
         document.dispatchEvent(new CustomEvent('hetk-auth-cleared'));
