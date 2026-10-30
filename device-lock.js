@@ -33,7 +33,7 @@
     const unlockPattern=async value=>{if(value.length<4)return;if(await verifySecret(value))unlocked();else{$('hetk-lock-status').textContent='Grafik kalit noto‘g‘ri.';setTimeout(()=>patternGrid('hetk-lock-pattern',unlockPattern),300);}};
     patternGrid('hetk-lock-pattern',unlockPattern);
     $('hetk-lock-pattern-clear').onclick=()=>patternGrid('hetk-lock-pattern',unlockPattern);
-    $('hetk-lock-logout').onclick=async()=>{clear();try{if(window.firebase&&firebase.auth)await firebase.auth().signOut();}catch(_e){}location.reload();};
+    $('hetk-lock-logout').onclick=async()=>{try{if(window.HETKPush&&window.HETKPush.signOut)await window.HETKPush.signOut();else throw new Error('Push chiqish xizmati yuklanmadi.');clear();location.reload();}catch(error){$('hetk-lock-status').textContent='Chiqish bajarilmadi: '+(error&&error.message||'Internetni tekshiring.');}};
     $('hetk-lock-settings-close').onclick=()=>$('hetk-lock-settings').classList.add('hetk-lock-hidden');
     document.querySelectorAll('.hetk-lock-method').forEach(b=>b.onclick=()=>choose(b.dataset.method));
     $('hetk-setup-pin-save').onclick=async()=>{const a=$('hetk-setup-pin1').value,b=$('hetk-setup-pin2').value;if(!/^\d{4,6}$/.test(a)||a!==b){$('hetk-setup-status').textContent='Bir xil 4–6 xonali PIN kiriting.';return;}const salt=b64(rand(16));save({method:'pin',salt,hash:await digest(a,salt)});sessionStorage.setItem(SESSION,'1');$('hetk-lock-settings').classList.add('hetk-lock-hidden');toast('PIN-kod yoqildi');};
