@@ -26,7 +26,7 @@
   function hideBoot(){const loader=$('app-loader');if(loader)loader.style.display='none';}
   function showGate(title,text){hideBoot();$('hetk-session-gate-title').textContent=title;$('hetk-session-gate-text').textContent=text;$('hetk-session-gate').classList.remove('hetk-sessions-hidden');}
   function hideGate(){$('hetk-session-gate').classList.add('hetk-sessions-hidden');}
-  async function signOut(){try{if(ownRef)await ownRef.remove();}catch(_e){}try{await firebase.auth().signOut();}catch(_e){}location.reload();}
+  async function signOut(){try{if(!window.HETKPush||!window.HETKPush.signOut)throw new Error('Push chiqish xizmati yuklanmadi.');await window.HETKPush.signOut();location.reload();}catch(error){showGate('Chiqish bajarilmadi',error&&error.message||'Internetni tekshiring.');}}
   function handleOwn(row){currentStatus=row&&row.status||'revoked';if(currentStatus==='active'){hideGate();if(!approvedAnnounced){approvedAnnounced=true;document.dispatchEvent(new CustomEvent('hetk-session-approved',{detail:{uid,deviceId,mode}}));}return;}approvedAnnounced=false;document.dispatchEvent(new CustomEvent('hetk-session-denied',{detail:{status:currentStatus}}));if(currentStatus==='pending')showGate('Tasdiqlash kutilmoqda','Ushbu qurilma asosiy qurilmadan tasdiqlanishi kerak. Asosiy qurilmadagi “Faol qurilmalar” oynasini oching.');else if(currentStatus==='limit')showGate('Qurilmalar limiti to‘lgan',mode==='app'?'Ikki ilova seansi band. Avval ulardan birini tugating.':'Sayt seansi band. Avval eski brauzer seansini tugating.');else if(currentStatus==='rejected')showGate('Kirish rad etildi','Asosiy qurilma ushbu kirishni rad etdi.');else showGate('Seans tugatilgan','Ushbu qurilmaning seansi tugatilgan. Qayta kirishingiz mumkin.');}
   async function register(){
     const ref=firebase.database().ref(ROOT+'/'+uid);mode=channel();deviceId=getDeviceId();
@@ -62,5 +62,5 @@
   document.addEventListener('hetk-auth-ready',start);
   document.addEventListener('hetk-auth-cleared',cleanup);
   document.addEventListener('click',e=>{if(e.target&&e.target.closest&&e.target.closest('#hetk-profile-logout')&&ownRef)ownRef.remove().catch(()=>{});},true);
-  window.HETKDeviceSessions={open:openManager,adminReset,isApproved:()=>currentStatus==='active'};
+  window.HETKDeviceSessions={open:openManager,adminReset,isApproved:()=>currentStatus==='active',endCurrent:async()=>{if(ownRef)await ownRef.remove();}};
 })();
