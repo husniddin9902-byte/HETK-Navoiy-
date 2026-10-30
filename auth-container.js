@@ -246,6 +246,9 @@
   let pushRegisteredUid = '';
   let pushCurrentToken = '';
   let pushForegroundBound = false;
+  let pushLogoutPending = false;
+  let pushLogoutPromise = null;
+  let pushStateWritePromise = Promise.resolve();
   let loginSessionId = '';
   let loginSessionToken = '';
   let loginHeartbeatTimer = null;
@@ -367,8 +370,100 @@
     });
   }
 
+  // V39: Service Worker does not have Firebase Auth. Persist an independent
+  // per-origin push session so a signed-out device never displays stale pushes.
+  function writeLocalPushSession(active,uid){
+    // Serialize login/logout writes: an older async cache.put must not overwrite
+    // the status of a subsequent login or a new account on the same browser.
+    pushStateWritePromise=pushStateWritePromise.catch(()=>{}).then(async()=>{
+      if(!('caches' in window))return;
+      const cache=await caches.open('hetk-push-session-v39');
+      const key=new URL('__hetk_push_session__',new URL('./',document.baseURI)).href;
+      await cache.put(key,new Response(JSON.stringify({active:!!active,uid:String(uid||''),updatedAt:Date.now()}),
+        {headers:{'Content-Type':'application/json'}}));
+    });
+    return pushStateWritePromise;
+  }
+
+  async function revokeServerPushDevice(user){
+    const deviceId=pushDeviceId();
+    const idToken=await user.getIdToken();
+    const controller=new AbortController();
+    const timeout=setTimeout(()=>controller.abort(),9000);
+    try{
+      const response=await fetch(`${TELEGRAM_WORKER_URL}/push/device/revoke`,{
+        method:'POST',headers:{'Authorization':'Bearer '+idToken,'Content-Type':'application/json'},
+        body:JSON.stringify({deviceId}),signal:controller.signal
+      });
+      if(!response.ok)throw new Error(`Worker: ${response.status}`);
+      const result=await response.json();
+      if(!result.ok||!result.revoked)throw new Error('Qurilma push seansi bekor qilinmadi.');
+      return true;
+    }finally{clearTimeout(timeout);}
+  }
+
+  async function revokePushForSignOut(user){
+    if(!user) return;
+    // A still-running getToken() must finish before revocation (no late re-register).
+    if(pushRegistrationPromise)await Promise.race([
+      pushRegistrationPromise.catch(()=>null),
+      new Promise((_,reject)=>setTimeout(()=>reject(new Error('Push ro‘yxatdan o‘tishi tugamadi.')),10000))
+    ]);
+    try{
+      await revokeServerPushDevice(user);
+    }catch(workerError){
+      // Compatible with the old deployed Worker until the V39 Worker is published.
+      // A timeout avoids an indefinite wait on an offline Firebase RTDB write.
+      if(!databaseRef)throw workerError;
+      let timer;
+      try{
+        await Promise.race([
+          databaseRef.ref(`PushTokens/${user.uid}/${pushDeviceId()}`).remove(),
+          new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Internet yoki Firebase javob bermayapti.')),7000);})
+        ]);
+      }finally{clearTimeout(timer);}
+    }
+    pushRegisteredUid='';pushCurrentToken='';
+    try{localStorage.removeItem('hetk_push_uid');}catch(_e){}
+    if(pushMessaging && typeof pushMessaging.deleteToken==='function'){
+      try{await Promise.race([pushMessaging.deleteToken(),new Promise(resolve=>setTimeout(resolve,3000))]);}
+      catch(error){console.warn('Push token mahalliy bekor qilinmadi:',error);}
+    }
+  }
+
+  async function signOutWithPushCleanup(options){
+    if(pushLogoutPromise)return pushLogoutPromise;
+    pushLogoutPromise=(async()=>{
+      const user=auth&&auth.currentUser;
+      if(!user)return;
+      pushLogoutPending=true;
+      try{
+        await writeLocalPushSession(false,user.uid);
+        try{await revokePushForSignOut(user);}
+        catch(error){
+          if(!(options&&options.force))throw error;
+          console.warn('Majburiy chiqishda server push yozuvi bekor qilinmadi:',error);
+        }
+        await writeLocalPushSession(false,user.uid);
+        // If device approval is re-enabled later, retire its record before Auth signs out.
+        if(window.HETKDeviceSessions&&typeof window.HETKDeviceSessions.endCurrent==='function'){
+          try{await window.HETKDeviceSessions.endCurrent();}
+          catch(error){console.warn('Qurilma seansini yakunlash:',error);}
+        }
+        await endLoginTracking(false);
+        await auth.signOut();
+      }catch(error){
+        if(auth&&auth.currentUser&&!(options&&options.force)){
+          try{await writeLocalPushSession(true,user.uid);}catch(_e){}
+        }
+        throw error;
+      }finally{pushLogoutPending=false;}
+    })();
+    try{return await pushLogoutPromise;}finally{pushLogoutPromise=null;}
+  }
+
   async function ensureBrowserPush(requestPermission){
-    if(!currentAccount || !databaseRef) return false;
+    if(!currentAccount || !databaseRef || pushLogoutPending) return false;
     if(!browserPushSupported()) throw new Error('Bu brauzer bildirishnomani qo‘llamaydi.');
     if(pushRegisteredUid===currentAccount.uid && pushCurrentToken) return true;
     if(pushRegistrationPromise) return await pushRegistrationPromise;
@@ -399,6 +494,7 @@
       });
       if(!token) throw new Error('Brauzer bildirishnoma kalitini bermadi.');
       const uid=currentAccount.uid;
+      if(pushLogoutPending || !auth || !auth.currentUser || auth.currentUser.uid!==uid) return false;
       const deviceId=pushDeviceId();
       let previousUid='';
       try{previousUid=localStorage.getItem('hetk_push_uid') || '';}catch(_e){}
@@ -410,7 +506,9 @@
         userAgent:String(navigator.userAgent || '').slice(0,240),
         updatedAt:Date.now()
       });
+      if(pushLogoutPending)return false;
       try{localStorage.setItem('hetk_push_uid',uid);}catch(_e){}
+      await writeLocalPushSession(true,uid);
       pushRegisteredUid=uid;pushCurrentToken=token;
       return true;
     })();
@@ -483,7 +581,18 @@
   window.HETKPush={
     sendToUsers:sendBrowserPushToUsers,
     safeSendToUsers:safeSendBrowserPush,
-    enable:()=>ensureBrowserPush(true)
+    enable:()=>ensureBrowserPush(true),
+    signOut:signOutWithPushCleanup,
+    // Do not reveal FCM tokens. Use this for a safe post-deployment diagnosis.
+    async status(){
+      const user=auth&&auth.currentUser;
+      if(!user)return {signedIn:false};
+      const row=databaseRef?await databaseRef.ref(`PushTokens/${user.uid}/${pushDeviceId()}`).once('value'):null;
+      const record=row&&row.val();
+      return {signedIn:true,deviceRegistered:!!(record&&record.token),
+        enabled:!!(record&&record.enabled===true),
+        notificationPermission:typeof Notification==='undefined'?'unsupported':Notification.permission};
+    }
   };
 
   function shortText(value,max){
@@ -1017,7 +1126,7 @@
           save.disabled=false;save.innerHTML='<i class="fas fa-lock"></i> Yangi parolni saqlash';
         }
       };
-      byId('hetk-temp-password-logout').onclick=async()=>{closeTemporaryPasswordGate();try{await auth.signOut();}catch(_e){}reject(Object.assign(new Error('Tizimdan chiqildi.'),{handled:true}));};
+      byId('hetk-temp-password-logout').onclick=async()=>{closeTemporaryPasswordGate();try{await signOutWithPushCleanup();}catch(error){alert(error&&error.message||'Chiqishda xato');return;}reject(Object.assign(new Error('Tizimdan chiqildi.'),{handled:true}));};
     });
   }
 
@@ -1027,13 +1136,13 @@
     let authAt=0;
     try{const result=await user.getIdTokenResult();authAt=Number(result&&result.claims&&result.claims.auth_time||0)*1000;}catch(_e){}
     if(issuedAt&&authAt&&authAt+5000<issuedAt){
-      await auth.signOut();
+      await signOutWithPushCleanup({force:true});
       setBootLoaderVisible(false);setOverlayVisible(true);
       setMessage('error','Parolingiz administrator tomonidan yangilangan. Yangi vaqtinchalik parol bilan kiring.');
       throw Object.assign(new Error('Yangi vaqtinchalik parol bilan kirish talab qilinadi.'),{handled:true});
     }
     if(expiresAt&&now>expiresAt){
-      await auth.signOut();
+      await signOutWithPushCleanup({force:true});
       setBootLoaderVisible(false);setOverlayVisible(true);
       setMessage('error','Vaqtinchalik parolning 24 soatlik muddati tugagan. Bosh administratorga murojaat qiling.');
       throw Object.assign(new Error('Vaqtinchalik parol muddati tugagan.'),{handled:true});
@@ -5184,8 +5293,8 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
     btn.innerHTML = '<i class="fas fa-sign-out-alt"></i> Tizimdan chiqish';
     btn.addEventListener('click', async () => {
       if(window.closeProfileModule) window.closeProfileModule();
-      await endLoginTracking(false);
-      await auth.signOut();
+      try{await signOutWithPushCleanup();}
+      catch(error){alert('Tizimdan chiqilmadi: push qurilmasini bekor qilish talab etiladi. Internetni tekshirib qayta urinib ko‘ring. '+(error&&error.message||''));}
     });
     menu.appendChild(btn);
   }
@@ -5366,7 +5475,7 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
       setBootLoaderVisible(true,'Ilova yuklanmoqda...');
       currentAccount = await loadAccount(user);
       if(!currentAccount){
-        await auth.signOut();
+        await signOutWithPushCleanup({force:true});
         setBootLoaderVisible(false);
         setOverlayVisible(true);
         setMessage('error','Bu login uchun foydalanuvchi profili topilmadi. Administratorga murojaat qiling.');
@@ -5375,7 +5484,7 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
       currentAccount = await ensureLoginIndex(currentAccount, user);
       baseCurrentAccount=currentAccount;
       if(baseCurrentAccount.active === false){
-        await auth.signOut();
+        await signOutWithPushCleanup({force:true});
         setBootLoaderVisible(false);
         setOverlayVisible(true);
         setMessage('error','Bu foydalanuvchi bloklangan.');
@@ -5392,7 +5501,7 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
       currentUserLiveRef.on('value', async snap => {
         const live=snap.val();
         if(!live || live.active === false){
-          if(auth.currentUser && auth.currentUser.uid === user.uid) await auth.signOut();
+          if(auth.currentUser && auth.currentUser.uid === user.uid) await signOutWithPushCleanup({force:true});
           return;
         }
         baseCurrentAccount=Object.assign({uid:user.uid},live);
@@ -5454,6 +5563,8 @@ Bu amalni ortga qaytarib bo‘lmaydi. Davom etasizmi?`)) return;
         if(creatingFirstAdmin) return;
         await handleSignedIn(user);
       }else{
+        writeLocalPushSession(false,'').catch(()=>{});
+        pushRegisteredUid='';pushCurrentToken='';
         endLoginTracking(false);
         if(usersTeamRef){usersTeamRef.off('value');usersTeamRef=null;}
         if(foldersTeamRef){foldersTeamRef.off('value');foldersTeamRef=null;}
