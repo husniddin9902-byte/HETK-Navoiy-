@@ -35,7 +35,7 @@ async function canDisplayHetkPush(data){
     if(!response)return false; // fail closed until the user logs in and registers a token
     const session=await response.json();
     if(!session||session.active!==true||!session.uid)return false;
-    return !data.recipientUid||String(data.recipientUid)===String(session.uid);
+    return !!data.recipientUid && String(data.recipientUid)===String(session.uid);
   }catch(_error){return false;}
 }
 
