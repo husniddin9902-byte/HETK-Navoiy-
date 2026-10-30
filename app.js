@@ -25,6 +25,9 @@ const HETK_SCOPED_TPS_CACHE_MS = 10000;
 // faqat bitta so‘rov yuboriladi. 10 soniyadan keyin navbatdagi amal yangi
 // ma’lumotni oladi, shuning uchun boshqa hodim kiritgan element ham yo‘qolmaydi.
 function hetkScopedTPsOnce(forceRefresh = false){
+    // Foydalanuvchi almashganda yoki eski kesh qolsa ham navbatchiga TP berilmaydi.
+    if(window.HETKAuth && window.HETKAuth.currentUser && window.HETKAuth.currentUser.role==='duty_electrician')
+        return Promise.resolve({val:()=>({}),exists:()=>false});
     const fresh = hetkScopedTPsSnapshot && (Date.now() - hetkScopedTPsLoadedAt < HETK_SCOPED_TPS_CACHE_MS);
     if(!forceRefresh && fresh) return Promise.resolve(hetkScopedTPsSnapshot);
     if(hetkScopedTPsRequest) return hetkScopedTPsRequest;
@@ -49,6 +52,8 @@ document.addEventListener('hetk-auth-ready', hetkInvalidateScopedTPs);
 document.addEventListener('hetk-auth-user-updated', hetkInvalidateScopedTPs);
 document.addEventListener('hetk-auth-cleared', hetkInvalidateScopedTPs);
 function hetkScopedTPOnce(tpId){
+    if(window.HETKAuth && window.HETKAuth.currentUser && window.HETKAuth.currentUser.role==='duty_electrician')
+        return Promise.resolve({val:()=>null,exists:()=>false});
     return window.HETKData ? window.HETKData.readTP(tpId) : database.ref('TPs/'+tpId).once('value');
 }
 function hetkScopedUsersOnce(){
@@ -2610,6 +2615,7 @@ function hetkAccountRoleLabel(account){
     if(window.HETKAuth && window.HETKAuth.getAccountRoleLabel) return window.HETKAuth.getAccountRoleLabel(account);
     if(account.role === 'master' && account.workZoneName) return account.workZoneName + ' Masteri';
     if(account.role === 'electrician' && account.workZoneName) return account.workZoneName + ' Elektromontyori';
+    if(account.role === 'duty_electrician') return 'Navbatchi elektromontyor';
     return account.roleLabel || account.role || 'Foydalanuvchi';
 }
 
@@ -4895,6 +4901,7 @@ function hetkCanSeeFolder(folderId){
 function hetkPointAllowedByUser(tp){
     if(!window.HETKAuth || !window.HETKAuth.currentUser || !tp) return false;
     const me=window.HETKAuth.currentUser;
+    if(me.role==='duty_electrician') return false;
     if(me.rootAccess) return true;
 
     // U/J uchun asosiy manba: server himoyasi bilan o'qilgan TPsByWorkZone
