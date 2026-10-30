@@ -25,6 +25,20 @@ self.addEventListener('fetch', function(event) {
   }));
 });
 
+// V39: a push received after logout must not appear on this device.
+// CacheStorage is shared by pages and the Service Worker; Firebase Auth is not.
+async function canDisplayHetkPush(data){
+  try{
+    const store=await caches.open('hetk-push-session-v39');
+    const key=new URL('__hetk_push_session__',self.registration.scope).href;
+    const response=await store.match(key);
+    if(!response)return false; // fail closed until the user logs in and registers a token
+    const session=await response.json();
+    if(!session||session.active!==true||!session.uid)return false;
+    return !data.recipientUid||String(data.recipientUid)===String(session.uid);
+  }catch(_error){return false;}
+}
+
 // FCM yuborgan xabarlarni tashqi Firebase SDKsiz ko'rsatadi.
 self.addEventListener('push', function(event) {
   let payload = {};
@@ -46,7 +60,10 @@ self.addEventListener('push', function(event) {
     vibrate: [220, 100, 220],
     timestamp: Number(data.sentAt || Date.now())
   };
-  event.waitUntil(self.registration.showNotification(title, options));
+  event.waitUntil((async function(){
+    if(!(await canDisplayHetkPush(data))) return;
+    await self.registration.showNotification(title, options);
+  })());
 });
 
 self.addEventListener('notificationclick', function(event) {
