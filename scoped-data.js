@@ -87,6 +87,8 @@
   }
   async function readTPs(force){
     const account=me();if(!account)return snapshot({});
+    // Navbatchi elektromontyorga TP/KTP elementlari umuman yuklanmaydi.
+    if(account.role==='duty_electrician')return snapshot({});
     if(tpRequest)return tpRequest;
     if(tpCacheReady&&!force&&Date.now()-tpCacheAt<READ_CACHE_MS)return snapshot(tpCache);
     tpRequest=(async function(){
@@ -110,6 +112,7 @@
     return tpRequest;
   }
   async function readTP(id){
+    if(me()&&me().role==='duty_electrician')return snapshot(null);
     if(tpCache[id])return snapshot(tpCache[id]);
     const all=(await readTPs(true)).val();return snapshot(all[id]||null);
   }
