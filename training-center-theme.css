@@ -423,3 +423,7 @@
 #hetk-training-overlay .hetk-rank-more{display:block;width:calc(100% - 20px);margin:12px 10px;padding:11px;border:1px solid #cfe2f7;border-radius:10px;background:#eff7ff;color:#1469be;font-size:12px;font-weight:700;cursor:pointer}
 #hetk-training-overlay .hetk-rank-more:hover{background:#dcefff}
 #hetk-training-overlay .hetk-rank-user-identity p{overflow-wrap:anywhere}
+
+/* V44: Test natijasidagi ikki mustaqil foizni tushunarli ko‘rsatish. */
+.hetk-training-result-hero .hetk-test-score-breakdown{margin-top:9px;padding:9px 12px;border-radius:9px;background:rgba(255,255,255,.14);line-height:1.6;opacity:1;font-size:12px;}
+.hetk-test-score-breakdown b{color:#fff;}
