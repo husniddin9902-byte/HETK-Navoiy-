@@ -547,3 +547,6 @@ body.hetk-minimal-support-role.hetk-profile-open::before{display:none}
 .hetk-message-recipient.selected b{color:#07599c;}
 .hetk-message-selected-recipient{display:flex;align-items:center;gap:7px;flex-wrap:wrap;background:#e9f5ff;border:1px solid #95c8f6;color:#134c78;padding:9px 12px;border-radius:9px;margin:7px 0;font-size:12px;}
 .hetk-message-selected-recipient i{color:#0873db;}
+/* V44: Kirish nazoratida xodimning doimiy ish hududini ajratib ko'rsatish. */
+.hetk-login-audit-person .hetk-login-audit-work-region{color:#1879b6;font-weight:700;white-space:normal;line-height:1.35;overflow-wrap:anywhere;}
+.hetk-login-audit-work-region i{margin-right:4px;}
