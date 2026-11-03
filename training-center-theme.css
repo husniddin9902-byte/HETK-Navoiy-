@@ -427,3 +427,30 @@
 /* V44: Test natijasidagi ikki mustaqil foizni tushunarli ko‘rsatish. */
 .hetk-training-result-hero .hetk-test-score-breakdown{margin-top:9px;padding:9px 12px;border-radius:9px;background:rgba(255,255,255,.14);line-height:1.6;opacity:1;font-size:12px;}
 .hetk-test-score-breakdown b{color:#fff;}
+
+/* V45 — Navoiy TTS lug‘atini kitobning barcha bob va mavzularida tahrirlash */
+#hetk-training-overlay .hetk-tts-dictionary{display:block;margin:14px 0;padding:14px;border:1px solid #b9d9ed;border-radius:14px;background:#f5fbff;color:#183b50}
+#hetk-training-overlay .hetk-tts-dictionary>summary{display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:800;list-style:none;line-height:1.4}
+#hetk-training-overlay .hetk-tts-dictionary>summary::-webkit-details-marker{display:none}
+#hetk-training-overlay .hetk-tts-dictionary>summary>i:first-child{color:#1682d1;font-size:19px}
+#hetk-training-overlay .hetk-tts-dictionary>summary span{display:flex;flex-direction:column;flex:1;min-width:0}
+#hetk-training-overlay .hetk-tts-dictionary>summary small{color:#617f95;font-size:12px;font-weight:500}
+#hetk-training-overlay .hetk-tts-dictionary>summary>i:last-child{font-size:12px;color:#6f91a5}
+#hetk-training-overlay .hetk-tts-dictionary[open]>summary>i:last-child{transform:rotate(180deg)}
+#hetk-training-overlay .hetk-tts-dictionary-help{margin:12px 0;color:#486b83;font-size:13px;line-height:1.5}
+#hetk-training-overlay .hetk-tts-dictionary>label{display:flex;flex-direction:column;gap:7px;margin-top:10px;font-size:13px;font-weight:700}
+#hetk-training-overlay .hetk-tts-dictionary textarea{width:100%;min-height:145px;padding:11px 12px;border:1px solid #bfd7e7;border-radius:10px;background:#fff;color:#183b50;resize:vertical;font-family:inherit;font-size:13px;line-height:1.5}
+#hetk-training-overlay .hetk-tts-quick-add{display:grid;grid-template-columns:minmax(110px,1fr) minmax(180px,1.65fr) auto;gap:9px;align-items:end;margin:12px 0}
+#hetk-training-overlay .hetk-tts-quick-add label{display:flex;flex-direction:column;gap:5px;min-width:0;font-size:12px;font-weight:700;color:#294d65}
+#hetk-training-overlay .hetk-tts-quick-add input{width:100%;min-height:41px;padding:8px 10px;border:1px solid #b9d4e8;border-radius:9px;background:#fff;color:#183b50;font:inherit}
+#hetk-training-overlay .hetk-tts-quick-add input:focus,#hetk-training-overlay .hetk-tts-dictionary textarea:focus{outline:2px solid #79baf1;outline-offset:1px}
+#hetk-training-overlay .hetk-tts-quick-add button,#hetk-training-overlay [data-tts-save-dictionary]{min-height:41px;padding:9px 12px;border:1px solid #0e81d2;border-radius:9px;background:#1084d8;color:#fff;font-size:12px;font-weight:800;cursor:pointer}
+#hetk-training-overlay .hetk-tts-quick-add button:hover,#hetk-training-overlay [data-tts-save-dictionary]:hover{background:#056bb3}
+#hetk-training-overlay .hetk-tts-quick-add button:disabled,#hetk-training-overlay [data-tts-save-dictionary]:disabled{opacity:.65;cursor:wait}
+#hetk-training-overlay .hetk-tts-dictionary-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:12px}
+#hetk-training-overlay .hetk-tts-dictionary-actions small{color:#597c90;line-height:1.5;flex:1;min-width:150px}
+#hetk-training-overlay .hetk-tts-topic-quick{margin:10px 0 14px;padding:12px;border:1px solid #b9d9ed;border-radius:12px;background:#f5fbff}
+#hetk-training-overlay .hetk-tts-topic-quick>b{font-size:13px;color:#1c4862}
+#hetk-training-overlay .hetk-tts-topic-quick .hetk-tts-quick-add{margin:8px 0 10px}
+#hetk-training-overlay .hetk-tts-topic-save{width:auto}
+@media(max-width:720px){#hetk-training-overlay .hetk-tts-quick-add{grid-template-columns:1fr}#hetk-training-overlay .hetk-tts-quick-add button{width:100%}#hetk-training-overlay .hetk-tts-dictionary-actions{align-items:stretch;flex-direction:column}#hetk-training-overlay .hetk-tts-dictionary-actions button{width:100%}}
