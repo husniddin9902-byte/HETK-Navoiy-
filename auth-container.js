@@ -1811,6 +1811,9 @@
       // Maxfiy Telegram tokeni hech qachon QR yozuviga chiqarilmaydi.
       photoFileId:account.telegramPhotoFileId||'',
       photoUrl:/^https:\/\/[^\s]+$/i.test(String(account.photoUrl||'')) ? account.photoUrl : '',
+      // Eski profil rasmi Telegramga o'tkazilmagan bo'lsa, QR uchun fallback.
+      // Katta data-URL'larni takror yozib bazani og'irlashtirmaymiz.
+      photoData:!account.telegramPhotoFileId && /^data:image\/(?:png|jpeg|webp);base64,/i.test(String(account.photoData||'')) && String(account.photoData).length<350000 ? account.photoData : '',
       certificateNo:safety.certificateNo||'',
       assignedGroup:safety.group||'I',effectiveGroup:effectiveSafetyGroup(merged),exam1:safety.exam1,exam2:safety.exam2,extraordinaryExam:safety.extraordinaryExam||defaultExtraordinaryExam(),
       specialWorks:special,stateKind:state.kind,stateText:state.text,updatedAt:safety.updatedAt||Date.now(),
@@ -1823,6 +1826,52 @@
     const rec=safetyRecord(account);
     if(!rec.publicCode) return;
     await databaseRef.ref('PublicPermits/'+rec.publicCode).set(publicPermitPayload(uid,account,rec));
+  }
+
+  // Avvalgi QR'larni ko'chirish: faqat rasm va TET/ShET qatorlari.
+  // Guvohnoma, imtihonlar va QR kodlarning o'ziga teginilmaydi.
+  async function repairPublicPermitIdentity(){
+    if(!databaseRef || !currentAccount || !(currentAccount.rootAccess || currentAccount.role==='super_admin')) return;
+    const btn=byId('hetk-qr-identity-refresh');
+    if(btn && btn.disabled)return;
+    const original=btn && btn.innerHTML;
+    if(btn){btn.disabled=true;btn.textContent='QR ma’lumotlari tekshirilmoqda...';}
+    try{
+      const [usersSnap,foldersSnap,zonesSnap]=await Promise.all([
+        databaseRef.ref('users').once('value'),
+        databaseRef.ref('Folders').once('value'),
+        databaseRef.ref('WorkZones').once('value')
+      ]);
+      // Papkalar manbai doimo joriy Firebase; eski brauzer keshiga ishonmaymiz.
+      teamFoldersCache=foldersSnap.val()||{};
+      teamWorkZonesCache=zonesSnap.val()||{};
+      const users=usersSnap.val()||{};
+      let changed=0, skipped=0, failed=0;
+      for(const [uid,account] of Object.entries(users)){
+        if(!account || typeof account!=='object')continue;
+        const safety=safetyRecord(account),code=String(safety.publicCode||'').trim();
+        if(!code)continue;
+        const newPayload=publicPermitPayload(uid,account,safety);
+        try{
+          const snap=await databaseRef.ref('PublicPermits/'+code).once('value');
+          if(!snap.exists()){skipped++;continue;}
+          const old=snap.val()||{};
+          const patch={};
+          for(const field of ['territoryName','photoFileId','photoUrl','photoData']){
+            const newValue=newPayload[field]||'';
+            if(newValue && newValue!==old[field])patch[field]=newValue;
+          }
+          if(Object.keys(patch).length){
+            await databaseRef.ref('PublicPermits/'+code).update(patch);
+            changed++;
+          }else skipped++;
+        }catch(error){failed++;console.warn('QR profil nusxasi yangilanmadi:',code,error);}
+      }
+      alert(`QR ma’lumotlari tekshirildi. Yangilandi: ${changed} ta. O‘zgarishsiz: ${skipped} ta. Xatolik: ${failed} ta.\nRasm yoki TET/ShET bazada biriktirilmagan bo‘lsa, tegishli profilni tekshiring.`);
+    }catch(error){
+      console.error('QR profil sinxronlash xatosi:',error);
+      alert('QR ma’lumotlarini yangilab bo‘lmadi: '+(error.message||error));
+    }finally{if(btn){btn.disabled=false;btn.innerHTML=original;}}
   }
 
   function safetyNoticeChanges(before,after){
@@ -2064,7 +2113,8 @@
       const state={kind:record.stateKind||'none',text:record.stateText||'—'};
       const rec={specialWorks:record.specialWorks||{}};
       const profilePhoto=record.photoFileId ? telegramProfilePhotoUrl(record.photoFileId) :
-        (/^https:\/\/[^\s]+$/i.test(String(record.photoUrl||'')) ? record.photoUrl : defaultAvatarUrl(record.gender));
+        (/^https:\/\/[^\s]+$/i.test(String(record.photoUrl||'')) ? record.photoUrl :
+        (/^data:image\/(?:png|jpeg|webp);base64,/i.test(String(record.photoData||'')) ? record.photoData : defaultAvatarUrl(record.gender)));
       const fallbackPhoto=defaultAvatarUrl(record.gender);
       const territory=record.territoryName||'TET / ShET ko‘rsatilmagan';
       const isValid=state.kind!=='expired' && state.kind!=='danger' && state.kind!=='none';
@@ -2084,7 +2134,12 @@
         <div class="hetk-public-scene" role="img" aria-label="6–10 kV elektr tarmog‘ida ishlayotgan elektromontyor"></div>
       </main>`);
       const photo=byId('hetk-public-permit-overlay')?.querySelector('.hetk-public-photo');
-      if(photo)photo.addEventListener('error',()=>{if(photo.src!==photo.dataset.fallback)photo.src=photo.dataset.fallback;},{once:true});
+      if(photo){
+        const alternates=[record.photoUrl,record.photoData,photo.dataset.fallback].filter(url=>
+          /^https:\/\//i.test(String(url||'')) || /^data:image\/(?:png|jpeg|webp);base64,/i.test(String(url||'')) || url===photo.dataset.fallback);
+        let next=0;
+        photo.addEventListener('error',()=>{if(next<alternates.length){photo.src=alternates[next++];}},false);
+      }
     }catch(error){publicPermitShell(code,`<div class="hetk-public-invalid"><i class="fas fa-wifi"></i><h2>Ma’lumot ochilmadi</h2><p>Internetni yoki Firebase’dagi PublicPermits o‘qish qoidasini tekshiring.</p></div>`);}
   }
 
@@ -3740,6 +3795,7 @@
           </div>
           <div style="display:flex;gap:10px;flex-wrap:wrap">
             ${(account.rootAccess||account.role==='super_admin') ? '<button id="hetk-build-access-index" class="hetk-team-add" type="button"><i class="fas fa-shield-alt"></i><span>Hududiy xavfsizlik indeksini yangilash</span></button>' : ''}
+            ${(account.rootAccess||account.role==='super_admin') ? '<button id="hetk-qr-identity-refresh" class="hetk-team-add" type="button"><i class="fas fa-sync-alt"></i><span>QR rasmi va TET/ShET ni yangilash</span></button>' : ''}
             ${isSafetyOfficer(account) ? '<button id="hetk-qr-batch-open" class="hetk-team-add hetk-qr-batch-open" type="button"><i class="fas fa-qrcode"></i><span>QR kodlarni chiqarish</span></button>' : ''}
             ${canManageZones ? '<button id="hetk-manage-workzones" class="hetk-team-add" type="button"><i class="fas fa-hard-hat"></i><span>U/J larni boshqarish</span></button>' : ''}
             ${canCreate ? '<button id="hetk-add-user" class="hetk-team-add" type="button"><i class="fas fa-user-plus"></i><span>Yangi hodim / admin</span></button>' : ''}
@@ -3895,6 +3951,8 @@
     if(add) add.addEventListener('click', openCreateUserEditor);
     const buildIndex=byId('hetk-build-access-index');
     if(buildIndex)buildIndex.addEventListener('click',runAccessIndexMigration);
+    const identityRefresh=byId('hetk-qr-identity-refresh');
+    if(identityRefresh)identityRefresh.addEventListener('click',repairPublicPermitIdentity);
     const qrBatch=byId('hetk-qr-batch-open');
     if(qrBatch)qrBatch.addEventListener('click',openQrBatch);
     const manageZones=byId('hetk-manage-workzones');
