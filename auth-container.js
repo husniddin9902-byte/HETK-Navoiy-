@@ -1780,6 +1780,24 @@
     throw new Error('QR kodi yaratilmadi. Yana bir marta urinib ko‘ring.');
   }
 
+  // QR sahifasidagi tashkilot nomi: ruxsat berilgan papkalar ichidan
+  // yuqoridagi TET/ShET darajasi olinadi (oddiy U/J yoki shahar matni emas).
+  function publicPermitTerritory(account){
+    const ids=accountFolderRoots(account);
+    const zone=account && teamWorkZonesCache[account.workZoneId];
+    if(zone) workZoneRoots(zone).forEach(id=>{if(!ids.includes(id))ids.push(id);});
+    const chains=ids.map(folderChainIds).filter(chain=>chain.length);
+    const names=chains.map(chain=>chain.map(id=>String((teamFoldersCache[id]||{}).name||'')));
+    for(const chain of names){
+      const match=chain.find(name=>/(?:^|\s)(?:TET|ShET)\s*$/i.test(name));
+      if(match) return match;
+    }
+    // Iyerarxiya: mamlakat / viloyat / TET-ShET. Nomdagi suffiks hali
+    // to'ldirilmagan bo'lsa ham uchinchi pog'onadan foydalanamiz.
+    for(const chain of names){if(chain.length>=3 && chain[2])return chain[2];}
+    return '';
+  }
+
   function publicPermitPayload(uid,account,safety){
     const merged=Object.assign({},account,{uid,safety});
     const state=permitState(merged);
@@ -1788,7 +1806,12 @@
     return {
       active:safety.publicEnabled===true && account.active!==false,
       code:safety.publicCode||'',fullName:account.fullName||'Hodim',gender:normalizeGender(account.gender),
-      role:getRoleLabel(account),region:account.workZoneName||account.region||'—',certificateNo:safety.certificateNo||'',
+      role:getRoleLabel(account),region:account.workZoneName||account.region||'—',territoryName:publicPermitTerritory(account),
+      // Profilning joriy surati Telegram xodimlar arxivida saqlanadi.
+      // Maxfiy Telegram tokeni hech qachon QR yozuviga chiqarilmaydi.
+      photoFileId:account.telegramPhotoFileId||'',
+      photoUrl:/^https:\/\/[^\s]+$/i.test(String(account.photoUrl||'')) ? account.photoUrl : '',
+      certificateNo:safety.certificateNo||'',
       assignedGroup:safety.group||'I',effectiveGroup:effectiveSafetyGroup(merged),exam1:safety.exam1,exam2:safety.exam2,extraordinaryExam:safety.extraordinaryExam||defaultExtraordinaryExam(),
       specialWorks:special,stateKind:state.kind,stateText:state.text,updatedAt:safety.updatedAt||Date.now(),
       updatedByName:safety.updatedByName||'',organization:'HETK'
@@ -2040,7 +2063,28 @@
       if(!record || record.active!==true){publicPermitShell(code,'<div class="hetk-public-invalid"><i class="fas fa-times-circle"></i><h2>Ruxsatnoma faol emas</h2><p>QR kodi topilmadi, hodim bloklangan yoki ruxsatnoma o‘chirilgan.</p></div>');return;}
       const state={kind:record.stateKind||'none',text:record.stateText||'—'};
       const rec={specialWorks:record.specialWorks||{}};
-      publicPermitShell(code,`<main class="hetk-public-permit-content"><section class="hetk-public-person"><img src="${escapeAttr(defaultAvatarUrl(record.gender))}" alt=""><div><small>Tasdiqlangan hodim</small><h1>${escapeHtml(record.fullName||'Hodim')}</h1><p>${escapeHtml(record.role||'—')}</p><span><i class="fas fa-map-marker-alt"></i>${escapeHtml(record.region||'—')}</span></div><strong class="${state.kind}"><i class="fas ${state.kind==='expired'?'fa-exclamation-triangle':'fa-check-circle'}"></i>${escapeHtml(state.text)}</strong></section><section class="hetk-public-group"><div><small>Guvohnoma №</small><b>${escapeHtml(record.certificateNo||'—')}</b></div><div><small>Belgilangan guruh</small><b>${escapeHtml(record.assignedGroup||'I')} guruh</b></div><div><small>Amaldagi guruh</small><b class="${record.effectiveGroup!==record.assignedGroup?'expired':''}">${escapeHtml(record.effectiveGroup||'I')} guruh</b></div><div><small>Yangilangan</small><b>${escapeHtml(formatProfileDate(record.updatedAt))}</b></div></section><section class="hetk-public-exams">${publicPermitExamHtml(record.exam1||defaultSafetyExam(),1)}${publicPermitExamHtml(record.exam2||defaultSafetyExam(),2)}</section>${publicExtraordinaryHtml(record.extraordinaryExam)}<section class="hetk-public-special-wrap"><h3>Maxsus ishlarga ruxsatlar</h3>${publicSpecialHtml(rec)}</section><div class="hetk-public-verified"><i class="fas fa-shield-alt"></i><span><b>Haqiqiyligi tasdiqlandi</b><small>Ma’lumot QR kod ichida qotib qolmaydi — Firebase bazasidan yangilanib turadi.</small></span></div></main>`);
+      const profilePhoto=record.photoFileId ? telegramProfilePhotoUrl(record.photoFileId) :
+        (/^https:\/\/[^\s]+$/i.test(String(record.photoUrl||'')) ? record.photoUrl : defaultAvatarUrl(record.gender));
+      const fallbackPhoto=defaultAvatarUrl(record.gender);
+      const territory=record.territoryName||'TET / ShET ko‘rsatilmagan';
+      const isValid=state.kind!=='expired' && state.kind!=='danger' && state.kind!=='none';
+      const verifiedText=isValid?'Guvohnoma haqiqiy':'Guvohnoma holatini tekshiring';
+      publicPermitShell(code,`<main class="hetk-public-permit-content hetk-public-redesign">
+        <section class="hetk-public-person">
+          <img class="hetk-public-photo" src="${escapeAttr(profilePhoto)}" data-fallback="${escapeAttr(fallbackPhoto)}" alt="${escapeAttr(record.fullName||'Hodim')} profil rasmi">
+          <div class="hetk-public-identity"><small><i class="fas fa-check-circle"></i> Tasdiqlangan hodim</small><h1>${escapeHtml(record.fullName||'Hodim')}</h1><p><i class="fas fa-briefcase"></i> ${escapeHtml(record.role||'—')}</p><span><i class="fas fa-map-marker-alt"></i>${escapeHtml(record.region||'—')}</span></div>
+          <div class="hetk-public-organization"><img src="hetk-territorial-logo.png" alt="Hududiy Elektr Tarmoqlari emblemasi"><b>${escapeHtml(territory)}</b></div>
+        </section>
+        <section class="hetk-public-status ${escapeAttr(state.kind)}"><div><i class="fas ${isValid?'fa-check-circle':'fa-exclamation-triangle'}"></i><b>${verifiedText}</b><span>· ${escapeHtml(state.text)}</span></div><small><i class="far fa-calendar-alt"></i> Tekshirilgan vaqt: ${escapeHtml(formatProfileDate(Date.now()))}</small></section>
+        <section class="hetk-public-details"><h3><i class="far fa-id-card"></i> Guvohnoma ma’lumotlari</h3><div class="hetk-public-group"><div><small>Guvohnoma №</small><b>${escapeHtml(record.certificateNo||'—')}</b></div><div><small>Belgilangan guruh</small><b>${escapeHtml(record.assignedGroup||'I')} guruh</b></div><div><small>Amaldagi guruh</small><b class="${record.effectiveGroup!==record.assignedGroup?'expired':''}">${escapeHtml(record.effectiveGroup||'I')} guruh</b></div><div><small>Yangilangan</small><b>${escapeHtml(formatProfileDate(record.updatedAt))}</b></div></div></section>
+        <section class="hetk-public-exams-wrap"><h3><i class="fas fa-bolt"></i> Imtihonlar</h3><div class="hetk-public-exams">${publicPermitExamHtml(record.exam1||defaultSafetyExam(),1)}${publicPermitExamHtml(record.exam2||defaultSafetyExam(),2)}</div></section>
+        ${publicExtraordinaryHtml(record.extraordinaryExam)}
+        <section class="hetk-public-special-wrap"><h3><i class="fas fa-hard-hat"></i> Maxsus ishlarga ruxsatlar</h3>${publicSpecialHtml(rec)}</section>
+        <div class="hetk-public-verified"><i class="fas fa-shield-alt"></i><span><b>Ma’lumotlar bazadan tekshirildi</b><small>Guvohnoma holati Firebase bazasidagi joriy ma’lumotdan olinadi.</small></span></div>
+        <div class="hetk-public-scene" role="img" aria-label="6–10 kV elektr tarmog‘ida ishlayotgan elektromontyor"></div>
+      </main>`);
+      const photo=byId('hetk-public-permit-overlay')?.querySelector('.hetk-public-photo');
+      if(photo)photo.addEventListener('error',()=>{if(photo.src!==photo.dataset.fallback)photo.src=photo.dataset.fallback;},{once:true});
     }catch(error){publicPermitShell(code,`<div class="hetk-public-invalid"><i class="fas fa-wifi"></i><h2>Ma’lumot ochilmadi</h2><p>Internetni yoki Firebase’dagi PublicPermits o‘qish qoidasini tekshiring.</p></div>`);}
   }
 
