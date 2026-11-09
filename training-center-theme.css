@@ -466,3 +466,100 @@
 
 /* Native widgets must not be silently inverted by dark-mode browser theming. */
 .hetk-training-overlay,.hetk-training-overlay input,.hetk-training-overlay select,.hetk-training-overlay textarea{color-scheme:light}
+
+/* V49 Corporate Blue — 2026/27 technical training. Reader gets the full center width. */
+#hetk-training-overlay .hetk-tech-root{color:#102844;font-family:inherit;min-width:0}
+#hetk-training-overlay .hetk-tech-root button,#hetk-training-overlay .hetk-tech-root select{cursor:pointer}
+#hetk-training-overlay .hetk-tech-root button{border:1px solid #bbd6f1;color:#085693;background:#edf6ff;padding:9px 12px;border-radius:10px;font-weight:750;transition:.15s}
+#hetk-training-overlay .hetk-tech-root button:hover:not(:disabled){background:#dcefff;border-color:#78bbef}
+#hetk-training-overlay .hetk-tech-root button:disabled{opacity:.45;cursor:not-allowed}
+#hetk-training-overlay .hetk-tech-banner{background:linear-gradient(115deg,#063a70,#0967b1 68%,#0d8dd1);color:#fff;border-radius:18px;padding:20px 24px;margin-bottom:15px;box-shadow:0 8px 22px #07376226}
+#hetk-training-overlay .hetk-tech-banner h2{margin:2px 0 4px;font-size:clamp(23px,2.3vw,30px);color:#fff}
+#hetk-training-overlay .hetk-tech-banner p,#hetk-training-overlay .hetk-tech-banner small{color:#d8edff;margin:0}
+#hetk-training-overlay .hetk-tech-layout{display:grid;grid-template-columns:minmax(160px,205px) minmax(0,1fr) minmax(190px,242px);gap:14px;align-items:start}
+#hetk-training-overlay .hetk-tech-layout.wide-reading{grid-template-columns:minmax(145px,180px) minmax(0,1fr)}
+#hetk-training-overlay .hetk-tech-month-nav,#hetk-training-overlay .hetk-tech-main,#hetk-training-overlay .hetk-tech-insights{min-width:0;background:#fff;border:1px solid #d5e4f3;border-radius:15px;box-shadow:0 4px 18px #06345c0c}
+#hetk-training-overlay .hetk-tech-month-nav{padding:9px;display:flex;flex-direction:column;gap:5px}
+#hetk-training-overlay .hetk-tech-month-nav h3{font-size:14px;margin:8px 7px;color:#10395c}
+#hetk-training-overlay .hetk-tech-month-nav .hetk-tech-month{width:100%;border:0;background:transparent;text-align:left;display:flex;justify-content:space-between;align-items:center;gap:6px;padding:10px;line-height:1.35}
+#hetk-training-overlay .hetk-tech-month b{font-size:12px;display:block}
+#hetk-training-overlay .hetk-tech-month small{font-size:11px;color:#6e849a;display:block;margin-top:2px}
+#hetk-training-overlay .hetk-tech-month.is-active{background:#0764b6;color:#fff}
+#hetk-training-overlay .hetk-tech-month.is-active small{color:#daebff}
+#hetk-training-overlay .hetk-tech-main{padding:20px;min-height:360px}
+#hetk-training-overlay .hetk-tech-page-head{display:flex;justify-content:space-between;align-items:start;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+#hetk-training-overlay .hetk-tech-page-head h2{font-size:21px;margin:0 0 4px;color:#093b67}
+#hetk-training-overlay .hetk-tech-page-head p{margin:0;color:#5d7186;font-size:12px}
+#hetk-training-overlay .hetk-tech-admin-actions{display:flex;gap:6px;flex-wrap:wrap}
+#hetk-training-overlay .hetk-tech-progress{padding:14px;background:#edf6ff;border-radius:13px;margin:15px 0}
+#hetk-training-overlay .hetk-tech-progress>div{display:flex;justify-content:space-between;font-size:13px}
+#hetk-training-overlay .hetk-tech-progress>i{display:block;height:8px;background:#bddaf1;border-radius:9px;overflow:hidden;margin-top:9px}
+#hetk-training-overlay .hetk-tech-progress>i>b{display:block;background:#0cad71;height:100%;border-radius:9px}
+#hetk-training-overlay .hetk-tech-topics{display:grid;gap:9px;margin-bottom:15px}
+#hetk-training-overlay .hetk-tech-topics article{display:flex;gap:9px;align-items:center;border:1px solid #d9e8f3;border-radius:13px;padding:12px;min-width:0}
+#hetk-training-overlay .hetk-tech-topic-num{flex:0 0 28px;height:28px;display:grid;place-items:center;border-radius:50%;background:#d6eeff;color:#0964b0;font-weight:850}
+#hetk-training-overlay .hetk-tech-topics article>div{flex:1;min-width:0}
+#hetk-training-overlay .hetk-tech-topics h3{margin:0 0 3px;font-size:13px;line-height:1.45;color:#173653}
+#hetk-training-overlay .hetk-tech-topics small{color:#5a7085;font-size:11px}
+#hetk-training-overlay .hetk-tech-insights{padding:15px}
+#hetk-training-overlay .hetk-tech-insights h3{color:#093b67;font-size:15px;margin:0 0 7px}
+#hetk-training-overlay .hetk-tech-insights p{font-size:11px;color:#708396;margin:0 0 12px}
+#hetk-training-overlay .hetk-tech-mini{background:#e8f4ff;border-radius:12px;padding:12px;display:grid;gap:6px;font-size:12px;margin:8px 0}
+#hetk-training-overlay .hetk-tech-mini span{font-size:17px;font-weight:800;color:#064b8f}
+#hetk-training-overlay .hetk-tech-insights select{max-width:100%;padding:7px;border:1px solid #b4d0ed;border-radius:8px}
+#hetk-training-overlay .hetk-tech-insights>button{width:100%;margin:7px 0}
+#hetk-training-overlay .hetk-tech-people{max-height:310px;overflow:auto}
+#hetk-training-overlay .hetk-tech-people>div{padding:7px;border-bottom:1px solid #e1ecf6;font-size:12px}
+#hetk-training-overlay .hetk-tech-people small{display:block;color:#7a8999}
+#hetk-training-overlay .hetk-tech-reading{max-width:1060px;margin:auto}
+#hetk-training-overlay .hetk-tech-reader-head{display:flex;align-items:center;justify-content:space-between;gap:15px;border-bottom:1px solid #dce9f4;padding-bottom:11px;margin-bottom:14px}
+#hetk-training-overlay .hetk-tech-reader-head span{color:#647b90;font-size:12px}
+#hetk-training-overlay .hetk-tech-reading h2{font-size:clamp(21px,2.3vw,27px);color:#0b3b6b;line-height:1.4;margin:0 0 13px}
+#hetk-training-overlay .hetk-tech-reader-tools{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:17px}
+#hetk-training-overlay .hetk-tech-reader-tools select{padding:8px;border-radius:8px;border:1px solid #b4cce3;background:#f6fbff}
+#hetk-training-overlay .hetk-tech-article{font-size:clamp(17px,1.5vw,20px);line-height:1.85;color:#203b57;min-height:320px;user-select:text;overflow-wrap:anywhere}
+#hetk-training-overlay .hetk-tech-article h2,#hetk-training-overlay .hetk-tech-article h3{color:#0c5184;line-height:1.35;margin:1.3em 0 .5em}
+#hetk-training-overlay .hetk-tech-article img{max-width:100%;height:auto;border-radius:10px;margin:10px auto;display:block;pointer-events:none}
+#hetk-training-overlay .hetk-tech-article table{width:100%;border-collapse:collapse;font-size:.9em}
+#hetk-training-overlay .hetk-tech-article td,#hetk-training-overlay .hetk-tech-article th{border:1px solid #c6d8e8;padding:8px}
+#hetk-training-overlay .hetk-tech-article blockquote{border-left:4px solid #1888d7;padding:7px 15px;background:#edf7ff}
+#hetk-training-overlay .hetk-tech-no-audio,#hetk-training-overlay .hetk-tech-audio{background:#edf6ff;border:1px solid #cae0f1;border-radius:13px;padding:13px;margin:20px 0}
+#hetk-training-overlay .hetk-tech-audio>div{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:6px 0}
+#hetk-training-overlay .hetk-tech-audio audio{max-width:100%;flex:1;min-width:160px}
+#hetk-training-overlay .hetk-tech-reader-actions{border-top:1px solid #e0eaf2;padding-top:17px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+#hetk-training-overlay .hetk-tech-reader-actions button:last-of-type,#hetk-training-overlay .hetk-tech-editor footer button{background:#076fc9;color:#fff;border-color:#076fc9}
+#hetk-training-overlay .hetk-tech-quiz{padding:14px;border:1px solid #cee2f4;border-radius:12px;margin-top:18px}
+#hetk-training-overlay .hetk-tech-quiz fieldset{padding:12px;margin:10px 0;border:1px solid #e2ebf5;border-radius:10px}
+#hetk-training-overlay .hetk-tech-quiz legend{font-weight:800}
+#hetk-training-overlay .hetk-tech-quiz label{display:block;padding:6px}
+#hetk-training-overlay .hetk-tech-locked{padding:55px 12px;text-align:center;color:#486c89}
+#hetk-training-overlay .hetk-tech-locked i{font-size:32px}
+#hetk-training-overlay .hetk-tech-editor header{display:flex;justify-content:space-between;gap:15px;align-items:center}
+#hetk-training-overlay .hetk-tech-editor>label{display:grid;gap:5px;font-weight:700;font-size:13px;margin:12px 0}
+#hetk-training-overlay .hetk-tech-editor input,#hetk-training-overlay .hetk-tech-editor textarea{max-width:100%;width:100%;border:1px solid #bad1e7;border-radius:9px;padding:10px;font:inherit;color:#163c58;background:#fff}
+#hetk-training-overlay .hetk-tech-editor-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+#hetk-training-overlay .hetk-tech-editor-cols section{min-width:0}
+#hetk-training-overlay .hetk-tech-editor-cols h3{font-size:14px}
+#hetk-training-overlay .hetk-tech-format{display:flex;align-items:center;gap:4px;flex-wrap:wrap;background:#f0f7ff;border:1px solid #d1e2f4;border-radius:10px;padding:5px}
+#hetk-training-overlay .hetk-tech-format button{font-size:11px;padding:7px}
+#hetk-training-overlay .hetk-tech-image-upload{font-size:12px;font-weight:750;cursor:pointer;padding:8px}
+#hetk-training-overlay .hetk-tech-editable{min-height:250px;padding:14px;border:1px solid #bed4e8;border-radius:10px;margin:9px 0;outline:0;line-height:1.65;overflow-wrap:anywhere}
+#hetk-training-overlay .hetk-tech-editable:focus{border-color:#1186cf;box-shadow:0 0 0 2px #3eaae625}
+#hetk-training-overlay .hetk-tech-editable img{max-width:100%;height:auto}
+#hetk-training-overlay .hetk-tech-editor footer{text-align:right;margin-top:15px}
+#hetk-training-overlay .hetk-tech-warning{background:#fff3df;color:#7d4910;border-radius:10px;margin:10px 0;padding:10px}
+#hetk-training-overlay .hetk-tech-tts-buttons{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+.hetk-training-shell.is-technical-reader .hetk-training-side{width:74px;min-width:74px}
+.hetk-training-shell.is-technical-reader .hetk-training-nav span{display:none}
+@media(max-width:1280px){#hetk-training-overlay .hetk-tech-layout{grid-template-columns:minmax(150px,190px) minmax(0,1fr)}#hetk-training-overlay .hetk-tech-insights{grid-column:1/-1}}
+@media(max-width:760px){#hetk-training-overlay .hetk-tech-banner{padding:14px;border-radius:12px}#hetk-training-overlay .hetk-tech-layout,#hetk-training-overlay .hetk-tech-layout.wide-reading{display:block}#hetk-training-overlay .hetk-tech-month-nav{display:flex;flex-direction:row;overflow-x:auto;gap:7px;margin-bottom:10px}#hetk-training-overlay .hetk-tech-month-nav h3{display:none}#hetk-training-overlay .hetk-tech-month-nav .hetk-tech-month{min-width:125px}#hetk-training-overlay .hetk-tech-main{padding:14px;min-height:360px}#hetk-training-overlay .hetk-tech-insights{margin-top:10px}#hetk-training-overlay .hetk-tech-topics article{flex-wrap:wrap}#hetk-training-overlay .hetk-tech-topics article>div{flex-basis:calc(100% - 48px)}#hetk-training-overlay .hetk-tech-editor-cols{grid-template-columns:1fr}#hetk-training-overlay .hetk-tech-article{font-size:18px}#hetk-training-overlay .hetk-tech-reader-head{flex-wrap:wrap}}
+#hetk-training-overlay .hetk-tech-insights h4{font-size:12px;margin:16px 0 7px;color:#184e79}
+#hetk-training-overlay .hetk-tech-leaders>div{display:flex;align-items:center;gap:7px;padding:7px 2px;border-bottom:1px solid #dce9f6;font-size:11px}
+#hetk-training-overlay .hetk-tech-leaders>div>b{width:21px;height:21px;display:grid;place-items:center;border-radius:50%;background:#dfecff;color:#0a67a5}
+#hetk-training-overlay .hetk-tech-leaders>div>span{flex:1;min-width:0;overflow-wrap:anywhere}
+#hetk-training-overlay .hetk-tech-leaders>div>strong{color:#11844a;text-align:right}
+/* Wide reader: hide only the training center's outer navigation, keep month menu accessible. */
+.hetk-training-shell.is-technical-reader .hetk-training-layout{grid-template-columns:minmax(0,1fr)!important}
+.hetk-training-shell.is-technical-reader .hetk-training-side{display:none!important}
+.hetk-training-shell.is-technical-reader .hetk-training-content{padding:12px 18px}
+@media(max-width:760px){.hetk-training-shell.is-technical-reader .hetk-training-content{padding:10px}}
