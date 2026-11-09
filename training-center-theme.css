@@ -563,3 +563,25 @@
 .hetk-training-shell.is-technical-reader .hetk-training-side{display:none!important}
 .hetk-training-shell.is-technical-reader .hetk-training-content{padding:12px 18px}
 @media(max-width:760px){.hetk-training-shell.is-technical-reader .hetk-training-content{padding:10px}}
+
+/* Texnik o‘qitish: kartochkali, ikki yozuvli test muharriri (v50). */
+#hetk-training-overlay .hetk-tech-question-studio{margin-top:24px;border:1px solid #bed5ed;background:#f4f9ff;border-radius:16px;padding:16px}
+#hetk-training-overlay .hetk-tech-question-studio-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+#hetk-training-overlay .hetk-tech-question-studio-head h3{margin:0;color:#0a4476;font-size:19px}
+#hetk-training-overlay .hetk-tech-question-studio-head p{margin:6px 0;color:#537089;font-size:13px}
+#hetk-training-overlay [data-tech-question-count]{background:#d8edff;border-radius:20px;padding:6px 12px;color:#075187;font-weight:800;white-space:nowrap}
+#hetk-training-overlay .hetk-tech-question-card{background:#fff;border:1px solid #bad1e7;border-radius:13px;padding:16px;margin:12px 0;box-shadow:0 3px 13px #123c6610}
+#hetk-training-overlay .hetk-tech-question-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:13px}
+#hetk-training-overlay .hetk-tech-question-head h4{margin:0;color:#083f76;font-size:16px}
+#hetk-training-overlay .hetk-tech-question-card .hetk-tech-remove-question{color:#a93442;background:#fff4f4;border-color:#f1d0d4}
+#hetk-training-overlay .hetk-tech-question-langs{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+#hetk-training-overlay .hetk-tech-question-langs label{display:grid;gap:6px;font-size:13px;font-weight:750;color:#244c70;min-width:0}
+#hetk-training-overlay .hetk-tech-question-help{font-size:12px;color:#607e95;margin:14px 0 8px}
+#hetk-training-overlay .hetk-tech-question-options{display:grid;gap:8px}
+#hetk-training-overlay .hetk-tech-answer-line{display:grid;grid-template-columns:54px minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:center}
+#hetk-training-overlay .hetk-tech-answer-line>input{min-width:0}
+#hetk-training-overlay .hetk-tech-answer-line .hetk-tech-correct{display:flex;align-items:center;justify-content:center;gap:5px;border:1px solid #b9d0e5;background:#f0f7ff;border-radius:9px;height:40px;cursor:pointer}
+#hetk-training-overlay .hetk-tech-answer-line .hetk-tech-correct:has(input:checked){background:#dff7e7;border-color:#43b778;color:#14663e}
+#hetk-training-overlay .hetk-tech-answer-line .hetk-tech-correct input{width:16px;height:16px;accent-color:#16834a}
+#hetk-training-overlay .hetk-tech-add-question{margin-top:12px;background:#075fba;color:#fff;border-color:#075fba;padding:12px 18px;font-weight:800}
+@media(max-width:760px){#hetk-training-overlay .hetk-tech-question-langs{grid-template-columns:1fr}#hetk-training-overlay .hetk-tech-answer-line{grid-template-columns:40px minmax(0,1fr);gap:6px}#hetk-training-overlay .hetk-tech-answer-line>input:last-child{grid-column:2}#hetk-training-overlay .hetk-tech-question-card{padding:11px}#hetk-training-overlay .hetk-tech-question-studio{padding:10px}}
