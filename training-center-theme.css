@@ -616,3 +616,148 @@
 #hetk-training-overlay .hetk-note-image-pages button:disabled{opacity:.4;cursor:default}
 #hetk-training-overlay .hetk-note-images-empty{grid-column:1/-1}
 @media(max-width:360px){#hetk-training-overlay .hetk-note-image-grid{grid-template-columns:1fr}}
+
+
+/* v57 — Bob testi: Lotin/Kirill javob variantlari ikkita mustaqil maydonda.
+   Faqat bob testlariga ta'sir qiladi; qolgan test muharrirlari o'zgarmaydi. */
+#hetk-training-overlay .hetk-training-options.hetk-chapter-answers {
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  gap:12px;
+}
+#hetk-training-overlay .hetk-chapter-answers .hetk-chapter-answer {
+  display:grid;
+  grid-template-columns:82px minmax(0,1fr) 86px;
+  align-items:start;
+  gap:10px;
+  padding:12px;
+  border:1px solid #d2e3f1;
+  border-radius:12px;
+  background:#fff;
+  min-width:0;
+}
+#hetk-training-overlay .hetk-chapter-answers .hetk-chapter-correct-answer {
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:6px;
+  font-size:12px;
+  cursor:pointer;
+  color:#124f7d;
+  min-width:0;
+}
+#hetk-training-overlay .hetk-chapter-correct-answer input[type=radio] {
+  flex:0 0 auto;
+  width:17px;
+  height:17px;
+  accent-color:#087dcb;
+}
+#hetk-training-overlay .hetk-chapter-correct-answer span {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:800;
+  border-radius:8px;
+  background:#e7f3ff;
+  padding:6px 9px;
+  color:#075a99;
+}
+#hetk-training-overlay .hetk-chapter-correct-answer small {
+  display:block;
+  flex-basis:100%;
+  font-size:10px;
+  color:#697d92;
+}
+#hetk-training-overlay .hetk-chapter-answer-fields {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  align-items:start;
+  gap:10px;
+  min-width:0;
+}
+#hetk-training-overlay .hetk-chapter-answer-fields label {
+  display:block;
+  min-width:0;
+  border:0;
+  background:transparent;
+  padding:0;
+  color:#224867;
+  font-size:12px;
+  line-height:1.35;
+  text-align:left;
+}
+#hetk-training-overlay .hetk-chapter-answer-fields textarea {
+  display:block;
+  width:100%;
+  min-width:0;
+  box-sizing:border-box;
+  margin-top:5px;
+  border:1px solid #b7cfe0;
+  border-radius:9px;
+  background:#fff;
+  color:#173b54;
+  padding:10px;
+  line-height:1.45;
+  min-height:64px;
+  resize:vertical;
+  font:inherit;
+}
+#hetk-training-overlay .hetk-chapter-answer-fields textarea:focus {
+  outline:2px solid #64aff4;
+  outline-offset:1px;
+}
+#hetk-training-overlay .hetk-chapter-answer-convert {
+  align-self:center;
+  padding:9px 7px;
+  border:1px solid #b8d6ee;
+  border-radius:9px;
+  background:#eaf5fe;
+  color:#126eaf;
+  font-weight:700;
+  font-size:12px;
+  cursor:pointer;
+}
+#hetk-training-overlay .hetk-chapter-cyrillic-actions {
+  display:flex;
+  flex-wrap:wrap;
+  gap:9px;
+  margin-top:10px;
+}
+#hetk-training-overlay .hetk-chapter-cyrillic-actions button {
+  width:auto;
+  max-width:100%;
+  min-height:42px;
+  white-space:normal;
+  cursor:pointer;
+}
+#hetk-training-overlay .hetk-chapter-cyrillic-help {
+  margin:6px 0 10px;
+  font-size:12px;
+  color:#5e7689;
+}
+@media(max-width:770px) {
+  #hetk-training-overlay .hetk-chapter-answers .hetk-chapter-answer {
+    grid-template-columns:minmax(0,1fr) auto;
+  }
+  #hetk-training-overlay .hetk-chapter-correct-answer {
+    grid-column:1 / -1;
+  }
+  #hetk-training-overlay .hetk-chapter-answer-fields {
+    grid-column:1;
+    grid-template-columns:minmax(0,1fr);
+  }
+  #hetk-training-overlay .hetk-chapter-answer-convert {
+    grid-column:2;
+    grid-row:2;
+  }
+}
+@media(max-width:380px) {
+  #hetk-training-overlay .hetk-chapter-answers .hetk-chapter-answer {
+    grid-template-columns:minmax(0,1fr);
+  }
+  #hetk-training-overlay .hetk-chapter-answer-fields,
+  #hetk-training-overlay .hetk-chapter-answer-convert {
+    grid-column:1;
+    grid-row:auto;
+  }
+}
