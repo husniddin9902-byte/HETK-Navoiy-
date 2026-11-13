@@ -761,3 +761,45 @@
     grid-row:auto;
   }
 }
+
+/* v58 — bob testining kirillcha javoblari kiritilishi va o'qishdagi test tili */
+#hetk-training-overlay .hetk-chapter-answer-fields textarea[data-chq-option-cyrillic] {
+  display:block!important;visibility:visible!important;opacity:1!important;
+  pointer-events:auto!important;user-select:text!important;-webkit-user-select:text!important;
+  position:relative;z-index:1;min-width:0;min-height:76px!important;
+  color:#123b56!important;background:#fff!important;caret-color:#087bc9;
+}
+#hetk-training-overlay .hetk-chapter-answer-fields textarea.hetk-chapter-converted {
+  background:#edfff7!important;border-color:#3aaf82!important;
+}
+#hetk-training-overlay .hetk-chapter-cyrillic-feedback:not([hidden]) {
+  display:block;padding:9px 12px;border-radius:9px;background:#ebfff2;
+  color:#12563b;font-weight:650;font-size:12px;border:1px solid #a7dfbe;
+}
+#hetk-training-overlay .hetk-chapter-quiz-editions {
+  display:flex;gap:6px;justify-content:center;align-items:center;
+  padding:10px 12px 4px;flex-wrap:wrap;
+}
+#hetk-training-overlay .hetk-chapter-quiz-editions button {
+  background:#f4f9fd;color:#17567e;border:1px solid #c1d9ea;
+  border-radius:8px;padding:8px 14px;min-height:36px;cursor:pointer;font-weight:750;
+}
+#hetk-training-overlay .hetk-chapter-quiz-editions button.on {
+  background:#087bc9;border-color:#087bc9;color:white;
+}
+@media(max-width:770px){
+  #hetk-training-overlay .hetk-chapter-answers .hetk-chapter-correct-answer {
+    display:inline-flex;flex-wrap:nowrap;gap:8px;justify-self:start;
+    align-items:center;padding:5px 9px;width:auto;max-width:100%;
+  }
+  #hetk-training-overlay .hetk-chapter-correct-answer small {
+    flex-basis:auto;margin:0;
+  }
+  #hetk-training-overlay .hetk-chapter-answer-fields {
+    grid-column:1/-1;grid-row:auto;
+  }
+  #hetk-training-overlay .hetk-chapter-answer-convert {
+    grid-column:1/-1;grid-row:auto;justify-self:end;
+    min-height:36px;
+  }
+}
