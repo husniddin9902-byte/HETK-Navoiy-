@@ -896,14 +896,29 @@ KL = kabel liniyasi`;
       return replacement?(token===token.toUpperCase()?replacement.toUpperCase():token[0]===token[0].toUpperCase()?replacement[0].toUpperCase()+replacement.slice(1):replacement):token;
     });
   }
+  // Bob testidagi har bir yozuv mustaqil tahrirlanadi. Kirillcha maydonni
+  // avtomatik to'ldirish avval qo'lda kiritilgan matnni almashtirmaydi.
   function fillChapterCyrillicDraft(btn){
     const card=btn.closest('[data-chapter-question-index]');if(!card)return;
-    const latin=card.querySelector('[data-chq-text]'),cyr=card.querySelector('[data-chq-text-cyrillic]');
-    if(cyr&&!cyr.value.trim())cyr.value=draftUzCyrillic(latin?.value||'');
-    for(let i=0;i<4;i++){const a=card.querySelector(`[data-chq-option="${i}"]`),b=card.querySelector(`[data-chq-option-cyrillic="${i}"]`);if(b&&!b.value.trim())b.value=draftUzCyrillic(a?.value||'');}
-    syncChapterTestDraft();toast('Kirillcha qoralama to‘ldirildi. Texnik atamalarni tekshirib chiqing.','success');
+    const single=btn.hasAttribute('data-fill-chapter-cyrillic-option');
+    const onlyOptions=btn.hasAttribute('data-fill-chapter-cyrillic-options')||single;
+    const singleIndex=single?Number(btn.dataset.fillChapterCyrillicOption):-1;
+    let filled=0,unchanged=0;
+    const fillIfEmpty=(latin,cyr)=>{
+      if(!latin||!cyr||!String(latin.value||'').trim())return;
+      if(String(cyr.value||'').trim()){unchanged++;return;}
+      cyr.value=draftUzCyrillic(latin.value);filled++;
+    };
+    if(!onlyOptions)fillIfEmpty(card.querySelector('[data-chq-text]'),card.querySelector('[data-chq-text-cyrillic]'));
+    for(let i=0;i<4;i++){
+      if(single&&i!==singleIndex)continue;
+      fillIfEmpty(card.querySelector(`[data-chq-option="${i}"]`),card.querySelector(`[data-chq-option-cyrillic="${i}"]`));
+    }
+    syncChapterTestDraft();
+    if(filled)toast(`${filled} ta kirillcha maydon to‘ldirildi. Texnik atamalarni tekshiring.`,'success');
+    else toast(unchanged?'Kirillcha javob avvaldan kiritilgan, uni o‘zgartirmadim. Qo‘lda tahrirlashingiz mumkin.':'Avval lotincha savol yoki javobni kiriting.','warning');
   }
-  function chapterQuestionEditor(q,index,total){return `<article class="hetk-training-question" data-chapter-question-index="${index}"><header><b>${index+1}-savol</b>${total>1?'<button type="button" data-remove-chapter-question aria-label="Savolni o‘chirish"><i class="fas fa-trash"></i></button>':''}</header><label>Savol matni — lotin *<textarea data-chq-text rows="3" placeholder="Bob bo‘yicha savolni kiriting...">${esc(q.text||'')}</textarea></label><label>Савол матни — кирилл<textarea data-chq-text-cyrillic rows="3" placeholder="Саволни кирилл ёзувида киритинг...">${esc(q.textCyrillic||'')}</textarea></label><button type="button" class="hetk-training-secondary" data-fill-chapter-cyrillic>Lotindan kirillga qoralama to‘ldirish</button><div class="hetk-chapter-question-time"><label>Bu savol uchun vaqt <span><input data-chq-time type="number" min="30" max="600" step="10" value="${Math.max(30,Math.min(600,Number(q.timeSeconds)||90))}"> soniya</span><small>Uzun matnli savol uchun vaqtni ko‘paytirishingiz mumkin.</small></label></div><div class="hetk-training-options">${(q.options||['','','','']).map((o,i)=>`<label><input type="radio" name="chapter_correct_${index}" value="${i}" ${Number(q.correctIndex)===i?'checked':''}><span>${String.fromCharCode(65+i)}</span><input data-chq-option="${i}" autocomplete="off" value="${esc(o)}" placeholder="${i+1}-javob varianti"><input data-chq-option-cyrillic="${i}" autocomplete="off" value="${esc((q.optionsCyrillic||[])[i]||'')}" placeholder="${i+1}-жавоб — кирилл"></label>`).join('')}</div><div class="hetk-training-question-extra"><label>Manba (ixtiyoriy)<input data-chq-source value="${esc(q.source||'')}" placeholder="Kitob, bob, band yoki havola"></label><label>Javobga tushuntirish (ixtiyoriy)<textarea data-chq-explanation rows="2" placeholder="Nima uchun shu javob to‘g‘ri?">${esc(q.explanation||'')}</textarea></label></div></article>`;}
+  function chapterQuestionEditor(q,index,total){return `<article class="hetk-training-question" data-chapter-question-index="${index}"><header><b>${index+1}-savol</b>${total>1?'<button type="button" data-remove-chapter-question aria-label="Savolni o‘chirish"><i class="fas fa-trash"></i></button>':''}</header><label>Savol matni — lotin *<textarea data-chq-text rows="3" placeholder="Bob bo‘yicha savolni kiriting...">${esc(q.text||'')}</textarea></label><label>Савол матни — кирилл<textarea data-chq-text-cyrillic rows="3" placeholder="Саволни кирилл ёзувида киритинг...">${esc(q.textCyrillic||'')}</textarea></label><div class="hetk-chapter-cyrillic-actions"><button type="button" class="hetk-training-secondary" data-fill-chapter-cyrillic><i class="fas fa-language" aria-hidden="true"></i> Savol va A–D javoblarini kirillga o‘tkazish</button><button type="button" class="hetk-training-secondary" data-fill-chapter-cyrillic-options><i class="fas fa-list-check" aria-hidden="true"></i> Faqat A–D javoblarini kirillga o‘tkazish</button></div><p class="hetk-chapter-cyrillic-help">Faqat bo‘sh kirillcha maydonlar to‘ldiriladi; oldin yozilgan javoblar saqlanadi. Hammasini qo‘lda tahrirlash ham mumkin.</p><div class="hetk-chapter-question-time"><label>Bu savol uchun vaqt <span><input data-chq-time type="number" min="30" max="600" step="10" value="${Math.max(30,Math.min(600,Number(q.timeSeconds)||90))}"> soniya</span><small>Uzun matnli savol uchun vaqtni ko‘paytirishingiz mumkin.</small></label></div><div class="hetk-training-options hetk-chapter-answers">${(q.options||['','','','']).map((o,i)=>`<div class="hetk-chapter-answer" data-chapter-answer-index="${i}"><label class="hetk-chapter-correct-answer"><input type="radio" name="chapter_correct_${index}" value="${i}" ${Number(q.correctIndex)===i?'checked':''}><span>${String.fromCharCode(65+i)}</span><small>To‘g‘ri</small></label><div class="hetk-chapter-answer-fields"><label>Lotin — ${String.fromCharCode(65+i)} javob<textarea rows="2" data-chq-option="${i}" placeholder="Lotincha javobni kiriting" autocomplete="off">${esc(o)}</textarea></label><label>Кирилл — ${String.fromCharCode(65+i)} жавоб<textarea rows="2" data-chq-option-cyrillic="${i}" placeholder="Кириллча жавобни киритинг" autocomplete="off">${esc((q.optionsCyrillic||[])[i]||'')}</textarea></label></div><button type="button" class="hetk-chapter-answer-convert" data-fill-chapter-cyrillic-option="${i}" title="Faqat shu javobni kirillchaga o‘tkazish"><i class="fas fa-language" aria-hidden="true"></i> Kirillga</button></div>`).join('')}</div><div class="hetk-training-question-extra"><label>Manba (ixtiyoriy)<input data-chq-source value="${esc(q.source||'')}" placeholder="Kitob, bob, band yoki havola"></label><label>Javobga tushuntirish (ixtiyoriy)<textarea data-chq-explanation rows="2" placeholder="Nima uchun shu javob to‘g‘ri?">${esc(q.explanation||'')}</textarea></label></div></article>`;}
   function voiceOptions(selected){const voices=state.ttsVoices&&state.ttsVoices.length?state.ttsVoices:[{id:'navoiy',name:'Navoiy — asosiy ovoz'}];return voices.map(v=>`<option value="${esc(v.id)}" ${String(v.id)===String(selected)?'selected':''}>${esc(v.name||v.label||v.id)}</option>`).join('');}
   function parseTtsDictionary(value){return String(value||'').split(/\r?\n/).map(line=>{const at=line.indexOf('=');return at>0?[line.slice(0,at).trim(),line.slice(at+1).trim()]:null;}).filter(row=>row&&row[0]&&row[1]);}
   // V45: Lug'at kitob darajasida bitta nusxada saqlanadi; qayta chizishdagi
@@ -1759,7 +1774,7 @@ KL = kabel liniyasi`;
     if(file)loadBookNoteImage(popup);
   }
   function handleClick(e){
-    const fillCyr=e.target.closest('[data-fill-chapter-cyrillic]');if(fillCyr){fillChapterCyrillicDraft(fillCyr);return;}
+    const fillCyr=e.target.closest('[data-fill-chapter-cyrillic],[data-fill-chapter-cyrillic-options],[data-fill-chapter-cyrillic-option]');if(fillCyr){e.preventDefault();fillChapterCyrillicDraft(fillCyr);return;}
     const openNoteViewer=e.target.closest('[data-v27-open-viewer],[data-book-note-preview]');
     if(openNoteViewer){e.preventDefault();e.stopPropagation();openBookNoteViewer(openNoteViewer.closest('.hetk-v15-note-popup'));return;}
     const retryNoteImage=e.target.closest('[data-retry-book-note-image]');
