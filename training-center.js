@@ -1401,6 +1401,46 @@ KL = kabel liniyasi`;
     if(!editor||!selection||!selection.rangeCount||selection.isCollapsed||!editor.contains(selection.anchorNode)||!editor.contains(selection.focusNode))return toast('Avval izoh biriktiriladigan matnni belgilang.','warning');
     openBookNoteEditor({editor,range:selection.getRangeAt(0).cloneRange(),preferImage:false,onSync:options.onSync||null});
   }
+  // V56: bir kitobda ilgari ishlatilgan izoh rasmlaridan qayta foydalanish.
+  // Media Telegramga qayta yuborilmaydi: faqat mavjud file_id yangi izohga yoziladi.
+  function reusableBookNoteImages(){
+    const found=new Map(),book=currentAdminBook();
+    const collect=(html,chapterLabel)=>{
+      if(!html||typeof html!=='string'||!html.includes('data-book-note-image'))return;
+      const host=document.createElement('div');host.innerHTML=safeRichHtml(html);
+      host.querySelectorAll('[data-book-note-image]').forEach(note=>{
+        const id=note.getAttribute('data-book-note-image')||'';
+        if(!id||id.length>1024)return;
+        const title=(note.textContent||note.getAttribute('data-book-note')||'Rasmli izoh').trim().slice(0,65);
+        if(found.has(id)){found.get(id).uses++;return;}
+        found.set(id,{fileId:id,title:title||'Rasmli izoh',chapter:chapterLabel,uses:1});
+      });
+    };
+    if(book){
+      chapterEntries(book).forEach(([chapterId,ch],i)=>{
+        const chLabel=`${Number(ch.order)||i+1}-bob: ${ch.titleUz||ch.titleCyrillic||'Mavzu'}`;
+        collect(ch.sourceHtmlUz,chLabel);collect(ch.sourceHtmlCyrillic,chLabel);
+        for(const [,topic] of topicEntries(ch)){
+          for(const edition of Object.values(topic.editions||{})){
+            const blocks=Array.isArray(edition?.blocks)?edition.blocks:Object.values(edition?.blocks||{});
+            blocks.forEach(block=>collect(block?.html,chLabel));
+          }
+        }
+      });
+    }
+    // Hali saqlanmagan joriy izohlar ham shu oynada tanlansin.
+    const form=document.querySelector('#hetk-training-overlay [data-book-form]');
+    form?.querySelectorAll('[contenteditable="true"]').forEach(el=>collect(el.innerHTML,'Joriy tahrir'));
+    const drafts=[state.topicDraft,...Object.values(state.topicDraftCache||{})];
+    drafts.forEach(draft=>{
+      if(!draft)return;
+      for(const edition of Object.values(draft.editions||{})){
+        const blocks=Array.isArray(edition?.blocks)?edition.blocks:Object.values(edition?.blocks||{});
+        blocks.forEach(block=>collect(block?.html,'Saqlanmagan mavzu'));
+      }
+    });
+    return [...found.values()];
+  }
   function openBookNoteEditor({editor,range=null,node=null,preferImage=false,onSync=null}={}){
     if(!editor)return;
     const root=document.querySelector('#hetk-training-overlay');if(!root)return;
@@ -1419,13 +1459,30 @@ KL = kabel liniyasi`;
     const currentImage=target?(target.getAttribute('data-book-note-image')||''):'';
     const popup=document.createElement('section');
     popup.className='hetk-v15-note-editor';
-    popup.innerHTML=`<div class="hetk-v15-note-editor-head"><div><strong>${target?'Izohni tahrirlash':'Matnga izoh biriktirish'}</strong><small>${target?'Izoh matni va rasmni o‘zgartirishingiz mumkin':'Belgilangan matnga izoh, rasm yoki ikkisini ham biriktiring'}</small></div><button type="button" class="close" data-note-editor-close aria-label="Yopish">×</button></div><div class="hetk-v15-note-editor-body"><label class="hetk-v15-note-label"><span>Belgilangan matn</span><div class="hetk-v15-note-selected">${esc(trimmedLabel||'Tanlangan matn')}</div></label><label class="hetk-v15-note-label"><span>Izoh matni</span><textarea data-note-editor-text rows="4" placeholder="Masalan: shu bandga oid qo‘shimcha tushuntirish kiriting...">${esc(currentNote)}</textarea></label><div class="hetk-v15-note-upload"><div><span>Izoh rasmi</span><small>Kompyuterda sichqoncha olib borganda, telefonda bosilganda ko‘rinadi.</small></div><div class="actions"><button type="button" data-note-editor-pick><i class="fas fa-image"></i> ${currentImage?'Rasmni almashtirish':'Rasm qo‘shish'}</button>${currentImage?'<button type="button" class="danger" data-note-editor-remove-image><i class="fas fa-trash"></i> Rasmni olib tashlash</button>':''}</div><input type="file" accept="image/*" data-note-editor-file hidden><div class="hetk-v15-note-preview ${currentImage?'has-image':''}" data-note-editor-preview>${currentImage?`<img data-training-media-file="${esc(currentImage)}" alt="Izoh rasmi">`:'<div class="placeholder"><i class="fas fa-image"></i><span>Hozircha rasm biriktirilmagan</span></div>'}</div></div><div class="hetk-v15-note-actions"><button type="button" class="secondary" data-note-editor-cancel>Bekor qilish</button>${target?'<button type="button" class="danger" data-note-editor-delete>Izohni o‘chirish</button>':''}<button type="button" class="primary" data-note-editor-save>${preferImage?'Rasmli izohni saqlash':'Saqlash'}</button></div></div>`;
+    popup.innerHTML=`<div class="hetk-v15-note-editor-head"><div><strong>${target?'Izohni tahrirlash':'Matnga izoh biriktirish'}</strong><small>${target?'Izoh matni va rasmni o‘zgartirishingiz mumkin':'Belgilangan matnga izoh, rasm yoki ikkisini ham biriktiring'}</small></div><button type="button" class="close" data-note-editor-close aria-label="Yopish">×</button></div><div class="hetk-v15-note-editor-body"><label class="hetk-v15-note-label"><span>Belgilangan matn</span><div class="hetk-v15-note-selected">${esc(trimmedLabel||'Tanlangan matn')}</div></label><label class="hetk-v15-note-label"><span>Izoh matni</span><textarea data-note-editor-text rows="4" placeholder="Masalan: shu bandga oid qo‘shimcha tushuntirish kiriting...">${esc(currentNote)}</textarea></label><div class="hetk-v15-note-upload"><div><span>Izoh rasmi</span><small>Kompyuterda sichqoncha olib borganda, telefonda bosilganda ko‘rinadi.</small></div><div class="actions"><button type="button" data-note-editor-pick><i class="fas fa-image"></i> ${currentImage?'Rasmni almashtirish':'Rasm qo‘shish'}</button><button type="button" class="hetk-note-reuse-button" data-note-editor-reuse><i class="fas fa-images"></i> Mavjud rasmni tanlash</button>${currentImage?'<button type="button" class="danger" data-note-editor-remove-image><i class="fas fa-trash"></i> Rasmni olib tashlash</button>':''}</div><input type="file" accept="image/*" data-note-editor-file hidden><section class="hetk-note-image-library" data-note-image-library hidden aria-label="Kitobdagi oldingi izoh rasmlari"><p>Shu kitobda avval ishlatilgan rasmli izohlar. Tanlang — Telegramga qayta yuklanmaydi.</p><input type="search" data-note-library-search placeholder="Bob yoki izoh matni bo‘yicha qidirish..." aria-label="Rasmli izoh qidirish"><div class="hetk-note-image-grid" data-note-image-grid></div><div class="hetk-note-image-pages"><small data-note-image-count></small><div><button type="button" data-note-image-prev aria-label="Oldingi rasmlar">‹</button><button type="button" data-note-image-next aria-label="Keyingi rasmlar">›</button></div></div></section><div class="hetk-v15-note-preview ${currentImage?'has-image':''}" data-note-editor-preview>${currentImage?`<img data-training-media-file="${esc(currentImage)}" alt="Izoh rasmi">`:'<div class="placeholder"><i class="fas fa-image"></i><span>Hozircha rasm biriktirilmagan</span></div>'}</div></div><div class="hetk-v15-note-actions"><button type="button" class="secondary" data-note-editor-cancel>Bekor qilish</button>${target?'<button type="button" class="danger" data-note-editor-delete>Izohni o‘chirish</button>':''}<button type="button" class="primary" data-note-editor-save>${preferImage?'Rasmli izohni saqlash':'Saqlash'}</button></div></div>`;
     root.appendChild(popup);
     hydrateTrainingMedia(popup);
     const textField=popup.querySelector('[data-note-editor-text]');
     const preview=popup.querySelector('[data-note-editor-preview]');
     const fileInput=popup.querySelector('[data-note-editor-file]');
     let pendingFile=null,removeImage=false,currentImageId=currentImage||'';
+    const imageLibrary=popup.querySelector('[data-note-image-library]'),imageGrid=popup.querySelector('[data-note-image-grid]');
+    const previousImages=reusableBookNoteImages();
+    let imagePage=0;
+    const renderImageLibrary=()=>{
+      const term=(imageLibrary.querySelector('[data-note-library-search]')?.value||'').trim().toLocaleLowerCase();
+      const images=previousImages.filter(row=>`${row.chapter} ${row.title}`.toLocaleLowerCase().includes(term));
+      const pageSize=16,pageCount=Math.max(1,Math.ceil(images.length/pageSize));
+      imagePage=Math.max(0,Math.min(imagePage,pageCount-1));
+      const shown=images.slice(imagePage*pageSize,(imagePage+1)*pageSize);
+      imageGrid.innerHTML=shown.length?shown.map((row,index)=>`<button type="button" class="hetk-note-image-choice ${row.fileId===currentImageId?'selected':''}" data-note-use-image="${esc(row.fileId)}" title="${esc(row.chapter)}"><span class="photo"><img data-training-media-file="${esc(row.fileId)}" alt="Ilgari biriktirilgan izoh rasmi"></span><span class="description"><b>${esc(row.title)}</b><small>${esc(row.chapter)}${row.uses>1?` · ${row.uses} joyda`:''}</small></span></button>`).join(''):'<p class="hetk-note-images-empty">Bu kitobda mos rasmli izoh topilmadi. Avval rasmni yuklab, izohni saqlashingiz mumkin.</p>';
+      imageLibrary.querySelector('[data-note-image-count]').textContent=`${images.length} ta rasm · ${imagePage+1}/${pageCount} sahifa`;
+      imageLibrary.querySelector('[data-note-image-prev]').disabled=imagePage===0;
+      imageLibrary.querySelector('[data-note-image-next]').disabled=imagePage>=pageCount-1;
+      if(!imageLibrary.hidden)hydrateTrainingMedia(imageGrid);
+    };
+    imageLibrary.querySelector('[data-note-library-search]').addEventListener('input',()=>{imagePage=0;renderImageLibrary();});
+
     const renderPreview=src=>{
       if(src==='__removed__'){preview.classList.remove('has-image');preview.innerHTML='<div class="placeholder"><i class="fas fa-image"></i><span>Rasm olib tashlanadi</span></div>';return;}
       if(src instanceof File){const url=URL.createObjectURL(src);preview.classList.add('has-image');preview.innerHTML=`<img src="${url}" alt="Yangi izoh rasmi">`;preview._tempUrl&&URL.revokeObjectURL(preview._tempUrl);preview._tempUrl=url;return;}
@@ -1477,6 +1534,24 @@ KL = kabel liniyasi`;
     popup.addEventListener('click',e=>{
       if(e.target.closest('[data-note-editor-close],[data-note-editor-cancel]')){closePopup();return;}
       if(e.target.closest('[data-note-editor-pick]')){fileInput.click();return;}
+      if(e.target.closest('[data-note-editor-reuse]')){imageLibrary.hidden=!imageLibrary.hidden;if(!imageLibrary.hidden)renderImageLibrary();return;}
+      if(e.target.closest('[data-note-image-prev]')){imagePage--;renderImageLibrary();return;}
+      if(e.target.closest('[data-note-image-next]')){imagePage++;renderImageLibrary();return;}
+      const imageChoice=e.target.closest('[data-note-use-image]');
+      if(imageChoice){
+        const id=imageChoice.getAttribute('data-note-use-image');
+        if(!previousImages.some(row=>row.fileId===id))return;
+        pendingFile=null;removeImage=false;currentImageId=id;fileInput.value='';
+        renderPreview(id);imageLibrary.hidden=true;
+        const pick=popup.querySelector('[data-note-editor-pick]');
+        if(pick)pick.innerHTML='<i class="fas fa-image"></i> Boshqa rasm yuklash';
+        const actions=popup.querySelector('.hetk-v15-note-upload .actions');
+        if(actions&&!actions.querySelector('[data-note-editor-remove-image]')){
+          const btn=document.createElement('button');btn.type='button';btn.className='danger';btn.setAttribute('data-note-editor-remove-image','');btn.innerHTML='<i class="fas fa-trash"></i> Rasmni olib tashlash';actions.appendChild(btn);
+        }
+        toast('Mavjud rasm tanlandi — Telegramga qayta yuborilmaydi. Izohni saqlang.','success');
+        return;
+      }
       if(e.target.closest('[data-note-editor-remove-image]')){pendingFile=null;removeImage=true;currentImageId='';renderPreview('__removed__');popup.querySelector('[data-note-editor-remove-image]')?.remove();const pick=popup.querySelector('[data-note-editor-pick]');if(pick)pick.innerHTML='<i class="fas fa-image"></i> Rasm qo‘shish';return;}
       if(e.target.closest('[data-note-editor-delete]')){if(!target)return;target.replaceWith(document.createTextNode(target.textContent||''));if(onSync)onSync();editor.dispatchEvent(new Event('input',{bubbles:true}));toast('Izoh o‘chirildi.','success');closePopup();return;}
       if(e.target.closest('[data-note-editor-save]')){saveNode();return;}
