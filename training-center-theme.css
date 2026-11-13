@@ -803,3 +803,25 @@
     min-height:36px;
   }
 }
+
+/* v59: Cyrillic book/topic editor preserves exact whitespace and paragraph indents. */
+#hetk-training-overlay .hetk-rich-editor-wrap.is-cyrillic-wrap .hetk-rich-editor,
+#hetk-training-overlay .hetk-v15-block-rich.is-cyrillic-editor,
+#hetk-training-overlay .hetk-rich-book-text.is-cyrillic-book-text,
+#hetk-training-overlay .hetk-rich-book-text.is-cyrillic-book-text .hetk-topic-content-blocks {
+  white-space:break-spaces;
+  text-align:left;
+  word-spacing:normal;
+  letter-spacing:normal;
+  tab-size:4;
+}
+#hetk-training-overlay .hetk-rich-editor-wrap.is-cyrillic-wrap [data-rich-indent],
+#hetk-training-overlay .hetk-topic-editor [data-topic-indent]{
+  border:1px solid #9ebdd6;background:#f5fbff;color:#174866;
+  border-radius:8px;padding:5px 10px;min-height:34px;cursor:pointer;
+  font-weight:700;
+}
+#hetk-training-overlay .hetk-rich-editor-wrap.is-cyrillic-wrap .hetk-rich-editor p,
+#hetk-training-overlay .hetk-rich-book-text.is-cyrillic-book-text p {
+  white-space:break-spaces;
+}
