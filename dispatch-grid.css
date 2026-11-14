@@ -244,3 +244,32 @@ body.dg-modal-open{overflow:hidden!important}
   isolation: isolate;
   overflow: hidden;
 }
+
+/* v63: map base layers, precision picker context and existing HETK folder tree. */
+#hetk-grid .dg-basemaps{display:inline-flex;align-items:center;gap:2px;padding:3px;border-radius:9px;background:#e8f2fb;border:1px solid #bfd3e9;white-space:nowrap}
+#hetk-grid .dg-basemaps button{border:0;background:transparent;padding:6px 9px;font-size:11px;font-weight:800;color:#275981;border-radius:6px;cursor:pointer;white-space:nowrap}
+#hetk-grid .dg-basemaps button.active{background:#0d69b2;color:#fff;box-shadow:0 2px 6px #093c7440}
+#hetk-grid .dg-picker-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+#hetk-grid .dg-picker-tools>button{border:1px solid #bdd3e9;color:#145e93;background:#fff;border-radius:8px;padding:9px 10px;font-size:11px;font-weight:800;cursor:pointer}
+#hetk-grid .dg-picker-tools>button.active{background:#e2f4fe}
+#hetk-grid .dg-pick-section .dg-location-map{height:345px;min-height:255px}
+#hetk-grid .dg-pick-section.dg-picker-expanded .dg-location-map{height:min(57vh,570px);min-height:340px}
+#hetk-grid .dg-folder-picker,#hetk-grid .dg-existing-tp{border:1px solid #cbddec;border-radius:11px;background:#f5f9fe;padding:11px;display:flex;flex-direction:column;gap:7px}
+#hetk-grid .dg-folder-picker>strong,#hetk-grid .dg-existing-tp>strong{font-size:12px;color:#0e558a}
+#hetk-grid .dg-folder-picker>small,#hetk-grid .dg-existing-tp>small{font-size:11px;color:#54738f;line-height:1.45}
+#hetk-grid .dg-folder-search,#hetk-grid #dg-tp-search,#hetk-grid #dg-linked-tp{width:100%;min-width:0;background:#fff;border:1px solid #c1d4e7;border-radius:8px;padding:10px;color:#153c5a;font-size:12px}
+#hetk-grid .dg-folder-tree{max-height:215px;overflow-y:auto;overscroll-behavior:contain;border:1px solid #d6e4f2;background:#fff;border-radius:8px;padding:4px;display:flex;flex-direction:column;gap:2px}
+#hetk-grid .dg-folder-row{width:100%;display:flex;align-items:center;flex-wrap:wrap;gap:3px 9px;text-align:left;padding:6px 7px 6px calc(8px + var(--folder-depth,0) * 15px);border:1px solid transparent;border-radius:6px;background:transparent;color:#203d57;cursor:pointer;font-size:12px;font-weight:700;min-height:29px}
+#hetk-grid .dg-folder-row:hover{background:#eef7ff}
+#hetk-grid .dg-folder-row.selected{background:#d8ecff;border-color:#80bcec;color:#0b5b94}
+#hetk-grid .dg-folder-row:disabled{color:#8393a5;cursor:default}
+#hetk-grid .dg-folder-row small{font-size:10px;color:#7b8fa4;font-weight:400;flex:1 1 100%;margin-left:19px}
+#hetk-grid .dg-folder-row[hidden]{display:none}
+#hetk-grid .dg-folder-chosen{font-size:11px;color:#11578c;font-weight:800;word-break:break-word}
+#hetk-grid .dg-existing-tp select{min-height:38px}
+@media(max-width:650px){#hetk-grid .dg-picker-tools{gap:5px}#hetk-grid .dg-basemaps button{font-size:10px;padding:6px}#hetk-grid .dg-pick-section .dg-location-map{height:260px}#hetk-grid .dg-pick-section.dg-picker-expanded .dg-location-map{height:50vh;min-height:230px}#hetk-grid .dg-folder-tree{max-height:180px}}
+
+/* v63 usability: one tree row per folder; long names do not overlap on phones. */
+#hetk-grid .dg-folder-row{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.4;flex:none;min-height:32px}
+#hetk-grid .dg-folder-row small{display:none}
+#hetk-grid .dg-item [data-attach-tps]{width:auto!important;min-width:43px;padding:3px 6px;font-size:10px;font-weight:800;white-space:nowrap;background:#e4f8ed!important;color:#106747!important}
