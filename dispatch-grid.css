@@ -1,4 +1,4 @@
-/* HETK-Navoiy — Dispetcherlik draft, isolated styles (v60). */
+/* HETK-Navoiy — Dispetcherlik draft, isolated styles (v62). */
 #hetk-dispatch-open{background:linear-gradient(135deg,#0b65b5,#11448b);color:#fff;border:1px solid rgba(255,255,255,.16)}
 body.dg-modal-open{overflow:hidden!important}
 #hetk-grid[hidden],#hetk-grid .dg-modal[hidden],#hetk-grid .dg-message[hidden]{display:none!important}
@@ -214,3 +214,33 @@ body.dg-modal-open{overflow:hidden!important}
 /* The GIS gets the entire available screen; optional count strip is opt-in. */
 #hetk-grid .dg-kpis{display:none}
 #hetk-grid.dg-show-stats .dg-kpis{display:grid}
+
+/* v62 — FIX: Leaflet panes have z-index 200–1000; they must not escape the GIS
+   stacking context and obscure the floating Objects/Impact panels.
+   Increasing the sidebar z-index alone is insufficient because Leaflet controls
+   can reach 1000. The GIS remains inside its own local stacking context. */
+#hetk-grid .dg-main {
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
+}
+#hetk-grid .dg-visual,
+#hetk-grid .dg-combined,
+#hetk-grid .dg-map {
+  isolation: isolate;
+}
+#hetk-grid .dg-map {
+  position: relative;
+  z-index: 0;
+}
+#hetk-grid .dg-sidebar,
+#hetk-grid .dg-impact {
+  z-index: 100;
+}
+/* Apply the same containment to the map embedded in the object editor. */
+#hetk-grid .dg-location-map {
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
+  overflow: hidden;
+}
