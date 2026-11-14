@@ -126,3 +126,91 @@ body.dg-modal-open{overflow:hidden!important}
   #hetk-grid .dg-small-diagram{overflow-x:auto}
   #hetk-grid .dg-small-diagram .dg-network-svg{min-height:165px;width:600px;min-width:600px}
 }
+
+/* v61: full workspace views; side panels overlay rather than squeeze the GIS. */
+#hetk-grid .dg-frame{z-index:1;isolation:isolate}
+#hetk-grid .dg-body{position:relative;display:block;overflow:hidden;flex:1;min-height:0;padding:10px}
+#hetk-grid .dg-main{width:100%;height:100%;min-height:0;display:flex;flex-direction:column;gap:7px}
+#hetk-grid .dg-kpis{flex:none;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+#hetk-grid .dg-kpi{padding:5px 9px;gap:7px;border-radius:8px}
+#hetk-grid .dg-kpi i{padding:5px;font-size:13px}
+#hetk-grid .dg-kpi b{font-size:17px}
+#hetk-grid .dg-kpi span{font-size:10px;margin:0}
+#hetk-grid .dg-visual-layout{flex:1;min-height:0;height:0}
+#hetk-grid .dg-visual{height:100%;min-height:0}
+#hetk-grid .dg-view-title{padding:8px 12px;flex:none}
+#hetk-grid .dg-view-title strong{font-size:14px}
+#hetk-grid .dg-diagram-wrap{min-height:0;height:100%;justify-content:stretch}
+#hetk-grid .dg-network-svg{height:100%;min-height:0;max-height:none}
+#hetk-grid .dg-combined{flex:1;height:100%;min-height:0;padding:7px;display:flex}
+#hetk-grid .dg-map{width:100%;height:100%;min-height:260px;flex:1;border-radius:11px}
+#hetk-grid .dg-small-diagram{display:none!important}
+#hetk-grid .dg-sidebar,#hetk-grid .dg-impact{
+  position:absolute;top:10px;bottom:10px;z-index:50;
+  width:min(318px,calc(100% - 20px));max-height:calc(100% - 20px);
+  box-shadow:0 12px 35px #0a345c38;border:1px solid #b8d7ec;
+  display:none;
+}
+#hetk-grid .dg-sidebar{left:10px}
+#hetk-grid .dg-impact{right:10px;overflow:auto}
+#hetk-grid.dg-show-objects .dg-sidebar{display:flex}
+#hetk-grid.dg-show-impact .dg-impact{display:block}
+#hetk-grid .dg-panel-close{position:absolute;right:8px;top:8px;width:30px;height:30px;border:1px solid #cbdcec;border-radius:7px;background:#f2f7ff;color:#1b5083;z-index:2}
+#hetk-grid .dg-sidebar-title{padding-right:44px}
+#hetk-grid .dg-impact-head{padding:10px 12px}
+#hetk-grid .dg-impact-head>div{display:flex;gap:6px;align-items:center}
+#hetk-grid .dg-impact-close{border:1px solid #ffffff66;border-radius:6px;background:#ffffff20;color:#fff;padding:2px 7px;font-size:15px}
+#hetk-grid .dg-toolbar-actions button.active{background:#0e64aa;color:#fff;border-color:#0e64aa}
+#hetk-grid .dg-toolbar-actions .dg-clear-button{color:#a93a45;border-color:#e7b7bc}
+#hetk-grid .dg-toolbar-actions .dg-clear-button:hover{background:#fff1f1}
+/* Keep Leaflet panes / markers behind editor overlays. */
+#hetk-grid .dg-modal{position:absolute;inset:0;z-index:5000;isolation:isolate;display:grid;place-items:center;background:#071e3fc4}
+#hetk-grid .dg-editor-card{position:relative;z-index:1;width:min(720px,96vw);max-height:94%;}
+#hetk-grid .dg-location-map{height:255px;width:100%;background:#e1ecf8;border-radius:10px;border:1px solid #c2d5e7;z-index:0}
+#hetk-grid .dg-pick-section{border:1px solid #c9daea;border-radius:12px;padding:9px;background:#f5f9fe;display:flex;flex-direction:column;gap:8px}
+#hetk-grid .dg-pick-head{display:flex;flex-direction:column;gap:3px}
+#hetk-grid .dg-pick-head strong{font-size:12px;color:#15528b}
+#hetk-grid .dg-pick-head small{font-size:11px;color:#5f7690;line-height:1.4}
+#hetk-grid .dg-picker-coord{font-size:11px;color:#46627c;font-weight:700}
+#hetk-grid .dg-line-label{background:#f9fcffed;color:#103e68;font-size:11px;font-weight:800;border:1px solid #a5cde9;border-radius:5px;padding:2px 6px;box-shadow:0 2px 4px #132d4622}
+#hetk-grid .dg-ps-tooltip{font-size:11px;background:#0b5289;color:#fff;border-color:#0b5289;font-weight:750}
+#hetk-grid .dg-ps-tooltip:before{border-top-color:#0b5289}
+#hetk-grid .dg-popup-edit{margin-top:7px;background:#e9f4ff;border:1px solid #bad8f3;border-radius:6px;padding:5px 7px;color:#125c99;font-size:11px;font-weight:750}
+#hetk-grid .dg-item-list{min-height:0}
+@media(max-width:900px){
+  #hetk-grid .dg-body{display:block;overflow:hidden;padding:7px}
+  #hetk-grid .dg-main{height:100%;min-height:0;flex:1}
+  #hetk-grid .dg-visual{height:100%;min-height:0}
+  #hetk-grid .dg-sidebar{max-height:calc(100% - 14px)}
+  #hetk-grid .dg-impact{max-height:calc(100% - 14px)}
+  #hetk-grid .dg-item-list{max-height:none}
+  #hetk-grid .dg-visual-layout{min-height:0}
+  #hetk-grid .dg-toolbar-actions{width:auto;justify-content:flex-start}
+  #hetk-grid .dg-toolbar{gap:5px}
+  #hetk-grid .dg-combined .dg-map{min-height:210px}
+}
+@media(max-width:520px){
+  #hetk-grid .dg-toolbar-actions{width:100%;overflow-x:auto;flex-wrap:nowrap}
+  #hetk-grid .dg-toolbar-actions button{white-space:nowrap}
+  #hetk-grid .dg-body{padding:5px}
+  #hetk-grid .dg-sidebar,#hetk-grid .dg-impact{top:5px;bottom:5px;max-height:calc(100% - 10px);width:calc(100% - 10px)}
+  #hetk-grid .dg-sidebar{left:5px}
+  #hetk-grid .dg-impact{right:5px}
+  #hetk-grid .dg-kpis{grid-template-columns:repeat(4,minmax(0,1fr));gap:3px}
+  #hetk-grid .dg-kpi{padding:4px;gap:3px;flex-direction:column;align-items:center;text-align:center}
+  #hetk-grid .dg-kpi i{display:none}
+  #hetk-grid .dg-kpi b{font-size:14px}
+  #hetk-grid .dg-kpi span{font-size:8px}
+  #hetk-grid .dg-main{min-height:0}
+  #hetk-grid .dg-visual{min-height:0}
+  #hetk-grid .dg-location-map{height:210px}
+  #hetk-grid .dg-diagram-wrap{overflow-x:auto;overflow-y:hidden}
+  #hetk-grid .dg-diagram-wrap .dg-network-svg{width:900px;min-width:900px;min-height:250px;max-height:none;height:100%}
+  #hetk-grid .dg-combined .dg-map{min-height:200px}
+}
+#hetk-grid .dg-layer-tools{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end}
+#hetk-grid .dg-layer-tools button{padding:6px 8px;font-size:10px}
+@media(max-width:520px){#hetk-grid .dg-view-title{flex-wrap:wrap}#hetk-grid .dg-layer-tools{width:100%;justify-content:flex-start;overflow:auto;flex-wrap:nowrap}#hetk-grid .dg-layer-tools button{white-space:nowrap}}
+/* The GIS gets the entire available screen; optional count strip is opt-in. */
+#hetk-grid .dg-kpis{display:none}
+#hetk-grid.dg-show-stats .dg-kpis{display:grid}
