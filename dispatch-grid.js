@@ -1,17 +1,19 @@
-/* HETK-Navoiy — Dispatch Grid prototype v61
+/* HETK-Navoiy — Dispatch Grid prototype v63
  * SIMULATION ONLY: No SCADA control, no live switching, no network writes.
  * This is a local draft in this browser, not an operational dispatch system.
  */
 (function () {
   'use strict';
   const ROLE_SET = new Set(['super_admin', 'chief_dispatcher', 'dispatcher']);
-  const STORAGE = 'hetk.dispatchGrid.draft.v60.';
+  const STORAGE = 'hetk.dispatchGrid.draft.v60.'; // Keep v60 key for backwards-compatible local drafts.
   const VOLTAGES = [220, 110, 35, 10, 6];
   const COLORS = { 220:'#e74655', 110:'#3186f6', 35:'#20b978', 10:'#e4a642', 6:'#ae7cf4' };
   let root, button, data, editorType = '', editorId = '', currentUser = null;
   let view = 'combined', section = 'stations', overrides = {}, chosen = null, map = null, mapLayer = null;
   let mapTowers = false, mapTps = false, mapConsumers = false, initialized = false;
   let showObjects = false, showImpact = false, showStats = false, pickerMap = null, pickerMarker = null, pickerRoute = null, pickerSelection = null;
+  let pickerContext = null, baseMapLayer = null, pickerBaseMapLayer = null, visiblePickerObjects = true;
+  let existingTPs = null, existingTPsPending = false, mapStyle = 'street';
 
   const el = id => document.getElementById(id);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -22,6 +24,118 @@
   const isAllowed = u => !!(u && u.active!==false && ROLE_SET.has(u.role));
   const storeKey = () => STORAGE + (currentUser && (currentUser.uid || currentUser.login) || 'unknown');
   const arr = (x) => Array.isArray(x) ? x : [];
+  const MAP_TILES = {
+    street: {url:'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', opts:{maxZoom:19,maxNativeZoom:19,attribution:'&copy; OpenStreetMap contributors'}},
+    satellite: {url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', opts:{maxZoom:20,maxNativeZoom:19,attribution:'Tiles &copy; Esri, Maxar, Earthstar Geographics, GIS User Community'}}
+  };
+  function readMapStyle(){try{return localStorage.getItem(STORAGE+'basemap')==='satellite'?'satellite':'street';}catch(e){return 'street';}}
+  function makeBaseMap(target){
+    const conf=MAP_TILES[mapStyle]||MAP_TILES.street;
+    const layer=L.tileLayer(conf.url,conf.opts).addTo(target);
+    let errors=0;
+    if(mapStyle==='satellite' && layer.on)layer.on('tileerror',()=>{if(++errors===5)showMsg('Sun’iy yo‘ldosh tasviri yuklanmadi. Internetni tekshiring yoki «Oddiy» xaritaga qayting.','error');});
+    return layer;
+  }
+  function switchMapStyle(style){
+    if(!MAP_TILES[style])return;
+    mapStyle=style;
+    try{localStorage.setItem(STORAGE+'basemap',mapStyle);}catch(e){}
+    if(map){if(baseMapLayer)map.removeLayer(baseMapLayer);baseMapLayer=makeBaseMap(map);if(baseMapLayer.bringToBack)baseMapLayer.bringToBack();}
+    if(pickerMap){if(pickerBaseMapLayer)pickerMap.removeLayer(pickerBaseMapLayer);pickerBaseMapLayer=makeBaseMap(pickerMap);if(pickerBaseMapLayer.bringToBack)pickerBaseMapLayer.bringToBack();}
+    if(root)root.querySelectorAll('[data-map-style]').forEach(b=>{const active=b.dataset.mapStyle===mapStyle;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));});
+  }
+  function mapStyleButtons(){return `<div class="dg-basemaps" role="group" aria-label="Xarita foni"><button type="button" data-map-style="street" aria-pressed="${mapStyle==='street'}" class="${mapStyle==='street'?'active':''}">🗺 Oddiy</button><button type="button" data-map-style="satellite" aria-pressed="${mapStyle==='satellite'}" class="${mapStyle==='satellite'?'active':''}">🛰 Sun’iy yo‘ldosh</button></div>`;}
+  // Reuse the existing HETK folder hierarchy. The ID, not its mutable label, is saved.
+  // This is a READ-ONLY use of the main application's loaded folder list.
+  function mainFolders(){try{return window.HETKManagementStatsContext?.getFolders?.()||window.currentFolders||{};}catch(e){return {};}}
+  function folderPath(id,folders=mainFolders()){
+    if(!id||!folders[id])return '';
+    const names=[],seen=new Set();let current=id;
+    while(current&&current!=='root'&&folders[current]&&!seen.has(current)&&names.length<40){seen.add(current);names.unshift(folders[current].name||current);current=folders[current].parentId;}
+    return names.join(' → ');
+  }
+  function folderIncludes(childId,ancestorId,folders=mainFolders()){
+    if(!childId||!ancestorId)return false;
+    const seen=new Set();let id=childId;
+    while(id&&id!=='root'&&folders[id]&&!seen.has(id)){if(id===ancestorId)return true;seen.add(id);id=folders[id].parentId;}
+    return false;
+  }
+  function folderEntries(){
+    const folders=mainFolders(),ids=Object.keys(folders);
+    const auth=window.HETKAuth;
+    const permitted=ids.filter(id=>!auth?.canSeeFolder||auth.canSeeFolder(id,folders));
+    const allowed=new Set(permitted);
+    // Keep visible ancestors so the hierarchy remains intelligible.
+    for(const id of permitted){let parent=folders[id]?.parentId,guard=0;while(parent&&parent!=='root'&&folders[parent]&&guard++<50){allowed.add(parent);parent=folders[parent].parentId;}}
+    const children={};
+    ids.filter(id=>allowed.has(id)).forEach(id=>{const parent=folders[id]?.parentId||'root';(children[parent]||(children[parent]=[])).push(id);});
+    Object.values(children).forEach(list=>list.sort((a,b)=>String(folders[a]?.name||'').localeCompare(String(folders[b]?.name||''),'uz')));
+    const ordered=[],seen=new Set();
+    function add(id,depth){if(seen.has(id))return;seen.add(id);ordered.push({id,depth:Math.min(depth,9),name:folders[id]?.name||id,path:folderPath(id,folders),selectable:permitted.includes(id)});(children[id]||[]).forEach(child=>add(child,depth+1));}
+    (children.root||[]).forEach(id=>add(id,0));
+    ids.filter(id=>allowed.has(id)&&!seen.has(id)).forEach(id=>add(id,0));
+    return ordered;
+  }
+  function folderPickerHtml(selectedId='',legacyName=''){
+    const entries=folderEntries();
+    const selected=entries.find(x=>x.id===selectedId);
+    const label=selected?.path||legacyName||'Papka tanlanmagan';
+    const rows=entries.map(x=>`<button type="button" data-folder-choice="${esc(x.id)}" data-folder-path="${esc(x.path)}" class="dg-folder-row ${selectedId===x.id?'selected':''}" style="--folder-depth:${x.depth}" ${x.selectable?'':'disabled title="Bu papka tanlash uchun ochiq emas"'}>📁 ${esc(x.name)}</button>`).join('');
+    return `<section class="dg-folder-picker"><strong>📂 HETK papkasini tanlash</strong><small>Mavjud papka daraxtidan tanlang; nomini qo‘lda yozmaysiz. Elektr liniyalar avtomatik ulanmaydi.</small><input type="search" class="dg-folder-search" data-folder-filter placeholder="Papka yoki PS/fider nomini qidirish" autocomplete="off"><div class="dg-folder-tree">${rows||'<div class="dg-form-tip">Papkalar hali yuklanmagan. Asosiy guruhlar oynasini ochib, qayta urinib ko‘ring.</div>'}</div><input type="hidden" name="folderId" value="${esc(selectedId)}"><div class="dg-folder-chosen" id="dg-folder-chosen">Tanlangan: ${esc(label)}</div></section>`;
+  }
+  function selectedFolderFromForm(form){
+    const id=String(form.elements.namedItem('folderId')?.value||'').trim();return {id,path:folderPath(id)};
+  }
+  function storedTPFolderIds(t){return [...new Set([t?.primaryFolderId,t?.folderId,...Object.keys(t?.folders||{}).filter(id=>t.folders[id]===true||t.folders[id]===1)].filter(Boolean))];}
+  function existingTPFields(){return `<section class="dg-existing-tp"><strong>🔗 HETK bazasidagi TP/KTPni biriktirish (ixtiyoriy)</strong><small>Asosiy bazadan faqat o‘qiladi. Tanlangan fider papkasidagi TP/KTP lar ko‘rsatiladi. HETKdagi elementning o‘zi o‘zgarmaydi.</small><input type="search" id="dg-tp-search" placeholder="TP/KTP nomi yoki raqami bo‘yicha qidirish"><select name="linkedTpId" id="dg-linked-tp"><option value="">— Yangi lokal TP/KTP —</option></select><small id="dg-tp-count">HETK elementlari yuklanmoqda…</small></section>`;}
+  function refreshExistingTPs(){
+    const form=el('dg-editor-form'),selectEl=form?.elements.namedItem('linkedTpId');if(!selectEl||!existingTPs)return;
+    const f=feeder(form.elements.namedItem('feederId')?.value||''),folderId=f?.folderId||'';
+    const q=String(el('dg-tp-search')?.value||'').trim().toLocaleLowerCase();
+    const old=selectEl.value||selectEl.dataset.original||'',list=[];
+    for(const [id,t] of Object.entries(existingTPs)){
+      if(folderId && !storedTPFolderIds(t).some(tpFolder=>folderIncludes(tpFolder,folderId)))continue;
+      if(q && !(String(t.name||'')+' '+String(id)).toLocaleLowerCase().includes(q))continue;
+      list.push({id,name:t.name||id,power:t.power});
+    }
+    list.sort((a,b)=>a.name.localeCompare(b.name,'uz'));
+    selectEl.innerHTML='<option value="">— Yangi lokal TP/KTP —</option>'+list.slice(0,300).map(t=>`<option value="${esc(t.id)}" ${t.id===old?'selected':''}>${esc(t.name)}${t.power?' · '+esc(t.power)+' kVA':''}</option>`).join('');
+    const counter=el('dg-tp-count');if(counter)counter.textContent=`Mos kelgan elementlar: ${list.length}${list.length>300?' (birinchi 300 ta, qidiruvdan foydalaning)':''}.`;
+  }
+  async function attachExistingTps(feederId){
+    const f=feeder(feederId);
+    if(!f||!f.folderId)return showMsg('Avval fiderni mavjud papka bilan bog‘lang.','error');
+    if(!window.HETKData?.readTPs)return showMsg('HETK elementlar bazasini o‘qish funksiyasi yo‘q.','error');
+    try{
+      if(!existingTPs)existingTPs=(await window.HETKData.readTPs()).val()||{};
+      const matches=Object.entries(existingTPs).filter(([id,t])=>storedTPFolderIds(t).some(folderId=>folderIncludes(folderId,f.folderId)));
+      const linked=new Set(data.tps.filter(t=>t.linkedTpId).map(t=>t.linkedTpId));
+      const pending=matches.filter(([id])=>!linked.has(id));
+      if(!pending.length)return showMsg('Ushbu fider papkasida yangi biriktiriladigan TP/KTP topilmadi.','info');
+      if(!confirm(`${f.name} papkasidagi ${pending.length} ta TP/KTPni dispetcherlikning LOKAL qoralamasiga bog‘laysizmi? HETK asosiy bazasi o‘zgarmaydi.`))return;
+      const selected=pending.slice(0,500);
+      for(const [mainId,t] of selected){
+        const folderId=storedTPFolderIds(t).find(tpFolder=>folderIncludes(tpFolder,f.folderId))||f.folderId;
+        const gps=t.lat!=null&&t.lng!=null&&String(t.lat).trim()!==''&&String(t.lng).trim()!==''&&validGps(t.lat,t.lng);
+        data.tps.push({id:uid(),name:t.name||mainId,feederId:f.id,kva:Math.max(0,num(t.power)),folderId,linkedTpId:mainId,lat:gps?num(t.lat):null,lng:gps?num(t.lng):null});
+      }
+      saveLocal();refresh();showMsg(`${selected.length} ta TP/KTP lokal modelga biriktirildi. Asosiy bazaga yozilmadi.`,'success');
+      if(pending.length>500)showMsg('500 ta bog‘landi. Qolganlarini alohida qo‘shish mumkin.','info');
+    }catch(e){showMsg('HETK elementlarini o‘qib bo‘lmadi: '+e.message,'error');}
+  }
+  async function prepareExistingTPs(){
+    const slot=el('dg-linked-tp');if(!slot)return;
+    slot.dataset.original=String(data.tps.find(t=>t.id===editorId)?.linkedTpId||'');
+    if(existingTPs){refreshExistingTPs();return;}
+    if(!window.HETKData?.readTPs){el('dg-tp-count').textContent='HETK elementlarini o‘qish moduli mavjud emas.';return;}
+    if(existingTPsPending)return;
+    existingTPsPending=true;
+    try{
+      const snap=await window.HETKData.readTPs();existingTPs=snap.val()||{};
+      if(el('dg-linked-tp'))refreshExistingTPs();
+    }catch(e){if(el('dg-tp-count'))el('dg-tp-count').textContent='Elementlarni olish imkoni bo‘lmadi. Qo‘lda kiritish mumkin.';}
+    finally{existingTPsPending=false;}
+  }
   const station = id => data.stations.find(x=>x.id===id);
   const feeder = id => data.feeders.find(x=>x.id===id);
   const tp = id => data.tps.find(x=>x.id===id);
@@ -170,7 +284,7 @@
   }
   function destroyPicker(){
     if(pickerMap){try{pickerMap.remove();}catch(e){}pickerMap=null;}
-    pickerMarker=null;pickerRoute=null;pickerSelection=null;
+    pickerMarker=null;pickerRoute=null;pickerSelection=null;pickerContext=null;pickerBaseMapLayer=null;
   }
   function closeEditor(){destroyPicker();if(el('dg-editor'))el('dg-editor').hidden=true;}
   function createShell(){
@@ -223,7 +337,7 @@
           </main>
           <aside class="dg-impact" id="dg-impact"></aside>
         </div>
-        <footer class="dg-footer"><span>⚠ Ta’minot va uzilish natijalari kiritilgan modelga asoslangan taxmin. Operativ qaror yoki xavfsiz ulash uchun ishlatilmaydi.</span><span>v62 · Lokal prototip</span></footer>
+        <footer class="dg-footer"><span>⚠ Ta’minot va uzilish natijalari kiritilgan modelga asoslangan taxmin. Operativ qaror yoki xavfsiz ulash uchun ishlatilmaydi.</span><span>v63 · Lokal prototip</span></footer>
       </div>
       <div class="dg-modal" id="dg-editor" hidden><div class="dg-editor-card" role="dialog" aria-modal="true" aria-label="Obyekt tahrirlash"><div class="dg-editor-head"><strong id="dg-editor-title">Tahrirlash</strong><button type="button" data-action="cancel-editor" aria-label="Yopish">✕</button></div><form id="dg-editor-form"></form></div></div>
       <input type="file" id="dg-import-file" accept=".json,application/json" hidden>
@@ -238,6 +352,19 @@
     button.addEventListener('click',open);
     root.addEventListener('click',onClick);
     el('dg-editor-form').addEventListener('submit',onSave);
+    el('dg-editor-form').addEventListener('input',ev=>{
+      if(ev.target.matches('[data-folder-filter]')){const q=ev.target.value.trim().toLocaleLowerCase();el('dg-editor-form').querySelectorAll('.dg-folder-row').forEach(b=>b.hidden=!!q&&!String(b.dataset.folderPath||'').toLocaleLowerCase().includes(q));}
+      if(ev.target.id==='dg-tp-search')refreshExistingTPs();
+    });
+    el('dg-editor-form').addEventListener('change',ev=>{
+      if(ev.target.name==='feederId')refreshExistingTPs();
+      if(ev.target.name==='linkedTpId'&&ev.target.value&&existingTPs){
+        const tp=existingTPs[ev.target.value];if(!tp)return;const f=ev.currentTarget;
+        for(const [name,value] of [['name',tp.name],['kva',tp.power],['lat',tp.lat],['lng',tp.lng]]){const control=f.elements.namedItem(name);if(control&&value!=null)control.value=value;}
+        const fld=storedTPFolderIds(tp)[0];const folderInput=f.elements.namedItem('folderId');if(folderInput&&fld){folderInput.value=fld;const marker=el('dg-folder-chosen');if(marker)marker.textContent='Tanlangan: '+folderPath(fld);f.querySelectorAll('.dg-folder-row').forEach(b=>b.classList.toggle('selected',b.dataset.folderChoice===fld));}
+        const lat=Number(tp.lat),lng=Number(tp.lng);if(validGps(tp.lat,tp.lng)&&tp.lat!=null&&tp.lng!=null&&pickerMap){if(!pickerMarker){pickerMarker=L.marker([lat,lng],{draggable:true}).addTo(pickerMap);}else pickerMarker.setLatLng([lat,lng]);pickerMap.setView([lat,lng],15);}
+      }
+    });
     el('dg-import-file').addEventListener('change',importFile);
   }
 
@@ -246,17 +373,27 @@
     const prior=currentUser && currentUser.uid;
     currentUser=isAllowed(u) ? u : null;
     if(button)button.hidden=!currentUser;
-    if(!currentUser){if(wasOpen)close();data=empty();overrides={};return;}
-    if(prior!==(u.uid||null)){data=loadLocal();overrides={};chosen=null;if(wasOpen)refresh();}
+    if(!currentUser){if(wasOpen)close();data=empty();overrides={};existingTPs=null;existingTPsPending=false;return;}
+    if(prior!==(u.uid||null)){existingTPs=null;existingTPsPending=false;data=loadLocal();overrides={};chosen=null;if(wasOpen)refresh();}
   }
   function open(){if(!canEdit())return;root.hidden=false;root.setAttribute('aria-hidden','false');document.body.classList.add('dg-modal-open');refresh();updateSidebar();}
-  function close(){if(!root)return;root.hidden=true;root.setAttribute('aria-hidden','true');document.body.classList.remove('dg-modal-open');closeEditor();if(map){map.remove();map=null;mapLayer=null;}}
+  function close(){if(!root)return;root.hidden=true;root.setAttribute('aria-hidden','true');document.body.classList.remove('dg-modal-open');closeEditor();if(map){map.remove();map=null;mapLayer=null;baseMapLayer=null;}}
   function onClick(ev){
     const target=ev.target.closest('button');if(!target||!root.contains(target))return;
     if(target.dataset.view){view=target.dataset.view;refresh();return;}
+    if(target.dataset.mapStyle){switchMapStyle(target.dataset.mapStyle);return;}
+    if(target.dataset.folderChoice){
+      const form=el('dg-editor-form'),fld=form?.elements.namedItem('folderId');if(fld)fld.value=target.dataset.folderChoice;
+      root.querySelectorAll('.dg-folder-row').forEach(b=>b.classList.toggle('selected',b===target));
+      const text=el('dg-folder-chosen');if(text)text.textContent='Tanlangan: '+target.dataset.folderPath;
+      const name=form?.elements.namedItem('name');if(name&&!name.value.trim())name.value=mainFolders()[fld.value]?.name||'';
+      if(editorType==='feeder')matchFeederPSFolder(fld.value);
+      if(editorType==='tp')refreshExistingTPs();return;
+    }
     if(target.dataset.section){section=target.dataset.section;renderList();return;}
     if(target.dataset.add){openEditor(target.dataset.add);return;}
     if(target.dataset.edit){openEditor(target.dataset.edit,target.dataset.id||'');return;}
+    if(target.dataset.attachTps){attachExistingTps(target.dataset.attachTps);return;}
     if(target.dataset.del){removeEntity(target.dataset.del,target.dataset.id);return;}
     if(target.dataset.select){chosen=target.dataset.select;refresh();return;}
     if(target.dataset.switch){const key=target.dataset.switch;const [lineId, end]=key.split(':');const l=data.lines.find(x=>x.id===lineId);
@@ -276,6 +413,8 @@
     if(a==='export')exportFile();
     if(a==='import')el('dg-import-file').click();
     if(a==='towers'){mapTowers=!mapTowers;refresh();}
+    if(a==='picker-objects'){visiblePickerObjects=!visiblePickerObjects;const btn=root.querySelector('[data-action="picker-objects"]');if(btn)btn.textContent=(visiblePickerObjects?'✓':'○')+' PS va liniyalar';renderPickerContext();}
+    if(a==='expand-picker'){const wrap=root.querySelector('.dg-pick-section');if(wrap){const big=wrap.classList.toggle('dg-picker-expanded');target.textContent=big?'⊟ Xaritani kichraytirish':'⛶ Xaritani kattalashtirish';setTimeout(()=>pickerMap?.invalidateSize(),90);}}
     if(a==='map-tps'){mapTps=!mapTps;refresh();}
     if(a==='map-consumers'){mapConsumers=!mapConsumers;refresh();}
   }
@@ -298,7 +437,7 @@
         section==='feeders' ? `${esc(station(x.psId)?.name||'?')} · ${esc(x.voltage)} kV`:
         section==='tps' ? `${esc(feeder(x.feederId)?.name||'?')} · ${num(x.kva)} kVA`:
         `${x.kind==='mahalla'?'Mahalla':'Tashkilot'} · ${esc(tp(x.tpId)?.name||'bog‘lanmagan')}`;
-      return `<article class="dg-item ${chosen===x.id?'selected':''}"><button type="button" class="dg-item-main" data-select="${esc(x.id)}"><strong>${esc(x.name)}</strong><small>${info}</small></button><button type="button" title="Tahrirlash" data-edit="${type}" data-id="${esc(x.id)}">✎</button></article>`;
+      return `<article class="dg-item ${chosen===x.id?'selected':''}"><button type="button" class="dg-item-main" data-select="${esc(x.id)}"><strong>${esc(x.name)}</strong><small>${info}</small></button>${section==='feeders'?`<button type="button" title="Shu fider papkasidagi HETK TP/KTP larni biriktirish" data-attach-tps="${esc(x.id)}">↳ TP</button>`:''}<button type="button" title="Tahrirlash" data-edit="${type}" data-id="${esc(x.id)}">✎</button></article>`;
     }).join('') : `<div class="dg-empty-list">Hozircha ma’lumot yo‘q. Yuqoridagi + tugmasi bilan qo‘shing yoki «Namuna»ni oching.</div>`;
   }
 
@@ -314,13 +453,13 @@
     if(view==='technical') title='Texnik bir chiziqli ko‘rinish (soddalashtirilgan)';
     if(view==='combined') title='GIS xarita — PS, liniya, otpayka va tayanchlar';
     el('dg-view-title').innerHTML=`<div><strong>${title}</strong><small>Yoritilgan yo‘nalish — faqat bir manbali, tasdiqlangan model segmenti</small></div>${view==='combined'?
-      `<div class="dg-layer-tools"><button type="button" data-action="towers">${mapTowers?'✓':'○'} Tayanchlar</button><button type="button" data-action="map-tps">${mapTps?'✓':'○'} TP/KTP</button><button type="button" data-action="map-consumers">${mapConsumers?'✓':'○'} Mahalla / tashkilot</button></div>`:''}`;
+      `<div class="dg-layer-tools">${mapStyleButtons()}<button type="button" data-action="towers">${mapTowers?'✓':'○'} Tayanchlar</button><button type="button" data-action="map-tps">${mapTps?'✓':'○'} TP/KTP</button><button type="button" data-action="map-consumers">${mapConsumers?'✓':'○'} Mahalla / tashkilot</button></div>`:''}`;
     const visual=el('dg-visual-content');
     if(view==='combined'){
       visual.innerHTML='<div class="dg-combined"><div id="dg-map" class="dg-map"></div></div>';
       renderMap(result);
     } else {
-      if(map){map.remove();map=null;mapLayer=null;}
+      if(map){map.remove();map=null;mapLayer=null;baseMapLayer=null;}
       visual.innerHTML=renderDiagram(result,view==='technical');
     }
   }
@@ -333,9 +472,9 @@
   }
   function renderMap(result){
     if(!window.L || !el('dg-map')){el('dg-map').textContent='Xarita kutubxonasi yuklanmagan.';return;}
-    if(map){map.remove();map=null;}
+    if(map){map.remove();map=null;baseMapLayer=null;}
     map=L.map('dg-map',{zoomControl:true,attributionControl:true}).setView([40.11,65.51],10);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}).addTo(map);
+    baseMapLayer=makeBaseMap(map);
     mapLayer=L.layerGroup().addTo(map);const bounds=[];
     data.lines.forEach(l=>{
       const coords=geometryFor(l).map(x=>[x.lat,x.lng]);
@@ -443,7 +582,26 @@
       : type==='tower'
         ? 'Liniya yo‘li ko‘rsatiladi. Tayanch joyiga bosing yoki markerni suring. GPS raqamini qo‘lda ham kiritishingiz mumkin.'
         : 'Xaritani yaqinlashtiring, PS joyiga bosing yoki ko‘k markerni suring. GPS kenglik/uzunlik avtomatik yoziladi.';
-    return `<section class="dg-pick-section"><div class="dg-pick-head"><strong>📍 Xaritadan aniq koordinatani tanlash</strong><small>${instruction}</small></div><div id="dg-location-picker" class="dg-location-map"></div><div class="dg-picker-coord" id="dg-picker-info">GPS kiritilmagan · xaritadan nuqtani tanlang</div></section>`;
+    return `<section class="dg-pick-section"><div class="dg-pick-head"><strong>📍 Xaritadan aniq koordinatani tanlash</strong><small>${instruction}</small></div><div class="dg-picker-tools">${mapStyleButtons()}<button type="button" data-action="picker-objects">${visiblePickerObjects?'✓':'○'} PS va liniyalar</button><button type="button" data-action="expand-picker">⛶ Xaritani kattalashtirish</button></div><div id="dg-location-picker" class="dg-location-map"></div><div class="dg-picker-coord" id="dg-picker-info">GPS kiritilmagan · xaritadan nuqtani tanlang</div></section>`;
+  }
+  function renderPickerContext(){
+    if(!pickerMap||!window.L)return;
+    if(pickerContext){pickerMap.removeLayer(pickerContext);pickerContext=null;}
+    if(!visiblePickerObjects)return;
+    pickerContext=L.layerGroup().addTo(pickerMap);
+    const selectedLineId=el('dg-editor-form')?.elements.namedItem('lineId')?.value||'';
+    for(const l of data.lines){
+      const coords=geometryFor(l);if(coords.length<2)continue;
+      const selected=l.id===selectedLineId;
+      const path=L.polyline(coords.map(p=>[p.lat,p.lng]),{color:COLORS[l.voltage]||'#74819b',weight:selected?6:3,opacity:selected?0.95:0.7,dashArray:selected?null:'5 6'}).addTo(pickerContext);
+      if(path.bindTooltip)path.bindTooltip(esc(l.name)+' · '+esc(l.voltage)+' kV',{direction:'center',permanent:selected,className:'dg-line-label'});
+    }
+    for(const ps of data.stations){
+      if(!validGps(ps.lat,ps.lng)||ps.lat==null||ps.lng==null)continue;
+      const marker=L.circleMarker([num(ps.lat),num(ps.lng)],{radius:ps.kind==='tap'?4:7,weight:2,color:'#fff',fillColor:ps.kind==='source'?'#e15a4d':ps.kind==='tap'?'#e7ac3d':'#1478cb',fillOpacity:0.95}).addTo(pickerContext);
+      if(marker.bindTooltip)marker.bindTooltip(esc(ps.name)+' · '+arr(ps.volts).join('/')+' kV',{permanent:false,direction:'top'});
+      if(marker.on)marker.on('click',ev=>{if(window.L.DomEvent?.stopPropagation)window.L.DomEvent.stopPropagation(ev);pickerMap?.setView([num(ps.lat),num(ps.lng)],Math.max(15,pickerMap.getZoom()));});
+    }
   }
   function initLocationPicker(type){
     destroyPicker();
@@ -456,8 +614,9 @@
     let center=existing?[num(latField.value),num(lngField.value)]:null;
     if(!center&&lineField){const line=data.lines.find(l=>l.id===lineField.value);const pts=line&&geometryFor(line);if(pts?.length)center=[pts[Math.floor(pts.length/2)].lat,pts[Math.floor(pts.length/2)].lng];}
     if(!center){const ps=data.stations.find(s=>s.lat!=null&&s.lng!=null&&validGps(s.lat,s.lng));center=ps?[num(ps.lat),num(ps.lng)]:[40.1,65.5];}
-    pickerMap=L.map(slot,{zoomControl:true}).setView(center,existing?15:11);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(pickerMap);
+    pickerMap=L.map(slot,{zoomControl:true,attributionControl:true}).setView(center,existing?15:11);
+    pickerBaseMapLayer=makeBaseMap(pickerMap);
+    renderPickerContext();
     function updateInfo(lat,lng){
       if(latField&&lngField){latField.value=Number(lat).toFixed(6);lngField.value=Number(lng).toFixed(6);}
       const info=el('dg-picker-info');if(info)info.textContent='Tanlangan GPS: '+Number(lat).toFixed(6)+', '+Number(lng).toFixed(6)+' (WGS84)';
@@ -504,7 +663,7 @@
       const field=form.elements.namedItem('percent');if(field)field.value=percent.toFixed(2);
       const point=routePointAt(l,percent/100);if(point)mark(point.lat,point.lng);
     });
-    if(lineField)lineField.addEventListener('change',drawRoute);
+    if(lineField)lineField.addEventListener('change',()=>{renderPickerContext();drawRoute();});
     if(type==='tap')form.elements.namedItem('percent')?.addEventListener('change',()=>{
       const l=data.lines.find(x=>x.id===lineField.value);const p=l&&routePointAt(l,clamp(num(form.elements.namedItem('percent').value)/100,0.01,.99));if(p)mark(p.lat,p.lng);
     });
@@ -517,6 +676,12 @@
     if(lineField)drawRoute();
     if(existing&&type!=='tap')mark(num(latField.value),num(lngField.value));
     setTimeout(()=>{if(pickerMap)pickerMap.invalidateSize();},140);
+  }
+  function matchFeederPSFolder(folderId){
+    if(!folderId)return;
+    const form=el('dg-editor-form'),choice=form?.elements.namedItem('psId');if(!choice)return;
+    const matching=data.stations.filter(s=>s.kind!=='tap'&&s.folderId&&folderIncludes(folderId,s.folderId));
+    if(matching.length===1)choice.value=matching[0].id;
   }
   function openEditor(type,id='') {
     if(!canEdit())return;
@@ -534,7 +699,7 @@
       html+=select('kind','PS turi',`<option value="ps" ${rec.kind!=='source'?'selected':''}>Oddiy PS</option><option value="source" ${rec.kind==='source'?'selected':''}>Manba PS</option>`);
       html+=field('name','PS nomi',rec.name,'required maxlength="100"');
       html+=field('volts','Kuchlanish darajalari (masalan: 35,10)',arr(rec.volts).join(','),'required placeholder="35,10"');
-      html+=field('folder','Papka / TET / ShET / U/J',rec.folder,'placeholder="Masalan: Xatirchi TET"');
+      html+=folderPickerHtml(rec.folderId||'',rec.folder||'');
       html+='<div class="dg-two">'+field('lat','GPS kenglik (latitude)',rec.lat==null?'':rec.lat,'type="number" min="-90" max="90" step="any" placeholder="40.123456"')+field('lng','GPS uzunlik (longitude)',rec.lng==null?'':rec.lng,'type="number" min="-180" max="180" step="any" placeholder="65.123456"')+'</div>';
       html+=locationPickerHtml('station');
       html+='<div class="dg-two">'+field('x','Sxemadagi X (45–895)',rec.x==null?Math.floor(120+Math.random()*620):rec.x,'type="number" min="45" max="895"')+field('y','Sxemadagi Y (55–385)',rec.y==null?220:rec.y,'type="number" min="55" max="385"')+'</div>';
@@ -562,9 +727,13 @@
       html+=field('name','Fider nomi',rec.name,'required maxlength="120"');
       html+=select('psId','Qaysi PSdan chiqadi?',options(data.stations.filter(x=>x.kind!=='tap'),rec.psId));
       html+=select('voltage','Fider kuchlanishi', [6,10].map(v=>`<option value="${v}" ${num(rec.voltage||10)===v?'selected':''}>${v} kV</option>`).join(''));
+      html+=folderPickerHtml(rec.folderId||'');
+      html+='<div class="dg-form-tip">PS papkasining ichidagi fider papkasini tanlang. Tegishli PS faqat bitta bo‘lsa avtomatik tanlanadi; yangi elektr liniya yaratilmaydi.</div>';
     } else if(type==='tp'){
       html+=field('name','TP/KTP nomi',rec.name,'required maxlength="120"');
       html+=select('feederId','Ulangan fider',options(data.feeders,rec.feederId));
+      html+=existingTPFields();
+      html+=folderPickerHtml(rec.folderId||'');
       html+=field('kva','Nominal quvvati, kVA',rec.kva==null?'':rec.kva,'type="number" min="0" step="0.1" required');
       html+='<div class="dg-two">'+field('lat','GPS kenglik (ixtiyoriy)',rec.lat==null?'':rec.lat,'type="number" min="-90" max="90" step="any"')+field('lng','GPS uzunlik (ixtiyoriy)',rec.lng==null?'':rec.lng,'type="number" min="-180" max="180" step="any"')+'</div>';
       html+=locationPickerHtml('tp');
@@ -580,6 +749,7 @@
     el('dg-editor-form').innerHTML=html+`<div class="dg-editor-actions">${id?`<button type="button" class="dg-delete" data-del="${esc(type)}" data-id="${esc(id)}">O‘chirish</button>`:''}<button type="button" data-action="cancel-editor">Bekor qilish</button><button type="submit" class="dg-save">Saqlash</button></div>`;
     el('dg-editor').hidden=false;
     if(['station','tap','tower','tp','consumer'].includes(type))initLocationPicker(type);
+    if(type==='tp')prepareExistingTPs();
   }
   function onSave(ev){
     ev.preventDefault();if(!canEdit())return;
@@ -589,7 +759,7 @@
     if(type==='station'){
       rec.kind=v('kind');rec.name=v('name');rec.volts=[...new Set(v('volts').split(/[ ,;/]+/).map(Number).filter(n=>VOLTAGES.includes(n)))];
       if(!rec.volts.length) return showMsg('To‘g‘ri kuchlanish kiriting (220, 110, 35, 10 yoki 6).','error');
-      rec.folder=v('folder');rec.lat=v('lat')===''?null:num(v('lat'));rec.lng=v('lng')===''?null:num(v('lng'));
+      const chosenFolder=selectedFolderFromForm(ev.currentTarget);rec.folderId=chosenFolder.id||station(id)?.folderId||'';rec.folder=chosenFolder.path||station(id)?.folder||'';rec.lat=v('lat')===''?null:num(v('lat'));rec.lng=v('lng')===''?null:num(v('lng'));
       if((rec.lat==null)!==(rec.lng==null))return showMsg('Xarita uchun ikkala GPS koordinatasini kiriting.','error');
       if(rec.lat!=null&&!validGps(rec.lat,rec.lng))return showMsg('GPS kenglik −90…90, uzunlik −180…180 oralig‘ida bo‘lsin.','error');
       rec.x=clamp(num(v('x'),470),45,895);rec.y=clamp(num(v('y'),200),55,385);
@@ -637,9 +807,14 @@
       saveLocal();closeEditor();refresh();showMsg('Tayanch saqlandi.','success');return;
     } else if(type==='feeder'){
       rec.name=v('name');rec.psId=v('psId');rec.voltage=num(v('voltage'));
+      rec.folderId=selectedFolderFromForm(ev.currentTarget).id||feeder(id)?.folderId||'';
+      const parentPS=station(rec.psId);if(rec.folderId&&parentPS?.folderId&&!folderIncludes(rec.folderId,parentPS.folderId))return showMsg('Fider papkasi tanlangan PS papkasi ichida emas. To‘g‘ri PS/fiderni tanlang.','error');
       if(!station(rec.psId)?.volts.includes(rec.voltage))return showMsg('Fider kuchlanishi PS shinasiga mos kelishi kerak.','error');collection='feeders';
     } else if(type==='tp'){
       rec.name=v('name');rec.feederId=v('feederId');rec.kva=num(v('kva'));
+      rec.linkedTpId=v('linkedTpId');rec.folderId=selectedFolderFromForm(ev.currentTarget).id||data.tps.find(t=>t.id===id)?.folderId||'';
+      if(rec.linkedTpId&&data.tps.some(t=>t.id!==id&&t.linkedTpId===rec.linkedTpId))return showMsg('Bu HETK elementi boshqa TP/KTP qoralamasiga bog‘langan.','error');
+      const chosenFeeder=feeder(rec.feederId);if(rec.folderId&&chosenFeeder?.folderId&&!folderIncludes(rec.folderId,chosenFeeder.folderId))return showMsg('TP/KTP papkasi tanlangan fider papkasi ichida emas. Tekshiring.','error');
       rec.lat=v('lat')===''?null:num(v('lat'));rec.lng=v('lng')===''?null:num(v('lng'));
       if((rec.lat==null)!==(rec.lng==null)|| (rec.lat!=null&&!validGps(rec.lat,rec.lng)))return showMsg('TP/KTP GPS koordinatalarini tekshiring.','error');
       if(!feeder(rec.feederId))return showMsg('Fider tanlanmagan.','error');if(rec.kva<0)return showMsg('kVA manfiy bo‘lmasin.','error');collection='tps';
@@ -686,12 +861,12 @@
       overrides={};saveLocal();refresh();showMsg('Qoralama import qilindi. Operativ ma’lumot emas.','success');
     }catch(e){showMsg('JSONni o‘qib bo‘lmadi: '+e.message,'error');}
   }
-  function init(){if(initialized)return;initialized=true;createShell();
+  function init(){if(initialized)return;initialized=true;mapStyle=readMapStyle();createShell();
     document.addEventListener('hetk-auth-ready',e=>authChanged(e.detail&&e.detail.user));
     document.addEventListener('hetk-auth-user-updated',e=>authChanged(e.detail&&e.detail.user));
     document.addEventListener('hetk-auth-cleared',()=>authChanged(null));
     if(window.HETKAuth?.currentUser)authChanged(window.HETKAuth.currentUser);
   }
-  window.HETKDispatchGrid = {open:()=>open(),analyzeDraft:()=>data?analyze():null,version:'61-local-draft'};
+  window.HETKDispatchGrid = {open:()=>open(),analyzeDraft:()=>data?analyze():null,version:'63-local-draft'};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
