@@ -1,4 +1,4 @@
-/* HETK-Navoiy — Dispatch Grid prototype v64
+/* HETK-Navoiy — Dispatch Grid prototype v65
  * SIMULATION ONLY: No SCADA control, no live switching, no network writes.
  * This is a local draft in this browser, not an operational dispatch system.
  */
@@ -296,8 +296,47 @@
     return Number.isFinite(Number(lat)) && Number.isFinite(Number(lng)) && Number(lat)>=-90 && Number(lat)<=90 && Number(lng)>=-180 && Number(lng)<=180;
   }
   function lineDistance(a,b){
-    const latRad=((num(a.lat)+num(b.lat))/2)*Math.PI/180;
-    return Math.hypot((num(b.lat)-num(a.lat))*111132,(num(b.lng)-num(a.lng))*111320*Math.cos(latRad));
+    // Haversine great-circle distance between GPS points (surface geometry).
+    const toRad=Math.PI/180,lat1=num(a.lat)*toRad,lat2=num(b.lat)*toRad;
+    const dLat=lat2-lat1,dLng=(num(b.lng)-num(a.lng))*toRad;
+    const h=Math.sin(dLat/2)**2+Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLng/2)**2;
+    return 2*6371008.8*Math.asin(Math.min(1,Math.sqrt(h)));
+  }
+  // Plan length: sum of geographic segments through entered support points.
+  // This is not conductor length (sag/spans) and cannot assert survey accuracy.
+  function lineLengthInfo(line){
+    const pts=geometryFor(line);
+    if(pts.length<2 || pts.some(p=>!validGps(p.lat,p.lng)))
+      return {meters:null,label:'GPS yetarli emas',quality:'missing'};
+    const meters=pts.slice(1).reduce((total,p,i)=>total+lineDistance(pts[i],p),0);
+    const supports=arr(line.towers);
+    const full=supports.length>0 && supports.every(t=>t.lat!=null&&t.lng!=null&&validGps(t.lat,t.lng));
+    const quality=full?'supports':supports.length?'partial':'straight';
+    const desc=full?'GPS tayanchlar bo‘yicha':'Taxminiy trassa';
+    return {meters,label:(meters>=1000?(meters/1000).toFixed(2)+' km':Math.round(meters)+' m'),quality,desc};
+  }
+  function lineStateInfo(line,result){
+    if(actualOpen(line,'a')||actualOpen(line,'b'))return {state:'QF ochiq (virtual)',active:false,reason:'Bir yoki ikkala uchidagi QF ochiq'};
+    if(result.malformed.includes(line.name||line.id))return {state:'Ulanish mos emas',active:false,reason:'Kuchlanish yoki ulanish nuqtalari mos emas'};
+    if(!result.energized[line.a]||!result.energized[line.b])return {state:'Manbaga ulanmagan',active:false,reason:'Yopiq QF orqali faol manbaga yo‘l yo‘q'};
+    if(result.sourceCount[line.a]>1)return {state:'Ko‘p manba — yo‘nalish noaniq',active:true,reason:'Bir konturda bir nechta manba bor; MW oqimi aniqlanmagan'};
+    if(!result.direction[line.id])return {state:'Ta’minot bor, yo‘nalish noaniq',active:true,reason:'Halqa yoki teng masofali yo‘llarda yo‘nalish tasdiqlanmagan'};
+    return {state:'Ta’minot yo‘li (virtual)',active:true,reason:'Bitta manbadan keladigan topologik yo‘l'};
+  }
+  function mapLinePopup(line,result){
+    const a=station(line.a),b=station(line.b),state=lineStateInfo(line,result),len=lineLengthInfo(line);
+    const qf=(end,node)=>node&&node.kind!=='tap'?`<button type="button" class="dg-popup-switch ${actualOpen(line,end)?'open':'closed'}" data-switch="${esc(line.id+':'+end)}">QF-${end.toUpperCase()}: ${actualOpen(line,end)?'○ Ochiq':'● Yopiq'} · almashtirish</button>`:'';
+    return `<div class="dg-line-popup"><strong>${esc(line.name)}</strong><div><b style="color:${COLORS[line.voltage]||'#58799d'}">${num(line.voltage)} kV</b> · ${esc(a?.name||'?')} — ${esc(b?.name||'?')}</div><div class="dg-popup-status">${esc(state.state)}</div><div><b>Geografik uzunlik:</b> ${esc(len.label)}${len.quality==='supports'?' (tayanchlar bo‘yicha)':' (dastlabki/taxminiy)'}</div><small>${esc(state.reason)}</small><div class="dg-popup-switches">${qf('a',a)}${qf('b',b)}</div><small>Faqat virtual sxema: haqiqiy QF boshqarilmaydi va real holati tekshirilmagan.</small><button type="button" class="dg-popup-edit" data-edit="line" data-id="${esc(line.id)}">✎ Liniyani tahrirlash</button></div>`;
+  }
+  function mapQfMarker(line,end,coords,layer,result){
+    const at=station(line[end]);if(!at||at.kind==='tap'||coords.length<2)return;
+    const first=end==='a'?coords[0]:coords[coords.length-1];
+    const other=end==='a'?coords[1]:coords[coords.length-2];
+    const position=[first[0]+(other[0]-first[0])*.10,first[1]+(other[1]-first[1])*.10];
+    const opened=actualOpen(line,end),color=opened?'#db384c':'#119a65';
+    const marker=L.circleMarker(position,{radius:7,color:'#fff',weight:2,fillColor:color,fillOpacity:1}).addTo(layer);
+    marker.bindTooltip(`QF-${end.toUpperCase()} · ${opened?'virtual ochiq':'virtual yopiq'}`,{direction:'top'});
+    marker.bindPopup(mapLinePopup(line,result));
   }
   function routePointAt(line,ratio){
     const pts=geometryFor(line);
@@ -384,7 +423,7 @@
           </main>
           <aside class="dg-impact" id="dg-impact"></aside>
         </div>
-        <footer class="dg-footer"><span>⚠ Ta’minot va uzilish natijalari kiritilgan modelga asoslangan taxmin. Operativ qaror yoki xavfsiz ulash uchun ishlatilmaydi.</span><span>v64 · Lokal prototip</span></footer>
+        <footer class="dg-footer"><span>⚠ Ta’minot va uzilish natijalari kiritilgan modelga asoslangan taxmin. Operativ qaror yoki xavfsiz ulash uchun ishlatilmaydi.</span><span>v65 · Lokal prototip</span></footer>
       </div>
       <div class="dg-modal" id="dg-editor" hidden><div class="dg-editor-card" role="dialog" aria-modal="true" aria-label="Obyekt tahrirlash"><div class="dg-editor-head"><strong id="dg-editor-title">Tahrirlash</strong><button type="button" data-action="cancel-editor" aria-label="Yopish">✕</button></div><form id="dg-editor-form"></form></div></div>
       <input type="file" id="dg-import-file" accept=".json,application/json" hidden>
@@ -461,6 +500,11 @@
     if(a==='close-objects'){showObjects=false;updateSidebar();}
     if(a==='close-impact'){showImpact=false;updateSidebar();}
     if(a==='reset-switches'){overrides={};refresh();}
+    if(a==='flow-help'){
+      const r=analyze(),moving=data.lines.filter(l=>accessibleEdge(l)&&r.sourceCount[l.a]===1&&r.sourceCount[l.b]===1&&r.direction[l.id]).length;
+      const explanation=!data.stations.some(x=>x.kind==='source'&&!x.sourceOff)?'Manba PS yo‘q. ':'';
+      showMsg(`${moving} ta yo‘nalishi aniq virtual liniya uchastkasi. ${explanation}Agar yurmasa: PS turini, kuchlanish mosligini, QF-A/B ochiq-yopiqligini va ikkinchi manbani tekshiring. Halqa yoki ikki manbada yo‘nalish noaniq bo‘lishi mumkin.`, 'info');
+    }
     if(a==='sample' && confirm('NAMUNA ma’lumotlarini yuklaysizmi? Joriy lokal qoralamangiz almashtiriladi. Avval JSON eksport qiling.')) {data=sample();overrides={};chosen=null;saveLocal();refresh();showMsg('Faqat ko‘rgazmali ma’lumotlar yuklandi.','success');}
     if(a==='clear' && confirm('DIQQAT: Barcha namunalar va ushbu brauzer qoralamasidagi kiritilgan obyektlar o‘chadi. Zarur bo‘lsa avval «↓ JSON» eksport qiling. Tozalaysizmi?')) {data=empty();overrides={};chosen=null;saveLocal();refresh();showMsg('Namuna va lokal qoralama tozalandi.','success');}
     if(a==='export')exportFile();
@@ -485,7 +529,7 @@
     container.innerHTML=items.length ? items.map(x=>{
       const type={stations:'station',lines:'line',towers:'tower',feeders:'feeder',tps:'tp',consumers:'consumer'}[section];
       const info=section==='stations'? `${x.kind==='source'?'MANBA PS':'PS'} · ${arr(x.volts).join('/')} kV`:
-        section==='lines' ? `${esc(x.voltage)} kV · ${esc(station(x.a)?.name||'?')} — ${esc(station(x.b)?.name||'?')}` :
+        section==='lines' ? `${esc(x.voltage)} kV · ${esc(station(x.a)?.name||'?')} — ${esc(station(x.b)?.name||'?')} · ${esc(lineLengthInfo(x).label)}` :
         section==='towers' ? `${esc(data.lines.find(l=>l.id===x.lineId)?.name||'?')} · ${x.lat==null?'Joylashuv taxminiy':(Number(x.lat).toFixed(5)+', '+Number(x.lng).toFixed(5))}` :
         section==='feeders' ? `${esc(station(x.psId)?.name||'?')} · ${esc(x.voltage)} kV`:
         section==='tps' ? `${esc(feeder(x.feederId)?.name||'?')} · ${num(x.kva)} kVA`:
@@ -505,8 +549,9 @@
     if(view==='simple') title='Sodda dispetcherlik sxemasi';
     if(view==='technical') title='Texnik bir chiziqli ko‘rinish (soddalashtirilgan)';
     if(view==='combined') title='GIS xarita — PS, liniya, otpayka va tayanchlar';
-    el('dg-view-title').innerHTML=`<div><strong>${title}</strong><small>Harakatli nuqtalar — faqat modelda bitta manbadan yetib boradigan yo‘l; haqiqiy tok oqimi emas</small></div>${view==='combined'?
-      `<div class="dg-layer-tools">${mapStyleButtons()}<button type="button" data-action="towers">${mapTowers?'✓':'○'} Tayanch raqamlari</button><button type="button" data-action="map-tps">${mapTps?'✓':'○'} TP/KTP</button><button type="button" data-action="map-consumers">${mapConsumers?'✓':'○'} Mahalla / tashkilot</button></div>`:''}`;
+    const moving=data.lines.filter(l=>accessibleEdge(l)&&result.sourceCount[l.a]===1&&result.sourceCount[l.b]===1&&result.direction[l.id]).length;
+    el('dg-view-title').innerHTML=`<div><strong>${title}</strong><small>Harakatli nuqtalar: ${moving} ta uchastka · Faqat virtual ta’minot yo‘li, haqiqiy MW emas.</small></div>${view==='combined'?
+      `<div class="dg-layer-tools">${mapStyleButtons()}<button type="button" data-action="flow-help">ⓘ Chiroqchalar</button><button type="button" data-action="towers">${mapTowers?'✓':'○'} Tayanch raqamlari</button><button type="button" data-action="map-tps">${mapTps?'✓':'○'} TP/KTP</button><button type="button" data-action="map-consumers">${mapConsumers?'✓':'○'} Mahalla / tashkilot</button></div>`:''}`;
     const visual=el('dg-visual-content');
     if(view==='combined'){
       visual.innerHTML='<div class="dg-combined"><div id="dg-map" class="dg-map"></div></div>';
@@ -525,13 +570,22 @@
   }
   function renderMap(result){
     if(!window.L || !el('dg-map')){el('dg-map').textContent='Xarita kutubxonasi yuklanmagan.';return;}
-    if(map){map.remove();map=null;baseMapLayer=null;}
-    map=L.map('dg-map',{zoomControl:true,attributionControl:true}).setView([40.11,65.51],10);
+    let savedView=null;
+    if(map){try{savedView={center:map.getCenter(),zoom:map.getZoom()};}catch(e){}map.remove();map=null;baseMapLayer=null;}
+    map=L.map('dg-map',{zoomControl:true,attributionControl:true}).setView(savedView?.center||[40.11,65.51],savedView?.zoom||10);
     // Leaflet popup content stops click bubbling. Bind its edit button directly.
     if(map.on)map.on('popupopen',e=>{
       const popup=e.popup?.getElement?.();if(!popup)return;
       popup.querySelectorAll('button[data-edit]').forEach(btn=>btn.addEventListener('click',evt=>{
         evt.preventDefault();evt.stopPropagation();openEditor(btn.dataset.edit,btn.dataset.id||'');
+      },{once:true}));
+      popup.querySelectorAll('button[data-switch]').forEach(btn=>btn.addEventListener('click',evt=>{
+        evt.preventDefault();evt.stopPropagation();
+        const [id,end]=btn.dataset.switch.split(':');
+        const line=data.lines.find(l=>l.id===id);
+        if(!line||station(line[end])?.kind==='tap')return;
+        overrides[id+':'+end]=!actualOpen(line,end);
+        refresh();showMsg('QF-'+end.toUpperCase()+' faqat VIRTUAL sinovda almashtirildi. Haqiqiy tarmoq o‘zgarmadi.','info');
       },{once:true}));
     });
     baseMapLayer=makeBaseMap(map);
@@ -539,11 +593,16 @@
     data.lines.forEach(l=>{
       const coords=geometryFor(l).map(x=>[x.lat,x.lng]);
       if(coords.length<2||coords.some(p=>!Number.isFinite(p[0])||!Number.isFinite(p[1])))return;
-      const on=accessibleEdge(l) && result.energized[l.a] && result.energized[l.b];
-      const poly=L.polyline(coords,{color:on?(COLORS[l.voltage]||'#999'):'#9ba6b5',weight:l.voltage>=110?5:4,opacity:on?0.92:0.62,dashArray:on?null:'7 9'}).addTo(mapLayer);
-      poly.bindPopup(`<strong>${esc(l.name)}</strong><div>${esc(l.voltage)} kV</div><div>Simulyatsiyada: ${on?'Ta’minot yo‘li mavjud':'Ulangan manba yo‘q yoki o‘chirgich ochiq'}</div><button type="button" class="dg-popup-edit" data-edit="line" data-id="${esc(l.id)}">✎ Liniyani tahrirlash</button>`);
-      poly.bindTooltip(esc(l.name),{permanent:true,direction:'center',className:'dg-line-label'});
+      const st=lineStateInfo(l,result),on=st.active;
+      // Voltage is ALWAYS expressed by hue. State is expressed by solid/dashed,
+      // opacity and QF markers, so an isolated 110kV route does not look like 35kV.
+      const voltageColor=COLORS[l.voltage]||'#7889a9';
+      const poly=L.polyline(coords,{color:voltageColor,weight:l.voltage>=110?6:5,opacity:on?.96:.57,dashArray:on?null:'9 9',lineCap:'round'}).addTo(mapLayer);
+      poly.bindPopup(mapLinePopup(l,result));
+      poly.bindTooltip(`${esc(l.name)} · ${num(l.voltage)} kV`,{permanent:true,direction:'center',className:'dg-line-label dg-line-'+num(l.voltage)});
       coords.forEach(p=>bounds.push(p));
+      mapQfMarker(l,'a',coords,mapLayer,result);
+      mapQfMarker(l,'b',coords,mapLayer,result);
       // Moving light dots trace a modeled *supply path*, NEVER measured MW flow.
       // Reverse geographic coordinates when the model reaches this edge from B.
       const direction=on&&result.sourceCount[l.a]===1&&result.sourceCount[l.b]===1?result.direction[l.id]:0;
@@ -584,12 +643,57 @@
         .bindPopup(`<strong>${esc(c.name)}</strong><br>${c.kind==='mahalla'?'Mahalla':'Tashkilot'}<br>${esc(tp(c.tpId)?.name||'TP biriktirilmagan')}<br><button type="button" class="dg-popup-edit" data-edit="consumer" data-id="${esc(c.id)}">✎ Tahrirlash</button>`);
       bounds.push([num(c.lat),num(c.lng)]);
     });
-    if(bounds.length){try{map.fitBounds(bounds,{padding:[35,35],maxZoom:12});}catch(e){}}
+    if(bounds.length&&!savedView){try{map.fitBounds(bounds,{padding:[35,35],maxZoom:12});}catch(e){}}
+    if(typeof L.control==='function'){
+      const legend=L.control({position:'bottomleft'});
+      legend.onAdd=()=>{const e=document.createElement('div');e.className='dg-map-legend';e.innerHTML='<strong>Kuchlanish va holat (virtual)</strong><div class="dg-legend-list">'+VOLTAGES.map(v=>`<span><i style="background:${COLORS[v]}"></i>${v} kV</span>`).join('')+'</div><div class="dg-legend-status"><span>● Yashil: QF yopiq</span><span>● Qizil: QF ochiq</span><span>┄ Uzilgan chiziq: modelda ta’minot yo‘q</span></div>';return e;};
+      if(typeof legend.addTo==='function')legend.addTo(map);
+    }
     setTimeout(()=>{if(map)map.invalidateSize();},100);
   }
+  // Auto-place ONLY when stored diagram positions overlap. GIS positions and
+  // stored manual X/Y are left untouched. Uses all connections including open QFs
+  // so the layout remains stable when an operator tests a virtual switching state.
+  function diagramLayout(){
+    const nodes=data.stations,manual=new Map(nodes.map(n=>[n.id,{x:num(n.x,NaN),y:num(n.y,NaN)}]));
+    let collision=nodes.some(n=>!Number.isFinite(manual.get(n.id).x)||!Number.isFinite(manual.get(n.id).y));
+    for(let i=0;i<nodes.length&&!collision;i++)for(let j=0;j<i;j++){
+      const a=manual.get(nodes[i].id),b=manual.get(nodes[j].id);
+      const minX=(nodes[i].kind==='tap'||nodes[j].kind==='tap')?105:177;
+      if(Math.abs(a.x-b.x)<minX&&Math.abs(a.y-b.y)<79){collision=true;break;}
+    }
+    if(!collision)return {positions:manual,width:940,height:455,automatic:false};
+    const byId=new Map(nodes.map(n=>[n.id,n]));
+    const graph=new Map(nodes.map(n=>[n.id,[]]));
+    for(const l of data.lines)if(byId.has(l.a)&&byId.has(l.b)){graph.get(l.a).push(l.b);graph.get(l.b).push(l.a);}
+    const seen=new Set(),groups=[];
+    for(const n of nodes){if(seen.has(n.id))continue;
+      const q=[n.id],members=[];seen.add(n.id);
+      while(q.length){const id=q.shift();members.push(id);
+        for(const peer of graph.get(id)||[])if(!seen.has(peer)){seen.add(peer);q.push(peer);}
+      }
+      groups.push(members);
+    }
+    const positions=new Map();let bottom=40,maxLevel=0;
+    if(groups.length===nodes.length && nodes.length>1){
+      const columns=Math.min(4,nodes.length);
+      nodes.forEach((n,i)=>positions.set(n.id,{x:135+(i%columns)*315,y:115+Math.floor(i/columns)*125}));
+      return {positions,width:Math.max(940,270+(columns-1)*315),height:Math.max(455,230+Math.ceil(nodes.length/columns)*125),automatic:true};
+    }
+    for(const members of groups){
+      const source=members.find(id=>byId.get(id).kind==='source')||members[0];
+      const distances={[source]:0},q=[source];
+      while(q.length){const id=q.shift();for(const peer of graph.get(id)||[])if(distances[peer]==null){distances[peer]=distances[id]+1;q.push(peer);}}
+      const levels=new Map();for(const id of members){const depth=distances[id]||0;maxLevel=Math.max(maxLevel,depth);if(!levels.has(depth))levels.set(depth,[]);levels.get(depth).push(id);}
+      const height=Math.max(190,Math.max(...Array.from(levels.values(),a=>a.length))*118+70);
+      for(const [depth,ids] of levels)ids.forEach((id,i)=>positions.set(id,{x:135+depth*315,y:bottom+height/2+(i-(ids.length-1)/2)*112}));
+      bottom+=height+35;
+    }
+    return {positions,width:Math.max(940,270+maxLevel*315),height:Math.max(455,bottom+25),automatic:true};
+  }
   function renderDiagram(result,technical){
-    const vwidth=940,vheight=455;
-    const sx=n=>clamp(num(n.x,480),45,895),sy=n=>clamp(num(n.y,170),55,385);
+    const layout=diagramLayout(),vwidth=layout.width,vheight=layout.height;
+    const sx=n=>layout.positions.get(n.id)?.x??480,sy=n=>layout.positions.get(n.id)?.y??170;
     const lines=data.lines.map(l=>{
       const a=station(l.a),b=station(l.b);if(!a||!b)return '';
       const x1=sx(a),y1=sy(a),x2=sx(b),y2=sy(b), color=COLORS[l.voltage]||'#788bb0';
@@ -597,7 +701,8 @@
       const parallel=result.sourceCount[l.a]>1;
       const dir=active&&!parallel?result.direction[l.id]:0;
       const path=`M ${x1} ${y1} L ${x2} ${y2}`;
-      const labelX=(x1+x2)/2,labelY=(y1+y2)/2-12;
+      const labelX=(x1+x2)/2,labelY=(y1+y2)/2-48;
+      const shortName=l.name.length>19?l.name.slice(0,18)+'…':l.name;
       const bulbs=dir?Array.from({length:3},(_,i)=>{
         const start=dir===1?0:1,end=dir===1?1:0;
         const a0=(start+(end-start)*(i/3)),a1=end;
@@ -605,12 +710,12 @@
         return `<circle class="dg-flow-light" r="5" cx="${fromX}" cy="${fromY}" fill="#b4ffdf"><animate attributeName="cx" values="${fromX};${toX}" begin="${(i*.43).toFixed(2)}s" dur="1.4s" repeatCount="indefinite"/><animate attributeName="cy" values="${fromY};${toY}" begin="${(i*.43).toFixed(2)}s" dur="1.4s" repeatCount="indefinite"/></circle>`;
       }).join(''):'';
       function breaker(end,n,x,y){if(n?.kind==='tap')return '';
-        const opened=actualOpen(l,end),tx=end==='a'?0.15:0.85,px=x1+(x2-x1)*tx,py=y1+(y2-y1)*tx;
+        const opened=actualOpen(l,end),step=clamp(96/Math.max(1,Math.hypot(x2-x1,y2-y1)),.18,.43),tx=end==='a'?step:1-step,px=x1+(x2-x1)*tx,py=y1+(y2-y1)*tx;
         return `<g class="dg-breaker ${opened?'open':'closed'}"><rect x="${px-8}" y="${py-8}" width="16" height="16" rx="2" fill="${opened?'#fff':'#20b978'}" stroke="${opened?'#fa6675':'#067957'}" stroke-width="2.5"/>${technical?`<text x="${px}" y="${py-14}" text-anchor="middle" font-size="12" fill="currentColor">QF ${opened?'ochiq':'yopiq'}</text>`:''}</g>`;
       }
-      const label=technical?`<g><rect x="${labelX-65}" y="${labelY-16}" width="130" height="22" rx="6" fill="#e9f4ff" stroke="#bfd4e9"/><text x="${labelX}" y="${labelY-1}" text-anchor="middle" font-size="11" fill="#123f6c">${esc(l.name)} · ${num(l.voltage)} kV</text></g>`:
-        `<text x="${labelX}" y="${labelY}" text-anchor="middle" font-size="11" font-weight="700" fill="currentColor">${esc(l.name)}</text>`;
-      return `<g><path d="${path}" stroke="${active?color:'#adb8c7'}" stroke-width="${l.voltage>=110?6:5}" stroke-linecap="round" fill="none" ${active?'':'stroke-dasharray="8 7"'}/>${bulbs}${label}${breaker('a',a)}${breaker('b',b)}</g>`;
+      const label=technical?`<g><rect x="${labelX-65}" y="${labelY-16}" width="130" height="22" rx="6" fill="#e9f4ff" stroke="#bfd4e9"/><text x="${labelX}" y="${labelY-1}" text-anchor="middle" font-size="11" fill="#123f6c">${esc(shortName)} · ${num(l.voltage)} kV</text></g>`:
+        `<text x="${labelX}" y="${labelY}" text-anchor="middle" font-size="11" font-weight="700" fill="currentColor">${esc(shortName)}</text>`;
+      return `<g><path d="${path}" stroke="${color}" stroke-opacity="${active?'1':'0.47'}" stroke-width="${l.voltage>=110?6:5}" stroke-linecap="round" fill="none" ${active?'':'stroke-dasharray="8 7"'}/>${bulbs}${label}${breaker('a',a)}${breaker('b',b)}</g>`;
     }).join('');
     const nodes=data.stations.map(n=>{
       const x=sx(n),y=sy(n),on=result.energized[n.id], amb=result.sourceCount[n.id]>1;
@@ -618,7 +723,7 @@
       const title=esc(n.name.length>23?n.name.slice(0,22)+'…':n.name);
       return `<g><rect x="${x-83}" y="${y-31}" width="166" height="66" rx="11" fill="${n.kind==='source'?'#1452a0':'#133c6a'}" stroke="${amb?'#f6b34f':on?'#2cd6a8':'#839ab2'}" stroke-width="${on?3:2}"/><text x="${x}" y="${y-5}" fill="#fff" font-size="14" text-anchor="middle" font-weight="700">${title}</text><text x="${x}" y="${y+15}" fill="#beddfa" font-size="12" text-anchor="middle">${esc(arr(n.volts).join('/'))} kV${n.kind==='source'?' · MANBA':''}</text>${technical?`<text x="${x}" y="${y+52}" fill="currentColor" text-anchor="middle" font-size="11">${data.feeders.filter(f=>f.psId===n.id).length} fider</text>`:''}</g>`;
     }).join('');
-    return `<div class="dg-diagram-wrap"><svg class="dg-network-svg" viewBox="0 0 ${vwidth} ${vheight}" role="img" aria-label="Podstansiyalar, liniyalar va o‘chirgichlar sxemasi"><defs><filter id="dg-glow"><feGaussianBlur stdDeviation="2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><g>${lines}</g><g>${nodes}</g></svg><div class="dg-diagram-caption">Chiroqchalar: faqat bir manbali ta’minot yo‘li. Kulrang chiziq: o‘chirilgan yoki holati aniqlanmagan. Sxema koordinatalari qo‘lda tahrirlanadi.</div></div>`;
+    return `<div class="dg-diagram-wrap"><svg class="dg-network-svg" style="min-width:${vwidth}px;min-height:${Math.min(vheight,850)}px" viewBox="0 0 ${vwidth} ${vheight}" role="img" aria-label="Podstansiyalar, liniyalar va o‘chirgichlar sxemasi"><defs><filter id="dg-glow"><feGaussianBlur stdDeviation="2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><g>${lines}</g><g>${nodes}</g></svg><div class="dg-diagram-caption">Chiroqchalar: faqat bir manbali ta’minot yo‘li. Uzuq rangli chiziq: virtual QF ochiq yoki modelda ta’minot yo‘q. ${layout.automatic?'Ustma-ust joylashgan PSlar ekranda avtomatik ajratildi; saqlangan X/Y va GPS o‘zgarmadi.':'Sxema X/Y joylashuvlari saqlangan.'}</div></div>`;
   }
   function renderImpact(){
     const r=analyze();const impactedPS=data.stations.filter(x=>x.kind==='ps'&&!r.energized[x.id]);
@@ -792,6 +897,7 @@
       html+=select('a','Birinchi ulanish nuqtasi',options(data.stations,rec.a));
       html+=select('b','Ikkinchi ulanish nuqtasi',options(data.stations,rec.b));
       html+='<div class="dg-form-tip">PSlar avtomatik ulanmaydi. Har ikkala nuqtada ham shu kuchlanish darajasi mavjud bo‘lishi shart. Liniyani yaratish xavfsiz elektr ulanishini tasdiqlamaydi.</div>';
+      if(id){const len=lineLengthInfo(rec);html+=`<div class="dg-length-summary">📏 Xaritadan hisoblangan uzunlik: <b>${esc(len.label)}</b><small>${esc(len.desc||'Dastlabki to‘g‘ri yo‘l. Tayanchlar qo‘shilganda qayta hisoblanadi.')}. Simning haqiqiy uzunligi emas.</small></div>`;}
       html+=`<div class="dg-two">${select('openA','A tomondagi QF (model)',`<option value="false" ${!rec.openA?'selected':''}>Yopiq</option><option value="true" ${rec.openA?'selected':''}>Ochiq</option>`)}${select('openB','B tomondagi QF (model)',`<option value="false" ${!rec.openB?'selected':''}>Yopiq</option><option value="true" ${rec.openB?'selected':''}>Ochiq</option>`)}</div>`;
     } else if(type==='tap'){
       html+=select('lineId','Otpayka chiqadigan liniya uchastkasi',options(data.lines));
@@ -963,6 +1069,6 @@
     document.addEventListener('hetk-auth-cleared',()=>authChanged(null));
     if(window.HETKAuth?.currentUser)authChanged(window.HETKAuth.currentUser);
   }
-  window.HETKDispatchGrid = {open:()=>open(),analyzeDraft:()=>data?analyze():null,version:'64-local-draft'};
+  window.HETKDispatchGrid = {open:()=>open(),analyzeDraft:()=>data?analyze():null,version:'65-local-draft'};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
