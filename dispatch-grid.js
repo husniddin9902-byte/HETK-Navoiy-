@@ -1,4 +1,4 @@
-/* HETK-Navoiy — Dispatch Grid prototype v67
+/* HETK-Navoiy — Dispatch Grid prototype v69
  * SIMULATION ONLY: No SCADA control, no live switching, no network writes.
  * This is a local draft in this browser, not an operational dispatch system.
  */
@@ -255,11 +255,11 @@
     try {
       const nodes = new Map(d.stations.map(x=>[x.id,x]));
       const links = new Map(d.stations.map(x=>[x.id,[]]));
-      const malformed=[];
+      const malformed=[],malformedIds=[];
       for(const l of d.lines){
         const a=nodes.get(l.a), b=nodes.get(l.b);
         if(!a || !b || !arr(a.volts).includes(num(l.voltage)) || !arr(b.volts).includes(num(l.voltage))){
-          malformed.push(l.name || l.id); continue;
+          malformed.push(l.name || l.id); malformedIds.push(l.id); continue;
         }
         if(accessibleEdge(l)){
           links.get(l.a).push({id:l.b,line:l});links.get(l.b).push({id:l.a,line:l});
@@ -295,7 +295,7 @@
         else { consumerState[c.id]=tpState[t.id]?'supplied':'affected'; if(!tpState[t.id])affected.push(c); }
       }
       const affectedTps=d.tps.filter(x=>tpState[x.id]===false && d.feeders.some(f=>f.id===x.feederId));
-      return {nodes,components,links,byNode,energized,sourceCount,dist,direction,malformed,feederState,tpState,consumerState,affected,unknown,affectedTps,affectedKva:affectedTps.reduce((n,t)=>n+Math.max(0,num(t.kva)),0),parallel:components.filter(x=>x.sources.length>1),islands:components.filter(x=>x.sources.length===0)};
+      return {nodes,components,links,byNode,energized,sourceCount,dist,direction,malformed,malformedIds,feederState,tpState,consumerState,affected,unknown,affectedTps,affectedKva:affectedTps.reduce((n,t)=>n+Math.max(0,num(t.kva)),0),parallel:components.filter(x=>x.sources.length>1),islands:components.filter(x=>x.sources.length===0)};
     } finally {overrides=old;}
   }
 
@@ -325,7 +325,7 @@
   function lineStateInfo(line,result){
     if(isGroundMarked(line))return {state:'Yerga ulagich qayd etilgan (virtual)',active:false,reason:'Virtual yerga ulagich belgisi bor. QF holatini va haqiqiy kuchlanishni mustaqil tekshirish shart.'};
     if(actualOpen(line,'a')||actualOpen(line,'b'))return {state:'QF ochiq (virtual)',active:false,reason:'Bir yoki ikkala uchidagi QF ochiq'};
-    if(result.malformed.includes(line.name||line.id))return {state:'Ulanish mos emas',active:false,reason:'Kuchlanish yoki ulanish nuqtalari mos emas'};
+    if(result.malformedIds.includes(line.id))return {state:'Ulanish mos emas',active:false,reason:'Kuchlanish yoki ulanish nuqtalari mos emas'};
     if(!result.energized[line.a]||!result.energized[line.b])return {state:'Manbaga ulanmagan',active:false,reason:'Yopiq QF orqali faol manbaga yo‘l yo‘q'};
     if(result.sourceCount[line.a]>1)return {state:'Ko‘p manba — yo‘nalish noaniq',active:true,reason:'Bir konturda bir nechta manba bor; MW oqimi aniqlanmagan'};
     if(!result.direction[line.id])return {state:'Ta’minot bor, yo‘nalish noaniq',active:true,reason:'Halqa yoki teng masofali yo‘llarda yo‘nalish tasdiqlanmagan'};
@@ -637,7 +637,7 @@
           <aside class="dg-impact" id="dg-impact"></aside>
           <aside class="dg-ps-panel" id="dg-ps-panel" hidden></aside>
         </div>
-        <footer class="dg-footer"><span>⚠ Ta’minot va uzilish natijalari kiritilgan modelga asoslangan taxmin. Operativ qaror yoki xavfsiz ulash uchun ishlatilmaydi.</span><span>v67 · Lokal prototip</span></footer>
+        <footer class="dg-footer"><span>⚠ Ta’minot va uzilish natijalari kiritilgan modelga asoslangan taxmin. Operativ qaror yoki xavfsiz ulash uchun ishlatilmaydi.</span><span>v69 · Lokal prototip</span></footer>
       </div>
       <div class="dg-modal" id="dg-editor" hidden><div class="dg-editor-card" role="dialog" aria-modal="true" aria-label="Obyekt tahrirlash"><div class="dg-editor-head"><strong id="dg-editor-title">Tahrirlash</strong><button type="button" data-action="cancel-editor" aria-label="Yopish">✕</button></div><form id="dg-editor-form"></form></div></div>
       <input type="file" id="dg-import-file" accept=".json,application/json" hidden>
@@ -741,9 +741,10 @@
     if(a==='close-impact'){showImpact=false;updateSidebar();}
     if(a==='reset-switches'){overrides={};refresh();}
     if(a==='flow-help'){
-      const r=analyze(),moving=data.lines.filter(l=>accessibleEdge(l)&&r.sourceCount[l.a]===1&&r.sourceCount[l.b]===1&&r.direction[l.id]).length;
-      const explanation=!data.stations.some(x=>x.kind==='source'&&!x.sourceOff)?'Manba PS yo‘q. ':'';
-      showMsg(`${moving} ta yo‘nalishi aniq virtual liniya uchastkasi. ${explanation}Agar yurmasa: PS turini, kuchlanish mosligini, QF-A/B ochiq-yopiqligini va ikkinchi manbani tekshiring. Halqa yoki ikki manbada yo‘nalish noaniq bo‘lishi mumkin.`, 'info');
+      const r=analyze();
+      const stats=flowDiagnostics(r);
+      const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches===true;
+      showMsg(`Harakat: ${stats.moving}/${data.lines.length} ta uchastka. ${stats.reasons.length?stats.reasons.slice(0,3).join('; '):'Barcha mavjud yo‘llarning yo‘nalishi aniq.'} ${reduced?'Qurilmada harakat effektlari cheklangan; tizim animatsiyasi shuning uchun o‘chiq bo‘lishi mumkin.':''} Tayanch GPSi animatsiyani o‘chirmaydi. Ikki manbali yoki halqasimon noaniq yo‘nalishlar haqiqiy MW oqimi deb ko‘rsatilmaydi.`, 'info');
     }
     if(a==='sample' && confirm('NAMUNA ma’lumotlarini yuklaysizmi? Joriy lokal qoralamangiz almashtiriladi. Avval JSON eksport qiling.')) {data=sample();overrides={};chosen=null;activePsId=null;saveLocal();refresh();showMsg('Faqat ko‘rgazmali ma’lumotlar yuklandi.','success');}
     if(a==='clear' && confirm('DIQQAT: Barcha namunalar va ushbu brauzer qoralamasidagi kiritilgan obyektlar o‘chadi. Zarur bo‘lsa avval «↓ JSON» eksport qiling. Tozalaysizmi?')) {data=empty();overrides={};chosen=null;activePsId=null;saveLocal();refresh();showMsg('Namuna va lokal qoralama tozalandi.','success');}
@@ -778,6 +779,15 @@
     }).join('') : `<div class="dg-empty-list">Hozircha ma’lumot yo‘q. Yuqoridagi + tugmasi bilan qo‘shing yoki «Namuna»ni oching.</div>`;
   }
 
+  function flowDiagnostics(result){
+    let moving=0;const reasons=[];
+    for(const line of data.lines){
+      const info=lineStateInfo(line,result);
+      if(info.active && result.sourceCount[line.a]===1 && result.sourceCount[line.b]===1 && result.direction[line.id])moving++;
+      else if(reasons.length<5)reasons.push(`${line.name||line.id}: ${info.state}`);
+    }
+    return {moving,reasons};
+  }
   function renderMain(){
     const result=analyze();
     const countPS=data.stations.filter(x=>x.kind!=='tap').length;
@@ -789,15 +799,21 @@
     if(view==='simple') title='Sodda dispetcherlik sxemasi';
     if(view==='technical') title='Texnik bir chiziqli ko‘rinish (soddalashtirilgan)';
     if(view==='combined') title='GIS xarita — PS, liniya, otpayka va tayanchlar';
-    const moving=data.lines.filter(l=>accessibleEdge(l)&&result.sourceCount[l.a]===1&&result.sourceCount[l.b]===1&&result.direction[l.id]).length;
-    el('dg-view-title').innerHTML=`<div><strong>${title}</strong><small>Harakatli nuqtalar: ${moving} ta uchastka · Faqat virtual ta’minot yo‘li, haqiqiy MW emas.</small></div>${view==='combined'?
+    const flow=flowDiagnostics(result);
+    el('dg-view-title').innerHTML=`<div><strong>${title}</strong><small>Harakatli nuqtalar: ${flow.moving}/${data.lines.length} ta uchastka · ${flow.moving?'Uzluksiz animatsiya yoqilgan.':'Yo‘nalishni tekshirish uchun «ⓘ Chiroqchalar»ni bosing.'} Faqat virtual ta’minot yo‘li, haqiqiy MW emas.</small></div>${view==='combined'?
       `<div class="dg-layer-tools">${mapStyleButtons()}<button type="button" data-action="flow-help">ⓘ Chiroqchalar</button><button type="button" data-action="towers">${mapTowers?'✓':'○'} Tayanch raqamlari</button><button type="button" data-action="map-tps">${mapTps?'✓':'○'} TP/KTP</button><button type="button" data-action="map-consumers">${mapConsumers?'✓':'○'} Mahalla / tashkilot</button></div>`:''}`;
     const visual=el('dg-visual-content');
     if(view==='combined'){
-      visual.innerHTML='<div class="dg-combined"><div id="dg-map" class="dg-map"></div></div>';
+      // Keep the Leaflet instance and its viewport alive across edits / toggles.
+      // Only the network overlay is redrawn; recreating the whole map would
+      // repeatedly tear down the animated supply paths and reset zoom.
+      if(!visual.querySelector('#dg-map')){
+        if(map){map.remove();map=null;mapLayer=null;baseMapLayer=null;callouts=null;}
+        visual.innerHTML='<div class="dg-combined"><div id="dg-map" class="dg-map"></div></div>';
+      }
       renderMap(result);
     } else {
-      if(map){map.remove();map=null;mapLayer=null;baseMapLayer=null;}
+      if(map){map.remove();map=null;mapLayer=null;baseMapLayer=null;callouts=null;}
       visual.innerHTML=renderDiagram(result,view==='technical');
     }
   }
@@ -810,11 +826,10 @@
   }
   function renderMap(result){
     if(!window.L || !el('dg-map')){el('dg-map').textContent='Xarita kutubxonasi yuklanmagan.';return;}
-    let savedView=null;
-    if(map){try{savedView={center:map.getCenter(),zoom:map.getZoom()};}catch(e){}map.remove();map=null;baseMapLayer=null;callouts=null;}
-    map=L.map('dg-map',{zoomControl:true,attributionControl:true}).setView(savedView?.center||[40.11,65.51],savedView?.zoom||10);
-    // Leaflet popup content stops click bubbling. Bind its edit button directly.
-    if(map.on)map.on('popupopen',e=>{
+    const mapIsNew=!map;
+    if(mapIsNew)map=L.map('dg-map',{zoomControl:true,attributionControl:true}).setView([40.11,65.51],10);
+    // Leaflet popup controls are registered only once per map instance.
+    if(mapIsNew && map.on)map.on('popupopen',e=>{
       const popup=e.popup?.getElement?.();if(!popup)return;
       popup.querySelectorAll('button[data-open-ps]').forEach(btn=>btn.addEventListener('click',evt=>{evt.preventDefault();evt.stopPropagation();openPsPanel(btn.dataset.openPs);map?.closePopup?.();},{once:true}));
       popup.querySelectorAll('button[data-edit]').forEach(btn=>btn.addEventListener('click',evt=>{
@@ -829,8 +844,10 @@
         refresh();showMsg('QF-'+end.toUpperCase()+' faqat VIRTUAL sinovda almashtirildi. Haqiqiy tarmoq o‘zgarmadi.','info');
       },{once:true}));
     });
-    baseMapLayer=makeBaseMap(map);
-    mapLayer=L.layerGroup().addTo(map);const bounds=[];
+    if(mapIsNew)baseMapLayer=makeBaseMap(map);
+    if(mapLayer && !mapIsNew)mapLayer.clearLayers();
+    else mapLayer=L.layerGroup().addTo(map);
+    const bounds=[];
     data.lines.forEach(l=>{
       const coords=geometryFor(l).map(x=>[x.lat,x.lng]);
       if(coords.length<2||coords.some(p=>!Number.isFinite(p[0])||!Number.isFinite(p[1])))return;
@@ -884,10 +901,11 @@
         .bindPopup(`<strong>${esc(c.name)}</strong><br>${c.kind==='mahalla'?'Mahalla':'Tashkilot'}<br>${esc(tp(c.tpId)?.name||'TP biriktirilmagan')}<br><button type="button" class="dg-popup-edit" data-edit="consumer" data-id="${esc(c.id)}">✎ Tahrirlash</button>`);
       bounds.push([num(c.lat),num(c.lng)]);
     });
-    callouts=L.layerGroup().addTo(map);
-    map.on('moveend zoomend resize',drawMapCallouts);
-    if(bounds.length&&!savedView){try{map.fitBounds(bounds,{padding:[35,35],maxZoom:12});}catch(e){}}
-    if(typeof L.control==='function'){
+    if(!callouts || mapIsNew)callouts=L.layerGroup().addTo(map);
+    else callouts.clearLayers();
+    if(mapIsNew)map.on('moveend zoomend resize',drawMapCallouts);
+    if(bounds.length && mapIsNew){try{map.fitBounds(bounds,{padding:[35,35],maxZoom:12});}catch(e){}}
+    if(mapIsNew && typeof L.control==='function'){
       const legend=L.control({position:'bottomleft'});
       legend.onAdd=()=>{const e=document.createElement('div');e.className='dg-map-legend';e.innerHTML='<strong>Kuchlanish va holat (virtual)</strong><div class="dg-legend-list">'+VOLTAGES.map(v=>`<span><i style="background:${COLORS[v]}"></i>${v} kV</span>`).join('')+'</div><div class="dg-legend-status"><span>QFlarni PS nuqtasini bosib ko‘ring</span><span>┄ Uzilgan chiziq: modelda ta’minot yo‘q</span></div>';return e;};
       if(typeof legend.addTo==='function')legend.addTo(map);
@@ -1234,9 +1252,17 @@
       const splitAt=onRoute?.segment??Math.round(supports.length*ratio);
       const first={...origin,id:uid(),b:j.id,openB:false,towers:normalized.slice(0,splitAt)};
       const second={...origin,id:uid(),a:j.id,openA:false,towers:normalized.slice(splitAt)};
-      const branch={id:uid(),name:'Otpayka '+target.name,voltage:num(origin.voltage),a:j.id,b:target.id,openA:false,openB:false,towers:[]};
+      // Never silently close an unexpected loop or parallel two sources.
+      // Joining a PS already energized by another component, or already in
+      // the originating component, can make the entire modeled flow ambiguous.
+      // Insert the new branch with its PS-side virtual QF OPEN in that case.
+      const before=analyze();
+      const sameComponent=before.byNode[origin.a]!=null && before.byNode[origin.a]===before.byNode[target.id];
+      const anotherSupply=before.energized[target.id]===true && !sameComponent;
+      const safeOpen=sameComponent||anotherSupply||target.kind==='source';
+      const branch={id:uid(),name:'Otpayka '+target.name,voltage:num(origin.voltage),a:j.id,b:target.id,openA:false,openB:safeOpen,towers:[]};
       data.stations.push(j);data.lines.splice(index,1,first,second,branch);
-      overrides={};saveLocal();closeEditor();refresh();showMsg('Otpayka, ikki magistral uchastka va PSga tarmoq yaratildi.','success');return;
+      overrides={};saveLocal();closeEditor();refresh();showMsg(safeOpen?'Otpayka yaratildi. PS boshqa yo‘ldan ham bog‘langan: kutilmagan halqa / ikki manba hosil bo‘lmasligi uchun yangi tarmoqning PS tomonidagi VIRTUAL QF OCHIQ qoldi. PS kartasidan tekshiring.':'Otpayka yaratildi. Avvalgi ta’minot yo‘li saqlandi, yangi tarmoq ham yopiq virtual QF bilan ulandi.','info');return;
     } else if(type==='tower'){
       const line=data.lines.find(l=>l.id===v('lineId'));if(!line)return showMsg('Liniyani tanlang.','error');
       const coordA=v('lat'),coordB=v('lng');
@@ -1314,6 +1340,6 @@
     document.addEventListener('hetk-auth-cleared',()=>authChanged(null));
     if(window.HETKAuth?.currentUser)authChanged(window.HETKAuth.currentUser);
   }
-  window.HETKDispatchGrid = {open:()=>open(),analyzeDraft:()=>data?analyze():null,version:'68-local-draft'};
+  window.HETKDispatchGrid = {open:()=>open(),analyzeDraft:()=>data?analyze():null,version:'69-local-draft'};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
