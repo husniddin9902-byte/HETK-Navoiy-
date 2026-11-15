@@ -381,3 +381,14 @@ body.dg-modal-open{overflow:hidden!important}
 #hetk-grid .dg-map-callout.dg-callout-below{bottom:auto;top:19px;transform:translateY(var(--dg-shift,0px))}
 #hetk-grid .dg-map-callout.dg-callout-below:before{bottom:auto;top:-10px;transform:rotate(44deg)}
 #hetk-grid .dg-map-callout.dg-callout-below.dg-callout-left:before{transform:rotate(-44deg)}
+
+
+/* v68 — zoom-aware declutter: line labels only when ≥~3 cm visible; nearby PS
+   markers collapse into one caption; place captions in vacant map space. */
+#hetk-grid .dg-smart-callout-icon{width:1px!important;height:1px!important;border:0!important;background:transparent!important;overflow:visible!important}
+#hetk-grid .dg-smart-callout{position:relative;left:0;top:0;width:0;height:0;overflow:visible;pointer-events:none}
+#hetk-grid .dg-smart-leader{position:absolute;left:0;top:0;height:2px;background:var(--dg-accent);transform-origin:0 50%;opacity:.9;pointer-events:none;filter:drop-shadow(0 1px 1px #fff)}
+#hetk-grid .dg-smart-tag{position:absolute;display:block;max-width:none;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;box-sizing:border-box;padding:5px 8px;border:1px solid #b8d1ea;border-left:4px solid var(--dg-accent);border-radius:7px;background:#f8fbfffa;color:#16466f;font-size:11px;font-weight:800;line-height:17px;box-shadow:0 3px 10px #123a5766;pointer-events:auto;cursor:pointer}
+#hetk-grid .dg-smart-ps{color:#fff;background:#0e467df5;border-color:#356693;border-left-color:var(--dg-accent)}
+#hetk-grid .dg-smart-tag:hover,#hetk-grid .dg-smart-tag:focus{filter:brightness(1.08);outline:2px solid #d3e9fa;z-index:2}
+@media(max-width:560px){#hetk-grid .dg-smart-tag{font-size:10px;line-height:16px;padding:5px 7px}}
