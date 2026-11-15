@@ -292,3 +292,28 @@ body.dg-modal-open{overflow:hidden!important}
 @keyframes dg-gis-supply-dots{from{stroke-dashoffset:0}to{stroke-dashoffset:-30}}
 @media(prefers-reduced-motion:reduce){#hetk-grid .leaflet-overlay-pane path.dg-gis-flow-path{animation:none;opacity:.35}}
 @media(max-width:520px){#hetk-grid .dg-folder-tree{max-height:235px}#hetk-grid .dg-folder-node{padding-left:calc(var(--folder-depth,0) * 10px)}}
+
+/* v65 — readable GIS electrical state, breaker markers and metric overlay. */
+#hetk-grid .dg-line-popup{max-width:310px;display:flex;flex-direction:column;gap:5px;font-size:12px;color:#173f64}
+#hetk-grid .dg-line-popup strong{font-size:13px}
+#hetk-grid .dg-line-popup small{font-size:10px;color:#60788e;line-height:1.45}
+#hetk-grid .dg-popup-status{background:#e8f4ff;border-left:3px solid #348be1;border-radius:4px;padding:5px 7px;font-weight:800}
+#hetk-grid .dg-popup-switches{display:flex;gap:5px;flex-wrap:wrap;margin:4px 0}
+#hetk-grid .dg-popup-switch{border:1px solid #a6cfe9;background:#e2f7ed;border-radius:7px;padding:8px;color:#126a52;font-size:11px;font-weight:800}
+#hetk-grid .dg-popup-switch.open{color:#b62f41;border-color:#e8b5c0;background:#fff0f3}
+#hetk-grid .dg-map-legend{background:#fffffff2;backdrop-filter:blur(3px);padding:9px 10px;border:1px solid #c6dcea;border-radius:9px;box-shadow:0 2px 8px #1b345233;max-width:280px;color:#1c4b73;font-size:10px;line-height:1.5;pointer-events:auto}
+#hetk-grid .dg-map-legend strong{font-size:11px}
+#hetk-grid .dg-legend-list{display:flex;gap:5px 10px;flex-wrap:wrap;margin-top:5px}
+#hetk-grid .dg-legend-list span{display:flex;align-items:center;gap:3px;white-space:nowrap}
+#hetk-grid .dg-legend-list i{display:inline-block;width:16px;height:4px;border-radius:5px}
+#hetk-grid .dg-legend-status{display:flex;flex-direction:column;margin-top:5px;border-top:1px solid #dae9f2;padding-top:4px;gap:1px}
+#hetk-grid .dg-line-label.dg-line-220{border-left:4px solid #e74655}
+#hetk-grid .dg-line-label.dg-line-110{border-left:4px solid #3186f6}
+#hetk-grid .dg-line-label.dg-line-35{border-left:4px solid #20b978}
+#hetk-grid .dg-line-label.dg-line-10{border-left:4px solid #e4a642}
+#hetk-grid .dg-line-label.dg-line-6{border-left:4px solid #ae7cf4}
+#hetk-grid .dg-length-summary{background:#eaf7fd;border:1px solid #b8dcf1;border-radius:9px;padding:9px 11px;font-size:12px;color:#174b74}
+#hetk-grid .dg-length-summary small{display:block;margin-top:4px;font-size:10px;line-height:1.5;color:#5b7e93}
+#hetk-grid .dg-diagram-wrap{overflow:auto;align-items:flex-start;justify-content:flex-start}
+#hetk-grid .dg-network-svg{flex:0 0 auto;width:100%;height:auto;max-height:none}
+@media(max-width:520px){#hetk-grid .dg-map-legend{max-width:195px;padding:6px 7px;font-size:9px}}
