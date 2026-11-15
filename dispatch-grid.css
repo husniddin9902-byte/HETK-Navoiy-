@@ -392,3 +392,13 @@ body.dg-modal-open{overflow:hidden!important}
 #hetk-grid .dg-smart-ps{color:#fff;background:#0e467df5;border-color:#356693;border-left-color:var(--dg-accent)}
 #hetk-grid .dg-smart-tag:hover,#hetk-grid .dg-smart-tag:focus{filter:brightness(1.08);outline:2px solid #d3e9fa;z-index:2}
 @media(max-width:560px){#hetk-grid .dg-smart-tag{font-size:10px;line-height:16px;padding:5px 7px}}
+
+/* v69: persistent moving-light overlay: independent of editable tower markers.
+   Leaflet map instance is retained across routine model refreshes.
+   The line only appears when a single modeled source gives an unambiguous
+   route; open/grounded/parallel paths are deliberately not animated. */
+#hetk-grid .leaflet-overlay-pane path.dg-gis-flow-path{will-change:stroke-dashoffset;animation:dg-gis-supply-dots 1.4s linear infinite}
+
+/* Keep accessibility setting: devices requesting reduced motion do not flash.
+   Operators can check the motion setting using the Chiroqchalar help button. */
+@media(prefers-reduced-motion:reduce){#hetk-grid .leaflet-overlay-pane path.dg-gis-flow-path{animation:none;opacity:.35}}
