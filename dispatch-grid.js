@@ -1,4 +1,4 @@
-/* HETK-Navoiy — Dispatch Grid prototype v66
+/* HETK-Navoiy — Dispatch Grid prototype v67
  * SIMULATION ONLY: No SCADA control, no live switching, no network writes.
  * This is a local draft in this browser, not an operational dispatch system.
  */
@@ -9,6 +9,7 @@
   const VOLTAGES = [220, 110, 35, 10, 6];
   const COLORS = { 220:'#e74655', 110:'#3186f6', 35:'#20b978', 10:'#e4a642', 6:'#ae7cf4' };
   let root, button, data, editorType = '', editorId = '', currentUser = null;
+  let activePsId = null, callouts = null;
   let view = 'combined', section = 'stations', overrides = {}, chosen = null, map = null, mapLayer = null;
   let mapTowers = false, mapTps = false, mapConsumers = false, initialized = false;
   let showObjects = false, showImpact = false, showStats = false, pickerMap = null, pickerMarker = null, pickerRoute = null, pickerSelection = null;
@@ -184,7 +185,9 @@
   const tp = id => data.tps.find(x=>x.id===id);
   const savedOpen = (l, end) => end==='a' ? l.openA===true : l.openB===true;
   const actualOpen = (l,end) => overrides[l.id+':'+end] == null ? savedOpen(l,end) : overrides[l.id+':'+end];
-  const accessibleEdge = l => !actualOpen(l,'a') && !actualOpen(l,'b');
+  const earthState = (l,end) => ['on','off'].includes(l['earth'+end.toUpperCase()]) ? l['earth'+end.toUpperCase()] : 'unknown';
+  const isGroundMarked = l => earthState(l,'a')==='on' || earthState(l,'b')==='on';
+  const accessibleEdge = l => !actualOpen(l,'a') && !actualOpen(l,'b') && !isGroundMarked(l);
   const canEdit = () => isAllowed(currentUser);
   const showMsg = (message, kind='info') => {
     const box = el('hetk-grid-message'); if(!box) return;
@@ -258,7 +261,7 @@
         if(!a || !b || !arr(a.volts).includes(num(l.voltage)) || !arr(b.volts).includes(num(l.voltage))){
           malformed.push(l.name || l.id); continue;
         }
-        if(!actualOpen(l,'a') && !actualOpen(l,'b')){
+        if(accessibleEdge(l)){
           links.get(l.a).push({id:l.b,line:l});links.get(l.b).push({id:l.a,line:l});
         }
       }
@@ -320,6 +323,7 @@
     return {meters,label:(meters>=1000?(meters/1000).toFixed(2)+' km':Math.round(meters)+' m'),quality,desc};
   }
   function lineStateInfo(line,result){
+    if(isGroundMarked(line))return {state:'Yerga ulagich qayd etilgan (virtual)',active:false,reason:'Virtual yerga ulagich belgisi bor. QF holatini va haqiqiy kuchlanishni mustaqil tekshirish shart.'};
     if(actualOpen(line,'a')||actualOpen(line,'b'))return {state:'QF ochiq (virtual)',active:false,reason:'Bir yoki ikkala uchidagi QF ochiq'};
     if(result.malformed.includes(line.name||line.id))return {state:'Ulanish mos emas',active:false,reason:'Kuchlanish yoki ulanish nuqtalari mos emas'};
     if(!result.energized[line.a]||!result.energized[line.b])return {state:'Manbaga ulanmagan',active:false,reason:'Yopiq QF orqali faol manbaga yo‘l yo‘q'};
@@ -329,18 +333,107 @@
   }
   function mapLinePopup(line,result){
     const a=station(line.a),b=station(line.b),state=lineStateInfo(line,result),len=lineLengthInfo(line);
-    const qf=(end,node)=>node&&node.kind!=='tap'?`<button type="button" class="dg-popup-switch ${actualOpen(line,end)?'open':'closed'}" data-switch="${esc(line.id+':'+end)}">QF-${end.toUpperCase()}: ${actualOpen(line,end)?'○ Ochiq':'● Yopiq'} · almashtirish</button>`:'';
-    return `<div class="dg-line-popup"><strong>${esc(line.name)}</strong><div><b style="color:${COLORS[line.voltage]||'#58799d'}">${num(line.voltage)} kV</b> · ${esc(a?.name||'?')} — ${esc(b?.name||'?')}</div><div class="dg-popup-status">${esc(state.state)}</div><div><b>Geografik uzunlik:</b> ${esc(len.label)}${len.quality==='supports'?' (tayanchlar bo‘yicha)':' (dastlabki/taxminiy)'}</div><small>${esc(state.reason)}</small><div class="dg-popup-switches">${qf('a',a)}${qf('b',b)}</div><small>Faqat virtual sxema: haqiqiy QF boshqarilmaydi va real holati tekshirilmagan.</small><button type="button" class="dg-popup-edit" data-edit="line" data-id="${esc(line.id)}">✎ Liniyani tahrirlash</button></div>`;
+    const psJump=(ps)=>ps&&ps.kind!=='tap'?`<button type="button" class="dg-popup-edit" data-open-ps="${esc(ps.id)}">⚡ ${esc(ps.name)} · PS oynasi</button>`:'';
+    return `<div class="dg-line-popup"><strong>${esc(line.name)}</strong><div><b style="color:${COLORS[line.voltage]||'#58799d'}">${num(line.voltage)} kV</b> · ${esc(a?.name||'?')} — ${esc(b?.name||'?')}</div><div class="dg-popup-status">${esc(state.state)}</div><div><b>Trassa uzunligi:</b> ${esc(len.label)}${len.quality==='supports'?' (tayanchlar bo‘yicha)':' (taxminiy)'}</div><small>${esc(state.reason)}</small><div class="dg-popup-switches">${psJump(a)}${psJump(b)}</div><small>Virtual QF va yerga ulagich holati PS oynasida ko‘rsatiladi. Bu operativ sxema emas.</small><button type="button" class="dg-popup-edit" data-edit="line" data-id="${esc(line.id)}">✎ Liniyani tahrirlash</button></div>`;
   }
-  function mapQfMarker(line,end,coords,layer,result){
-    const at=station(line[end]);if(!at||at.kind==='tap'||coords.length<2)return;
-    const first=end==='a'?coords[0]:coords[coords.length-1];
-    const other=end==='a'?coords[1]:coords[coords.length-2];
-    const position=[first[0]+(other[0]-first[0])*.10,first[1]+(other[1]-first[1])*.10];
-    const opened=actualOpen(line,end),color=opened?'#db384c':'#119a65';
-    const marker=L.circleMarker(position,{radius:7,color:'#fff',weight:2,fillColor:color,fillOpacity:1}).addTo(layer);
-    marker.bindTooltip(`QF-${end.toUpperCase()} · ${opened?'virtual ochiq':'virtual yopiq'}`,{direction:'top'});
-    marker.bindPopup(mapLinePopup(line,result));
+  const showReading = v => v==null||v===''?'—':Number(v).toLocaleString('uz-UZ',{maximumFractionDigits:3});
+  function openPsPanel(id){
+    if(station(id)?.kind==='tap'||!station(id))return;
+    activePsId=id;showObjects=false;showImpact=false;updateSidebar();renderPsPanel();
+  }
+  function renderPsPanel(){
+    const box=el('dg-ps-panel');if(!box)return;
+    const ps=station(activePsId);
+    if(!ps||ps.kind==='tap'){box.hidden=true;activePsId=null;return;}
+    const r=analyze(),attached=data.lines.filter(l=>l.a===ps.id||l.b===ps.id);
+    const feeders=data.feeders.filter(f=>f.psId===ps.id);
+    const allTps=feeders.flatMap(f=>data.tps.filter(t=>t.feederId===f.id));
+    const kva=allTps.reduce((total,t)=>total+Math.max(0,num(t.kva)),0);
+    const loads=feeders.filter(f=>f.loadKw!=null&&f.loadKw!=='');
+    const totalLoad=loads.reduce((sum,f)=>sum+num(f.loadKw),0);
+    const statusLine=(l)=>{
+      const end=l.a===ps.id?'a':'b',side=end.toUpperCase(), other=station(l[end==='a'?'b':'a']);
+      const opened=actualOpen(l,end), earth=earthState(l,end);
+      const status=earth==='on'?'Yerga ulagich qayd etilgan':opened?'QF ochiq': 'QF yopiq';
+      const alarming=(earth==='on'&&!opened);
+      return `<article class="dg-ps-line ${alarming?'dg-ps-alert':''}">
+        <div class="dg-ps-line-title"><span class="dg-ps-volt" style="--volt:${COLORS[l.voltage]||'#64748b'}">${num(l.voltage)} kV</span><div><strong>${esc(l.name)}</strong><small>Ulanish: ${esc(other?.name||'aniqlanmagan')} · ${esc(lineLengthInfo(l).label)}</small></div></div>
+        <div class="dg-ps-line-ctrl"><div class="dg-qf-state ${opened?'is-open':'is-closed'}">QF-${side}: ${opened?'○ Ochiq':'● Yopiq'}</div>
+        <button type="button" class="dg-ps-simulate" data-switch="${esc(l.id+':'+end)}">${opened?'Virtual yopish':'Virtual ochish'}</button></div>
+        <label class="dg-ps-earth">Yerga ulagich (${side} uchi) · <select data-earth-state="${esc(l.id+':'+end)}"><option value="unknown" ${earth==='unknown'?'selected':''}>Ma’lumot kiritilmagan</option><option value="off" ${earth==='off'?'selected':''}>Olingan deb qayd etilgan</option><option value="on" ${earth==='on'?'selected':''}>O‘rnatilgan deb qayd etilgan</option></select></label>
+        ${alarming?'<div class="dg-ps-warning">⚠ Virtual QF yopiq va yerga ulagich o‘rnatilgan deb qayd etilgan. Bu xavfli mos kelmaslik, haqiqiy holat tekshirilishi shart!</div>':''}
+      </article>`;
+    };
+    const feederCard=(f)=>{
+      const tps=data.tps.filter(t=>t.feederId===f.id), totalKva=tps.reduce((sum,t)=>sum+Math.max(0,num(t.kva)),0);
+      const last=f.meterAt?new Date(f.meterAt).toLocaleString('uz-UZ'):'—';
+      return `<article class="dg-ps-feeder" data-feeder-record="${esc(f.id)}">
+        <div class="dg-ps-feeder-head"><div><strong>${esc(f.name)}</strong><small>${num(f.voltage)} kV · ${tps.length} TP/KTP · ${totalKva.toLocaleString('uz-UZ')} kVA nominal</small></div><button type="button" data-edit="feeder" data-id="${esc(f.id)}">✎</button></div>
+        <div class="dg-ps-tp-names">${tps.length?tps.map(t=>`<span>${esc(t.name)} · ${showReading(t.kva)} kVA</span>`).join(''):'TP/KTP hali biriktirilmagan'}</div>
+        <div class="dg-ps-input-grid">
+        <label>Yuklama (kW)<input type="number" min="0" step="any" data-feeder-field="loadKw" value="${esc(f.loadKw??'')}" placeholder="kW"></label>
+        <label>Tok (A)<input type="number" min="0" step="any" data-feeder-field="loadAmp" value="${esc(f.loadAmp??'')}" placeholder="A"></label>
+        <label>Hisoblagich raqami<input maxlength="70" data-feeder-field="meterNumber" value="${esc(f.meterNumber??'')}" placeholder="Raqam"></label>
+        <label>Ko‘rsatkich (kWh)<input type="number" min="0" step="any" data-feeder-field="meterKwh" value="${esc(f.meterKwh??'')}" placeholder="kWh"></label>
+        </div>
+        <div class="dg-ps-feeder-bottom"><small>Oxirgi qayd: ${esc(last)}</small><button type="button" data-save-feeder="${esc(f.id)}">Saqlash</button></div>
+        ${arr(f.readings).length?`<div class="dg-ps-readings"><b>Oxirgi ko‘rsatkichlar:</b> ${arr(f.readings).slice(-3).reverse().map(x=>`<span>${esc(new Date(x.at).toLocaleDateString('uz-UZ'))}: ${showReading(x.kwh)} kWh</span>`).join('')}</div>`:''}
+      </article>`;
+    };
+    box.hidden=false;
+    box.innerHTML=`<header class="dg-ps-panel-head"><div><small>PS BOSHQARUV KARTASI · LOKAL SINOV</small><h2>${esc(ps.name)}</h2><span>${esc(arr(ps.volts).join('/'))} kV · ${ps.kind==='source'?'Manba PS':'Oddiy PS'}</span></div><button type="button" data-action="close-ps-panel" aria-label="PS oynasini yopish">✕</button></header>
+      <div class="dg-ps-panel-body"><div class="dg-ps-banner">⚠ Bu ma’lumotlar lokal qoralama. QF tugmalari haqiqiy tarmoqni boshqarmaydi; holatlar SCADA bilan tekshirilmagan.</div>
+      <div class="dg-ps-metrics"><div><b>${attached.length}</b><small>Ulangan liniya</small></div><div><b>${feeders.length}</b><small>Fider</small></div><div><b>${kva.toLocaleString('uz-UZ')}</b><small>TP/KTP kVA</small></div><div><b>${loads.length?showReading(totalLoad):'—'}</b><small>Yuklama kW*</small></div></div>
+      <div class="dg-ps-folder">📁 ${esc(ps.folder|| (ps.folderId?folderPath(ps.folderId):'Papka biriktirilmagan'))}</div>
+      <div class="dg-ps-section-head"><h3>Ulangan liniyalar va PSdagi QF</h3><small>${r.energized[ps.id]?'Modelda manbaga ulangan':'Modelda ta’minot yo‘q / aniqlanmagan'}</small></div>
+      ${attached.length?attached.map(statusLine).join(''):'<p class="dg-ps-empty">Bu PSga liniya bog‘lanmagan.</p>'}
+      <div class="dg-ps-section-head"><h3>Fiderlar, yuklama va hisoblagichlar</h3><button type="button" data-action="ps-add-feeder">+ Fider</button></div>
+      ${feeders.length?feeders.map(feederCard).join(''):'<p class="dg-ps-empty">Hali fider biriktirilmagan. «+ Fider» orqali mavjud HETK papkasini tanlang.</p>'}
+      <div class="dg-ps-note">* Yuklama va hisoblagich qiymatlari qo‘lda kiritiladi; 0 yoki bo‘sh qiymat real o‘lchov sifatida tasdiqlanmagan. kVA nominal TP quvvati, kW yuklama. Yerga ulagich haqidagi belgi operativ xavfsizlik kafolati emas.</div>
+      </div>`;
+  }
+  // Every Leaflet callout is anchored to the asset but the text is offset by a
+  // thin leader, keeping long names away from lines and PS markers. The line
+  // anchor is recalculated for the VISIBLE section on every zoom or pan.
+  function visibleLineAnchor(line){
+    if(!map)return null;
+    const geo=geometryFor(line);if(geo.length<2)return null;
+    const size=map.getSize();if(!size?.x||!size?.y)return null;
+    const margin=26, xmin=margin,xmax=size.x-margin,ymin=margin,ymax=size.y-margin;
+    let best=null;
+    for(let i=0;i<geo.length-1;i++){
+      const a=map.latLngToContainerPoint([geo[i].lat,geo[i].lng]);
+      const b=map.latLngToContainerPoint([geo[i+1].lat,geo[i+1].lng]);
+      const dx=b.x-a.x,dy=b.y-a.y;
+      let u0=0,u1=1;const clip=[[ -dx,a.x-xmin],[ dx,xmax-a.x],[-dy,a.y-ymin],[dy,ymax-a.y]];
+      let valid=true;
+      for(const [p,q] of clip){if(!p){if(q<0){valid=false;break;}}else{const t=q/p;if(p<0)u0=Math.max(u0,t);else u1=Math.min(u1,t);if(u0>u1){valid=false;break;}}}
+      if(!valid||u1<=u0)continue;
+      const cx=a.x+(u0+u1)*dx/2,cy=a.y+(u0+u1)*dy/2;
+      const length=Math.hypot(dx,dy)*(u1-u0),dist=Math.hypot(cx-size.x/2,cy-size.y/2);
+      const score=length*.30-dist;
+      if(!best||score>best.score)best={x:cx,y:cy,score};
+    }
+    return best?{point:map.containerPointToLatLng([best.x,best.y]),right:best.x>Math.max(85,size.x-250)}:null;
+  }
+  function drawMapCallouts(){
+    if(!map||!callouts||!window.L?.divIcon)return;
+    callouts.clearLayers();
+    const overview=analyze();
+    data.lines.forEach((l,i)=>{
+      const anchor=visibleLineAnchor(l);if(!anchor)return;
+      const text=esc(l.name)+' · '+num(l.voltage)+' kV';
+      const below=map.latLngToContainerPoint(anchor.point).y<75;
+      const html=`<div class="dg-map-callout dg-line-callout ${anchor.right?'dg-callout-left':''} ${below?'dg-callout-below':''}" style="--dg-accent:${COLORS[l.voltage]||'#6b7890'};--dg-shift:${i%3*16}px"><span>${text}</span></div>`;
+      const label=L.marker(anchor.point,{icon:L.divIcon({className:'dg-map-callout-icon',html,iconSize:[0,0],iconAnchor:[0,0]}),interactive:true,zIndexOffset:650}).addTo(callouts);
+      label.bindPopup(mapLinePopup(l,overview));
+    });
+    data.stations.filter(p=>p.kind!=='tap').forEach((ps,i)=>{
+      if(ps.lat==null||ps.lng==null||!validGps(ps.lat,ps.lng)||!map.getBounds().contains([num(ps.lat),num(ps.lng)]))return;
+      const pos=map.latLngToContainerPoint([num(ps.lat),num(ps.lng)]);
+      const html=`<div class="dg-map-callout dg-ps-callout ${pos.x>Math.max(85,map.getSize().x-250)?'dg-callout-left':''} ${pos.y<75?'dg-callout-below':''}" style="--dg-accent:${ps.kind==='source'?'#1274d1':'#183f75'};--dg-shift:${i%3*14}px"><span>${esc(ps.name)}</span></div>`;
+      L.marker([num(ps.lat),num(ps.lng)],{icon:L.divIcon({className:'dg-map-callout-icon',html,iconSize:[0,0],iconAnchor:[0,0]}),interactive:true,zIndexOffset:850}).addTo(callouts).on('click',()=>openPsPanel(ps.id));
+    });
   }
   function routePointAt(line,ratio){
     const pts=geometryFor(line);
@@ -426,8 +519,9 @@
             <div class="dg-visual-layout" id="dg-visual-layout"><section class="dg-visual"><div class="dg-view-title" id="dg-view-title"></div><div id="dg-visual-content"></div></section></div>
           </main>
           <aside class="dg-impact" id="dg-impact"></aside>
+          <aside class="dg-ps-panel" id="dg-ps-panel" hidden></aside>
         </div>
-        <footer class="dg-footer"><span>⚠ Ta’minot va uzilish natijalari kiritilgan modelga asoslangan taxmin. Operativ qaror yoki xavfsiz ulash uchun ishlatilmaydi.</span><span>v65 · Lokal prototip</span></footer>
+        <footer class="dg-footer"><span>⚠ Ta’minot va uzilish natijalari kiritilgan modelga asoslangan taxmin. Operativ qaror yoki xavfsiz ulash uchun ishlatilmaydi.</span><span>v67 · Lokal prototip</span></footer>
       </div>
       <div class="dg-modal" id="dg-editor" hidden><div class="dg-editor-card" role="dialog" aria-modal="true" aria-label="Obyekt tahrirlash"><div class="dg-editor-head"><strong id="dg-editor-title">Tahrirlash</strong><button type="button" data-action="cancel-editor" aria-label="Yopish">✕</button></div><form id="dg-editor-form"></form></div></div>
       <input type="file" id="dg-import-file" accept=".json,application/json" hidden>
@@ -441,6 +535,7 @@
     if(header)header.insertBefore(button,header.firstChild);
     button.addEventListener('click',open);
     root.addEventListener('click',onClick);
+    root.addEventListener('keydown',ev=>{if((ev.key==='Enter'||ev.key===' ')&&ev.target.matches('g[data-open-ps]')){ev.preventDefault();openPsPanel(ev.target.dataset.openPs);}});
     el('dg-editor-form').addEventListener('submit',onSave);
     el('dg-editor-form').addEventListener('input',ev=>{
       if(ev.target.matches('[data-folder-filter]'))updateFolderVisibility();
@@ -455,6 +550,15 @@
         const lat=Number(tp.lat),lng=Number(tp.lng);if(validGps(tp.lat,tp.lng)&&tp.lat!=null&&tp.lng!=null&&pickerMap){if(!pickerMarker){pickerMarker=L.marker([lat,lng],{draggable:true}).addTo(pickerMap);}else pickerMarker.setLatLng([lat,lng]);pickerMap.setView([lat,lng],15);}
       }
     });
+    root.addEventListener('change',ev=>{
+      const select=ev.target.closest('select[data-earth-state]');if(!select)return;
+      const [id,end]=String(select.dataset.earthState).split(':');const line=data.lines.find(l=>l.id===id);
+      if(!line||!['a','b'].includes(end))return;
+      const prev=earthState(line,end),value=select.value;
+      if(value==='on'&&!actualOpen(line,end)&&!confirm('QF virtual yopiq turibdi! «Yerga ulagich o‘rnatilgan» deb belgilash faqat lokal sinovdir, haqiqiy tizimni himoya qilmaydi. Davom etasizmi?')){select.value=prev;return;}
+      line['earth'+end.toUpperCase()]=value;
+      saveLocal();refresh();showMsg('Yerga ulagich holati LOCAL QORALAMADA qayd etildi; real uskunani bildirmaydi.','info');
+    });
     el('dg-import-file').addEventListener('change',importFile);
   }
 
@@ -463,12 +567,14 @@
     const prior=currentUser && currentUser.uid;
     currentUser=isAllowed(u) ? u : null;
     if(button)button.hidden=!currentUser;
-    if(!currentUser){if(wasOpen)close();data=empty();overrides={};existingTPs=null;existingTPsPending=false;return;}
-    if(prior!==(u.uid||null)){existingTPs=null;existingTPsPending=false;data=loadLocal();overrides={};chosen=null;if(wasOpen)refresh();}
+    if(!currentUser){if(wasOpen)close();activePsId=null;data=empty();overrides={};existingTPs=null;existingTPsPending=false;return;}
+    if(prior!==(u.uid||null)){existingTPs=null;existingTPsPending=false;data=loadLocal();overrides={};chosen=null;activePsId=null;if(wasOpen)refresh();}
   }
   function open(){if(!canEdit())return;root.hidden=false;root.setAttribute('aria-hidden','false');document.body.classList.add('dg-modal-open');refresh();updateSidebar();}
-  function close(){if(!root)return;root.hidden=true;root.setAttribute('aria-hidden','true');document.body.classList.remove('dg-modal-open');closeEditor();if(map){map.remove();map=null;mapLayer=null;baseMapLayer=null;}}
+  function close(){if(!root)return;activePsId=null;callouts=null;root.hidden=true;root.setAttribute('aria-hidden','true');document.body.classList.remove('dg-modal-open');closeEditor();if(map){map.remove();map=null;mapLayer=null;baseMapLayer=null;}}
   function onClick(ev){
+    const svgPs=ev.target.closest('[data-open-ps]');
+    if(svgPs && svgPs.tagName.toLowerCase()!=='button'){openPsPanel(svgPs.dataset.openPs);return;}
     const target=ev.target.closest('button');if(!target||!root.contains(target))return;
     if(target.dataset.view){view=target.dataset.view;refresh();return;}
     if(target.dataset.mapStyle){switchMapStyle(target.dataset.mapStyle);return;}
@@ -489,17 +595,31 @@
     if(target.dataset.section){section=target.dataset.section;renderList();return;}
     if(target.dataset.add){openEditor(target.dataset.add);return;}
     if(target.dataset.edit){openEditor(target.dataset.edit,target.dataset.id||'');return;}
+    if(target.dataset.openPs){openPsPanel(target.dataset.openPs);return;}
+    if(target.dataset.saveFeeder){
+      const record=feeder(target.dataset.saveFeeder),wrap=target.closest('[data-feeder-record]');if(!record||!wrap)return;
+      const numeric=['loadKw','loadAmp','meterKwh'];const values={};
+      for(const key of numeric){const f=wrap.querySelector(`[data-feeder-field="${key}"]`);const raw=f?.value.trim()||'';if(raw!==''&&(!Number.isFinite(Number(raw))||Number(raw)<0))return showMsg('Yuklama, tok va hisoblagich ko‘rsatkichlari manfiy bo‘lmasin.','error');values[key]=raw===''?null:Number(raw);}
+      const meterNum=wrap.querySelector('[data-feeder-field="meterNumber"]')?.value.trim()||'';
+      const readingChanged=values.meterKwh!=null&&(values.meterKwh!==record.meterKwh||meterNum!==(record.meterNumber||''));
+      Object.assign(record,values,{meterNumber:meterNum,meterAt:new Date().toISOString()});
+      if(readingChanged)record.readings=[...arr(record.readings),{at:record.meterAt,kwh:record.meterKwh,meterNumber:meterNum}].slice(-250);
+      saveLocal();renderPsPanel();showMsg('Fider yuklamasi va hisoblagich ma’lumoti LOKAL qoralamaga yozildi.','success');return;
+    }
     if(target.dataset.attachTps){attachExistingTps(target.dataset.attachTps);return;}
     if(target.dataset.del){removeEntity(target.dataset.del,target.dataset.id);return;}
     if(target.dataset.select){chosen=target.dataset.select;refresh();return;}
     if(target.dataset.switch){const key=target.dataset.switch;const [lineId, end]=key.split(':');const l=data.lines.find(x=>x.id===lineId);
       if(!l || station(l[end])?.kind==='tap')return;
+      if(actualOpen(l,end)&&isGroundMarked(l)&&!confirm('DIQQAT: virtual yerga ulagich o‘rnatilgan deb qayd etilgan! Bu faqat SIMULYATSIYA; haqiqiy holatni boshqarmaydi. Virtual QFni yopishni davom ettirasizmi?'))return;
       overrides[key]=!actualOpen(l,end);refresh();return;}
     const a=target.dataset.action;
     if(a==='close')close();
+    if(a==='close-ps-panel'){activePsId=null;renderPsPanel();}
+    if(a==='ps-add-feeder'){openEditor('feeder');const f=el('dg-editor-form')?.elements.namedItem('psId');if(f&&activePsId)f.value=activePsId;}
     if(a==='cancel-editor')closeEditor();
-    if(a==='toggle-objects'){showObjects=!showObjects;if(showObjects)showImpact=false;updateSidebar();}
-    if(a==='toggle-impact'){showImpact=!showImpact;if(showImpact)showObjects=false;updateSidebar();}
+    if(a==='toggle-objects'){showObjects=!showObjects;if(showObjects){showImpact=false;activePsId=null;renderPsPanel();}updateSidebar();}
+    if(a==='toggle-impact'){showImpact=!showImpact;if(showImpact){showObjects=false;activePsId=null;renderPsPanel();}updateSidebar();}
     if(a==='toggle-stats'){showStats=!showStats;updateSidebar();}
     if(a==='close-objects'){showObjects=false;updateSidebar();}
     if(a==='close-impact'){showImpact=false;updateSidebar();}
@@ -509,8 +629,8 @@
       const explanation=!data.stations.some(x=>x.kind==='source'&&!x.sourceOff)?'Manba PS yo‘q. ':'';
       showMsg(`${moving} ta yo‘nalishi aniq virtual liniya uchastkasi. ${explanation}Agar yurmasa: PS turini, kuchlanish mosligini, QF-A/B ochiq-yopiqligini va ikkinchi manbani tekshiring. Halqa yoki ikki manbada yo‘nalish noaniq bo‘lishi mumkin.`, 'info');
     }
-    if(a==='sample' && confirm('NAMUNA ma’lumotlarini yuklaysizmi? Joriy lokal qoralamangiz almashtiriladi. Avval JSON eksport qiling.')) {data=sample();overrides={};chosen=null;saveLocal();refresh();showMsg('Faqat ko‘rgazmali ma’lumotlar yuklandi.','success');}
-    if(a==='clear' && confirm('DIQQAT: Barcha namunalar va ushbu brauzer qoralamasidagi kiritilgan obyektlar o‘chadi. Zarur bo‘lsa avval «↓ JSON» eksport qiling. Tozalaysizmi?')) {data=empty();overrides={};chosen=null;saveLocal();refresh();showMsg('Namuna va lokal qoralama tozalandi.','success');}
+    if(a==='sample' && confirm('NAMUNA ma’lumotlarini yuklaysizmi? Joriy lokal qoralamangiz almashtiriladi. Avval JSON eksport qiling.')) {data=sample();overrides={};chosen=null;activePsId=null;saveLocal();refresh();showMsg('Faqat ko‘rgazmali ma’lumotlar yuklandi.','success');}
+    if(a==='clear' && confirm('DIQQAT: Barcha namunalar va ushbu brauzer qoralamasidagi kiritilgan obyektlar o‘chadi. Zarur bo‘lsa avval «↓ JSON» eksport qiling. Tozalaysizmi?')) {data=empty();overrides={};chosen=null;activePsId=null;saveLocal();refresh();showMsg('Namuna va lokal qoralama tozalandi.','success');}
     if(a==='export')exportFile();
     if(a==='import')el('dg-import-file').click();
     if(a==='towers'){mapTowers=!mapTowers;refresh();}
@@ -521,7 +641,7 @@
   }
   function refresh(){if(!root||root.hidden)return;
     root.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view));
-    renderList();renderMain();renderImpact();
+    renderList();renderMain();renderImpact();renderPsPanel();
   }
   function badgeStatus(oper) {return oper?'dg-good':'dg-off';}
   function renderList(){
@@ -575,11 +695,12 @@
   function renderMap(result){
     if(!window.L || !el('dg-map')){el('dg-map').textContent='Xarita kutubxonasi yuklanmagan.';return;}
     let savedView=null;
-    if(map){try{savedView={center:map.getCenter(),zoom:map.getZoom()};}catch(e){}map.remove();map=null;baseMapLayer=null;}
+    if(map){try{savedView={center:map.getCenter(),zoom:map.getZoom()};}catch(e){}map.remove();map=null;baseMapLayer=null;callouts=null;}
     map=L.map('dg-map',{zoomControl:true,attributionControl:true}).setView(savedView?.center||[40.11,65.51],savedView?.zoom||10);
     // Leaflet popup content stops click bubbling. Bind its edit button directly.
     if(map.on)map.on('popupopen',e=>{
       const popup=e.popup?.getElement?.();if(!popup)return;
+      popup.querySelectorAll('button[data-open-ps]').forEach(btn=>btn.addEventListener('click',evt=>{evt.preventDefault();evt.stopPropagation();openPsPanel(btn.dataset.openPs);map?.closePopup?.();},{once:true}));
       popup.querySelectorAll('button[data-edit]').forEach(btn=>btn.addEventListener('click',evt=>{
         evt.preventDefault();evt.stopPropagation();openEditor(btn.dataset.edit,btn.dataset.id||'');
       },{once:true}));
@@ -603,10 +724,9 @@
       const voltageColor=COLORS[l.voltage]||'#7889a9';
       const poly=L.polyline(coords,{color:voltageColor,weight:l.voltage>=110?6:5,opacity:on?.96:.57,dashArray:on?null:'9 9',lineCap:'round'}).addTo(mapLayer);
       poly.bindPopup(mapLinePopup(l,result));
-      poly.bindTooltip(`${esc(l.name)} · ${num(l.voltage)} kV`,{permanent:true,direction:'center',className:'dg-line-label dg-line-'+num(l.voltage)});
+      // Names are rendered as viewport-aware leader callouts, never over the conductor.
       coords.forEach(p=>bounds.push(p));
-      mapQfMarker(l,'a',coords,mapLayer,result);
-      mapQfMarker(l,'b',coords,mapLayer,result);
+      // QF virtual controls live at their own station, not at arbitrary points on the route.
       // Moving light dots trace a modeled *supply path*, NEVER measured MW flow.
       // Reverse geographic coordinates when the model reaches this edge from B.
       const direction=on&&result.sourceCount[l.a]===1&&result.sourceCount[l.b]===1?result.direction[l.id]:0;
@@ -628,8 +748,9 @@
     data.stations.forEach(p=>{
       if(p.lat==null||p.lng==null||!Number.isFinite(Number(p.lat))||!Number.isFinite(Number(p.lng)))return;
       const color=p.kind==='source'?'#1e7adf':p.kind==='tap'?'#e8a547':'#153e75';
-      L.circleMarker([num(p.lat),num(p.lng)],{radius:p.kind==='tap'?5:9,color:'#fff',weight:2,fillColor:color,fillOpacity:1})
-        .addTo(mapLayer).bindTooltip(esc(p.name),{permanent:p.kind!=='tap',direction:'top',className:'dg-ps-tooltip'}).bindPopup(`<strong>${esc(p.name)}</strong><br>${arr(p.volts).join('/')} kV<br>${esc(p.folder||'Papka biriktirilmagan')}<br>GPS: ${num(p.lat).toFixed(6)}, ${num(p.lng).toFixed(6)}<br><button type="button" class="dg-popup-edit" data-edit="${p.kind==='tap'?'tap-point':'station'}" data-id="${esc(p.id)}">✎ ${p.kind==='tap'?'Otpayka nuqtasini':'PSni'} tahrirlash</button>`);
+      const marker=L.circleMarker([num(p.lat),num(p.lng)],{radius:p.kind==='tap'?5:9,color:'#fff',weight:2,fillColor:color,fillOpacity:1}).addTo(mapLayer);
+      if(p.kind==='tap')marker.bindPopup(`<strong>${esc(p.name)}</strong><br>${arr(p.volts).join('/')} kV<br><button type="button" class="dg-popup-edit" data-edit="tap-point" data-id="${esc(p.id)}">✎ Otpayka nuqtasini tahrirlash</button>`);
+      else marker.on('click',()=>openPsPanel(p.id));
       bounds.push([num(p.lat),num(p.lng)]);
     });
     if(mapTps)data.tps.forEach(t=>{
@@ -647,13 +768,15 @@
         .bindPopup(`<strong>${esc(c.name)}</strong><br>${c.kind==='mahalla'?'Mahalla':'Tashkilot'}<br>${esc(tp(c.tpId)?.name||'TP biriktirilmagan')}<br><button type="button" class="dg-popup-edit" data-edit="consumer" data-id="${esc(c.id)}">✎ Tahrirlash</button>`);
       bounds.push([num(c.lat),num(c.lng)]);
     });
+    callouts=L.layerGroup().addTo(map);
+    map.on('moveend zoomend resize',drawMapCallouts);
     if(bounds.length&&!savedView){try{map.fitBounds(bounds,{padding:[35,35],maxZoom:12});}catch(e){}}
     if(typeof L.control==='function'){
       const legend=L.control({position:'bottomleft'});
-      legend.onAdd=()=>{const e=document.createElement('div');e.className='dg-map-legend';e.innerHTML='<strong>Kuchlanish va holat (virtual)</strong><div class="dg-legend-list">'+VOLTAGES.map(v=>`<span><i style="background:${COLORS[v]}"></i>${v} kV</span>`).join('')+'</div><div class="dg-legend-status"><span>● Yashil: QF yopiq</span><span>● Qizil: QF ochiq</span><span>┄ Uzilgan chiziq: modelda ta’minot yo‘q</span></div>';return e;};
+      legend.onAdd=()=>{const e=document.createElement('div');e.className='dg-map-legend';e.innerHTML='<strong>Kuchlanish va holat (virtual)</strong><div class="dg-legend-list">'+VOLTAGES.map(v=>`<span><i style="background:${COLORS[v]}"></i>${v} kV</span>`).join('')+'</div><div class="dg-legend-status"><span>QFlarni PS nuqtasini bosib ko‘ring</span><span>┄ Uzilgan chiziq: modelda ta’minot yo‘q</span></div>';return e;};
       if(typeof legend.addTo==='function')legend.addTo(map);
     }
-    setTimeout(()=>{if(map)map.invalidateSize();},100);
+    setTimeout(()=>{if(map){map.invalidateSize();drawMapCallouts();}},130);
   }
   // Auto-place ONLY when stored diagram positions overlap. GIS positions and
   // stored manual X/Y are left untouched. Uses all connections including open QFs
@@ -725,7 +848,7 @@
       const x=sx(n),y=sy(n),on=result.energized[n.id], amb=result.sourceCount[n.id]>1;
       if(n.kind==='tap')return `<g><circle cx="${x}" cy="${y}" r="10" stroke="#e3a14b" stroke-width="3" fill="#fff"/><circle cx="${x}" cy="${y}" r="4" fill="${on?'#1cc984':'#94a3b8'}"/><text text-anchor="middle" x="${x}" y="${y+27}" font-size="11" fill="currentColor">${esc(n.name)}</text></g>`;
       const title=esc(n.name.length>23?n.name.slice(0,22)+'…':n.name);
-      return `<g><rect x="${x-83}" y="${y-31}" width="166" height="66" rx="11" fill="${n.kind==='source'?'#1452a0':'#133c6a'}" stroke="${amb?'#f6b34f':on?'#2cd6a8':'#839ab2'}" stroke-width="${on?3:2}"/><text x="${x}" y="${y-5}" fill="#fff" font-size="14" text-anchor="middle" font-weight="700">${title}</text><text x="${x}" y="${y+15}" fill="#beddfa" font-size="12" text-anchor="middle">${esc(arr(n.volts).join('/'))} kV${n.kind==='source'?' · MANBA':''}</text>${technical?`<text x="${x}" y="${y+52}" fill="currentColor" text-anchor="middle" font-size="11">${data.feeders.filter(f=>f.psId===n.id).length} fider</text>`:''}</g>`;
+      return `<g class="dg-svg-ps-open" data-open-ps="${esc(n.id)}" tabindex="0" role="button" aria-label="${esc(n.name)} PS boshqaruvini ochish"><rect x="${x-83}" y="${y-31}" width="166" height="66" rx="11" fill="${n.kind==='source'?'#1452a0':'#133c6a'}" stroke="${amb?'#f6b34f':on?'#2cd6a8':'#839ab2'}" stroke-width="${on?3:2}"/><text x="${x}" y="${y-5}" fill="#fff" font-size="14" text-anchor="middle" font-weight="700">${title}</text><text x="${x}" y="${y+15}" fill="#beddfa" font-size="12" text-anchor="middle">${esc(arr(n.volts).join('/'))} kV${n.kind==='source'?' · MANBA':''}</text>${technical?`<text x="${x}" y="${y+52}" fill="currentColor" text-anchor="middle" font-size="11">${data.feeders.filter(f=>f.psId===n.id).length} fider</text>`:''}</g>`;
     }).join('');
     return `<div class="dg-diagram-wrap"><svg class="dg-network-svg" style="min-width:${vwidth}px;min-height:${Math.min(vheight,850)}px" viewBox="0 0 ${vwidth} ${vheight}" role="img" aria-label="Podstansiyalar, liniyalar va o‘chirgichlar sxemasi"><defs><filter id="dg-glow"><feGaussianBlur stdDeviation="2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><g>${lines}</g><g>${nodes}</g></svg><div class="dg-diagram-caption">Chiroqchalar: faqat bir manbali ta’minot yo‘li. Uzuq rangli chiziq: virtual QF ochiq yoki modelda ta’minot yo‘q. ${layout.automatic?'Ustma-ust joylashgan PSlar ekranda avtomatik ajratildi; saqlangan X/Y va GPS o‘zgarmadi.':'Sxema X/Y joylashuvlari saqlangan.'}</div></div>`;
   }
@@ -734,16 +857,16 @@
     const warnings=[];
     if(r.parallel.length) warnings.push({title:'Ikki manba bir konturda',msg:'Parallellash imkoniyati bor. Sinxronizm va himoya tekshirilmaguncha yo‘nalish animatsiyasi o‘chirildi.'});
     if(r.malformed.length)warnings.push({title:'Noto‘g‘ri yoki yetishmaydigan ulanish',msg:'Tekshiring: '+r.malformed.join(', ')});
+    if(data.lines.some(l=>isGroundMarked(l)&&(!actualOpen(l,'a')||!actualOpen(l,'b'))))warnings.push({title:'Yerga ulagich va virtual QF mos kelmasligi',msg:'Ba’zi uchastkada yerga ulagich o‘rnatilgan deb qayd etilgan, QF esa yopiq. Bu xavfli holat bo‘lishi mumkin. Haqiqiy tarmoq bo‘yicha xulosa chiqarmang.'});
     if(Object.keys(overrides).length)warnings.push({title:'Virtual sxema o‘zgartirildi',msg:'Bu faqat ushbu ekrandagi sinov. Haqiqiy o‘chirgich holati o‘zgarmadi.'});
     const groups={mahalla:r.affected.filter(c=>c.kind==='mahalla'),organization:r.affected.filter(c=>c.kind!=='mahalla')};
     const consDisplay=(list)=>list.length?list.map(c=>{
       const t=tp(c.tpId),f=t&&feeder(t.feederId);
       return `<div class="dg-impact-row"><strong>${esc(c.name)}</strong><small>${esc(t?.name||'TP?')} · ${esc(f?.name||'Fider?')}</small></div>`;
     }).join(''):'<p class="dg-none">Bog‘langan obyekt yo‘q.</p>';
-    const controls=data.lines.map(l=>{
-      const a=station(l.a),b=station(l.b);
-      const create=(end,node)=>node && node.kind!=='tap'?`<button type="button" class="dg-qf ${actualOpen(l,end)?'is-open':'is-closed'}" data-switch="${esc(l.id+':'+end)}" title="Faqat virtual sxemadagi holatni almashtiradi">${actualOpen(l,end)?'○ Ochiq':'● Yopiq'} · ${end==='a'?'A':'B'}</button>`:'';
-      return `<div class="dg-switch-row"><div><strong>${esc(l.name)}</strong><small>${esc(a?.name||'?')} — ${esc(b?.name||'?')}</small></div><div class="dg-qf-controls">${create('a',a)}${create('b',b)}</div></div>`;
+    const controls=data.stations.filter(ps=>ps.kind!=='tap').map(ps=>{
+      const lines=data.lines.filter(l=>l.a===ps.id||l.b===ps.id);
+      return `<div class="dg-switch-row"><div><strong>${esc(ps.name)}</strong><small>${lines.length} liniya · PSning virtual QF holatlarini shu yerda ko‘ring</small></div><div class="dg-qf-controls"><button type="button" class="dg-popup-edit" data-open-ps="${esc(ps.id)}">PS oynasini ochish</button></div></div>`;
     }).join('');
     el('dg-impact').innerHTML=`
       <div class="dg-impact-head"><strong>Ta’sir tahlili</strong><div><span>Virtual rejim</span><button type="button" class="dg-impact-close" data-action="close-impact" aria-label="Panelni yopish">✕</button></div></div>
@@ -753,7 +876,7 @@
       <div class="dg-impact-section"><h3>Mahallalar (${groups.mahalla.length})</h3>${consDisplay(groups.mahalla)}</div>
       <div class="dg-impact-section"><h3>Tashkilotlar (${groups.organization.length})</h3>${consDisplay(groups.organization)}</div>
       ${r.unknown.length?`<div class="dg-alert"><b>To‘liq bog‘lanmagan iste’molchilar: ${r.unknown.length}</b><p>Fider/TP bog‘lanishlarini to‘ldirmasdan aniq ta’sir ro‘yxati olinmaydi.</p></div>`:''}
-      <div class="dg-impact-section"><h3>Virtual QF o‘chirgichlari</h3><p class="dg-section-note">Bosilsa faqat shu ekrandagi sxema o‘zgaradi.</p>${controls||'<p class="dg-none">Liniya yaratilmagan.</p>'}</div>
+      <div class="dg-impact-section"><h3>PSlar orqali virtual QF</h3><p class="dg-section-note">QF va yerga ulagichlar PS oynasida; haqiqiy uskunalar boshqarilmaydi.</p>${controls||'<p class="dg-none">Liniya yaratilmagan.</p>'}</div>
       <div class="dg-impact-footnote">* Natija faqat kiritilgan aloqa modeli va mavjud iste’molchilar ro‘yxatiga asoslangan. kVA — nominal transformator quvvatlari yig‘indisi, yuklama emas. Ma’lumotlar to‘liqligi tasdiqlanmaguncha real uzilish hisobi emas.</div>`;
   }
   const options = (list,selected='')=>list.map(x=>`<option value="${esc(x.id)}" ${x.id===selected?'selected':''}>${esc(x.name)}</option>`).join('');
@@ -977,6 +1100,7 @@
       rec.name=v('name');rec.voltage=num(v('voltage'));rec.a=v('a');rec.b=v('b');
       if(rec.a===rec.b)return showMsg('Liniya ikki xil ulanish nuqtasi orasida bo‘lishi kerak.','error');
       if(!station(rec.a)?.volts.includes(rec.voltage)||!station(rec.b)?.volts.includes(rec.voltage))return showMsg('Kuchlanish mos emas: ikkala PS/otpayka ham liniya kuchlanishini qo‘llashi kerak.','error');
+      const oldLine=data.lines.find(x=>x.id===id);rec.earthA=oldLine?.earthA||'unknown';rec.earthB=oldLine?.earthB||'unknown';
       rec.openA=v('openA')==='true';rec.openB=v('openB')==='true';
       rec.towers=arr(data.lines.find(x=>x.id===id)?.towers);collection='lines';
     } else if(type==='tap'){
@@ -1012,6 +1136,7 @@
       } else line.towers.push(entry);
       saveLocal();closeEditor();refresh();showMsg('Tayanch saqlandi.','success');return;
     } else if(type==='feeder'){
+      Object.assign(rec,feeder(id)||{});rec.id=id;
       rec.name=v('name');rec.psId=v('psId');rec.voltage=num(v('voltage'));
       rec.folderId=selectedFolderFromForm(ev.currentTarget).id||feeder(id)?.folderId||'';
       const parentPS=station(rec.psId);if(rec.folderId&&parentPS?.folderId&&!folderIncludes(rec.folderId,parentPS.folderId))return showMsg('Fider papkasi tanlangan PS papkasi ichida emas. To‘g‘ri PS/fiderni tanlang.','error');
@@ -1073,6 +1198,6 @@
     document.addEventListener('hetk-auth-cleared',()=>authChanged(null));
     if(window.HETKAuth?.currentUser)authChanged(window.HETKAuth.currentUser);
   }
-  window.HETKDispatchGrid = {open:()=>open(),analyzeDraft:()=>data?analyze():null,version:'66-local-draft'};
+  window.HETKDispatchGrid = {open:()=>open(),analyzeDraft:()=>data?analyze():null,version:'67-local-draft'};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
