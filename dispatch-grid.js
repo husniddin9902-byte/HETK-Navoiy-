@@ -1,4 +1,4 @@
-/* HETK-Navoiy — Dispatch Grid prototype v63
+/* HETK-Navoiy — Dispatch Grid prototype v64
  * SIMULATION ONLY: No SCADA control, no live switching, no network writes.
  * This is a local draft in this browser, not an operational dispatch system.
  */
@@ -14,6 +14,7 @@
   let showObjects = false, showImpact = false, showStats = false, pickerMap = null, pickerMarker = null, pickerRoute = null, pickerSelection = null;
   let pickerContext = null, baseMapLayer = null, pickerBaseMapLayer = null, visiblePickerObjects = true;
   let existingTPs = null, existingTPsPending = false, mapStyle = 'street';
+  let expandedFolders = new Set(); // User-controlled open branches of HETK folder tree.
 
   const el = id => document.getElementById(id);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -65,23 +66,51 @@
     const auth=window.HETKAuth;
     const permitted=ids.filter(id=>!auth?.canSeeFolder||auth.canSeeFolder(id,folders));
     const allowed=new Set(permitted);
-    // Keep visible ancestors so the hierarchy remains intelligible.
+    // Keep visible ancestors so the folder hierarchy remains intelligible.
     for(const id of permitted){let parent=folders[id]?.parentId,guard=0;while(parent&&parent!=='root'&&folders[parent]&&guard++<50){allowed.add(parent);parent=folders[parent].parentId;}}
     const children={};
     ids.filter(id=>allowed.has(id)).forEach(id=>{const parent=folders[id]?.parentId||'root';(children[parent]||(children[parent]=[])).push(id);});
     Object.values(children).forEach(list=>list.sort((a,b)=>String(folders[a]?.name||'').localeCompare(String(folders[b]?.name||''),'uz')));
     const ordered=[],seen=new Set();
-    function add(id,depth){if(seen.has(id))return;seen.add(id);ordered.push({id,depth:Math.min(depth,9),name:folders[id]?.name||id,path:folderPath(id,folders),selectable:permitted.includes(id)});(children[id]||[]).forEach(child=>add(child,depth+1));}
-    (children.root||[]).forEach(id=>add(id,0));
-    ids.filter(id=>allowed.has(id)&&!seen.has(id)).forEach(id=>add(id,0));
+    function add(id,depth,parents){
+      if(seen.has(id))return;seen.add(id);
+      ordered.push({id,depth:Math.min(depth,12),name:folders[id]?.name||id,path:folderPath(id,folders),selectable:permitted.includes(id),parents,hasChildren:!!children[id]?.length});
+      (children[id]||[]).forEach(child=>add(child,depth+1,[...parents,id]));
+    }
+    (children.root||[]).forEach(id=>add(id,0,[]));
+    ids.filter(id=>allowed.has(id)&&!seen.has(id)).forEach(id=>add(id,0,[]));
     return ordered;
   }
   function folderPickerHtml(selectedId='',legacyName=''){
     const entries=folderEntries();
     const selected=entries.find(x=>x.id===selectedId);
     const label=selected?.path||legacyName||'Papka tanlanmagan';
-    const rows=entries.map(x=>`<button type="button" data-folder-choice="${esc(x.id)}" data-folder-path="${esc(x.path)}" class="dg-folder-row ${selectedId===x.id?'selected':''}" style="--folder-depth:${x.depth}" ${x.selectable?'':'disabled title="Bu papka tanlash uchun ochiq emas"'}>📁 ${esc(x.name)}</button>`).join('');
-    return `<section class="dg-folder-picker"><strong>📂 HETK papkasini tanlash</strong><small>Mavjud papka daraxtidan tanlang; nomini qo‘lda yozmaysiz. Elektr liniyalar avtomatik ulanmaydi.</small><input type="search" class="dg-folder-search" data-folder-filter placeholder="Papka yoki PS/fider nomini qidirish" autocomplete="off"><div class="dg-folder-tree">${rows||'<div class="dg-form-tip">Papkalar hali yuklanmagan. Asosiy guruhlar oynasini ochib, qayta urinib ko‘ring.</div>'}</div><input type="hidden" name="folderId" value="${esc(selectedId)}"><div class="dg-folder-chosen" id="dg-folder-chosen">Tanlangan: ${esc(label)}</div></section>`;
+    expandedFolders=new Set(entries.filter(x=>x.depth===0).map(x=>x.id));
+    // Open just the selected branch, not all 1000+ entries.
+    if(selected)selected.parents.forEach(id=>expandedFolders.add(id));
+    const rows=entries.map(x=>`<div class="dg-folder-node" data-folder-node="${esc(x.id)}" data-folder-name="${esc(x.name.toLocaleLowerCase())}" data-folder-parents="${esc(x.parents.join('|'))}" style="--folder-depth:${x.depth}"><button type="button" class="dg-folder-toggle" data-folder-toggle="${esc(x.id)}" title="${x.hasChildren?'Papka ichini ochish/yopish':'Ichki papkasi yo‘q'}" aria-label="${esc(x.name)} papkasini ochish yoki yopish" ${x.hasChildren?'':'disabled'}>${x.hasChildren?'−':'·'}</button><button type="button" data-folder-choice="${esc(x.id)}" data-folder-path="${esc(x.path)}" class="dg-folder-row ${selectedId===x.id?'selected':''}" ${x.selectable?'':'disabled title="Bu papka tanlash uchun ochiq emas"'}>📁 ${esc(x.name)}</button></div>`).join('');
+    return `<section class="dg-folder-picker"><strong>📂 HETK papkasini tanlash</strong><small>Chapdagi +/− tugmalari bilan papkalarni oching. Qidiruv faqat mos papkalar va ularning ota papkalarini ko‘rsatadi. Liniyalar avtomatik ulanmaydi.</small><input type="search" class="dg-folder-search" data-folder-filter placeholder="PS, fider yoki papka nomini qidirish" autocomplete="off"><div class="dg-folder-tree">${rows||'<div class="dg-form-tip">Papkalar hali yuklanmagan. Asosiy guruhlar oynasini ochib, qayta urinib ko‘ring.</div>'}</div><input type="hidden" name="folderId" value="${esc(selectedId)}"><div class="dg-folder-chosen" id="dg-folder-chosen">Tanlangan: ${esc(label)}</div></section>`;
+  }
+  function updateFolderVisibility(){
+    const form=el('dg-editor-form');if(!form)return;
+    const nodes=[...form.querySelectorAll('[data-folder-node]')];if(!nodes.length)return;
+    const q=String(form.querySelector('[data-folder-filter]')?.value||'').trim().toLocaleLowerCase();
+    let relevant=null;
+    if(q){
+      relevant=new Set();
+      for(const node of nodes){
+        if(String(node.dataset.folderName||'').includes(q)){
+          relevant.add(node.dataset.folderNode);
+          String(node.dataset.folderParents||'').split('|').filter(Boolean).forEach(id=>relevant.add(id));
+        }
+      }
+    }
+    nodes.forEach(node=>{
+      const id=node.dataset.folderNode,parents=String(node.dataset.folderParents||'').split('|').filter(Boolean);
+      node.hidden=q?!relevant.has(id):parents.some(parent=>!expandedFolders.has(parent));
+      const toggle=node.querySelector('[data-folder-toggle]');
+      if(toggle&&!toggle.disabled){const open=q?true:expandedFolders.has(id);toggle.textContent=open?'−':'+';toggle.setAttribute('aria-expanded',String(open));}
+    });
   }
   function selectedFolderFromForm(form){
     const id=String(form.elements.namedItem('folderId')?.value||'').trim();return {id,path:folderPath(id)};
@@ -136,6 +165,16 @@
     }catch(e){if(el('dg-tp-count'))el('dg-tp-count').textContent='Elementlarni olish imkoni bo‘lmadi. Qo‘lda kiritish mumkin.';}
     finally{existingTPsPending=false;}
   }
+  function towerRef(line,t,i){return line.id+':'+(t.id||i);}
+  function findTowerRef(ref){
+    const [lineId,key]=String(ref||'').split(':');
+    const line=data.lines.find(l=>l.id===lineId);
+    if(!line)return null;
+    let index=arr(line.towers).findIndex(t=>t.id===key);
+    if(index<0&&/^\d+$/.test(key))index=Number(key);
+    if(!line.towers?.[index])return null;
+    return {line,index,tower:line.towers[index]};
+  }
   const station = id => data.stations.find(x=>x.id===id);
   const feeder = id => data.feeders.find(x=>x.id===id);
   const tp = id => data.tps.find(x=>x.id===id);
@@ -149,12 +188,20 @@
     clearTimeout(showMsg._timer);
     showMsg._timer=setTimeout(()=>{ if(box) box.hidden=true;},5500);
   };
-  const saveLocal = () => {try { localStorage.setItem(storeKey(),JSON.stringify(data)); } catch(e){showMsg('Brauzer xotirasiga yozib bo‘lmadi. JSON eksportini saqlang.','error');}};
+  // Stable IDs for old v63 tower points. The migration is additive: no GPS,
+  // line, breaker or station records are discarded or rearranged.
+  function normalizeTowerIds(draft){
+    for(const line of arr(draft?.lines)){
+      line.towers=arr(line.towers).map(t=>({...(t&&typeof t==='object'?t:{}),id:t?.id||uid()}));
+    }
+    return draft;
+  }
+  const saveLocal = () => {try { normalizeTowerIds(data);localStorage.setItem(storeKey(),JSON.stringify(data)); } catch(e){showMsg('Brauzer xotirasiga yozib bo‘lmadi. JSON eksportini saqlang.','error');}};
   const loadLocal = () => {
     try {
       const raw=JSON.parse(localStorage.getItem(storeKey()) || 'null');
       if(raw && Array.isArray(raw.stations) && Array.isArray(raw.lines)) {
-        return {version:1,stations:arr(raw.stations),lines:arr(raw.lines),feeders:arr(raw.feeders),tps:arr(raw.tps),consumers:arr(raw.consumers)};
+        return normalizeTowerIds({version:1,stations:arr(raw.stations),lines:arr(raw.lines),feeders:arr(raw.feeders),tps:arr(raw.tps),consumers:arr(raw.consumers)});
       }
     } catch(e) { /* Keep a clean draft on corrupt data. */ }
     return empty();
@@ -190,7 +237,7 @@
       {id:'C-2',name:'Namuna maktabi',kind:'organization',tpId:'T-2',note:'Faqat misol'},
       {id:'C-3',name:'Namuna shifoxonasi',kind:'organization',tpId:'T-3',note:'Faqat misol'}
     ];
-    return d;
+    return normalizeTowerIds(d);
   };
 
   // A connected electrical component is energized if it reaches an enabled source
@@ -337,7 +384,7 @@
           </main>
           <aside class="dg-impact" id="dg-impact"></aside>
         </div>
-        <footer class="dg-footer"><span>⚠ Ta’minot va uzilish natijalari kiritilgan modelga asoslangan taxmin. Operativ qaror yoki xavfsiz ulash uchun ishlatilmaydi.</span><span>v63 · Lokal prototip</span></footer>
+        <footer class="dg-footer"><span>⚠ Ta’minot va uzilish natijalari kiritilgan modelga asoslangan taxmin. Operativ qaror yoki xavfsiz ulash uchun ishlatilmaydi.</span><span>v64 · Lokal prototip</span></footer>
       </div>
       <div class="dg-modal" id="dg-editor" hidden><div class="dg-editor-card" role="dialog" aria-modal="true" aria-label="Obyekt tahrirlash"><div class="dg-editor-head"><strong id="dg-editor-title">Tahrirlash</strong><button type="button" data-action="cancel-editor" aria-label="Yopish">✕</button></div><form id="dg-editor-form"></form></div></div>
       <input type="file" id="dg-import-file" accept=".json,application/json" hidden>
@@ -353,7 +400,7 @@
     root.addEventListener('click',onClick);
     el('dg-editor-form').addEventListener('submit',onSave);
     el('dg-editor-form').addEventListener('input',ev=>{
-      if(ev.target.matches('[data-folder-filter]')){const q=ev.target.value.trim().toLocaleLowerCase();el('dg-editor-form').querySelectorAll('.dg-folder-row').forEach(b=>b.hidden=!!q&&!String(b.dataset.folderPath||'').toLocaleLowerCase().includes(q));}
+      if(ev.target.matches('[data-folder-filter]'))updateFolderVisibility();
       if(ev.target.id==='dg-tp-search')refreshExistingTPs();
     });
     el('dg-editor-form').addEventListener('change',ev=>{
@@ -361,7 +408,7 @@
       if(ev.target.name==='linkedTpId'&&ev.target.value&&existingTPs){
         const tp=existingTPs[ev.target.value];if(!tp)return;const f=ev.currentTarget;
         for(const [name,value] of [['name',tp.name],['kva',tp.power],['lat',tp.lat],['lng',tp.lng]]){const control=f.elements.namedItem(name);if(control&&value!=null)control.value=value;}
-        const fld=storedTPFolderIds(tp)[0];const folderInput=f.elements.namedItem('folderId');if(folderInput&&fld){folderInput.value=fld;const marker=el('dg-folder-chosen');if(marker)marker.textContent='Tanlangan: '+folderPath(fld);f.querySelectorAll('.dg-folder-row').forEach(b=>b.classList.toggle('selected',b.dataset.folderChoice===fld));}
+        const fld=storedTPFolderIds(tp)[0];const folderInput=f.elements.namedItem('folderId');if(folderInput&&fld){folderInput.value=fld;const marker=el('dg-folder-chosen');if(marker)marker.textContent='Tanlangan: '+folderPath(fld);f.querySelectorAll('.dg-folder-row').forEach(b=>b.classList.toggle('selected',b.dataset.folderChoice===fld));const picked=f.querySelector(`[data-folder-node="${CSS.escape(fld)}"]`);if(picked){String(picked.dataset.folderParents||'').split('|').filter(Boolean).forEach(id=>expandedFolders.add(id));updateFolderVisibility();}}
         const lat=Number(tp.lat),lng=Number(tp.lng);if(validGps(tp.lat,tp.lng)&&tp.lat!=null&&tp.lng!=null&&pickerMap){if(!pickerMarker){pickerMarker=L.marker([lat,lng],{draggable:true}).addTo(pickerMap);}else pickerMarker.setLatLng([lat,lng]);pickerMap.setView([lat,lng],15);}
       }
     });
@@ -382,9 +429,15 @@
     const target=ev.target.closest('button');if(!target||!root.contains(target))return;
     if(target.dataset.view){view=target.dataset.view;refresh();return;}
     if(target.dataset.mapStyle){switchMapStyle(target.dataset.mapStyle);return;}
+    if(target.dataset.folderToggle){
+      const id=target.dataset.folderToggle;
+      if(expandedFolders.has(id))expandedFolders.delete(id);else expandedFolders.add(id);
+      updateFolderVisibility();return;
+    }
     if(target.dataset.folderChoice){
       const form=el('dg-editor-form'),fld=form?.elements.namedItem('folderId');if(fld)fld.value=target.dataset.folderChoice;
       root.querySelectorAll('.dg-folder-row').forEach(b=>b.classList.toggle('selected',b===target));
+      const node=target.closest('[data-folder-node]');if(node)String(node.dataset.folderParents||'').split('|').filter(Boolean).forEach(id=>expandedFolders.add(id));updateFolderVisibility();
       const text=el('dg-folder-chosen');if(text)text.textContent='Tanlangan: '+target.dataset.folderPath;
       const name=form?.elements.namedItem('name');if(name&&!name.value.trim())name.value=mainFolders()[fld.value]?.name||'';
       if(editorType==='feeder')matchFeederPSFolder(fld.value);
@@ -426,7 +479,7 @@
   function renderList(){
     root.querySelectorAll('[data-section]').forEach(b=>b.classList.toggle('active',b.dataset.section===section));
     const container=el('dg-item-list');if(!container)return;
-    const towerItems=data.lines.flatMap(l=>arr(l.towers).map((t,i)=>({id:l.id+':'+i,name:t.number?'Tayanch '+t.number:'Raqamsiz tayanch',lineId:l.id,number:t.number,lat:t.lat,lng:t.lng})));
+    const towerItems=data.lines.flatMap(l=>arr(l.towers).map((t,i)=>({id:towerRef(l,t,i),name:t.number?'Tayanch '+t.number:'Raqamsiz tayanch',lineId:l.id,number:t.number,lat:t.lat,lng:t.lng})));
     const mapSec={stations:data.stations.filter(x=>x.kind!=='tap'),lines:data.lines,towers:towerItems,feeders:data.feeders,tps:data.tps,consumers:data.consumers};
     const items=mapSec[section]||[];
     container.innerHTML=items.length ? items.map(x=>{
@@ -452,8 +505,8 @@
     if(view==='simple') title='Sodda dispetcherlik sxemasi';
     if(view==='technical') title='Texnik bir chiziqli ko‘rinish (soddalashtirilgan)';
     if(view==='combined') title='GIS xarita — PS, liniya, otpayka va tayanchlar';
-    el('dg-view-title').innerHTML=`<div><strong>${title}</strong><small>Yoritilgan yo‘nalish — faqat bir manbali, tasdiqlangan model segmenti</small></div>${view==='combined'?
-      `<div class="dg-layer-tools">${mapStyleButtons()}<button type="button" data-action="towers">${mapTowers?'✓':'○'} Tayanchlar</button><button type="button" data-action="map-tps">${mapTps?'✓':'○'} TP/KTP</button><button type="button" data-action="map-consumers">${mapConsumers?'✓':'○'} Mahalla / tashkilot</button></div>`:''}`;
+    el('dg-view-title').innerHTML=`<div><strong>${title}</strong><small>Harakatli nuqtalar — faqat modelda bitta manbadan yetib boradigan yo‘l; haqiqiy tok oqimi emas</small></div>${view==='combined'?
+      `<div class="dg-layer-tools">${mapStyleButtons()}<button type="button" data-action="towers">${mapTowers?'✓':'○'} Tayanch raqamlari</button><button type="button" data-action="map-tps">${mapTps?'✓':'○'} TP/KTP</button><button type="button" data-action="map-consumers">${mapConsumers?'✓':'○'} Mahalla / tashkilot</button></div>`:''}`;
     const visual=el('dg-visual-content');
     if(view==='combined'){
       visual.innerHTML='<div class="dg-combined"><div id="dg-map" class="dg-map"></div></div>';
@@ -474,6 +527,13 @@
     if(!window.L || !el('dg-map')){el('dg-map').textContent='Xarita kutubxonasi yuklanmagan.';return;}
     if(map){map.remove();map=null;baseMapLayer=null;}
     map=L.map('dg-map',{zoomControl:true,attributionControl:true}).setView([40.11,65.51],10);
+    // Leaflet popup content stops click bubbling. Bind its edit button directly.
+    if(map.on)map.on('popupopen',e=>{
+      const popup=e.popup?.getElement?.();if(!popup)return;
+      popup.querySelectorAll('button[data-edit]').forEach(btn=>btn.addEventListener('click',evt=>{
+        evt.preventDefault();evt.stopPropagation();openEditor(btn.dataset.edit,btn.dataset.id||'');
+      },{once:true}));
+    });
     baseMapLayer=makeBaseMap(map);
     mapLayer=L.layerGroup().addTo(map);const bounds=[];
     data.lines.forEach(l=>{
@@ -484,13 +544,29 @@
       poly.bindPopup(`<strong>${esc(l.name)}</strong><div>${esc(l.voltage)} kV</div><div>Simulyatsiyada: ${on?'Ta’minot yo‘li mavjud':'Ulangan manba yo‘q yoki o‘chirgich ochiq'}</div><button type="button" class="dg-popup-edit" data-edit="line" data-id="${esc(l.id)}">✎ Liniyani tahrirlash</button>`);
       poly.bindTooltip(esc(l.name),{permanent:true,direction:'center',className:'dg-line-label'});
       coords.forEach(p=>bounds.push(p));
-      if(mapTowers)geometryFor(l).slice(1,-1).forEach(t=>L.circleMarker([t.lat,t.lng],{radius:4,color:'#172c55',fillColor:'#fff',fillOpacity:1}).addTo(mapLayer).bindTooltip('Tayanch '+esc(t.number||'raqamsiz')));
+      // Moving light dots trace a modeled *supply path*, NEVER measured MW flow.
+      // Reverse geographic coordinates when the model reaches this edge from B.
+      const direction=on&&result.sourceCount[l.a]===1&&result.sourceCount[l.b]===1?result.direction[l.id]:0;
+      if(direction){
+        const route=direction===1?coords:[...coords].reverse();
+        L.polyline(route,{color:'#e3fff5',weight:4,opacity:0.95,dashArray:'1 14',lineCap:'round',interactive:false,className:'dg-gis-flow-path'}).addTo(mapLayer);
+      }
+      // Show each numbered or unnumbered support as a persistent clickable point.
+      // Without GPS the point is an ESTIMATE between adjacent known positions.
+      geometryFor(l).slice(1,-1).forEach((t,i)=>{
+        const original=arr(l.towers)[i]||{};
+        const actual=original.lat!=null&&original.lng!=null&&validGps(original.lat,original.lng);
+        const text=(t.number?'Tayanch '+t.number:'Raqamsiz tayanch')+(actual?'':' (GPS aniqlanmagan — taxminiy)');
+        const marker=L.circleMarker([t.lat,t.lng],{radius:actual?5:4,color:actual?'#123d6b':'#7b8997',weight:2,fillColor:actual?'#fff':'#dadfe5',fillOpacity:1}).addTo(mapLayer);
+        if(marker.bindTooltip)marker.bindTooltip(esc(text),{permanent:mapTowers,direction:'top'});
+        if(marker.bindPopup)marker.bindPopup(`<strong>${esc(text)}</strong><br>${actual?'GPS: '+num(t.lat).toFixed(6)+', '+num(t.lng).toFixed(6):'GPS kiritilmagan; chiziqdagi taxminiy joy'}<br><button type="button" class="dg-popup-edit" data-edit="tower" data-id="${esc(towerRef(l,original,i))}">✎ Tayanch joyini tahrirlash</button>`);
+      });
     });
     data.stations.forEach(p=>{
       if(p.lat==null||p.lng==null||!Number.isFinite(Number(p.lat))||!Number.isFinite(Number(p.lng)))return;
       const color=p.kind==='source'?'#1e7adf':p.kind==='tap'?'#e8a547':'#153e75';
       L.circleMarker([num(p.lat),num(p.lng)],{radius:p.kind==='tap'?5:9,color:'#fff',weight:2,fillColor:color,fillOpacity:1})
-        .addTo(mapLayer).bindTooltip(esc(p.name),{permanent:p.kind!=='tap',direction:'top',className:'dg-ps-tooltip'}).bindPopup(`<strong>${esc(p.name)}</strong><br>${arr(p.volts).join('/')} kV<br>${esc(p.folder||'Papka biriktirilmagan')}<br>GPS: ${num(p.lat).toFixed(6)}, ${num(p.lng).toFixed(6)}${p.kind!=='tap'?`<br><button type="button" class="dg-popup-edit" data-edit="station" data-id="${esc(p.id)}">✎ PSni tahrirlash</button>`:''}`);
+        .addTo(mapLayer).bindTooltip(esc(p.name),{permanent:p.kind!=='tap',direction:'top',className:'dg-ps-tooltip'}).bindPopup(`<strong>${esc(p.name)}</strong><br>${arr(p.volts).join('/')} kV<br>${esc(p.folder||'Papka biriktirilmagan')}<br>GPS: ${num(p.lat).toFixed(6)}, ${num(p.lng).toFixed(6)}<br><button type="button" class="dg-popup-edit" data-edit="${p.kind==='tap'?'tap-point':'station'}" data-id="${esc(p.id)}">✎ ${p.kind==='tap'?'Otpayka nuqtasini':'PSni'} tahrirlash</button>`);
       bounds.push([num(p.lat),num(p.lng)]);
     });
     if(mapTps)data.tps.forEach(t=>{
@@ -579,6 +655,8 @@
       :type==='tp'?'TP/KTPning haqiqiy joyini xaritada bosing yoki markerni suring.'
       :type==='tap'
       ? 'Xaritadagi tanlangan liniya ustiga bosing. Otpayka aynan shu trassaga yopishtiriladi, foiz avtomatik hisoblanadi.'
+      : type==='tap-point'
+      ? 'Otpayka nuqtasining yangi GPS joyini xaritadan tanlang. Elektr ulanish o‘zgarmaydi; tanlangan nuqta sxemada ham ishlatiladi.'
       : type==='tower'
         ? 'Liniya yo‘li ko‘rsatiladi. Tayanch joyiga bosing yoki markerni suring. GPS raqamini qo‘lda ham kiritishingiz mumkin.'
         : 'Xaritani yaqinlashtiring, PS joyiga bosing yoki ko‘k markerni suring. GPS kenglik/uzunlik avtomatik yoziladi.';
@@ -595,6 +673,10 @@
       const selected=l.id===selectedLineId;
       const path=L.polyline(coords.map(p=>[p.lat,p.lng]),{color:COLORS[l.voltage]||'#74819b',weight:selected?6:3,opacity:selected?0.95:0.7,dashArray:selected?null:'5 6'}).addTo(pickerContext);
       if(path.bindTooltip)path.bindTooltip(esc(l.name)+' · '+esc(l.voltage)+' kV',{direction:'center',permanent:selected,className:'dg-line-label'});
+    }
+    for(const l of data.lines){
+      const points=geometryFor(l).slice(1,-1);
+      points.forEach((t,i)=>{const marker=L.circleMarker([t.lat,t.lng],{radius:3,color:'#274968',weight:1,fillColor:'#fff',fillOpacity:1,interactive:false}).addTo(pickerContext);if(marker.bindTooltip)marker.bindTooltip(esc('Tayanch '+(t.number||'raqamsiz')));});
     }
     for(const ps of data.stations){
       if(!validGps(ps.lat,ps.lng)||ps.lat==null||ps.lng==null)continue;
@@ -690,9 +772,10 @@
     if(type==='tp' && !data.feeders.length){showMsg('Avval fider yarating.','error');return;}
     const collection={station:'stations',line:'lines',feeder:'feeders',tp:'tps',consumer:'consumers'}[type];
     let rec=collection?(data[collection].find(x=>x.id===id)||{}):{};
-    if(type==='tower' && id){const [lineId,index]=id.split(':');rec=arr(data.lines.find(l=>l.id===lineId)?.towers)[Number(index)]||{};rec={...rec,lineId};}
+    if(type==='tower' && id){const found=findTowerRef(id);rec=found?{...found.tower,lineId:found.line.id}:{};}
+    if(type==='tap-point' && id){rec=station(id)||{};}
     editorType=type;editorId=id;
-    const names={station:'PS yoki manba',line:'Liniya',tap:'Otpayka',tower:'Tayanch',feeder:'Fider',tp:'TP/KTP',consumer:'Mahalla yoki tashkilot'};
+    const names={station:'PS yoki manba',line:'Liniya',tap:'Otpayka', 'tap-point':'Otpayka nuqtasi', tower:'Tayanch',feeder:'Fider',tp:'TP/KTP',consumer:'Mahalla yoki tashkilot'};
     el('dg-editor-title').textContent=(id?'Tahrirlash: ':'Qo‘shish: ')+names[type];
     let html='';
     if(type==='station'){
@@ -702,7 +785,7 @@
       html+=folderPickerHtml(rec.folderId||'',rec.folder||'');
       html+='<div class="dg-two">'+field('lat','GPS kenglik (latitude)',rec.lat==null?'':rec.lat,'type="number" min="-90" max="90" step="any" placeholder="40.123456"')+field('lng','GPS uzunlik (longitude)',rec.lng==null?'':rec.lng,'type="number" min="-180" max="180" step="any" placeholder="65.123456"')+'</div>';
       html+=locationPickerHtml('station');
-      html+='<div class="dg-two">'+field('x','Sxemadagi X (45–895)',rec.x==null?Math.floor(120+Math.random()*620):rec.x,'type="number" min="45" max="895"')+field('y','Sxemadagi Y (55–385)',rec.y==null?220:rec.y,'type="number" min="55" max="385"')+'</div>';
+      html+='<details class="dg-schema-position"><summary>▦ Sxemadagi joylashuv (ixtiyoriy)</summary><div class="dg-form-tip">X/Y — GIS xaritadagi GPS emas! Faqat 1- va 2-variant sxemada PS qayerda chizilishini bildiradi. GPSni yuqoridagi xaritada belgilang.</div><div class="dg-two">'+field('x','Sxemadagi X — chapdan o‘ngga (45–895)',rec.x==null?Math.floor(120+Math.random()*620):rec.x,'type="number" min="45" max="895"')+field('y','Sxemadagi Y — yuqoridan pastga (55–385)',rec.y==null?220:rec.y,'type="number" min="55" max="385"')+'</div></details>';
     } else if(type==='line'){
       html+=field('name','Liniya nomi',rec.name,'required maxlength="120"');
       html+=select('voltage','Kuchlanish',VOLTAGES.map(v=>`<option value="${v}" ${num(rec.voltage||35)===v?'selected':''}>${v} kV</option>`).join(''));
@@ -717,12 +800,17 @@
       html+=locationPickerHtml('tap');
       html+=select('target','Qaysi PSga otpayka ketadi?',options(data.stations.filter(x=>x.kind!=='tap')));
       html+='<div class="dg-form-tip">Tanlangan uchastka 2 qismga bo‘linadi. Otpayka alohida ulanish nuqtasi sifatida saqlanadi. Bu faqat sxematik model.</div>';
+    } else if(type==='tap-point'){
+      html+=field('name','Otpayka nuqtasining nomi',rec.name,'required maxlength="120"');
+      html+='<div class="dg-form-tip">Bu yerda faqat nuqtaning GPS joyi va nomi yangilanadi. Mavjud liniya/PS ulanishlari va QF holatlari o‘zgarmaydi. Xaritadan haqiqiy magistral tarmoqlanish joyini tanlang.</div>';
+      html+='<div class="dg-two">'+field('lat','GPS kenglik',rec.lat==null?'':rec.lat,'type="number" min="-90" max="90" step="any" required')+field('lng','GPS uzunlik',rec.lng==null?'':rec.lng,'type="number" min="-180" max="180" step="any" required')+'</div>';
+      html+=locationPickerHtml('tap-point');
     } else if(type==='tower'){
-      html+=select('lineId','Liniya uchastkasi',options(data.lines,rec.lineId));
+      html+=select('lineId' ,'Liniya uchastkasi',options(data.lines,rec.lineId));
       html+=field('number','Tayanch raqami (ixtiyoriy)',rec.number||'', 'placeholder="Masalan: 12A" maxlength="40"');
       html+='<div class="dg-two">'+field('lat','GPS kenglik (ixtiyoriy)',rec.lat==null?'':rec.lat,'type="number" min="-90" max="90" step="any"')+field('lng','GPS uzunlik (ixtiyoriy)',rec.lng==null?'':rec.lng,'type="number" min="-180" max="180" step="any"')+'</div>';
       html+=locationPickerHtml('tower');
-      html+='<div class="dg-form-tip">GPS berilmasa, tayanch chiziq bo‘ylab teng oraliqda ko‘rsatiladi. Keyinchalik koordinatani tahrirlash mumkin bo‘ladi.</div>';
+      html+='<div class="dg-form-tip">Tayanch xaritada doim kichik nuqta bo‘lib chiqadi. GPS berilmasa taxminiy joy ko‘rsatiladi. Nuqtani bosib aniq joyiga ko‘chirish mumkin.</div>';
     } else if(type==='feeder'){
       html+=field('name','Fider nomi',rec.name,'required maxlength="120"');
       html+=select('psId','Qaysi PSdan chiqadi?',options(data.stations.filter(x=>x.kind!=='tap'),rec.psId));
@@ -746,9 +834,10 @@
       html+=locationPickerHtml('consumer');
       html+='<div class="dg-form-tip">Iste’molchi bir nechta TPdan ta’minlansa, oddiy bitta bog‘lanish asosidagi ta’sir hisobi yetarli emas. Bunday murakkab ulanish uchun alohida model kerak.</div>';
     }
-    el('dg-editor-form').innerHTML=html+`<div class="dg-editor-actions">${id?`<button type="button" class="dg-delete" data-del="${esc(type)}" data-id="${esc(id)}">O‘chirish</button>`:''}<button type="button" data-action="cancel-editor">Bekor qilish</button><button type="submit" class="dg-save">Saqlash</button></div>`;
+    el('dg-editor-form').innerHTML=html+`<div class="dg-editor-actions">${id&&type!=='tap-point'?`<button type="button" class="dg-delete" data-del="${esc(type)}" data-id="${esc(id)}">O‘chirish</button>`:''}<button type="button" data-action="cancel-editor">Bekor qilish</button><button type="submit" class="dg-save">Saqlash</button></div>`;
     el('dg-editor').hidden=false;
-    if(['station','tap','tower','tp','consumer'].includes(type))initLocationPicker(type);
+    updateFolderVisibility();
+    if(['station','tap','tap-point','tower','tp','consumer'].includes(type))initLocationPicker(type);
     if(type==='tp')prepareExistingTPs();
   }
   function onSave(ev){
@@ -768,6 +857,12 @@
       if(prior){if(prior.kind==='tap')return;rec.sourceOff=prior.sourceOff;}
       const oldLines=data.lines.filter(x=>x.a===id||x.b===id);
       if(oldLines.some(l=>!rec.volts.includes(num(l.voltage))))return showMsg('PSga ulangan liniya kuchlanishi saqlanayotgan PS darajasida yo‘q. Avval liniyani tahrirlang.','error');
+    } else if(type==='tap-point'){
+      const old=station(id);if(!old||old.kind!=='tap')return showMsg('Otpayka topilmadi.','error');
+      if(!v('name'))return showMsg('Otpayka nomini kiriting.','error');
+      if(!v('lat')||!v('lng')||!validGps(v('lat'),v('lng')))return showMsg('Otpayka GPS koordinatalarini tekshiring.','error');
+      Object.assign(old,{name:v('name'),lat:num(v('lat')),lng:num(v('lng'))});
+      saveLocal();closeEditor();refresh();showMsg('Otpayka nuqtasi ko‘chirildi. Elektr ulanishlar o‘zgarmadi.','success');return;
     } else if(type==='line'){
       rec.name=v('name');rec.voltage=num(v('voltage'));rec.a=v('a');rec.b=v('b');
       if(rec.a===rec.b)return showMsg('Liniya ikki xil ulanish nuqtasi orasida bo‘lishi kerak.','error');
@@ -798,11 +893,12 @@
       if(!!coordA!==!!coordB)return showMsg('GPS uchun kenglik va uzunlikni birga kiriting.','error');
       if(coordA&&!validGps(coordA,coordB))return showMsg('GPS koordinatalarini tekshiring.','error');
       if(!Array.isArray(line.towers))line.towers=[];
-      const entry={number:v('number'),lat:coordA===''?null:num(coordA),lng:coordB===''?null:num(coordB)};
-      if(editorId){const [oldLineId,idx]=editorId.split(':');const originLine=data.lines.find(l=>l.id===oldLineId);
-        if(!originLine?.towers?.[Number(idx)])return showMsg('Tahrirlanadigan tayanch topilmadi.','error');
-        if(originLine===line)line.towers[Number(idx)]=entry;
-        else {originLine.towers.splice(Number(idx),1);line.towers.push(entry);}
+      const origin=editorId?findTowerRef(editorId):null;
+      if(editorId&&!origin)return showMsg('Tahrirlanadigan tayanch topilmadi.','error');
+      const entry={id:origin?.tower.id||uid(),number:v('number'),lat:coordA===''?null:num(coordA),lng:coordB===''?null:num(coordB)};
+      if(origin){
+        if(origin.line===line)line.towers[origin.index]=entry;
+        else {origin.line.towers.splice(origin.index,1);line.towers.push(entry);}
       } else line.towers.push(entry);
       saveLocal();closeEditor();refresh();showMsg('Tayanch saqlandi.','success');return;
     } else if(type==='feeder'){
@@ -831,9 +927,9 @@
   function removeEntity(type,id){
     if(!confirm('Ushbu obyektni lokal qoralamadan o‘chirasizmi?'))return;
     if(type==='tower'){
-      const [lid,ix]=id.split(':');const line=data.lines.find(x=>x.id===lid);
-      if(!line?.towers?.[Number(ix)])return showMsg('Tayanch topilmadi.','error');
-      line.towers.splice(Number(ix),1);saveLocal();closeEditor();refresh();showMsg('Tayanch o‘chirildi.','success');return;
+      const found=findTowerRef(id);
+      if(!found)return showMsg('Tayanch topilmadi.','error');
+      found.line.towers.splice(found.index,1);saveLocal();closeEditor();refresh();showMsg('Tayanch o‘chirildi.','success');return;
     }
     const deps={
       station:()=>data.lines.some(x=>x.a===id||x.b===id)||data.feeders.some(x=>x.psId===id),
@@ -857,7 +953,7 @@
       const next=JSON.parse(await file.text());
       if(!next||!['stations','lines','feeders','tps','consumers'].every(k=>Array.isArray(next[k])))throw Error('Mos bo‘lmagan JSON');
       if(!confirm('Import joriy lokal qoralama o‘rnini egallaydi. Davom etasizmi?'))return;
-      data={version:1,...Object.fromEntries(['stations','lines','feeders','tps','consumers'].map(k=>[k,next[k].slice(0,2000)]))};
+      data=normalizeTowerIds({version:1,...Object.fromEntries(['stations','lines','feeders','tps','consumers'].map(k=>[k,next[k].slice(0,2000)]))});
       overrides={};saveLocal();refresh();showMsg('Qoralama import qilindi. Operativ ma’lumot emas.','success');
     }catch(e){showMsg('JSONni o‘qib bo‘lmadi: '+e.message,'error');}
   }
@@ -867,6 +963,6 @@
     document.addEventListener('hetk-auth-cleared',()=>authChanged(null));
     if(window.HETKAuth?.currentUser)authChanged(window.HETKAuth.currentUser);
   }
-  window.HETKDispatchGrid = {open:()=>open(),analyzeDraft:()=>data?analyze():null,version:'63-local-draft'};
+  window.HETKDispatchGrid = {open:()=>open(),analyzeDraft:()=>data?analyze():null,version:'64-local-draft'};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
