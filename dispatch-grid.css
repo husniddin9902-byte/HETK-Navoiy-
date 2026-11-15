@@ -273,3 +273,22 @@ body.dg-modal-open{overflow:hidden!important}
 #hetk-grid .dg-folder-row{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.4;flex:none;min-height:32px}
 #hetk-grid .dg-folder-row small{display:none}
 #hetk-grid .dg-item [data-attach-tps]{width:auto!important;min-width:43px;padding:3px 6px;font-size:10px;font-weight:800;white-space:nowrap;background:#e4f8ed!important;color:#106747!important}
+
+
+/* v64 — collapsible HETK folder tree for 1000+ existing folders. */
+#hetk-grid .dg-folder-tree{max-height:285px;gap:1px}
+#hetk-grid .dg-folder-node{display:flex;align-items:center;min-width:0;padding-left:calc(var(--folder-depth,0) * 15px)}
+#hetk-grid .dg-folder-node[hidden]{display:none!important}
+#hetk-grid .dg-folder-toggle{flex:0 0 26px;width:26px;height:29px;display:grid;place-items:center;border:0;border-radius:6px;background:#e5f2ff;color:#0b659e;font-weight:900;font-size:17px;cursor:pointer}
+#hetk-grid .dg-folder-toggle:hover:not(:disabled){background:#cbe7ff}
+#hetk-grid .dg-folder-toggle:disabled{background:transparent;color:#a5b8c8;cursor:default}
+#hetk-grid .dg-folder-node .dg-folder-row{display:block;min-width:0;flex:1;width:auto;padding:7px 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;min-height:32px}
+#hetk-grid .dg-schema-position{border:1px solid #d1dfed;border-radius:9px;background:#f5f9fe;padding:10px}
+#hetk-grid .dg-schema-position summary{cursor:pointer;color:#1b5789;font-weight:800;font-size:12px}
+#hetk-grid .dg-schema-position .dg-form-tip{margin:8px 0}
+/* Animation is only present for unambiguous modeled supply routes. The CSS
+   animates dots along SVG path geometry, respecting geographic bends. */
+#hetk-grid .leaflet-overlay-pane path.dg-gis-flow-path{stroke-linecap:round;pointer-events:none;animation:dg-gis-supply-dots 1.4s linear infinite}
+@keyframes dg-gis-supply-dots{from{stroke-dashoffset:0}to{stroke-dashoffset:-30}}
+@media(prefers-reduced-motion:reduce){#hetk-grid .leaflet-overlay-pane path.dg-gis-flow-path{animation:none;opacity:.35}}
+@media(max-width:520px){#hetk-grid .dg-folder-tree{max-height:235px}#hetk-grid .dg-folder-node{padding-left:calc(var(--folder-depth,0) * 10px)}}
