@@ -392,48 +392,164 @@
       <div class="dg-ps-note">* Yuklama va hisoblagich qiymatlari qo‘lda kiritiladi; 0 yoki bo‘sh qiymat real o‘lchov sifatida tasdiqlanmagan. kVA nominal TP quvvati, kW yuklama. Yerga ulagich haqidagi belgi operativ xavfsizlik kafolati emas.</div>
       </div>`;
   }
-  // Every Leaflet callout is anchored to the asset but the text is offset by a
-  // thin leader, keeping long names away from lines and PS markers. The line
-  // anchor is recalculated for the VISIBLE section on every zoom or pan.
-  function visibleLineAnchor(line){
-    if(!map)return null;
-    const geo=geometryFor(line);if(geo.length<2)return null;
-    const size=map.getSize();if(!size?.x||!size?.y)return null;
-    const margin=26, xmin=margin,xmax=size.x-margin,ymin=margin,ymax=size.y-margin;
-    let best=null;
+  // Viewport-based decluttering: roughly 3 cm on a 96-CSS-pixel/inch display.
+  // Recomputed on pan/zoom, so zoomed-out lines lose their name instead of
+  // creating a pile of overlapping tags. The underlying PS / lines NEVER hide.
+  const LABEL_MIN_SCREEN_PX = 114;
+  const LABEL_EDGE_PADDING = 12;
+  function clipScreenSegment(a,b,sz,pad=12){
+    const dx=b.x-a.x,dy=b.y-a.y;
+    const limits=[[-dx,a.x-pad],[dx,sz.x-pad-a.x],[-dy,a.y-pad],[dy,sz.y-pad-a.y]];
+    let low=0,high=1;
+    for(const [p,q] of limits){
+      if(Math.abs(p)<1e-8){if(q<0)return null;continue;}
+      const t=q/p;
+      if(p<0)low=Math.max(low,t);else high=Math.min(high,t);
+      if(low>high)return null;
+    }
+    return {ax:a.x+low*dx,ay:a.y+low*dy,bx:a.x+high*dx,by:a.y+high*dy,length:Math.hypot(dx,dy)*(high-low)};
+  }
+  function projectedLineSegments(line,sz){
+    const geo=geometryFor(line),result=[];
     for(let i=0;i<geo.length-1;i++){
       const a=map.latLngToContainerPoint([geo[i].lat,geo[i].lng]);
       const b=map.latLngToContainerPoint([geo[i+1].lat,geo[i+1].lng]);
-      const dx=b.x-a.x,dy=b.y-a.y;
-      let u0=0,u1=1;const clip=[[ -dx,a.x-xmin],[ dx,xmax-a.x],[-dy,a.y-ymin],[dy,ymax-a.y]];
-      let valid=true;
-      for(const [p,q] of clip){if(!p){if(q<0){valid=false;break;}}else{const t=q/p;if(p<0)u0=Math.max(u0,t);else u1=Math.min(u1,t);if(u0>u1){valid=false;break;}}}
-      if(!valid||u1<=u0)continue;
-      const cx=a.x+(u0+u1)*dx/2,cy=a.y+(u0+u1)*dy/2;
-      const length=Math.hypot(dx,dy)*(u1-u0),dist=Math.hypot(cx-size.x/2,cy-size.y/2);
-      const score=length*.30-dist;
-      if(!best||score>best.score)best={x:cx,y:cy,score};
+      const segment=clipScreenSegment(a,b,sz,LABEL_EDGE_PADDING);
+      if(segment&&segment.length>1)result.push(segment);
     }
-    return best?{point:map.containerPointToLatLng([best.x,best.y]),right:best.x>Math.max(85,size.x-250)}:null;
+    return result;
+  }
+  function boxesOverlap(a,b,gap=5){
+    return a.x<b.x+b.w+gap && b.x<a.x+a.w+gap &&
+      a.y<b.y+b.h+gap && b.y<a.y+a.h+gap;
+  }
+  function lineTouchesBox(s,rect,pad=5){
+    // Liang-Barsky segment / expanded label rectangle test (no DOM layout required).
+    const x0=rect.x-pad,x1=rect.x+rect.w+pad,y0=rect.y-pad,y1=rect.y+rect.h+pad;
+    const dx=s.bx-s.ax,dy=s.by-s.ay;
+    let t0=0,t1=1;
+    for(const [p,q] of [[-dx,s.ax-x0],[dx,x1-s.ax],[-dy,s.ay-y0],[dy,y1-s.ay]]){
+      if(Math.abs(p)<1e-8){if(q<0)return false;continue;}
+      const t=q/p;
+      if(p<0)t0=Math.max(t0,t);else t1=Math.min(t1,t);
+      if(t0>t1)return false;
+    }
+    return true;
+  }
+  function labelWidth(text,size){
+    // Match the CSS tag width. Use canvas measurement where supported, else
+    // a conservative estimate. A bounded width ensures long PS names cannot
+    // blanket the map on small monitors.
+    const maximum=Math.max(88,Math.min(size.x<650?166:234,size.x-40));
+    let raw=String(text).length*6.8+25;
+    try{
+      const canvas=document.createElement('canvas');
+      const ctx=canvas.getContext('2d');
+      if(ctx){ctx.font='800 11px system-ui, Arial, sans-serif';raw=ctx.measureText(String(text)).width+25;}
+    }catch(e){}
+    return Math.min(maximum,Math.max(78,Math.ceil(raw)));
+  }
+  function candidatePositions(anchor,w,h){
+    const p=anchor;
+    // Every candidate keeps text off the exact PS point / conductor.
+    return [
+      {x:p.x+27,y:p.y-55}, {x:p.x-w-27,y:p.y-55},
+      {x:p.x+27,y:p.y+28}, {x:p.x-w-27,y:p.y+28},
+      {x:p.x-w/2,y:p.y-83}, {x:p.x-w/2,y:p.y+48},
+      {x:p.x+49,y:p.y-79}, {x:p.x-w-49,y:p.y-79},
+      {x:p.x+49,y:p.y+48}, {x:p.x-w-49,y:p.y+48},
+      {x:p.x-w/2,y:p.y-111}, {x:p.x-w/2,y:p.y+75}
+    ].map(c=>({x:Math.round(c.x),y:Math.round(c.y),w,h}));
+  }
+  function placeCallout(anchor,text,kind,ref,context){
+    const {size,occupied,segments,psPoints}=context;
+    const w=labelWidth(text,size),h=29;
+    const preferRight=anchor.x<size.x/2,preferBelow=anchor.y<size.y/2;
+    // Labels gravitate to different sides depending on their map position,
+    // rather than every leader automatically pointing in the same direction.
+    const positions=candidatePositions(anchor,w,h).sort((a,b)=>{
+      function rank(r){
+        const toRight=r.x>=anchor.x,toBelow=r.y>=anchor.y;
+        const horizontal=(toRight===preferRight)?0:1;
+        const vertical=(toBelow===preferBelow)?0:1;
+        return horizontal*1000+vertical*500+Math.hypot(r.x+r.w/2-anchor.x,r.y+r.h/2-anchor.y);
+      }
+      return rank(a)-rank(b);
+    });
+    for(const rect of positions){
+      if(rect.x<9||rect.y<9||rect.x+rect.w>size.x-9||rect.y+rect.h>size.y-9)continue;
+      if(occupied.some(box=>boxesOverlap(rect,box,7)))continue;
+      if(segments.some(s=>lineTouchesBox(s,rect,4)))continue;
+      if(psPoints.some(p=>p!==anchor && p.x>rect.x-12 && p.x<rect.x+rect.w+12 && p.y>rect.y-12 && p.y<rect.y+rect.h+12))continue;
+      occupied.push(rect);
+      let endX,endY;
+      if(rect.x>anchor.x){endX=rect.x;endY=rect.y+h/2;}
+      else if(rect.x+rect.w<anchor.x){endX=rect.x+rect.w;endY=rect.y+h/2;}
+      else{endX=rect.x+w/2;endY=rect.y>anchor.y?rect.y:rect.y+h;}
+      const dx=endX-anchor.x,dy=endY-anchor.y;
+      const length=Math.hypot(dx,dy),angle=Math.atan2(dy,dx);
+      const color=kind==='line'?(COLORS[ref.voltage]||'#56728a'):(ref.kind==='source'?'#1374d0':'#164579');
+      const html=`<div class="dg-smart-callout" style="--dg-accent:${color}"><i class="dg-smart-leader" aria-hidden="true" style="width:${length.toFixed(1)}px;transform:rotate(${angle.toFixed(5)}rad)"></i><span class="dg-smart-tag ${kind==='ps'?'dg-smart-ps':''}" style="left:${rect.x-anchor.x}px;top:${rect.y-anchor.y}px;width:${w}px" title="${esc(text)}">${esc(text)}</span></div>`;
+      const marker=L.marker(map.containerPointToLatLng([anchor.x,anchor.y]),{icon:L.divIcon({className:'dg-smart-callout-icon',html,iconSize:[1,1],iconAnchor:[0,0]}),interactive:true,zIndexOffset:kind==='ps'?850:650}).addTo(callouts);
+      if(kind==='line')marker.bindPopup(mapLinePopup(ref,context.overview));
+      else marker.on('click',()=>openPsPanel(ref.id));
+      return true;
+    }
+    return false;
   }
   function drawMapCallouts(){
     if(!map||!callouts||!window.L?.divIcon)return;
     callouts.clearLayers();
+    const size=map.getSize();if(!size?.x||!size?.y)return;
+    const bounds=map.getBounds();
     const overview=analyze();
-    data.lines.forEach((l,i)=>{
-      const anchor=visibleLineAnchor(l);if(!anchor)return;
-      const text=esc(l.name)+' · '+num(l.voltage)+' kV';
-      const below=map.latLngToContainerPoint(anchor.point).y<75;
-      const html=`<div class="dg-map-callout dg-line-callout ${anchor.right?'dg-callout-left':''} ${below?'dg-callout-below':''}" style="--dg-accent:${COLORS[l.voltage]||'#6b7890'};--dg-shift:${i%3*16}px"><span>${text}</span></div>`;
-      const label=L.marker(anchor.point,{icon:L.divIcon({className:'dg-map-callout-icon',html,iconSize:[0,0],iconAnchor:[0,0]}),interactive:true,zIndexOffset:650}).addTo(callouts);
-      label.bindPopup(mapLinePopup(l,overview));
+    const context={size,overview,occupied:[],segments:[],psPoints:[]};
+    // All line geometries remain obstacles, even when their own text is hidden.
+    const lines=data.lines.map(line=>{
+      const segments=projectedLineSegments(line,size);
+      context.segments.push(...segments);
+      return {line,segments,visibleLength:segments.reduce((sum,s)=>sum+s.length,0)};
     });
-    data.stations.filter(p=>p.kind!=='tap').forEach((ps,i)=>{
-      if(ps.lat==null||ps.lng==null||!validGps(ps.lat,ps.lng)||!map.getBounds().contains([num(ps.lat),num(ps.lng)]))return;
-      const pos=map.latLngToContainerPoint([num(ps.lat),num(ps.lng)]);
-      const html=`<div class="dg-map-callout dg-ps-callout ${pos.x>Math.max(85,map.getSize().x-250)?'dg-callout-left':''} ${pos.y<75?'dg-callout-below':''}" style="--dg-accent:${ps.kind==='source'?'#1274d1':'#183f75'};--dg-shift:${i%3*14}px"><span>${esc(ps.name)}</span></div>`;
-      L.marker([num(ps.lat),num(ps.lng)],{icon:L.divIcon({className:'dg-map-callout-icon',html,iconSize:[0,0],iconAnchor:[0,0]}),interactive:true,zIndexOffset:850}).addTo(callouts).on('click',()=>openPsPanel(ps.id));
-    });
+    const stations=data.stations.filter(ps=>ps.kind!=='tap'&&ps.lat!=null&&ps.lng!=null&&validGps(ps.lat,ps.lng)&&bounds.contains([num(ps.lat),num(ps.lng)]))
+      .map(ps=>({ps,point:map.latLngToContainerPoint([num(ps.lat),num(ps.lng)])}));
+    context.psPoints=stations.map(s=>s.point);
+    // Group only genuinely close PS markers. Clicking original markers still
+    // opens the exact PS. Zoom in to separate the grouped labels again.
+    const byPriority=[...stations].sort((a,b)=>(a.ps.kind==='source'?0:1)-(b.ps.kind==='source'?0:1)||a.ps.name.localeCompare(b.ps.name,'uz'));
+    const used=new Set();
+    for(const candidate of byPriority){
+      if(used.has(candidate.ps.id))continue;
+      const group=[candidate];used.add(candidate.ps.id);
+      for(const other of byPriority){
+        if(used.has(other.ps.id))continue;
+        if(Math.hypot(other.point.x-candidate.point.x,other.point.y-candidate.point.y)<LABEL_MIN_SCREEN_PX){
+          group.push(other);used.add(other.ps.id);
+        }
+      }
+      const volts=[...new Set(group.flatMap(x=>arr(x.ps.volts).map(Number)).filter(Number.isFinite))].sort((a,b)=>b-a);
+      const summary=group.length>1?`${candidate.ps.name} +${group.length-1} PS · ${volts.join('/')} kV`:candidate.ps.name;
+      placeCallout(candidate.point,summary,'ps',candidate.ps,context);
+    }
+    // Show text ONLY when at least ~3 cm of this line is visible. In dense
+    // regions a colliding label is suppressed, not drawn over another line.
+    lines.filter(l=>l.visibleLength>=LABEL_MIN_SCREEN_PX)
+      .sort((a,b)=>b.visibleLength-a.visibleLength||num(b.line.voltage)-num(a.line.voltage))
+      .forEach(({line,segments,visibleLength})=>{
+        // Use length-weighted locations along the entire VISIBLE route. Many
+        // support points can split a long line into dozens of tiny segments.
+        // The label must still show when their COMBINED length exceeds 3 cm.
+        for(const fraction of [.50,.25,.75,.125,.875,.375,.625]){
+          let remaining=visibleLength*fraction,anchor=null;
+          for(const s of segments){
+            if(remaining<=s.length){
+              const t=s.length?remaining/s.length:0;
+              anchor={x:s.ax+(s.bx-s.ax)*t,y:s.ay+(s.by-s.ay)*t};break;
+            }
+            remaining-=s.length;
+          }
+          if(anchor&&placeCallout(anchor,`${line.name} · ${num(line.voltage)} kV`,'line',line,context))break;
+        }
+      });
   }
   function routePointAt(line,ratio){
     const pts=geometryFor(line);
@@ -1198,6 +1314,6 @@
     document.addEventListener('hetk-auth-cleared',()=>authChanged(null));
     if(window.HETKAuth?.currentUser)authChanged(window.HETKAuth.currentUser);
   }
-  window.HETKDispatchGrid = {open:()=>open(),analyzeDraft:()=>data?analyze():null,version:'67-local-draft'};
+  window.HETKDispatchGrid = {open:()=>open(),analyzeDraft:()=>data?analyze():null,version:'68-local-draft'};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
