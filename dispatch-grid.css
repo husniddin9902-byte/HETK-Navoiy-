@@ -402,3 +402,11 @@ body.dg-modal-open{overflow:hidden!important}
 /* Keep accessibility setting: devices requesting reduced motion do not flash.
    Operators can check the motion setting using the Chiroqchalar help button. */
 @media(prefers-reduced-motion:reduce){#hetk-grid .leaflet-overlay-pane path.dg-gis-flow-path{animation:none;opacity:.35}}
+
+/* v70: explicit Firebase simulation persistence status; never imply live SCADA. */
+#hetk-grid .dg-cloud-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:5px 16px;background:#e8f3ff;color:#17517b;border-bottom:1px solid #cadeee;font-size:11px;font-weight:700;flex-wrap:wrap}
+#hetk-grid #dg-cloud-status{overflow-wrap:anywhere}
+#hetk-grid .dg-cloud-bar>span:last-child{color:#7d5c13;font-size:10px}
+#hetk-grid [data-action="cloud-save"]{background:#e2f7eb;color:#176142;border-color:#a8d9b5}
+#hetk-grid [data-action="cloud-load"]{background:#edf4ff;color:#225a99;border-color:#b6cbe7}
+@media(max-width:600px){#hetk-grid .dg-cloud-bar{padding:5px 9px;font-size:10px}}
