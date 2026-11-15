@@ -1,11 +1,13 @@
-/* HETK-Navoiy — Dispatch Grid prototype v69
- * SIMULATION ONLY: No SCADA control, no live switching, no network writes.
- * This is a local draft in this browser, not an operational dispatch system.
+/* HETK-Navoiy — Dispatch Grid simulation v70
+ * NO SCADA CONTROL. An optional, role-restricted Firebase RTDB shared
+ * SIMULATION DRAFT is supported only after separately reviewed DB rules.
+ * The animated dots are derived from the saved model and virtual QF states.
  */
 (function () {
   'use strict';
   const ROLE_SET = new Set(['super_admin', 'chief_dispatcher', 'dispatcher']);
-  const STORAGE = 'hetk.dispatchGrid.draft.v60.'; // Keep v60 key for backwards-compatible local drafts.
+  const STORAGE = 'hetk.dispatchGrid.draft.v60.'; // Preserve legacy local draft key.
+  const CLOUD_PATH = 'DispatchGridSimulation/shared'; // A SIMULATION ONLY shared draft. Never a SCADA state.
   const VOLTAGES = [220, 110, 35, 10, 6];
   const COLORS = { 220:'#e74655', 110:'#3186f6', 35:'#20b978', 10:'#e4a642', 6:'#ae7cf4' };
   let root, button, data, editorType = '', editorId = '', currentUser = null;
@@ -16,6 +18,9 @@
   let pickerContext = null, baseMapLayer = null, pickerBaseMapLayer = null, visiblePickerObjects = true;
   let existingTPs = null, existingTPsPending = false, mapStyle = 'street';
   let expandedFolders = new Set(); // User-controlled open branches of HETK folder tree.
+  let cloudWanted=false, cloudRevision=null, cloudBusy=false, cloudDirty=false, cloudBlocked=false;
+  let cloudTimer=null, cloudEpoch=0, cloudReadStarted=false, cloudListenerRef=null, cloudListenerFn=null;
+  let localChangeSerial=0, cloudStatusText='Lokal qoralama';
 
   const el = id => document.getElementById(id);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -203,16 +208,174 @@
     }
     return draft;
   }
-  const saveLocal = () => {try { normalizeTowerIds(data);localStorage.setItem(storeKey(),JSON.stringify(data)); } catch(e){showMsg('Brauzer xotirasiga yozib bo‘lmadi. JSON eksportini saqlang.','error');}};
-  const loadLocal = () => {
-    try {
-      const raw=JSON.parse(localStorage.getItem(storeKey()) || 'null');
-      if(raw && Array.isArray(raw.stations) && Array.isArray(raw.lines)) {
+  const localMetaKey = suffix => STORAGE + suffix + '.' + (currentUser?.uid||currentUser?.login||'unknown');
+  const readMeta = suffix => {try{return localStorage.getItem(localMetaKey(suffix));}catch(e){return null;}};
+  const writeMeta = (suffix,value) => {try{localStorage.setItem(localMetaKey(suffix),String(value));}catch(e){/* Optional local flag. */}};
+  function onlyValidSwitches(raw,model=data){
+    const out={};const ids=new Set(arr(model?.lines).map(l=>l.id));
+    if(raw&&typeof raw==='object'&&!Array.isArray(raw))for(const [key,value] of Object.entries(raw)){
+      const m=/^(.+):(a|b)$/.exec(key);
+      if(m&&ids.has(m[1])&&typeof value==='boolean')out[key]=value;
+    }
+    return out;
+  }
+  function loadSwitchesLocal(){
+    try{return onlyValidSwitches(JSON.parse(localStorage.getItem(localMetaKey('virtualSwitches'))||'{}'));}
+    catch(e){return {};}
+  }
+  function markLocalChanged(){
+    localChangeSerial++;
+    if(cloudWanted){cloudDirty=true;writeMeta('cloudDirty','1');setCloudStatus('Firebase: o‘zgarishlar saqlanmoqda…');queueCloudSave();}
+  }
+  function saveSwitchesLocal(mark=true){
+    overrides=onlyValidSwitches(overrides);
+    try{localStorage.setItem(localMetaKey('virtualSwitches'),JSON.stringify(overrides));}
+    catch(e){showMsg('Virtual QF holatini brauzer xotirasiga yozib bo‘lmadi.','error');}
+    if(mark)markLocalChanged();
+  }
+  function saveLocal(mark=true){
+    try{normalizeTowerIds(data);localStorage.setItem(storeKey(),JSON.stringify(data));}
+    catch(e){showMsg('Brauzer xotirasiga yozib bo‘lmadi. JSON eksportini saqlang.','error');}
+    if(mark)markLocalChanged();
+  }
+  function loadLocal(){
+    try{
+      const raw=JSON.parse(localStorage.getItem(storeKey())||'null');
+      if(raw&&Array.isArray(raw.stations)&&Array.isArray(raw.lines))
         return normalizeTowerIds({version:1,stations:arr(raw.stations),lines:arr(raw.lines),feeders:arr(raw.feeders),tps:arr(raw.tps),consumers:arr(raw.consumers)});
-      }
-    } catch(e) { /* Keep a clean draft on corrupt data. */ }
+    }catch(e){/* Keep a clean draft on corrupt data. */}
     return empty();
-  };
+  }
+  const draftIsNonempty = d => ['stations','lines','feeders','tps','consumers'].some(k=>arr(d?.[k]).length>0);
+  function setCloudStatus(message){
+    cloudStatusText=message;
+    const target=el('dg-cloud-status');if(target)target.textContent=message;
+  }
+  function firebaseRef(){
+    try{
+      const auth=window.firebase?.auth?.().currentUser;
+      if(!currentUser?.uid||!auth||auth.uid!==currentUser.uid)return null;
+      return window.firebase?.database?.().ref(CLOUD_PATH)||null;
+    }catch(e){return null;}
+  }
+  function stopCloudListener(){
+    if(cloudListenerRef&&cloudListenerFn)try{cloudListenerRef.off('value',cloudListenerFn);}catch(e){}
+    cloudListenerRef=null;cloudListenerFn=null;
+    if(cloudTimer){clearTimeout(cloudTimer);cloudTimer=null;}
+  }
+  function cloudPacket(snapshot){
+    const raw=snapshot?.val?.();
+    if(!raw||raw.simulationOnly!==true||raw.version!==1||!raw.model||raw.model.version!==1)throw new Error('Firebase dagi qoralama formati noto‘g‘ri.');
+    return raw;
+  }
+  function applyCloud(packet){
+    data=normalizeTowerIds({version:1,...Object.fromEntries(['stations','lines','feeders','tps','consumers'].map(k=>[k,arr(packet.model[k])]))});
+    overrides=onlyValidSwitches(packet.virtualSwitches||{},data);
+    cloudRevision=Number(packet.revision)||0;
+    cloudDirty=false;cloudBlocked=false;
+    writeMeta('cloudRevision',cloudRevision);writeMeta('cloudDirty','0');writeMeta('cloudMode','1');
+    cloudWanted=true;saveLocal(false);saveSwitchesLocal(false);
+    if(root&&!root.hidden&&el('dg-editor')?.hidden!==false)refresh();
+    setCloudStatus('Firebase: sinov ma’lumotlari saqlangan · rev '+cloudRevision);
+  }
+  function observeCloud(ref){
+    if(cloudListenerRef)return;
+    const expected=cloudEpoch;
+    cloudListenerFn=snapshot=>{
+      if(expected!==cloudEpoch||!currentUser||!cloudWanted||!snapshot.exists())return;
+      let packet;try{packet=cloudPacket(snapshot);}catch(e){setCloudStatus(e.message);return;}
+      if(Number(packet.revision)===cloudRevision||cloudBusy)return;
+      if(cloudDirty||!el('dg-editor')?.hidden){cloudBlocked=true;setCloudStatus('Firebase’da boshqa o‘zgarish bor. JSON zaxira oling, so‘ng Firebase’dan yuklang.');return;}
+      applyCloud(packet);
+    };
+    cloudListenerRef=ref;
+    ref.on('value',cloudListenerFn,error=>{if(expected===cloudEpoch)setCloudStatus('Firebase tinglash xatosi: '+(error?.code||error?.message||'ruxsat yo‘q'));});
+  }
+  async function openCloudSession(){
+    const epoch=cloudEpoch,ref=firebaseRef();
+    if(!ref){setCloudStatus('Firebase Auth ulanmagan; lokal nusxa saqlanmoqda');return;}
+    if(cloudReadStarted)return;cloudReadStarted=true;
+    setCloudStatus('Firebase’dan sinov ma’lumotlari tekshirilmoqda…');
+    try{
+      const snapshot=await ref.once('value');
+      if(epoch!==cloudEpoch||!currentUser)return;
+      if(!snapshot.exists()){
+        cloudRevision=0;
+        setCloudStatus('Firebase bo‘sh. «☁ Saqlash» bilan lokal loyihani joylang.');
+        return;
+      }
+      const packet=cloudPacket(snapshot);
+      if(cloudDirty){cloudBlocked=true;setCloudStatus('Lokal nusxada saqlanmagan o‘zgarish bor. JSON zaxira oling, so‘ng tanlang.');return;}
+      applyCloud(packet);observeCloud(ref);
+    }catch(e){if(epoch===cloudEpoch)setCloudStatus('Firebase ulanmadi: '+(e?.code||e?.message||'ruxsat talab etiladi'));}
+    finally{if(epoch===cloudEpoch)cloudReadStarted=false;}
+  }
+  function pauseCloudForReplacement(){
+    // Loading a sample, clearing the draft, or importing JSON is a LOCAL
+    // replacement. It MUST NOT silently overwrite the shared Firebase model.
+    stopCloudListener();cloudWanted=false;cloudDirty=false;cloudBlocked=false;
+    cloudRevision=null;writeMeta('cloudMode','0');writeMeta('cloudDirty','0');
+    writeMeta('cloudRevision','');
+    setCloudStatus('Lokal nusxa almashtirildi. Firebase o‘zgarmadi. Umumiyga yozish uchun «☁ Saqlash»ni bosing.');
+  }
+  function queueCloudSave(){
+    if(!cloudWanted||cloudBusy||cloudBlocked)return;
+    if(cloudTimer)clearTimeout(cloudTimer);
+    cloudTimer=setTimeout(()=>{cloudTimer=null;writeCloud(false);},900);
+  }
+  async function writeCloud(manual){
+    if(cloudBusy)return;
+    const ref=firebaseRef();
+    if(!ref){setCloudStatus('Firebase Auth ulanmagan — faqat lokal saqlandi');return;}
+    if(cloudBlocked&&!manual){return;}
+    const epoch=cloudEpoch;
+    cloudBusy=true;
+    try{
+      if(!cloudWanted||cloudRevision===null){
+        const snap=await ref.once('value');
+        if(epoch!==cloudEpoch)return;
+        if(snap.exists()){
+          const remote=cloudPacket(snap);
+          if(!manual||!confirm('DIQQAT: Firebase’da oldindan umumiy dispetcherlik qoralamasi bor. Uning o‘rniga SHU qurilmadagi ma’lumotlarni saqlamoqchimisiz? Avval ikkala JSON zaxirasini oling.')){
+            setCloudStatus('Firebase’da boshqa ma’lumot bor. «↓ Firebase» orqali ko‘ring.');return;
+          }
+          cloudRevision=Number(remote.revision)||0;
+        }else cloudRevision=0;
+      }
+      if(epoch!==cloudEpoch)return;
+      if(cloudBlocked){setCloudStatus('Boshqa dispetcher o‘zgartirgan: avval «↓ Firebase» orqali tekshiring.');return;}
+      const serial=localChangeSerial;
+      const payload={version:1,simulationOnly:true,model:JSON.parse(JSON.stringify(data)),virtualSwitches:onlyValidSwitches(overrides),updatedBy:currentUser.uid,updatedAt:window.firebase.database.ServerValue.TIMESTAMP};
+      let revisionConflict=false;
+      const result=await ref.transaction(remote=>{
+        const revision=Number(remote?.revision)||0;
+        if(revision!==cloudRevision){revisionConflict=true;return;}
+        return {...payload,revision:revision+1};
+      },undefined,false);
+      if(epoch!==cloudEpoch)return;
+      if(!result.committed){cloudBlocked=true;setCloudStatus('Konflikt: boshqa dispetcher yangi nusxani saqlagan. Lokal JSONni eksport qiling.');return;}
+      cloudRevision=Number(result.snapshot.val()?.revision)||cloudRevision+1;
+      cloudWanted=true;cloudBlocked=false;writeMeta('cloudMode','1');writeMeta('cloudRevision',cloudRevision);
+      if(serial===localChangeSerial){cloudDirty=false;writeMeta('cloudDirty','0');setCloudStatus('Firebase: sinov ma’lumotlari saqlandi · rev '+cloudRevision);}
+      else{cloudDirty=true;writeMeta('cloudDirty','1');setCloudStatus('Firebase: yangi o‘zgarishlar navbatda…');}
+      observeCloud(ref);
+      if(cloudDirty)setTimeout(()=>queueCloudSave(),50);
+    }catch(e){
+      setCloudStatus('Firebase saqlash xatosi: '+(e?.code||e?.message||'ruxsat talab etiladi')+' · lokal nusxa saqlangan');
+      cloudDirty=true;writeMeta('cloudDirty','1');
+    }finally{cloudBusy=false;}
+  }
+  async function importCloud(){
+    const ref=firebaseRef();if(!ref)return showMsg('Firebase Auth ulanmagan.','error');
+    const epoch=cloudEpoch;setCloudStatus('Firebase’dan yuklanmoqda…');
+    try{
+      const snapshot=await ref.once('value');if(epoch!==cloudEpoch)return;
+      if(!snapshot.exists())return setCloudStatus('Firebase’da dispetcherlik qoralamasi hali yo‘q.');
+      const packet=cloudPacket(snapshot);
+      if((draftIsNonempty(data)||cloudDirty)&&!confirm('Firebase’dan yuklash ushbu qurilmadagi qoralama o‘rnini egallaydi. Avval «↓ JSON» orqali lokal zaxira oling. Davom etasizmi?'))return setCloudStatus('Lokal nusxa saqlab qolindi.');
+      applyCloud(packet);observeCloud(ref);showMsg('Firebase’dagi umumiy SINOV modeli yuklandi.','success');
+    }catch(e){setCloudStatus('Firebase yuklash xatosi: '+(e?.code||e?.message||'ruxsat talab etiladi'));}
+  }
   const sample = () => {
     const d = empty();
     d.stations = [
@@ -607,10 +770,13 @@
             <button type="button" data-action="reset-switches" title="Sinovdagi o‘chirgichlarni asl holatga qaytarish">↶ Sxemani tiklash</button>
             <button type="button" data-action="sample">Namuna</button>
             <button type="button" data-action="clear" class="dg-clear-button" title="Mahalliy qoralamani (namunani ham) tozalash">✕ Tozalash</button>
+            <button type="button" data-action="cloud-save" title="Umumiy Firebase SINOV qoralamasiga saqlash">☁ Saqlash</button>
+            <button type="button" data-action="cloud-load" title="Firebase’dagi umumiy SINOV nusxasini ochish">☁ Yuklash</button>
             <button type="button" data-action="export">↓ JSON</button>
             <button type="button" data-action="import">↑ JSON</button>
           </div>
         </div>
+        <div class="dg-cloud-bar"><span id="dg-cloud-status" role="status">Lokal qoralama</span><span>FAKAT SINOV · Elektr jihoziga buyruq yuborilmaydi</span></div>
         <div id="hetk-grid-message" class="dg-message" hidden></div>
         <div class="dg-body">
           <aside class="dg-sidebar" id="dg-sidebar">
@@ -628,7 +794,7 @@
               <button type="button" data-section="consumers">Iste’molchi</button>
             </div>
             <div class="dg-item-list" id="dg-item-list"></div>
-            <div class="dg-local-notice">🔒 Birinchi bosqich: ma’lumotlar faqat shu qurilma brauzerida saqlanadi. Hozircha Firebase va SCADA bilan sinxron emas. Haqiqiy kommutatsiya bajarilmaydi.</div>
+            <div class="dg-local-notice">🔒 Lokal zaxira doim saqlanadi. «☁ Saqlash» Firebase’dagi UMUMIY SIMULYATSIYA modelini yangilaydi (faqat tegishli Firebase qoidalari o‘rnatilganda). <strong>Haqiqiy kommutatsiya va SCADA boshqaruvi yo‘q.</strong></div>
           </aside>
           <main class="dg-main">
             <div class="dg-kpis" id="dg-kpis"></div>
@@ -637,7 +803,7 @@
           <aside class="dg-impact" id="dg-impact"></aside>
           <aside class="dg-ps-panel" id="dg-ps-panel" hidden></aside>
         </div>
-        <footer class="dg-footer"><span>⚠ Ta’minot va uzilish natijalari kiritilgan modelga asoslangan taxmin. Operativ qaror yoki xavfsiz ulash uchun ishlatilmaydi.</span><span>v69 · Lokal prototip</span></footer>
+        <footer class="dg-footer"><span>⚠ Ta’minot va uzilish natijalari kiritilgan modelga asoslangan taxmin. Operativ qaror yoki xavfsiz ulash uchun ishlatilmaydi.</span><span>v70 · Firebase sinov qoralamasi</span></footer>
       </div>
       <div class="dg-modal" id="dg-editor" hidden><div class="dg-editor-card" role="dialog" aria-modal="true" aria-label="Obyekt tahrirlash"><div class="dg-editor-head"><strong id="dg-editor-title">Tahrirlash</strong><button type="button" data-action="cancel-editor" aria-label="Yopish">✕</button></div><form id="dg-editor-form"></form></div></div>
       <input type="file" id="dg-import-file" accept=".json,application/json" hidden>
@@ -683,10 +849,18 @@
     const prior=currentUser && currentUser.uid;
     currentUser=isAllowed(u) ? u : null;
     if(button)button.hidden=!currentUser;
-    if(!currentUser){if(wasOpen)close();activePsId=null;data=empty();overrides={};existingTPs=null;existingTPsPending=false;return;}
-    if(prior!==(u.uid||null)){existingTPs=null;existingTPsPending=false;data=loadLocal();overrides={};chosen=null;activePsId=null;if(wasOpen)refresh();}
+    if(!currentUser){cloudEpoch++;stopCloudListener();cloudWanted=false;cloudDirty=false;cloudBlocked=false;cloudRevision=null;cloudReadStarted=false;if(wasOpen)close();activePsId=null;data=empty();overrides={};existingTPs=null;existingTPsPending=false;return;}
+    if(prior!==(u.uid||null)){
+      cloudEpoch++;stopCloudListener();cloudReadStarted=false;cloudBusy=false;cloudBlocked=false;
+      existingTPs=null;existingTPsPending=false;data=loadLocal();overrides=loadSwitchesLocal();
+      cloudWanted=readMeta('cloudMode')==='1';cloudDirty=readMeta('cloudDirty')==='1';
+      cloudRevision=readMeta('cloudRevision')!=null?Number(readMeta('cloudRevision')):null;
+      chosen=null;activePsId=null;if(wasOpen)refresh();
+      setCloudStatus(cloudWanted?'Firebase sinov nusxasiga qayta ulanmoqda…':'Lokal qoralama · ☁ Saqlash orqali Firebase’ga o‘ting');
+      if(cloudWanted)Promise.resolve().then(()=>openCloudSession());
+    }
   }
-  function open(){if(!canEdit())return;root.hidden=false;root.setAttribute('aria-hidden','false');document.body.classList.add('dg-modal-open');refresh();updateSidebar();}
+  function open(){if(!canEdit())return;root.hidden=false;root.setAttribute('aria-hidden','false');document.body.classList.add('dg-modal-open');refresh();updateSidebar();setCloudStatus(cloudStatusText);if(cloudWanted)openCloudSession();}
   function close(){if(!root)return;activePsId=null;callouts=null;root.hidden=true;root.setAttribute('aria-hidden','true');document.body.classList.remove('dg-modal-open');closeEditor();if(map){map.remove();map=null;mapLayer=null;baseMapLayer=null;}}
   function onClick(ev){
     const svgPs=ev.target.closest('[data-open-ps]');
@@ -728,7 +902,7 @@
     if(target.dataset.switch){const key=target.dataset.switch;const [lineId, end]=key.split(':');const l=data.lines.find(x=>x.id===lineId);
       if(!l || station(l[end])?.kind==='tap')return;
       if(actualOpen(l,end)&&isGroundMarked(l)&&!confirm('DIQQAT: virtual yerga ulagich o‘rnatilgan deb qayd etilgan! Bu faqat SIMULYATSIYA; haqiqiy holatni boshqarmaydi. Virtual QFni yopishni davom ettirasizmi?'))return;
-      overrides[key]=!actualOpen(l,end);refresh();return;}
+      overrides[key]=!actualOpen(l,end);saveSwitchesLocal();refresh();return;}
     const a=target.dataset.action;
     if(a==='close')close();
     if(a==='close-ps-panel'){activePsId=null;renderPsPanel();}
@@ -739,15 +913,17 @@
     if(a==='toggle-stats'){showStats=!showStats;updateSidebar();}
     if(a==='close-objects'){showObjects=false;updateSidebar();}
     if(a==='close-impact'){showImpact=false;updateSidebar();}
-    if(a==='reset-switches'){overrides={};refresh();}
+    if(a==='reset-switches'){overrides={};saveSwitchesLocal();refresh();}
     if(a==='flow-help'){
       const r=analyze();
       const stats=flowDiagnostics(r);
       const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches===true;
       showMsg(`Harakat: ${stats.moving}/${data.lines.length} ta uchastka. ${stats.reasons.length?stats.reasons.slice(0,3).join('; '):'Barcha mavjud yo‘llarning yo‘nalishi aniq.'} ${reduced?'Qurilmada harakat effektlari cheklangan; tizim animatsiyasi shuning uchun o‘chiq bo‘lishi mumkin.':''} Tayanch GPSi animatsiyani o‘chirmaydi. Ikki manbali yoki halqasimon noaniq yo‘nalishlar haqiqiy MW oqimi deb ko‘rsatilmaydi.`, 'info');
     }
-    if(a==='sample' && confirm('NAMUNA ma’lumotlarini yuklaysizmi? Joriy lokal qoralamangiz almashtiriladi. Avval JSON eksport qiling.')) {data=sample();overrides={};chosen=null;activePsId=null;saveLocal();refresh();showMsg('Faqat ko‘rgazmali ma’lumotlar yuklandi.','success');}
-    if(a==='clear' && confirm('DIQQAT: Barcha namunalar va ushbu brauzer qoralamasidagi kiritilgan obyektlar o‘chadi. Zarur bo‘lsa avval «↓ JSON» eksport qiling. Tozalaysizmi?')) {data=empty();overrides={};chosen=null;activePsId=null;saveLocal();refresh();showMsg('Namuna va lokal qoralama tozalandi.','success');}
+    if(a==='sample' && confirm('NAMUNA faqat shu qurilmada yuklanadi. Firebase umumiy bazasi o‘zgarmaydi. Avval lokal JSON eksport qiling. Davom etasizmi?')) {if(cloudBusy)return showMsg('Firebase saqlash tugashidan oldin almashtirmang.','error');pauseCloudForReplacement();data=sample();overrides={};saveSwitchesLocal();chosen=null;activePsId=null;saveLocal();refresh();showMsg('Namuna faqat lokal yuklandi.','success');}
+    if(a==='clear' && confirm('DIQQAT: bu faqat SHU brauzer qoralamasini tozalaydi, Firebase umumiy bazasiga tegmaydi. Avval JSON eksport qiling. Davom etasizmi?')) {if(cloudBusy)return showMsg('Firebase saqlash tugashidan oldin almashtirmang.','error');pauseCloudForReplacement();data=empty();overrides={};saveSwitchesLocal();chosen=null;activePsId=null;saveLocal();refresh();showMsg('Faqat lokal qoralama tozalandi. Firebase o‘zgarmadi.','success');}
+    if(a==='cloud-save'){writeCloud(true);return;}
+    if(a==='cloud-load'){importCloud();return;}
     if(a==='export')exportFile();
     if(a==='import')el('dg-import-file').click();
     if(a==='towers'){mapTowers=!mapTowers;refresh();}
@@ -1262,7 +1438,13 @@
       const safeOpen=sameComponent||anotherSupply||target.kind==='source';
       const branch={id:uid(),name:'Otpayka '+target.name,voltage:num(origin.voltage),a:j.id,b:target.id,openA:false,openB:safeOpen,towers:[]};
       data.stations.push(j);data.lines.splice(index,1,first,second,branch);
-      overrides={};saveLocal();closeEditor();refresh();showMsg(safeOpen?'Otpayka yaratildi. PS boshqa yo‘ldan ham bog‘langan: kutilmagan halqa / ikki manba hosil bo‘lmasligi uchun yangi tarmoqning PS tomonidagi VIRTUAL QF OCHIQ qoldi. PS kartasidan tekshiring.':'Otpayka yaratildi. Avvalgi ta’minot yo‘li saqlandi, yangi tarmoq ham yopiq virtual QF bilan ulandi.','info');return;
+      // Preserve virtual QF state at both outer terminals when the old
+      // section is split. The new tap has no invented terminal breaker.
+      const oldA=overrides[origin.id+':a'],oldB=overrides[origin.id+':b'];
+      delete overrides[origin.id+':a'];delete overrides[origin.id+':b'];
+      if(typeof oldA==='boolean')overrides[first.id+':a']=oldA;
+      if(typeof oldB==='boolean')overrides[second.id+':b']=oldB;
+      saveSwitchesLocal();saveLocal();closeEditor();refresh();showMsg(safeOpen?'Otpayka yaratildi. PS boshqa yo‘ldan ham bog‘langan: kutilmagan halqa / ikki manba hosil bo‘lmasligi uchun yangi tarmoqning PS tomonidagi VIRTUAL QF OCHIQ qoldi. PS kartasidan tekshiring.':'Otpayka yaratildi. Avvalgi ta’minot yo‘li saqlandi, yangi tarmoq ham yopiq virtual QF bilan ulandi.','info');return;
     } else if(type==='tower'){
       const line=data.lines.find(l=>l.id===v('lineId'));if(!line)return showMsg('Liniyani tanlang.','error');
       const coordA=v('lat'),coordB=v('lng');
@@ -1299,7 +1481,8 @@
     } else return;
     if(!rec.name) return showMsg('Nomi bo‘sh bo‘lmasin.','error');
     const at=data[collection].findIndex(x=>x.id===id);if(at>=0)data[collection][at]=rec;else data[collection].push(rec);
-    overrides={};saveLocal();closeEditor();refresh();showMsg('Lokal qoralamaga saqlandi.','success');
+    if(type==='line'){delete overrides[id+':a'];delete overrides[id+':b'];}
+    saveSwitchesLocal();saveLocal();closeEditor();refresh();showMsg('Lokal qoralamaga saqlandi.','success');
   }
   function removeEntity(type,id){
     if(!confirm('Ushbu obyektni lokal qoralamadan o‘chirasizmi?'))return;
@@ -1317,10 +1500,10 @@
     };
     if(deps[type]?.())return showMsg('Bu obyektga boshqa elementlar ulangan. Oldin ularni uzing yoki o‘chiring.','error');
     const group={station:'stations',line:'lines',feeder:'feeders',tp:'tps',consumer:'consumers'}[type];
-    if(!group)return;data[group]=data[group].filter(x=>x.id!==id);overrides={};saveLocal();closeEditor();refresh();
+    if(!group)return;data[group]=data[group].filter(x=>x.id!==id);saveSwitchesLocal();saveLocal();closeEditor();refresh();
   }
   function exportFile(){
-    const blob=new Blob([JSON.stringify({...data,_notice:'LOCAL DRAFT - NOT FOR OPERATIVE SWITCHING'},null,2)],{type:'application/json;charset=utf-8'});
+    const blob=new Blob([JSON.stringify({...data,_virtualSwitches:onlyValidSwitches(overrides),_notice:'SIMULATION ONLY - NOT FOR OPERATIVE SWITCHING'},null,2)],{type:'application/json;charset=utf-8'});
     const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='HETK-dispetcherlik-qoralama-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
   }
   async function importFile(event){
@@ -1330,16 +1513,19 @@
       const next=JSON.parse(await file.text());
       if(!next||!['stations','lines','feeders','tps','consumers'].every(k=>Array.isArray(next[k])))throw Error('Mos bo‘lmagan JSON');
       if(!confirm('Import joriy lokal qoralama o‘rnini egallaydi. Davom etasizmi?'))return;
+      if(cloudBusy)return showMsg('Firebase saqlash tugashidan oldin import qilmang.','error');
+      pauseCloudForReplacement();
       data=normalizeTowerIds({version:1,...Object.fromEntries(['stations','lines','feeders','tps','consumers'].map(k=>[k,next[k].slice(0,2000)]))});
-      overrides={};saveLocal();refresh();showMsg('Qoralama import qilindi. Operativ ma’lumot emas.','success');
+      overrides=onlyValidSwitches(next._virtualSwitches||{},data);saveSwitchesLocal();saveLocal();refresh();showMsg('Qoralama import qilindi. Operativ ma’lumot emas.','success');
     }catch(e){showMsg('JSONni o‘qib bo‘lmadi: '+e.message,'error');}
   }
   function init(){if(initialized)return;initialized=true;mapStyle=readMapStyle();createShell();
+    window.addEventListener('online',()=>{if(cloudWanted&&cloudDirty&&!cloudBlocked)queueCloudSave();});
     document.addEventListener('hetk-auth-ready',e=>authChanged(e.detail&&e.detail.user));
     document.addEventListener('hetk-auth-user-updated',e=>authChanged(e.detail&&e.detail.user));
     document.addEventListener('hetk-auth-cleared',()=>authChanged(null));
     if(window.HETKAuth?.currentUser)authChanged(window.HETKAuth.currentUser);
   }
-  window.HETKDispatchGrid = {open:()=>open(),analyzeDraft:()=>data?analyze():null,version:'69-local-draft'};
+  window.HETKDispatchGrid = {open:()=>open(),analyzeDraft:()=>data?analyze():null,version:'70-firebase-simulation'};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
