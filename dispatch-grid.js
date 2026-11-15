@@ -1,4 +1,4 @@
-/* HETK-Navoiy — Dispatch Grid prototype v65
+/* HETK-Navoiy — Dispatch Grid prototype v66
  * SIMULATION ONLY: No SCADA control, no live switching, no network writes.
  * This is a local draft in this browser, not an operational dispatch system.
  */
@@ -26,8 +26,12 @@
   const storeKey = () => STORAGE + (currentUser && (currentUser.uid || currentUser.login) || 'unknown');
   const arr = (x) => Array.isArray(x) ? x : [];
   const MAP_TILES = {
-    street: {url:'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', opts:{maxZoom:19,maxNativeZoom:19,attribution:'&copy; OpenStreetMap contributors'}},
-    satellite: {url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', opts:{maxZoom:20,maxNativeZoom:19,attribution:'Tiles &copy; Esri, Maxar, Earthstar Geographics, GIS User Community'}}
+    // Allow the user to zoom in, but never ask imagery services for map tiles
+    // beyond a conservative native level. Esri can return a grey 'Map data not
+    // yet available' JPEG (HTTP 200) for Uzbekistan at very large scales;
+    // tileerror will NOT catch it. Leaflet upscales a known lower-level tile.
+    street: {url:'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', opts:{maxZoom:20,maxNativeZoom:19,attribution:'&copy; OpenStreetMap contributors'}},
+    satellite: {url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', opts:{maxZoom:20,maxNativeZoom:17,attribution:'Tiles &copy; Esri, Maxar, Earthstar Geographics, GIS User Community'}}
   };
   function readMapStyle(){try{return localStorage.getItem(STORAGE+'basemap')==='satellite'?'satellite':'street';}catch(e){return 'street';}}
   function makeBaseMap(target){
@@ -1069,6 +1073,6 @@
     document.addEventListener('hetk-auth-cleared',()=>authChanged(null));
     if(window.HETKAuth?.currentUser)authChanged(window.HETKAuth.currentUser);
   }
-  window.HETKDispatchGrid = {open:()=>open(),analyzeDraft:()=>data?analyze():null,version:'65-local-draft'};
+  window.HETKDispatchGrid = {open:()=>open(),analyzeDraft:()=>data?analyze():null,version:'66-local-draft'};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
