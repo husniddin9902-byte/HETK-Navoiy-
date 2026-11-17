@@ -366,6 +366,40 @@ if(hueSlider) {
     });
 }
 
+// PS papkalari fiderdan mustaqil obyekt; nom oldidagi tirnoqlar ham qabul qilinadi.
+function hetkIsPsFolderName(name){
+    return /^\s*['‘’`"«»]*\s*(?:PS|ПС)(?=[\s'‘’`"«»\-–_:])/i.test(String(name||'')) ||
+      (!/(?:fider|fedir|фидер)/i.test(String(name||'')) && /(?:^|\s)(?:500|220|110|35)\s*\/\s*(?:110|35|10|6)(?=\s|$|[’'\"«»])/i.test(String(name||'')));
+}
+function hetkPsGpsControls(prefix){
+    return { box:document.getElementById('hetk-'+prefix+'-ps-gps'),
+      lat:document.getElementById('hetk-'+prefix+'-ps-lat'),
+      lng:document.getElementById('hetk-'+prefix+'-ps-lng') };
+}
+function hetkTogglePsGps(prefix,name){
+    const gps=hetkPsGpsControls(prefix);
+    if(gps.box)gps.box.hidden=!hetkIsPsFolderName(name);
+}
+function hetkParsePsCoord(raw,limit){
+    const str=String(raw==null?'':raw).trim().replace(',', '.');
+    if(!str)return null;
+    const value=Number(str);
+    return Number.isFinite(value)&&Math.abs(value)<=limit?value:NaN;
+}
+function hetkGetPsGpsFromForm(prefix,folderName){
+    if(!hetkIsPsFolderName(folderName))return {};
+    const gps=hetkPsGpsControls(prefix);
+    const la=String(gps.lat?.value||'').trim(), lo=String(gps.lng?.value||'').trim();
+    if(!la&&!lo)return {lat:null,lng:null};
+    const lat=hetkParsePsCoord(la,90),lng=hetkParsePsCoord(lo,180);
+    if(lat===null||lng===null||!Number.isFinite(lat)||!Number.isFinite(lng))return false;
+    return {lat,lng};
+}
+const hetkNewPsNameInput=document.getElementById('new-group-name');
+const hetkEditPsNameInput=document.getElementById('edit-group-name');
+hetkNewPsNameInput?.addEventListener('input',()=>hetkTogglePsGps('new',hetkNewPsNameInput.value));
+hetkEditPsNameInput?.addEventListener('input',()=>hetkTogglePsGps('edit',hetkEditPsNameInput.value));
+
 const saveFolderBtn = document.getElementById('save-folder');
 if(saveFolderBtn) {
     saveFolderBtn.addEventListener('click', () => {
@@ -379,12 +413,15 @@ if(saveFolderBtn) {
 
         if (!name) return showToast("Guruh nomini yozing!");
 
+        const coords=hetkGetPsGpsFromForm('new',name);
+        if(coords===false)return showToast('PS koordinatasini tekshiring: kenglik va uzunlikni to‘liq kiriting.');
         const folderData={
             name: name,
             parentId: parentId,
             hue: hue,
             color: color,
-            createdAt: Date.now()
+            createdAt: Date.now(),
+            ...coords
         };
         const createdRef=database.ref('Folders').push();
         createdRef.set(folderData).then(async () => {
@@ -398,6 +435,9 @@ if(saveFolderBtn) {
             }
             showToast("Guruh yaratildi!");
             document.getElementById('new-group-name').value = "";
+            const gps=hetkPsGpsControls('new');
+            if(gps.lat)gps.lat.value='';if(gps.lng)gps.lng.value='';
+            hetkTogglePsGps('new','');
             addFolderPanel.classList.add('hidden');
         });
     });
@@ -461,7 +501,7 @@ function renderTree(parentId, container) {
                 <span class="toggle-btn" style="width: 20px; text-align: center; font-size: 16px; display: inline-block;" onclick="event.stopPropagation(); toggleFolderView('${id}')">+</span>
                 <i class="fas fa-folder" style="color: ${folder.color}; margin-right: 5px;"></i>
                 <span style="flex-grow: 1; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline-block;">${folder.name}</span>
-                <i class="fas fa-edit edit-icon" style="cursor: pointer; display:${hetkHasPermission('manageFolders') && hetkCanAccessFolder(id) ? 'inline-block' : 'none'};" onclick="event.stopPropagation(); openEditFolder('${id}', '${folder.name}', ${folder.hue || 0})"></i>
+                <i class="fas fa-edit edit-icon" style="cursor: pointer; display:${hetkHasPermission('manageFolders') && hetkCanAccessFolder(id) ? 'inline-block' : 'none'};" onclick="event.stopPropagation(); openEditFolder('${id}', null, ${folder.hue || 0})"></i>
             </div>
             <div id="children-${id}" class="folder-children" style="display: none;"></div>
         `;
@@ -1536,7 +1576,12 @@ if(editColorSlider) {
 window.openEditFolder = function(id, name, hue) {
     if(!hetkHasPermission('manageFolders') || !hetkCanAccessFolder(id)) return showToast("Bu papkani tahrirlash ruxsati yo'q.");
     editingFolderId = id;
-    document.getElementById('edit-group-name').value = name;
+    const folder=currentFolders[id]||{};
+    document.getElementById('edit-group-name').value = folder.name || name || '';
+    const gps=hetkPsGpsControls('edit');
+    if(gps.lat)gps.lat.value=folder.lat == null ? '' : String(folder.lat);
+    if(gps.lng)gps.lng.value=folder.lng == null ? '' : String(folder.lng);
+    hetkTogglePsGps('edit',folder.name || name || '');
     if(editColorSlider) {
         editColorSlider.value = hue || 0;
         editColorPreview.style.background = `hsl(${hue || 0}, 100%, 50%)`;
@@ -1580,11 +1625,14 @@ document.getElementById('update-folder-btn').addEventListener('click', () => {
     if (newName.trim() === "") return alert("Nomini kiriting");
 
     const oldFolder=Object.assign({},currentFolders[editingFolderId] || {});
+    const coords=hetkGetPsGpsFromForm('edit',newName);
+    if(coords===false)return showToast('PS koordinatasini tekshiring: kenglik va uzunlikni to‘liq kiriting.');
     const changedFolder={
         name: newName,
         parentId: newParentId,
         hue: newHue,
-        color: `hsl(${newHue}, 100%, 50%)`
+        color: `hsl(${newHue}, 100%, 50%)`,
+        ...coords
     };
     database.ref('Folders/' + editingFolderId).update(changedFolder).then(async () => {
         currentFolders[editingFolderId]=Object.assign({},oldFolder,changedFolder);
@@ -4485,7 +4533,7 @@ function renderTree(parentId, container) {
                 <span class="toggle-btn" style="width: 20px; text-align: center; font-size: 16px; display: inline-block;" onclick="event.stopPropagation(); toggleFolderView('${id}')">+</span>
                 <i class="fas fa-folder" style="color: ${folder.color}; margin-right: 5px;"></i>
                 <span style="flex-grow: 1; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline-block;">${folder.name}</span>
-                <i class="fas fa-edit edit-icon" style="cursor: pointer; display:${hetkHasPermission('manageFolders') && hetkCanAccessFolder(id) ? 'inline-block' : 'none'};" onclick="event.stopPropagation(); openEditFolder('${id}', '${folder.name}', ${folder.hue || 0})"></i>
+                <i class="fas fa-edit edit-icon" style="cursor: pointer; display:${hetkHasPermission('manageFolders') && hetkCanAccessFolder(id) ? 'inline-block' : 'none'};" onclick="event.stopPropagation(); openEditFolder('${id}', null, ${folder.hue || 0})"></i>
             </div>
             <div id="children-${id}" class="folder-children" style="display: none; padding-left: 15px;"></div>
         `;
@@ -6003,6 +6051,7 @@ function hetkResetManagementPanelState(){
     if(foldersBox) foldersBox.style.display='block';
 
     panelMapRequestedElementId=null;
+    if(window.HETKPSFeederMap)window.HETKPSFeederMap.clear();
     if(panelInternalMap){
         panelInternalMap.closePopup();
         panelInternalMarkers.forEach(marker=>{
@@ -6328,6 +6377,20 @@ if(requestedElementId && !filteredKeys.length){
                 }
             });
 
+            // PS nuqtalari va taxminiy 6/10 kV feeder qatlamlari KTP/GKTP markerlarini o'chirmaydi.
+            if(!requestedElementId && window.HETKPSFeederMap){
+                const psBounds=window.HETKPSFeederMap.render({
+                    map:panelInternalMap, points:allPoints,
+                    getFolders:()=>currentFolders,
+                    getActiveFolderId:()=>activeFolderId,
+                    canSeeFolder:hetkCanSeeFolder,
+                    pointAllowed:hetkPointAllowedByUser,
+                    pointInSelectedFolder:isPointInSelectedFolder
+                });
+                for(const pair of psBounds)bounds.push(pair);
+            } else if(window.HETKPSFeederMap){
+                window.HETKPSFeederMap.clear();
+            }
             // Universal o'lchamlarni yangilab, markerlarga markazlashtirish (Yaqinlashtirish)
             setTimeout(() => {
                 if (panelInternalMap) {
