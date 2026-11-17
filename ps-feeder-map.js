@@ -6,6 +6,8 @@
   'use strict';
   const STORAGE_KEY='hetk.psFeederMap.previewLines.v71';
   const feederRegex=/(?:fider|fedir|fid[eі]r|фидер)/iu;
+  const routeDistance=(a,b)=>{const rad=Math.PI/180,dLat=(+b[0]-+a[0])*rad,dLon=(+b[1]-+a[1])*rad;const v=Math.sin(dLat/2)**2+Math.cos(+a[0]*rad)*Math.cos(+b[0]*rad)*Math.sin(dLon/2)**2;return 12742*Math.atan2(Math.sqrt(v),Math.sqrt(Math.max(0,1-v)));};
+  const pathDistance=path=>path.slice(1).reduce((s,p,i)=>s+routeDistance(path[i],p),0);
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const isFeeder=name=>feederRegex.test(String(name||''));
   // Explicit PS marker is used only for special legacy folder names.
@@ -104,7 +106,7 @@
     for(const s of stations.values()){
       for(const fid of (children[s.id]||[])){
         if(!folders[fid]||isPS(folders[fid])||!isFeeder(folders[fid].name)||!canSee(fid))continue;
-        s.feeders.push({id:fid,name:folders[fid].name,kv:voltageForFeeder(folders[fid].name,s.name),tps:[]});
+        s.feeders.push({id:fid,name:folders[fid].name,kv:voltageForFeeder(folders[fid].name,s.name),tps:[],route:folders[fid].feederRoute6kv||null});
       }
     }
     const feederLookup=new Map();
@@ -133,10 +135,10 @@
       if(!s.located)continue;
       for(const f of s.feeders){
         if(selected!=='root' && !(folderHasAncestor(f.id,selected,folders)||folderHasAncestor(selected,f.id,folders)))continue;
-        if(!f.tps.length)continue;
+        if(!f.tps.length&&!f.route?.points?.length)continue;
         // Keep all validated coordinates, preserve input; avoid artificial electrical branches.
         const path=provisionalRoute([s.lat,s.lng],f.tps.map(p=>[p.lat,p.lng]));
-        previewLines.push({stationId:s.id,feederId:f.id,name:f.name,kv:f.kv,path,tpCount:f.tps.length});
+        previewLines.push({stationId:s.id,feederId:f.id,name:f.name,kv:f.kv,path,tpCount:f.tps.length,route:f.route});
       }
     }
     return {stations,visibleStations,previewLines,tpTotal};
@@ -161,7 +163,7 @@
   }
   function popup(s){
     const feeders=s.feeders.length? s.feeders.map(f=>`<li><span>${esc(f.name)}</span><em>${f.kv} kV · ${f.tps.length} TP</em></li>`).join(''):'<li>Fider papkalari topilmadi</li>';
-    return `<div class="hetk-ps-map-card"><strong>${esc(s.name)}</strong><small>📁 ${esc(s.path)}</small><div class="hetk-ps-map-card-stats"><span>📍 PS koordinatasi mavjud</span><span>⚡ ${s.feeders.length} fider</span></div><ul>${feeders}</ul><p>6/10 kV chiziqlar — faqat KTP koordinatalaridan hisoblangan taxminiy trassa. Haqiqiy ulanish yoki kuchlanish holati tasdiqlanmagan.</p></div>`;
+    return `<div class="hetk-ps-map-card"><strong>${esc(s.name)}</strong><small>📁 ${esc(s.path)}</small><div class="hetk-ps-map-card-stats"><span>📍 PS koordinatasi mavjud</span><span>⚡ ${s.feeders.length} fider</span></div><ul>${feeders}</ul><button type="button" class="hetk-ps-popup-route-open" data-ps-id="${esc(s.id)}">⚒ Fider tayanchlari / 6–10 kV yo‘nalish</button><p>6/10 kV chiziqlar — faqat ko‘rgazmali taxmin. Yo‘nalishni tayanch va burilishlar bilan aniqlashtirish mumkin. Haqiqiy kuchlanish tasdiqlanmagan.</p></div>`;
   }
   function updateTooltipVisibility(){
     if(!renderedMap||!stationLayer||!stationLayer.eachLayer)return;
@@ -206,13 +208,37 @@
     }
     for(const l of model.previewLines){
       const c=l.kv===6?'#ae7cf4':'#f4af49';
-      L.polyline(l.path,{color:c,weight:3,opacity:.85,dashArray:'8 6',
-        interactive:true,className:'hetk-feeder-draft-path'})
-          .bindTooltip(esc(l.name)+' · '+l.kv+' kV · TAXMINIY',{sticky:true})
+      const ps=model.stations.get(l.stationId), routed= l.route?.points?.length &&
+        window.HETKFeederRouteEditor?.graph?.(l.route,ps);
+      const segments=routed&&!routed.errors.length&&routed.routes.length?routed.routes:[{path:l.path,mode:'draft'}];
+      const km=routed&&!routed.errors.length?routed.adjustedKm:pathDistance(l.path)*1.04;
+      for(const seg of segments){
+        const sc=seg.mode==='cable'?'#d966e0':c;
+        const poly=L.polyline(seg.path,{color:sc,weight:seg.mode==='draft'?3:4,opacity:.93,
+          dashArray:seg.mode==='cable'?'4 8':seg.mode==='draft'?'8 6':null,
+          interactive:true,className:'hetk-feeder-draft-path'})
+          .bindTooltip(esc(l.name)+' · '+l.kv+' kV · '+(routed&&!routed.errors.length?'KIRITILGAN BO‘LAK · TAXMINIY':'GPS TAXMINIY')+' · ≈'+km.toFixed(3)+' km',{sticky:true})
           .addTo(lineLayer);
-      L.polyline(l.path,{color:'#fff',weight:2,opacity:.95,dashArray:'2 17',
-        interactive:false,className:'hetk-feeder-flow-path'}).addTo(lineLayer);
+        poly.on?.('click',()=>window.HETKFeederRouteEditor?.open(l.stationId,l.feederId));
+        L.polyline(seg.path,{color:'#fff',weight:2,opacity:.95,dashArray:'2 17',
+          interactive:false,className:'hetk-feeder-flow-path'}).addTo(lineLayer);
+        if(seg.point?.kind==='pole'||seg.point?.kind==='cable'||seg.point?.kind==='turn'){
+          const n=seg.point;
+          const svg=window.HETKFeederRouteEditor?.poleSvg?.(n.material,n.anchor,24) || '⬢';
+          const marker=L.marker([+n.lat,+n.lng],{icon:L.divIcon({className:'hetk-feeder-support-icon',
+            html:`<span class="hetk-feeder-support ${seg.mode==='cable'?'cable':''}" title="${esc(n.number)}">${n.kind==='pole'?svg:'◆'}</span>`,iconSize:[24,24],iconAnchor:[12,12]}),zIndexOffset:200}).addTo(lineLayer);
+          marker.bindTooltip(esc(n.number)+(n.sharedWith?' · 2 fiderga umumiy tayanch':''),{direction:'top'});
+          marker.on?.('click',()=>window.HETKFeederRouteEditor?.open(l.stationId,l.feederId,n.id));
+        }
+      }
     }
+    stationLayer.eachLayer?.(marker=>{
+      marker.on?.('popupopen',()=>{
+        const root=marker.getPopup?.()?.getElement?.();
+        const btn=root?.querySelector?.('.hetk-ps-popup-route-open');
+        if(btn&&!btn.dataset.bound){btn.dataset.bound='1';btn.addEventListener('click',()=>window.HETKFeederRouteEditor?.open(btn.dataset.psId));}
+      });
+    });
     mapZoomListener=updateTooltipVisibility;
     map.on?.('zoomend',mapZoomListener);
     // Do not open labels on very far zoom; tooltip still available on hover.
@@ -237,5 +263,5 @@
     if(currentCtx?.map)draw();
   });
   document.addEventListener('hetk-auth-cleared',()=>clear());
-  window.HETKPSFeederMap={render,clear,buildModel,isPS,voltageForFeeder,provisionalRoute};
+  window.HETKPSFeederMap={render,clear,refresh:()=>currentCtx?draw():[],getLatestModel:()=>latestModel,getPoints:()=>currentCtx?.points||{},buildModel,isPS,voltageForFeeder,provisionalRoute};
 })();
