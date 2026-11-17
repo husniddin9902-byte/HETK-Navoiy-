@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="style.css?v=71">
-    <link rel="stylesheet" href="ps-feeder-map.css?v=71">
+    <link rel="stylesheet" href="ps-feeder-map.css?v=73">
 <style>
     #address {
         word-break: keep-all !important;
@@ -985,9 +985,16 @@ cursor:pointer;
         <input type="hidden" id="edit-parent-folder-select" value="root">
 
 
+        <label class="hetk-ps-folder-type"><input id="hetk-edit-is-ps" type="checkbox"> Bu guruh PS (podstansiya) <small>PS nomi aniqlansa, avtomatik belgilanadi</small></label>
+
         <div class="hetk-ps-folder-gps" id="hetk-edit-ps-gps" hidden>
             <strong>📍 PS joylashuvi (GIS)</strong>
             <small>Faqat PS papkasi uchun. Kenglik va uzunlikni kiriting; tayanchlar keyingi bosqichda kiritiladi.</small>
+            <div class="hetk-ps-gps-actions">
+                <button type="button" class="hetk-ps-open-map" data-hetk-ps-map="edit">🗺 Xaritadan belgilash</button>
+                <button type="button" class="hetk-ps-round-location" data-hetk-ps-locate="edit" aria-label="Men turgan joy" title="Men turgan joy">◎</button>
+                <span class="hetk-ps-location-label">Men turgan joy</span>
+            </div>
             <div class="hetk-ps-folder-gps-row">
                 <label>Kenglik (Latitude)<input id="hetk-edit-ps-lat" type="text" inputmode="decimal" autocomplete="off" placeholder="40.123456"></label>
                 <label>Uzunlik (Longitude)<input id="hetk-edit-ps-lng" type="text" inputmode="decimal" autocomplete="off" placeholder="65.123456"></label>
@@ -1019,9 +1026,16 @@ cursor:pointer;
         <input type="hidden" id="parent-folder-select" value="root">
         
 
+        <label class="hetk-ps-folder-type"><input id="hetk-new-is-ps" type="checkbox"> Bu guruh PS (podstansiya) <small>PS nomi aniqlansa, avtomatik belgilanadi</small></label>
+
         <div class="hetk-ps-folder-gps" id="hetk-new-ps-gps" hidden>
             <strong>📍 PS joylashuvi (GIS)</strong>
             <small>Faqat PS papkasi uchun. Kenglik va uzunlikni kiriting; tayanchlar keyingi bosqichda kiritiladi.</small>
+            <div class="hetk-ps-gps-actions">
+                <button type="button" class="hetk-ps-open-map" data-hetk-ps-map="new">🗺 Xaritadan belgilash</button>
+                <button type="button" class="hetk-ps-round-location" data-hetk-ps-locate="new" aria-label="Men turgan joy" title="Men turgan joy">◎</button>
+                <span class="hetk-ps-location-label">Men turgan joy</span>
+            </div>
             <div class="hetk-ps-folder-gps-row">
                 <label>Kenglik (Latitude)<input id="hetk-new-ps-lat" type="text" inputmode="decimal" autocomplete="off" placeholder="40.123456"></label>
                 <label>Uzunlik (Longitude)<input id="hetk-new-ps-lng" type="text" inputmode="decimal" autocomplete="off" placeholder="65.123456"></label>
@@ -1036,6 +1050,37 @@ cursor:pointer;
             <button id="save-folder" style="width:100%; padding:12px; border-radius:8px; background:#007AFF; color:white; border:none; font-weight:bold;">Saqlash</button>
         </div>
     </div>
+
+<!-- v73: independent modal for selecting a PS position; does not modify original folder panels. -->
+<div id="hetk-ps-gps-picker" class="hetk-ps-picker-overlay" hidden role="presentation">
+    <section class="hetk-ps-picker" role="dialog" aria-modal="true" aria-labelledby="hetk-ps-picker-title" tabindex="-1">
+        <header class="hetk-ps-picker-head">
+            <div><small>PS JOYLASHUVI · GIS</small><h3 id="hetk-ps-picker-title">Xaritadan nuqtani tanlang</h3></div>
+            <button type="button" id="hetk-ps-picker-close" aria-label="Xaritani yopish" title="Yopish">×</button>
+        </header>
+        <div class="hetk-ps-picker-toolbar">
+            <div class="hetk-ps-picker-note">PS joyini xaritada bosing yoki belgini suring. Koordinata faqat siz tasdiqlaganda formaga o‘tadi.</div>
+            <div class="hetk-ps-picker-toolbar-actions">
+                <button type="button" id="hetk-ps-picker-style" class="hetk-ps-picker-tool">◫ Oddiy xarita</button>
+                <button type="button" id="hetk-ps-picker-me" class="hetk-ps-picker-tool hetk-ps-picker-me" title="Men turgan joy"><span class="hetk-ps-current-round">◎</span> Men turgan joy</button>
+            </div>
+        </div>
+        <div class="hetk-ps-picker-map-wrap">
+            <div id="hetk-ps-picker-map" aria-label="PS joylashuvini belgilash xaritasi"></div>
+            <div class="hetk-ps-picker-hint">📍 Xaritani bosib PS joyini belgilang. Nuqtani siljitish ham mumkin.</div>
+        </div>
+        <footer class="hetk-ps-picker-foot">
+            <div class="hetk-ps-picker-coordinates">
+                <span id="hetk-ps-picker-message" role="status" aria-live="polite">Xaritadan PS nuqtasini belgilang.</span>
+                <strong id="hetk-ps-picker-value">Koordinata tanlanmagan</strong>
+            </div>
+            <div class="hetk-ps-picker-foot-actions">
+                <button type="button" id="hetk-ps-picker-cancel">Bekor qilish</button>
+                <button type="button" id="hetk-ps-picker-confirm" disabled>✓ Shu nuqtani tanlash</button>
+            </div>
+        </footer>
+    </section>
+</div>
 
     <div id="element-manage-panel" class="bottom-sheet-folder hidden">
         <div class="sheet-handle"></div>
@@ -1716,8 +1761,9 @@ gap:8px;
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="jszip.min.js"></script>
-    <script src="app.js?v=71"></script>
-    <script src="ps-feeder-map.js?v=71"></script>
+    <script src="app.js?v=73"></script>
+    <script src="ps-feeder-map.js?v=73"></script>
+    <script src="ps-gps-picker.js?v=73"></script>
     <script src="profile-container.js?v=3.6"></script>
     <script src="training-center.js?v=59"></script>
     <script src="dispatch-grid.js?v=70"></script>
