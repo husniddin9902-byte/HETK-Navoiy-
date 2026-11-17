@@ -14,7 +14,8 @@
     <link rel="apple-touch-icon" href="icons/hetk-192.png">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=10.5">
+    <link rel="stylesheet" href="style.css?v=71">
+    <link rel="stylesheet" href="ps-feeder-map.css?v=71">
 <style>
     #address {
         word-break: keep-all !important;
@@ -859,7 +860,15 @@ cursor:pointer;
             <button id="open-add-folder" class="add-main-btn">+ Yangi guruh qo'shish</button>
         </div>
 
-                       <div id="items-section" class="tab-content" style="display: none; height: calc(100% - 110px); padding: 5px;">
+                       <div id="items-section" class="tab-content" style="display: none; height: calc(100% - 110px); padding: 5px; position:relative;">
+            <div class="hetk-ps-map-tools" id="hetk-ps-map-tools">
+              <label class="hetk-ps-layer-switch" title="6/10 kV taxminiy trassalarni yoqish yoki yashirish">
+                <input type="checkbox" id="hetk-ps-line-toggle" />
+                <span>⚡ 6/10 kV liniyalar</span>
+              </label>
+              <span class="hetk-ps-layer-count" id="hetk-ps-map-status">PS koordinatalari yuklanmoqda</span>
+            </div>
+            <div class="hetk-ps-map-disclaimer" id="hetk-ps-map-disclaimer" hidden>Taxminiy trassa · virtual harakat · haqiqiy kuchlanish tasdiqlanmagan</div>
             <div id="panel-map" style="width: 100%; height: 100%; border-radius: 12px; background: #001a2c; border: 1px solid rgba(255,255,255,0.1); z-index: 10;"></div>
                        </div>
         
@@ -975,6 +984,16 @@ cursor:pointer;
         <div id="edit-parent-folder-tree" class="tree-dropdown-container" style="width:100%; max-height:200px; overflow-y:auto; background:#001a2c; border-radius:8px; padding:10px; margin:10px 0; border:1px solid rgba(255, 255, 255, 0.1);"></div>
         <input type="hidden" id="edit-parent-folder-select" value="root">
 
+
+        <div class="hetk-ps-folder-gps" id="hetk-edit-ps-gps" hidden>
+            <strong>📍 PS joylashuvi (GIS)</strong>
+            <small>Faqat PS papkasi uchun. Kenglik va uzunlikni kiriting; tayanchlar keyingi bosqichda kiritiladi.</small>
+            <div class="hetk-ps-folder-gps-row">
+                <label>Kenglik (Latitude)<input id="hetk-edit-ps-lat" type="text" inputmode="decimal" autocomplete="off" placeholder="40.123456"></label>
+                <label>Uzunlik (Longitude)<input id="hetk-edit-ps-lng" type="text" inputmode="decimal" autocomplete="off" placeholder="65.123456"></label>
+            </div>
+            <small>Koordinata bo‘lmasa, PS papkasi saqlanadi, ammo xaritada nuqta chiqmaydi.</small>
+        </div>
         <label>Guruh rangi:</label>
         <input type="range" id="edit-color-slider" min="0" max="360" value="0" class="hue-slider">
         <div id="edit-color-preview" style="width:40px; height:40px; border-radius:50%; margin:10px auto; border:2px solid white; background:red;"></div>
@@ -999,6 +1018,16 @@ cursor:pointer;
         <div id="parent-folder-tree" class="tree-dropdown-container" style="width:100%; max-height:200px; overflow-y:auto; background:#001a2c; border-radius:8px; padding:10px; margin:10px 0; border:1px solid rgba(255, 255, 255, 0.1);"></div>
         <input type="hidden" id="parent-folder-select" value="root">
         
+
+        <div class="hetk-ps-folder-gps" id="hetk-new-ps-gps" hidden>
+            <strong>📍 PS joylashuvi (GIS)</strong>
+            <small>Faqat PS papkasi uchun. Kenglik va uzunlikni kiriting; tayanchlar keyingi bosqichda kiritiladi.</small>
+            <div class="hetk-ps-folder-gps-row">
+                <label>Kenglik (Latitude)<input id="hetk-new-ps-lat" type="text" inputmode="decimal" autocomplete="off" placeholder="40.123456"></label>
+                <label>Uzunlik (Longitude)<input id="hetk-new-ps-lng" type="text" inputmode="decimal" autocomplete="off" placeholder="65.123456"></label>
+            </div>
+            <small>Koordinata bo‘lmasa, PS papkasi saqlanadi, ammo xaritada nuqta chiqmaydi.</small>
+        </div>
         <label>Guruh rangi:</label>
         <input type="range" id="color-slider" min="0" max="360" value="0" class="hue-slider">
         <div id="color-preview" style="width:40px; height:40px; border-radius:50%; margin:10px auto; border:2px solid white; background:red;"></div>
@@ -1687,7 +1716,8 @@ gap:8px;
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="jszip.min.js"></script>
-    <script src="app.js?v=36.0"></script>
+    <script src="app.js?v=71"></script>
+    <script src="ps-feeder-map.js?v=71"></script>
     <script src="profile-container.js?v=3.6"></script>
     <script src="training-center.js?v=59"></script>
     <script src="dispatch-grid.js?v=70"></script>
