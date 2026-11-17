@@ -85,3 +85,14 @@
   .hetk-ps-picker-foot-actions button{flex:1;padding:10px 6px;font-size:12px}
   .hetk-ps-picker-hint{font-size:11px;bottom:9px}
 }
+
+/* v74 — selected PS's optional feeder editor; existing panel remains unchanged. */
+.hetk-ps-popup-route-open{border:1px solid #7fb3d4;background:#116eb6;color:#fff;border-radius:8px;padding:8px 10px;cursor:pointer;font-size:12px;font-weight:800;width:100%}
+.hetk-feeder-support-icon{background:none;border:0}
+.hetk-feeder-support{width:24px;height:24px;display:flex;align-items:center;justify-content:center;background:#e9f5ff;border:2px solid white;border-radius:5px;box-shadow:0 2px 7px #001c39a8;color:#184f78;box-sizing:border-box}
+.hetk-feeder-support svg{width:21px;height:21px}
+.hetk-feeder-support.cable{background:#f5d9fe;border-radius:50%}
+
+/* v74: GPS joylashuv tugmasi Leaflet xarita boshqaruvi kabi yumaloq oq ikonka. */
+.hetk-ps-map-me-round{position:absolute;left:10px;top:89px;z-index:480;display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:11px;border:2px solid #e0eaf2;background:#fff;color:#254459;font-size:28px;line-height:1;cursor:pointer;box-shadow:0 2px 7px #092b5180}
+.hetk-ps-map-me-round:hover{background:#e4f4ff;color:#075f9e}.hetk-ps-map-me-round:disabled{opacity:.55;cursor:wait}
