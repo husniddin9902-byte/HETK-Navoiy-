@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="style.css?v=71">
-    <link rel="stylesheet" href="ps-feeder-map.css?v=73">
+    <link rel="stylesheet" href="ps-feeder-map.css?v=74">
 <style>
     #address {
         word-break: keep-all !important;
@@ -37,6 +37,7 @@
 
     <link rel="stylesheet" href="safety-home.css?v=1.2">
     <link rel="stylesheet" href="app-install.css?v=1.3">
+    <link rel="stylesheet" href="feeder-route-editor.css?v=74">
 </head>
 <body>
 
@@ -866,6 +867,7 @@ cursor:pointer;
                 <input type="checkbox" id="hetk-ps-line-toggle" />
                 <span>⚡ 6/10 kV liniyalar</span>
               </label>
+              <button type="button" id="hetk-feeder-route-open" class="hetk-route-open" title="6/10 kV fider tayanchlarini kiritish">⚒ Tayanchlar</button>
               <span class="hetk-ps-layer-count" id="hetk-ps-map-status">PS koordinatalari yuklanmoqda</span>
             </div>
             <div class="hetk-ps-map-disclaimer" id="hetk-ps-map-disclaimer" hidden>Taxminiy trassa · virtual harakat · haqiqiy kuchlanish tasdiqlanmagan</div>
@@ -1062,11 +1064,12 @@ cursor:pointer;
             <div class="hetk-ps-picker-note">PS joyini xaritada bosing yoki belgini suring. Koordinata faqat siz tasdiqlaganda formaga o‘tadi.</div>
             <div class="hetk-ps-picker-toolbar-actions">
                 <button type="button" id="hetk-ps-picker-style" class="hetk-ps-picker-tool">◫ Oddiy xarita</button>
-                <button type="button" id="hetk-ps-picker-me" class="hetk-ps-picker-tool hetk-ps-picker-me" title="Men turgan joy"><span class="hetk-ps-current-round">◎</span> Men turgan joy</button>
+
             </div>
         </div>
         <div class="hetk-ps-picker-map-wrap">
             <div id="hetk-ps-picker-map" aria-label="PS joylashuvini belgilash xaritasi"></div>
+            <button type="button" id="hetk-ps-picker-me" class="hetk-ps-map-me-round" aria-label="Men turgan joy" title="Men turgan joy">⌖</button>
             <div class="hetk-ps-picker-hint">📍 Xaritani bosib PS joyini belgilang. Nuqtani siljitish ham mumkin.</div>
         </div>
         <footer class="hetk-ps-picker-foot">
@@ -1761,9 +1764,10 @@ gap:8px;
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="jszip.min.js"></script>
-    <script src="app.js?v=73"></script>
-    <script src="ps-feeder-map.js?v=73"></script>
-    <script src="ps-gps-picker.js?v=73"></script>
+    <script src="app.js?v=74"></script>
+    <script src="ps-feeder-map.js?v=74"></script>
+    <script src="ps-gps-picker.js?v=74"></script>
+    <script src="feeder-route-editor.js?v=74"></script>
     <script src="profile-container.js?v=3.6"></script>
     <script src="training-center.js?v=59"></script>
     <script src="dispatch-grid.js?v=70"></script>
