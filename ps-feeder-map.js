@@ -1,16 +1,24 @@
-/* HETK-Navoiy v71 — existing Boshqaruv paneli xaritasi uchun PS + 6/10 kV taxminiy fider qatlami.
+/* HETK-Navoiy v72 — existing Boshqaruv paneli xaritasi uchun PS + 6/10 kV taxminiy fider qatlami.
    No SCADA, no switch commands, no writes to TPs or DispatchGridSimulation.
    Only Folders/$id.lat/lng is written through the existing folder editor (manageFolders permission).
 */
 (function(){
   'use strict';
   const STORAGE_KEY='hetk.psFeederMap.previewLines.v71';
-  const psRegex=/^\s*['‘’`"«»]*\s*(?:PS|ПС)(?=[\s'‘’`"«»\-–_:])/i;
-  const feederRegex=/(?:fider|fedir|fid[eі]r|фидер)/i;
+  const feederRegex=/(?:fider|fedir|fid[eі]r|фидер)/iu;
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const isFeeder=name=>feederRegex.test(String(name||''));
-  // E.g. 'Langar 35/6' is a PS even without the literal PS prefix (existing data).
-  const isPS=name=>psRegex.test(String(name||'')) || (!isFeeder(name) && /(?:^|\s)(?:500|220|110|35)\s*\/\s*(?:110|35|10|6)(?=\s|$|[’'\"«»])/i.test(String(name||'')));
+  // Explicit PS marker is used only for special legacy folder names.
+  // Standard PS names and 35/6, 110/10, 110/35 etc. are detected in every region.
+  const isPS=folderOrName=>{
+    if(folderOrName&&typeof folderOrName==='object'&&folderOrName.psFolder===true)return true;
+    const name=typeof folderOrName==='object'?folderOrName?.name:folderOrName;
+    const clean=String(name||'').normalize('NFKC').trim()
+      .replace(/^[^\p{L}\p{N}]+/u,'').trim();
+    if(/^(?:PS|ПС)(?=$|[\s.\-–—_:\/'‘’ʼʻ`´"«»(])/iu.test(clean))return true;
+    if(isFeeder(clean))return false;
+    return /(?:^|[^\d])(?:500|220|110|35)\s*\/\s*(?:110|35|10|6)(?=\s|$|[’ʼʻ'"«»])/iu.test(clean);
+  };
   const validGps=(lat,lng)=> lat!==null && lng!==null && lat!=='' && lng!=='' &&
     Number.isFinite(Number(lat)) && Number.isFinite(Number(lng)) && Math.abs(Number(lat))<=90 && Math.abs(Number(lng))<=180 &&
     (Number(lat)!==0 || Number(lng)!==0);
@@ -31,7 +39,7 @@
   function nearestStation(id,folders){
     const seen=new Set();let cur=id;
     while(cur && cur!=='root' && folders[cur] && !seen.has(cur)){
-      if(isPS(folders[cur].name))return cur;
+      if(isPS(folders[cur]))return cur;
       seen.add(cur);cur=folders[cur].parentId;
     }
     return '';
@@ -86,7 +94,7 @@
     const selected=opts.selectedFolderId||'root';
     const stations=new Map();
     for(const [id,f] of Object.entries(folders||{})){
-      if(!isPS(f?.name)||!canSee(id))continue;
+      if(!isPS(f)||!canSee(id))continue;
       const located=validGps(f.lat,f.lng);
       stations.set(id,{id,name:f.name,lat:located?Number(f.lat):null,lng:located?Number(f.lng):null,located,
         parentId:f.parentId||'root',feeders:[],path:getFolderPath(id,folders)});
@@ -95,7 +103,7 @@
     const children=folderChildren(folders);
     for(const s of stations.values()){
       for(const fid of (children[s.id]||[])){
-        if(!folders[fid]||isPS(folders[fid].name)||!isFeeder(folders[fid].name)||!canSee(fid))continue;
+        if(!folders[fid]||isPS(folders[fid])||!isFeeder(folders[fid].name)||!canSee(fid))continue;
         s.feeders.push({id:fid,name:folders[fid].name,kv:voltageForFeeder(folders[fid].name,s.name),tps:[]});
       }
     }
