@@ -367,18 +367,33 @@ if(hueSlider) {
 }
 
 // PS papkalari fiderdan mustaqil obyekt; nom oldidagi tirnoqlar ham qabul qilinadi.
+// Universal PS detection: names may begin with U+02BC, U+02BB, acute/backtick/quotes,
+// and may be under ANY territorial folder (Navoiy, Toshkent, etc.).
+// A manual PS checkbox covers legacy names without a voltage or PS prefix.
 function hetkIsPsFolderName(name){
-    return /^\s*['‘’`"«»]*\s*(?:PS|ПС)(?=[\s'‘’`"«»\-–_:])/i.test(String(name||'')) ||
-      (!/(?:fider|fedir|фидер)/i.test(String(name||'')) && /(?:^|\s)(?:500|220|110|35)\s*\/\s*(?:110|35|10|6)(?=\s|$|[’'\"«»])/i.test(String(name||'')));
+    const clean=String(name||'').normalize('NFKC').trim()
+        .replace(/^[^\p{L}\p{N}]+/u, '').trim();
+    if(/^(?:PS|ПС)(?=$|[\s.\-–—_:\/'‘’ʼʻ`´"«»(])/iu.test(clean))return true;
+    if(/(?:fider|fedir|fid[eі]r|фидер)/iu.test(clean))return false;
+    return /(?:^|[^\d])(?:500|220|110|35)\s*\/\s*(?:110|35|10|6)(?=\s|$|[’ʼʻ'"«»])/iu.test(clean);
 }
 function hetkPsGpsControls(prefix){
-    return { box:document.getElementById('hetk-'+prefix+'-ps-gps'),
+    return {box:document.getElementById('hetk-'+prefix+'-ps-gps'),
       lat:document.getElementById('hetk-'+prefix+'-ps-lat'),
-      lng:document.getElementById('hetk-'+prefix+'-ps-lng') };
+      lng:document.getElementById('hetk-'+prefix+'-ps-lng'),
+      isPs:document.getElementById('hetk-'+prefix+'-is-ps')};
 }
 function hetkTogglePsGps(prefix,name){
     const gps=hetkPsGpsControls(prefix);
-    if(gps.box)gps.box.hidden=!hetkIsPsFolderName(name);
+    const auto=hetkIsPsFolderName(name);
+    if(gps.isPs){
+        const prevAuto=gps.isPs.dataset.auto==='1';
+        if(auto)gps.isPs.checked=true;
+        else if(prevAuto)gps.isPs.checked=false;
+        gps.isPs.disabled=auto;
+        gps.isPs.dataset.auto=auto?'1':'0';
+    }
+    if(gps.box)gps.box.hidden=!(auto||gps.isPs?.checked);
 }
 function hetkParsePsCoord(raw,limit){
     const str=String(raw==null?'':raw).trim().replace(',', '.');
@@ -387,18 +402,26 @@ function hetkParsePsCoord(raw,limit){
     return Number.isFinite(value)&&Math.abs(value)<=limit?value:NaN;
 }
 function hetkGetPsGpsFromForm(prefix,folderName){
-    if(!hetkIsPsFolderName(folderName))return {};
     const gps=hetkPsGpsControls(prefix);
+    if(!(hetkIsPsFolderName(folderName)||gps.isPs?.checked))return {psFolder:null};
     const la=String(gps.lat?.value||'').trim(), lo=String(gps.lng?.value||'').trim();
-    if(!la&&!lo)return {lat:null,lng:null};
+    if(!la&&!lo)return {psFolder:true,lat:null,lng:null};
     const lat=hetkParsePsCoord(la,90),lng=hetkParsePsCoord(lo,180);
-    if(lat===null||lng===null||!Number.isFinite(lat)||!Number.isFinite(lng))return false;
-    return {lat,lng};
+    if(lat===null||lng===null||!Number.isFinite(lat)||!Number.isFinite(lng)||
+       (lat===0&&lng===0))return false;
+    return {psFolder:true,lat,lng};
 }
 const hetkNewPsNameInput=document.getElementById('new-group-name');
 const hetkEditPsNameInput=document.getElementById('edit-group-name');
 hetkNewPsNameInput?.addEventListener('input',()=>hetkTogglePsGps('new',hetkNewPsNameInput.value));
 hetkEditPsNameInput?.addEventListener('input',()=>hetkTogglePsGps('edit',hetkEditPsNameInput.value));
+['new','edit'].forEach(prefix=>{
+    const gps=hetkPsGpsControls(prefix);
+    gps.isPs?.addEventListener('change',()=>{
+        const name=prefix==='new'?hetkNewPsNameInput?.value:hetkEditPsNameInput?.value;
+        hetkTogglePsGps(prefix,name);
+    });
+});
 
 const saveFolderBtn = document.getElementById('save-folder');
 if(saveFolderBtn) {
@@ -437,6 +460,7 @@ if(saveFolderBtn) {
             document.getElementById('new-group-name').value = "";
             const gps=hetkPsGpsControls('new');
             if(gps.lat)gps.lat.value='';if(gps.lng)gps.lng.value='';
+            if(gps.isPs){gps.isPs.checked=false;gps.isPs.dataset.auto='0';}
             hetkTogglePsGps('new','');
             addFolderPanel.classList.add('hidden');
         });
@@ -1581,6 +1605,7 @@ window.openEditFolder = function(id, name, hue) {
     const gps=hetkPsGpsControls('edit');
     if(gps.lat)gps.lat.value=folder.lat == null ? '' : String(folder.lat);
     if(gps.lng)gps.lng.value=folder.lng == null ? '' : String(folder.lng);
+    if(gps.isPs){gps.isPs.checked=folder.psFolder===true;gps.isPs.dataset.auto='0';}
     hetkTogglePsGps('edit',folder.name || name || '');
     if(editColorSlider) {
         editColorSlider.value = hue || 0;
