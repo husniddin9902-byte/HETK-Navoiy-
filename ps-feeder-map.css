@@ -1,0 +1,32 @@
+/* HETK v71: isolated to management panel, no global navigation or dispatch-grid changes. */
+.hetk-ps-folder-gps{padding:12px;margin:10px 0;border:1px solid rgba(85,178,238,.42);border-radius:10px;background:rgba(25,87,136,.25);color:#fff}
+.hetk-ps-folder-gps[hidden]{display:none!important}
+.hetk-ps-folder-gps strong{display:block;margin-bottom:6px;color:#c8eaff;font-size:14px}
+.hetk-ps-folder-gps small{display:block;font-size:11px;line-height:1.5;color:#bfd1df}
+.hetk-ps-folder-gps-row{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:9px 0}
+.hetk-ps-folder-gps-row label{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:600}
+.hetk-ps-folder-gps-row input{min-width:0;max-width:100%;box-sizing:border-box;background:#061c2d;color:#fff;border:1px solid #4b8cb5;border-radius:6px;padding:9px;outline-offset:2px}
+.hetk-ps-map-tools{position:absolute;z-index:505;right:16px;top:15px;display:flex;align-items:center;gap:8px;max-width:calc(100% - 75px);pointer-events:none;flex-wrap:wrap;justify-content:flex-end}
+.hetk-ps-layer-switch{pointer-events:auto;display:flex;align-items:center;gap:7px;padding:9px 12px;color:#fff;font-weight:800;font-size:13px;white-space:nowrap;border-radius:9px;background:#115c9d;border:1px solid rgba(231,245,255,.85);box-shadow:0 2px 8px #031c35aa;cursor:pointer}
+.hetk-ps-layer-switch input{accent-color:#20cc81;width:16px;height:16px;cursor:pointer}
+.hetk-ps-layer-count{background:#08253edb;border:1px solid #45799b;border-radius:8px;padding:8px;font-size:11px;color:#d0e6f6;font-weight:700;pointer-events:none}
+.hetk-ps-map-disclaimer{position:absolute;bottom:14px;right:16px;z-index:505;max-width:min(540px,calc(100% - 24px));box-sizing:border-box;font-family:inherit;font-size:11px;font-weight:700;line-height:1.45;color:#70470b;background:#fff3d4;border:1px solid #cf9a44;border-radius:8px;padding:7px 10px;box-shadow:0 2px 7px #08213266;pointer-events:none}
+.hetk-ps-map-disclaimer[hidden]{display:none!important}
+.hetk-ps-dot-icon{background:none;border:0}
+.hetk-ps-map-dot{display:block;width:22px;height:22px;background:#0863ad;border:3px solid white;border-radius:50%;box-sizing:border-box;box-shadow:0 0 0 3px #095d9e88,0 3px 8px #042642d9}
+.hetk-ps-map-label{border:1px solid #a1cde9!important;border-radius:7px!important;background:#fff!important;color:#123a5c!important;font-size:13px!important;font-weight:900!important;box-shadow:0 3px 9px #052a4888!important;white-space:nowrap!important}
+.hetk-ps-map-label:before{border-right-color:#fff!important}
+.hetk-ps-map-popup .leaflet-popup-content-wrapper{border-radius:10px;background:#fff;color:#14334e}
+.hetk-ps-map-card{width:min(320px,calc(100vw - 60px));font-family:inherit;font-size:13px;line-height:1.5;color:#183450}
+.hetk-ps-map-card strong{display:block;font-size:17px;color:#115389;white-space:normal;overflow-wrap:anywhere}
+.hetk-ps-map-card small{display:block;margin:6px 0;color:#52728c;overflow-wrap:anywhere}
+.hetk-ps-map-card-stats{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+.hetk-ps-map-card-stats span{background:#e8f4ff;padding:3px 8px;border-radius:5px;font-weight:700}
+.hetk-ps-map-card ul{margin:8px 0;padding:0;list-style:none;max-height:170px;overflow:auto}
+.hetk-ps-map-card li{display:flex;justify-content:space-between;gap:10px;padding:4px 0;border-bottom:1px solid #dde7ef}
+.hetk-ps-map-card li em{font-size:11px;color:#356987;font-style:normal;flex-shrink:0}
+.hetk-ps-map-card p{background:#fff4d5;border-left:3px solid #e1a52d;padding:7px;font-size:11px;margin:9px 0 0}
+#panel-map .hetk-feeder-draft-path{stroke-linecap:round}
+#panel-map .hetk-feeder-flow-path{stroke-linecap:round;animation:hetk-preview-flow 950ms linear infinite;will-change:stroke-dashoffset}
+@keyframes hetk-preview-flow{from{stroke-dashoffset:0}to{stroke-dashoffset:-19}}
+@media(max-width:650px){.hetk-ps-folder-gps-row{grid-template-columns:1fr}.hetk-ps-map-tools{top:10px;right:10px;max-width:calc(100% - 70px)}.hetk-ps-layer-switch{padding:7px 9px;font-size:11px}.hetk-ps-layer-count{font-size:10px;padding:6px}.hetk-ps-map-disclaimer{right:8px;bottom:8px;font-size:10px}}
