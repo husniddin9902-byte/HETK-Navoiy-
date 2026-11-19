@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="style.css?v=71">
-    <link rel="stylesheet" href="ps-feeder-map.css?v=74">
+    <link rel="stylesheet" href="ps-feeder-map.css?v=75">
 <style>
     #address {
         word-break: keep-all !important;
@@ -33,7 +33,7 @@
     <link rel="stylesheet" href="naryad-module.css?v=1.2">
     <link rel="stylesheet" href="training-center.css?v=20.0">
     <link rel="stylesheet" href="training-center-theme.css?v=59">
-    <link rel="stylesheet" href="dispatch-grid.css?v=70">
+    <link rel="stylesheet" href="dispatch-grid.css?v=76">
 
     <link rel="stylesheet" href="safety-home.css?v=1.2">
     <link rel="stylesheet" href="app-install.css?v=1.3">
@@ -1003,6 +1003,12 @@ cursor:pointer;
             </div>
             <small>Koordinata bo‘lmasa, PS papkasi saqlanadi, ammo xaritada nuqta chiqmaydi.</small>
         </div>
+        <div class="hetk-feeder-source" id="hetk-edit-feeder-source" hidden>
+            <strong>⚡ Fiderning elektr manbasi</strong>
+            <small>Fider papkasi shu hududda qoladi. Boshqa TET/ShETdagi PSdan elektr olsa, manba PSni tanlang.</small>
+            <label>Manba PS<select id="hetk-edit-source-ps"><option value="">PS papkaga qarab avtomatik</option></select></label>
+            <small id="hetk-edit-source-hint">Hududiy papkalar ko‘chirilmaydi.</small>
+        </div>
         <label>Guruh rangi:</label>
         <input type="range" id="edit-color-slider" min="0" max="360" value="0" class="hue-slider">
         <div id="edit-color-preview" style="width:40px; height:40px; border-radius:50%; margin:10px auto; border:2px solid white; background:red;"></div>
@@ -1043,6 +1049,12 @@ cursor:pointer;
                 <label>Uzunlik (Longitude)<input id="hetk-new-ps-lng" type="text" inputmode="decimal" autocomplete="off" placeholder="65.123456"></label>
             </div>
             <small>Koordinata bo‘lmasa, PS papkasi saqlanadi, ammo xaritada nuqta chiqmaydi.</small>
+        </div>
+        <div class="hetk-feeder-source" id="hetk-new-feeder-source" hidden>
+            <strong>⚡ Fiderning elektr manbasi</strong>
+            <small>Fider papkasi shu hududda qoladi. Boshqa TET/ShETdagi PSdan elektr olsa, manba PSni tanlang.</small>
+            <label>Manba PS<select id="hetk-new-source-ps"><option value="">PS papkaga qarab avtomatik</option></select></label>
+            <small id="hetk-new-source-hint">Hududiy papkalar ko‘chirilmaydi.</small>
         </div>
         <label>Guruh rangi:</label>
         <input type="range" id="color-slider" min="0" max="360" value="0" class="hue-slider">
@@ -1764,13 +1776,13 @@ gap:8px;
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="jszip.min.js"></script>
-    <script src="app.js?v=74"></script>
-    <script src="ps-feeder-map.js?v=74"></script>
+    <script src="app.js?v=75"></script>
+    <script src="ps-feeder-map.js?v=75"></script>
     <script src="ps-gps-picker.js?v=74"></script>
     <script src="feeder-route-editor.js?v=74"></script>
     <script src="profile-container.js?v=3.6"></script>
     <script src="training-center.js?v=59"></script>
-    <script src="dispatch-grid.js?v=70"></script>
+    <script src="dispatch-grid.js?v=76"></script>
     <script src="ui-settings.js?v=1.4"></script>
     <script src="auth-container.js?v=48"></script>
     <script src="scoped-data.js?v=36.0"></script>
