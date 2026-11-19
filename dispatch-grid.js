@@ -1,4 +1,4 @@
-/* HETK-Navoiy — Dispatch Grid simulation v76
+/* HETK-Navoiy — Dispatch Grid simulation v78
  * NO SCADA CONTROL. Role-restricted Firebase RTDB shared simulation draft
  * autosaves with revision checks; existing local drafts are backed up before migration.
  * The animated dots are derived from the saved model and virtual QF states.
@@ -13,7 +13,7 @@
   let root, button, data, editorType = '', editorId = '', currentUser = null;
   let activePsId = null, callouts = null;
   let view = 'combined', section = 'stations', overrides = {}, chosen = null, map = null, mapLayer = null;
-  let mapTowers = false, mapTps = false, mapConsumers = false, initialized = false;
+  let mapLines = true, mapTowers = false, mapTps = false, mapConsumers = false, legendExpanded = false, initialized = false;
   let showObjects = false, showImpact = false, showStats = false, pickerMap = null, pickerMarker = null, pickerRoute = null, pickerSelection = null;
   let pickerContext = null, baseMapLayer = null, pickerBaseMapLayer = null, visiblePickerObjects = true;
   let existingTPs = null, existingTPsPending = false, mapStyle = 'street';
@@ -57,6 +57,10 @@
     if(root)root.querySelectorAll('[data-map-style]').forEach(b=>{const active=b.dataset.mapStyle===mapStyle;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));});
   }
   function mapStyleButtons(){return `<div class="dg-basemaps" role="group" aria-label="Xarita foni"><button type="button" data-map-style="street" aria-pressed="${mapStyle==='street'}" class="${mapStyle==='street'?'active':''}">🗺 Oddiy</button><button type="button" data-map-style="satellite" aria-pressed="${mapStyle==='satellite'}" class="${mapStyle==='satellite'?'active':''}">🛰 Sun’iy yo‘ldosh</button></div>`;}
+  function mapParameterMenu(){
+    const option=(action,label,selected)=>`<button type="button" role="menuitemcheckbox" aria-checked="${selected}" data-action="${action}"><span class="dg-param-mark" aria-hidden="true">${selected?'✓':'○'}</span>${label}</button>`;
+    return `<details class="dg-layer-menu"><summary aria-label="Xarita parametrlarini ochish">⚙ Parametrlar <span aria-hidden="true">▾</span></summary><div class="dg-layer-menu-panel" role="group" aria-label="Ko‘rsatiladigan xarita qatlamlari">${option('map-lines','Liniya',mapLines)}${option('towers','Tayanch raqamlari',mapTowers)}${option('map-tps','TP/KTP',mapTps)}${option('map-consumers','Mahalla / tashkilot',mapConsumers)}</div></details>`;
+  }
   // Reuse the existing HETK folder hierarchy. The ID, not its mutable label, is saved.
   // This is a READ-ONLY use of the main application's loaded folder list.
   function mainFolders(){try{return window.HETKManagementStatsContext?.getFolders?.()||window.currentFolders||{};}catch(e){return {};}}
@@ -679,8 +683,8 @@
     const bounds=map.getBounds();
     const overview=analyze();
     const context={size,overview,occupied:[],segments:[],psPoints:[]};
-    // All line geometries remain obstacles, even when their own text is hidden.
-    const lines=data.lines.map(line=>{
+    // A hidden "Liniya" layer also hides its callout labels and conductors.
+    const lines=(mapLines?data.lines:[]).map(line=>{
       const segments=projectedLineSegments(line,size);
       context.segments.push(...segments);
       return {line,segments,visibleLength:segments.reduce((sum,s)=>sum+s.length,0)};
@@ -821,7 +825,8 @@
     if(header)header.insertBefore(button,header.firstChild);
     button.addEventListener('click',open);
     root.addEventListener('click',onClick);
-    root.addEventListener('keydown',ev=>{if((ev.key==='Enter'||ev.key===' ')&&ev.target.matches('g[data-open-ps]')){ev.preventDefault();openPsPanel(ev.target.dataset.openPs);}});
+    root.addEventListener('click',ev=>{const menu=root.querySelector('.dg-layer-menu[open]');if(menu&&!menu.contains(ev.target))menu.open=false;});
+    root.addEventListener('keydown',ev=>{if(ev.key==='Escape'){const menu=root.querySelector('.dg-layer-menu[open]');if(menu){menu.open=false;ev.stopPropagation();return;}}if((ev.key==='Enter'||ev.key===' ')&&ev.target.matches('g[data-open-ps]')){ev.preventDefault();openPsPanel(ev.target.dataset.openPs);}});
     el('dg-editor-form').addEventListener('submit',onSave);
     el('dg-editor-form').addEventListener('input',ev=>{
       if(ev.target.matches('[data-folder-filter]'))updateFolderVisibility();
@@ -920,6 +925,7 @@
     if(a==='toggle-stats'){showStats=!showStats;updateSidebar();}
     if(a==='close-objects'){showObjects=false;updateSidebar();}
     if(a==='close-impact'){showImpact=false;updateSidebar();}
+    if(a==='map-lines'){mapLines=!mapLines;refresh();}
     if(a==='towers'){mapTowers=!mapTowers;refresh();}
     if(a==='picker-objects'){visiblePickerObjects=!visiblePickerObjects;const btn=root.querySelector('[data-action="picker-objects"]');if(btn)btn.textContent=(visiblePickerObjects?'✓':'○')+' PS va liniyalar';renderPickerContext();}
     if(a==='expand-picker'){const wrap=root.querySelector('.dg-pick-section');if(wrap){const big=wrap.classList.toggle('dg-picker-expanded');target.textContent=big?'⊟ Xaritani kichraytirish':'⛶ Xaritani kattalashtirish';setTimeout(()=>pickerMap?.invalidateSize(),90);}}
@@ -969,9 +975,10 @@
     if(view==='simple') title='Sodda dispetcherlik sxemasi';
     if(view==='technical') title='Texnik bir chiziqli ko‘rinish (soddalashtirilgan)';
     if(view==='combined') title='GIS xarita — PS, liniya, otpayka va tayanchlar';
-    const flow=flowDiagnostics(result);
-    el('dg-view-title').innerHTML=`<div><strong>${title}</strong><small>Harakatli nuqtalar: ${flow.moving}/${data.lines.length} ta uchastka · ${flow.moving?'Uzluksiz animatsiya yoqilgan.':'Yo‘nalishni tekshirish uchun «ⓘ Chiroqchalar»ni bosing.'} Faqat virtual ta’minot yo‘li, haqiqiy MW emas.</small></div>${view==='combined'?
-      `<div class="dg-layer-tools">${mapStyleButtons()}<button type="button" data-action="flow-help">ⓘ Chiroqchalar</button><button type="button" data-action="towers">${mapTowers?'✓':'○'} Tayanch raqamlari</button><button type="button" data-action="map-tps">${mapTps?'✓':'○'} TP/KTP</button><button type="button" data-action="map-consumers">${mapConsumers?'✓':'○'} Mahalla / tashkilot</button></div>`:''}`;
+    // Keep the GIS title and map controls in one compact row. Diagnostics still
+    // exist in code; the large text strip is intentionally not displayed.
+    el('dg-view-title').innerHTML=`<div class="dg-view-heading"><strong>${view==='combined'?'<span class="dg-title-full">GIS xarita — PS, liniya, otpayka va tayanchlar</span><span class="dg-title-short">GIS xarita</span>':esc(title)}</strong></div>${view==='combined'?
+      `<div class="dg-layer-tools">${mapStyleButtons()}${mapParameterMenu()}</div>`:''}`;
     const visual=el('dg-visual-content');
     if(view==='combined'){
       // Keep the Leaflet instance and its viewport alive across edits / toggles.
@@ -1026,15 +1033,17 @@
       // Voltage is ALWAYS expressed by hue. State is expressed by solid/dashed,
       // opacity and QF markers, so an isolated 110kV route does not look like 35kV.
       const voltageColor=COLORS[l.voltage]||'#7889a9';
-      const poly=L.polyline(coords,{color:voltageColor,weight:l.voltage>=110?6:5,opacity:on?.96:.57,dashArray:on?null:'9 9',lineCap:'round'}).addTo(mapLayer);
-      poly.bindPopup(mapLinePopup(l,result));
+      if(mapLines){
+        const poly=L.polyline(coords,{color:voltageColor,weight:l.voltage>=110?6:5,opacity:on?.96:.57,dashArray:on?null:'9 9',lineCap:'round'}).addTo(mapLayer);
+        poly.bindPopup(mapLinePopup(l,result));
+      }
       // Names are rendered as viewport-aware leader callouts, never over the conductor.
       coords.forEach(p=>bounds.push(p));
       // QF virtual controls live at their own station, not at arbitrary points on the route.
       // Moving light dots trace a modeled *supply path*, NEVER measured MW flow.
       // Reverse geographic coordinates when the model reaches this edge from B.
       const direction=on&&result.sourceCount[l.a]===1&&result.sourceCount[l.b]===1?result.direction[l.id]:0;
-      if(direction){
+      if(mapLines && direction){
         const route=direction===1?coords:[...coords].reverse();
         L.polyline(route,{color:'#e3fff5',weight:4,opacity:0.95,dashArray:'1 14',lineCap:'round',interactive:false,className:'dg-gis-flow-path'}).addTo(mapLayer);
       }
@@ -1078,7 +1087,19 @@
     if(bounds.length && mapIsNew){try{map.fitBounds(bounds,{padding:[35,35],maxZoom:12});}catch(e){}}
     if(mapIsNew && typeof L.control==='function'){
       const legend=L.control({position:'bottomleft'});
-      legend.onAdd=()=>{const e=document.createElement('div');e.className='dg-map-legend';e.innerHTML='<strong>Kuchlanish va holat (virtual)</strong><div class="dg-legend-list">'+VOLTAGES.map(v=>`<span><i style="background:${COLORS[v]}"></i>${v} kV</span>`).join('')+'</div><div class="dg-legend-status"><span>QFlarni PS nuqtasini bosib ko‘ring</span><span>┄ Uzilgan chiziq: modelda ta’minot yo‘q</span></div>';return e;};
+      legend.onAdd=()=>{
+        const e=document.createElement('div');e.className='dg-map-legend dg-legend-toggleable';
+        e.innerHTML=`<button type="button" class="dg-legend-toggle" aria-expanded="${legendExpanded}" aria-controls="dg-map-legend-content">◈ Kuchlanishlar <span aria-hidden="true">${legendExpanded?'▴':'▾'}</span></button><div id="dg-map-legend-content" class="dg-legend-content" ${legendExpanded?'':'hidden'}><strong>Kuchlanish va holat (virtual)</strong><div class="dg-legend-list">${VOLTAGES.map(v=>`<span><i style="background:${COLORS[v]}"></i>${v} kV</span>`).join('')}</div><div class="dg-legend-status"><span>QFlarni PS nuqtasini bosib ko‘ring</span><span>┄ Uzilgan chiziq: modelda ta’minot yo‘q</span></div></div>`;
+        if(L.DomEvent?.disableClickPropagation)L.DomEvent.disableClickPropagation(e);
+        if(L.DomEvent?.disableScrollPropagation)L.DomEvent.disableScrollPropagation(e);
+        const toggle=e.querySelector('.dg-legend-toggle'),content=e.querySelector('.dg-legend-content');
+        toggle.addEventListener('click',ev=>{
+          ev.stopPropagation();legendExpanded=!legendExpanded;
+          content.hidden=!legendExpanded;toggle.setAttribute('aria-expanded',String(legendExpanded));
+          toggle.querySelector('span').textContent=legendExpanded?'▴':'▾';
+        });
+        return e;
+      };
       if(typeof legend.addTo==='function')legend.addTo(map);
     }
     setTimeout(()=>{if(map){map.invalidateSize();drawMapCallouts();}},130);
@@ -1515,6 +1536,6 @@
     if(window.HETKAuth?.currentUser)authChanged(window.HETKAuth.currentUser);
     try{window.firebase?.auth?.().onAuthStateChanged?.(()=>{if(currentUser&&!cloudReady&&!cloudReadStarted)openCloudSession();});}catch(e){}
   }
-  window.HETKDispatchGrid = {open:()=>open(),analyzeDraft:()=>data?analyze():null,version:'76-auto-firebase-folder-ps'};
+  window.HETKDispatchGrid = {open:()=>open(),analyzeDraft:()=>data?analyze():null,version:'78-compact-gis-params'};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
