@@ -377,6 +377,49 @@ function hetkIsPsFolderName(name){
     if(/(?:fider|fedir|fid[eі]r|фидер)/iu.test(clean))return false;
     return /(?:^|[^\d])(?:500|220|110|35)\s*\/\s*(?:110|35|10|6)(?=\s|$|[’ʼʻ'"«»])/iu.test(clean);
 }
+// Fiderning xizmat hududi (parentId) va elektr manbasi (sourcePsFolderId) mustaqil.
+// Boshqa tumandagi PSga bog'lash papkalarni ko'chirmaydi va nusxalamaydi.
+function hetkIsFeederFolderName(name){
+    return /(?:fider|fedir|fid[eі]r|фидер)/iu.test(String(name||'')) && !hetkIsPsFolderName(name);
+}
+function hetkFeederSourceControls(prefix){
+    return {box:document.getElementById('hetk-'+prefix+'-feeder-source'),
+      select:document.getElementById('hetk-'+prefix+'-source-ps'),
+      hint:document.getElementById('hetk-'+prefix+'-source-hint')};
+}
+function hetkPsPathName(folderId){
+    const parts=[];let id=folderId;const visited=new Set();
+    while(id&&id!=='root'&&currentFolders[id]&&!visited.has(id)){
+        visited.add(id);parts.unshift(currentFolders[id].name||'Papka');id=currentFolders[id].parentId;
+    }
+    return parts.join(' / ');
+}
+function hetkUpdateFeederSource(prefix,name,savedSource){
+    const src=hetkFeederSourceControls(prefix);
+    if(!src.select)return;
+    const feeder=hetkIsFeederFolderName(name);
+    if(src.box)src.box.hidden=!feeder;
+    if(!feeder)return;
+    const current=savedSource===undefined?src.select.value:(savedSource||'');
+    const all=Object.keys(currentFolders||{}).filter(id=>hetkIsPsFolderName(currentFolders[id]?.name)||currentFolders[id]?.psFolder===true);
+    // Use DOM options, never unescaped user-created folder names in HTML.
+    src.select.replaceChildren();
+    const blank=document.createElement('option');blank.value='';blank.textContent='Papka iyerarxiyasidan avtomatik (PS ichida bo‘lsa)';src.select.appendChild(blank);
+    all.sort((a,b)=>hetkPsPathName(a).localeCompare(hetkPsPathName(b),'uz'));
+    for(const id of all){const op=document.createElement('option');op.value=id;op.textContent=hetkPsPathName(id);src.select.appendChild(op);}
+    if(current&&!all.includes(current)){
+        const op=document.createElement('option');op.value=current;op.disabled=true;op.textContent='⚠ Avval bog‘langan PS topilmadi (ID: '+current+')';src.select.appendChild(op);
+    }
+    src.select.value=current;
+    if(src.hint)src.hint.textContent=current?'Manba PS boshqa papkada bo‘lsa ham fider shu xizmat hududida qoladi.':'PS ichidagi fider uchun tanlash shart emas. Boshqa hududdagi PSdan chiqsa, ro‘yxatdan tanlang.';
+}
+function hetkFeederSourcePayload(prefix,name){
+    if(!hetkIsFeederFolderName(name))return {};
+    const id=hetkFeederSourceControls(prefix).select?.value||'';
+    if(id&&(!currentFolders[id]||!(hetkIsPsFolderName(currentFolders[id].name)||currentFolders[id].psFolder===true)))return false;
+    // null intentionally clears a previous explicit link; empty means inherit from closest parent PS.
+    return {sourcePsFolderId:id||null};
+}
 function hetkPsGpsControls(prefix){
     return {box:document.getElementById('hetk-'+prefix+'-ps-gps'),
       lat:document.getElementById('hetk-'+prefix+'-ps-lat'),
@@ -413,13 +456,21 @@ function hetkGetPsGpsFromForm(prefix,folderName){
 }
 const hetkNewPsNameInput=document.getElementById('new-group-name');
 const hetkEditPsNameInput=document.getElementById('edit-group-name');
-hetkNewPsNameInput?.addEventListener('input',()=>hetkTogglePsGps('new',hetkNewPsNameInput.value));
-hetkEditPsNameInput?.addEventListener('input',()=>hetkTogglePsGps('edit',hetkEditPsNameInput.value));
+hetkNewPsNameInput?.addEventListener('input',()=>{hetkTogglePsGps('new',hetkNewPsNameInput.value);hetkUpdateFeederSource('new',hetkNewPsNameInput.value);});
+hetkEditPsNameInput?.addEventListener('input',()=>{hetkTogglePsGps('edit',hetkEditPsNameInput.value);hetkUpdateFeederSource('edit',hetkEditPsNameInput.value);});
 ['new','edit'].forEach(prefix=>{
     const gps=hetkPsGpsControls(prefix);
     gps.isPs?.addEventListener('change',()=>{
         const name=prefix==='new'?hetkNewPsNameInput?.value:hetkEditPsNameInput?.value;
         hetkTogglePsGps(prefix,name);
+    });
+});
+
+['new','edit'].forEach(prefix=>{
+    const id=prefix==='new'?'parent-folder-select':'edit-parent-folder-select';
+    document.getElementById(id)?.addEventListener('change',()=>{
+        const name=(prefix==='new'?hetkNewPsNameInput:hetkEditPsNameInput)?.value||'';
+        hetkUpdateFeederSource(prefix,name);
     });
 });
 
@@ -438,13 +489,16 @@ if(saveFolderBtn) {
 
         const coords=hetkGetPsGpsFromForm('new',name);
         if(coords===false)return showToast('PS koordinatasini tekshiring: kenglik va uzunlikni to‘liq kiriting.');
+        const feederSource=hetkFeederSourcePayload('new',name);
+        if(feederSource===false)return showToast('Elektr manbasi sifatida haqiqiy PS papkasini tanlang.');
         const folderData={
             name: name,
             parentId: parentId,
             hue: hue,
             color: color,
             createdAt: Date.now(),
-            ...coords
+            ...coords,
+            ...feederSource
         };
         const createdRef=database.ref('Folders').push();
         createdRef.set(folderData).then(async () => {
@@ -462,6 +516,7 @@ if(saveFolderBtn) {
             if(gps.lat)gps.lat.value='';if(gps.lng)gps.lng.value='';
             if(gps.isPs){gps.isPs.checked=false;gps.isPs.dataset.auto='0';}
             hetkTogglePsGps('new','');
+            hetkUpdateFeederSource('new','',null);
             addFolderPanel.classList.add('hidden');
         });
     });
@@ -1607,6 +1662,7 @@ window.openEditFolder = function(id, name, hue) {
     if(gps.lng)gps.lng.value=folder.lng == null ? '' : String(folder.lng);
     if(gps.isPs){gps.isPs.checked=folder.psFolder===true;gps.isPs.dataset.auto='0';}
     hetkTogglePsGps('edit',folder.name || name || '');
+    hetkUpdateFeederSource('edit',folder.name || name || '',folder.sourcePsFolderId);
     if(editColorSlider) {
         editColorSlider.value = hue || 0;
         editColorPreview.style.background = `hsl(${hue || 0}, 100%, 50%)`;
@@ -1652,15 +1708,25 @@ document.getElementById('update-folder-btn').addEventListener('click', () => {
     const oldFolder=Object.assign({},currentFolders[editingFolderId] || {});
     const coords=hetkGetPsGpsFromForm('edit',newName);
     if(coords===false)return showToast('PS koordinatasini tekshiring: kenglik va uzunlikni to‘liq kiriting.');
+    const feederSource=hetkFeederSourcePayload('edit',newName);
+    if(feederSource===false)return showToast('Elektr manbasi sifatida haqiqiy PS papkasini tanlang.');
+    // Changing the physical source changes the first span of any previously
+    // drawn route. Keep the route points and require explicit confirmation.
+    if(Object.prototype.hasOwnProperty.call(feederSource,'sourcePsFolderId') &&
+       (oldFolder.sourcePsFolderId||'')!==(feederSource.sourcePsFolderId||'') &&
+       oldFolder.feederRoute6kv?.points?.length &&
+       !window.confirm('Bu fiderga tayanchlar kiritilgan. Manba PSni o‘zgartirsangiz, chizma yangi PSdan boshlanadi. Tayanchlar saqlanadi, ammo trassani qayta tekshirish kerak. Davom etasizmi?'))return;
     const changedFolder={
         name: newName,
         parentId: newParentId,
         hue: newHue,
         color: `hsl(${newHue}, 100%, 50%)`,
-        ...coords
+        ...coords,
+        ...feederSource
     };
     database.ref('Folders/' + editingFolderId).update(changedFolder).then(async () => {
         currentFolders[editingFolderId]=Object.assign({},oldFolder,changedFolder);
+        if(changedFolder.sourcePsFolderId===null)delete currentFolders[editingFolderId].sourcePsFolderId;
         hetkRebuildFolderChildrenIndex();
         hetkRenderFolderTreePreservingState();
         updateParentSelect('parent-folder-select');
