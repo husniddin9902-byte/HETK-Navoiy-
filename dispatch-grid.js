@@ -766,8 +766,8 @@
     root.innerHTML=`
       <div class="dg-frame" role="dialog" aria-modal="true" aria-labelledby="dg-title">
         <header class="dg-topbar">
-          <div class="dg-brand"><span class="dg-brand-icon">⚡</span><div><strong id="dg-title">Elektr tarmoqlari · Dispetcherlik</strong><small>HETK-Navoiy / PS · Liniya · Fider · Iste’molchi</small></div></div>
-          <div class="dg-head-actions"><span class="dg-simulation-tag">SINOV · haqiqiy tarmoq emas</span><button type="button" class="dg-close" data-action="close" aria-label="Yopish">✕</button></div>
+          <div class="dg-brand"><span class="dg-brand-icon">⚡</span><div><strong id="dg-title">Elektr tarmoqlari · Dispetcherlik</strong></div></div>
+          <div class="dg-head-actions"><button type="button" class="dg-close" data-action="close" aria-label="Yopish">✕</button></div>
         </header>
         <div class="dg-toolbar">
           <div class="dg-switch-views" role="tablist" aria-label="Ko‘rinish turi">
@@ -781,12 +781,12 @@
             <button type="button" data-action="toggle-stats" aria-expanded="false">▥ Statistika</button>
           </div>
         </div>
-        <div class="dg-cloud-bar"><span id="dg-cloud-status" role="status">Firebase yuklanmoqda…</span><span>FAKAT SINOV · Elektr jihoziga buyruq yuborilmaydi</span></div>
+        <div class="dg-cloud-bar" hidden><span id="dg-cloud-status" role="status">Firebase yuklanmoqda…</span></div>
         <div id="hetk-grid-message" class="dg-message" hidden></div>
         <div class="dg-body">
           <aside class="dg-sidebar" id="dg-sidebar">
             <button type="button" class="dg-panel-close" data-action="close-objects" aria-label="Obyektlar panelini yopish">✕</button>
-            <div class="dg-sidebar-title"><span>Obyektlar</span><small>PSlar guruh papkalaridan · o‘zgarishlar Firebase’ga avtomatik saqlanadi</small></div>
+            <div class="dg-sidebar-title"><span>Obyektlar</span></div>
             <div class="dg-add-grid">
               <button type="button" data-add="station">+ PS / manba</button><button type="button" data-add="line">+ Liniya</button>
               <button type="button" data-add="tap">+ Otpayka</button><button type="button" data-add="tower">+ Tayanch</button>
@@ -799,7 +799,7 @@
               <button type="button" data-section="consumers">Iste’molchi</button>
             </div>
             <div class="dg-item-list" id="dg-item-list"></div>
-            <div class="dg-local-notice">🔒 Obyektning «Saqlash» tugmasi yoki tasdiqlangan o‘chirish amali Firebase’ga avtomatik yuboriladi. Yuqoridagi holat satri tasdiqni ko‘rsatadi. Ulanish bo‘lmasa lokal nusxa qoladi. <strong>Bu virtual model, haqiqiy SCADA boshqaruvi emas.</strong></div>
+            
           </aside>
           <main class="dg-main">
             <div class="dg-kpis" id="dg-kpis"></div>
@@ -808,7 +808,7 @@
           <aside class="dg-impact" id="dg-impact"></aside>
           <aside class="dg-ps-panel" id="dg-ps-panel" hidden></aside>
         </div>
-        <footer class="dg-footer"><span>⚠ Ta’minot va uzilish natijalari kiritilgan modelga asoslangan taxmin. Operativ qaror yoki xavfsiz ulash uchun ishlatilmaydi.</span><span>v76 · Avtomatik Firebase sinxronlash</span></footer>
+        
       </div>
       <div class="dg-modal" id="dg-editor" hidden><div class="dg-editor-card" role="dialog" aria-modal="true" aria-label="Obyekt tahrirlash"><div class="dg-editor-head"><strong id="dg-editor-title">Tahrirlash</strong><button type="button" data-action="cancel-editor" aria-label="Yopish">✕</button></div><form id="dg-editor-form"></form></div></div>
     `;
