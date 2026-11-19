@@ -1,4 +1,4 @@
-/* HETK-Navoiy v72 — existing Boshqaruv paneli xaritasi uchun PS + 6/10 kV taxminiy fider qatlami.
+/* HETK-Navoiy v75 — existing Boshqaruv paneli xaritasi uchun PS + 6/10 kV taxminiy fider qatlami.
    No SCADA, no switch commands, no writes to TPs or DispatchGridSimulation.
    Only Folders/$id.lat/lng is written through the existing folder editor (manageFolders permission).
 */
@@ -46,13 +46,17 @@
     }
     return '';
   }
-  function feederParent(id,stations,folders){
-    const seen=new Set();let cur=id, child='';
+  // Find the nearest feeder folder independently of its source PS's location.
+  // Stop at a nested PS to prevent treating that PS or its child equipment as
+  // consumers of the surrounding feeder.
+  function feederAncestor(id,feeders,folders){
+    const seen=new Set();let cur=id;
     while(cur && cur!=='root' && folders[cur] && !seen.has(cur)){
-      if(stations.has(cur))return child && isFeeder(folders[child]?.name) ? {station:cur,feeder:child}:null;
-      seen.add(cur);child=cur;cur=folders[cur].parentId;
+      if(feeders.has(cur))return cur;
+      if(isPS(folders[cur]))return '';
+      seen.add(cur);cur=folders[cur].parentId;
     }
-    return null;
+    return '';
   }
   function voltageForFeeder(feederName,psName){
     const name=String(feederName||'').trim();
@@ -94,54 +98,64 @@
     const canSee=opts.canSeeFolder||(()=>true);
     const pointAllowed=opts.pointAllowed||(()=>true);
     const selected=opts.selectedFolderId||'root';
-    const stations=new Map();
+    const candidates=new Map(),stations=new Map(),warnings=[];
+    // Build the full PS catalog first; service ownership and electrical source
+    // are different hierarchies. No existing folder is moved or duplicated.
     for(const [id,f] of Object.entries(folders||{})){
-      if(!isPS(f)||!canSee(id))continue;
+      if(!isPS(f))continue;
       const located=validGps(f.lat,f.lng);
-      stations.set(id,{id,name:f.name,lat:located?Number(f.lat):null,lng:located?Number(f.lng):null,located,
+      candidates.set(id,{id,name:f.name,lat:located?Number(f.lat):null,lng:located?Number(f.lng):null,located,
         parentId:f.parentId||'root',feeders:[],path:getFolderPath(id,folders)});
     }
-    // Only direct feeder children count; PS under PS remains its own station.
-    const children=folderChildren(folders);
-    for(const s of stations.values()){
-      for(const fid of (children[s.id]||[])){
-        if(!folders[fid]||isPS(folders[fid])||!isFeeder(folders[fid].name)||!canSee(fid))continue;
-        s.feeders.push({id:fid,name:folders[fid].name,kv:voltageForFeeder(folders[fid].name,s.name),tps:[],route:folders[fid].feederRoute6kv||null});
-      }
-    }
     const feederLookup=new Map();
-    for(const s of stations.values())for(const f of s.feeders)feederLookup.set(f.id,{station:s,feeder:f});
+    for(const [fid,folder] of Object.entries(folders||{})){
+      if(!folder||isPS(folder)||!isFeeder(folder.name)||!canSee(fid))continue;
+      const explicit=typeof folder.sourcePsFolderId==='string'&&folder.sourcePsFolderId.trim()?folder.sourcePsFolderId.trim():'';
+      const stationId=explicit||nearestStation(folder.parentId,folders);
+      if(explicit&&!candidates.has(explicit)){
+        warnings.push((folder.name||fid)+': biriktirilgan manba PS topilmadi. Boshqa PSga avtomatik ulanmadi.');
+        continue;
+      }
+      if(!stationId||!candidates.has(stationId))continue;
+      const s=candidates.get(stationId);stations.set(stationId,s);
+      const feeder={id:fid,name:folder.name,kv:voltageForFeeder(folder.name,s.name),tps:[],
+        route:folder.feederRoute6kv||null,servicePath:getFolderPath(fid,folders),
+        sourcePsFolderId:stationId,explicitSource:!!explicit,
+        crossTerritory:!folderHasAncestor(fid,stationId,folders)};
+      s.feeders.push(feeder);feederLookup.set(fid,{station:s,feeder});
+    }
+    // Also show PS markers in the user's visible territorial folder, even
+    // when they have no feeder yet (and do not convert nested PS into feeders).
+    for(const [sid,s] of candidates){if(canSee(sid))stations.set(sid,s);}
     let tpTotal=0;
     for(const [tpId,tp] of Object.entries(points||{})){
       if(!pointAllowed(tp)||!validGps(tp?.lat,tp?.lng))continue;
-      const ids=pointFolderIds(tp);
-      let candidate=null;
-      // Prefer the primary folder, so dual assignment doesn't place the same TP on all feeders.
+      const ids=pointFolderIds(tp);let chosen=null;
       for(const folderId of ids){
-        const anc=feederParent(folderId,new Set(stations.keys()),folders);
-        if(anc && feederLookup.has(anc.feeder)){
-          candidate=feederLookup.get(anc.feeder);break;
-        }
+        const fid=feederAncestor(folderId,new Set(feederLookup.keys()),folders);
+        if(fid&&feederLookup.has(fid)){chosen=feederLookup.get(fid);break;}
       }
-      if(!candidate)continue;
-      candidate.feeder.tps.push({id:tpId,name:tp.name||tp.address||'TP/KTP',lat:Number(tp.lat),lng:Number(tp.lng)});
+      if(!chosen)continue;
+      chosen.feeder.tps.push({id:tpId,name:tp.name||tp.address||'TP/KTP',lat:Number(tp.lat),lng:Number(tp.lng)});
       tpTotal++;
     }
     const visibleStations=[...stations.values()].filter(s=>
-      folderHasAncestor(s.id,selected,folders)||folderHasAncestor(selected,s.id,folders)
+      folderHasAncestor(s.id,selected,folders)||folderHasAncestor(selected,s.id,folders)||
+      s.feeders.some(f=>folderHasAncestor(f.id,selected,folders)||folderHasAncestor(selected,f.id,folders))
     );
     const previewLines=[];
     for(const s of visibleStations){
       if(!s.located)continue;
       for(const f of s.feeders){
-        if(selected!=='root' && !(folderHasAncestor(f.id,selected,folders)||folderHasAncestor(selected,f.id,folders)))continue;
+        if(selected!=='root' && !folderHasAncestor(s.id,selected,folders) && !(folderHasAncestor(f.id,selected,folders)||folderHasAncestor(selected,f.id,folders)))continue;
         if(!f.tps.length&&!f.route?.points?.length)continue;
-        // Keep all validated coordinates, preserve input; avoid artificial electrical branches.
+        // A coordinate-nearest draft; no claim of actual conductor alignment.
         const path=provisionalRoute([s.lat,s.lng],f.tps.map(p=>[p.lat,p.lng]));
-        previewLines.push({stationId:s.id,feederId:f.id,name:f.name,kv:f.kv,path,tpCount:f.tps.length,route:f.route});
+        previewLines.push({stationId:s.id,feederId:f.id,name:f.name,kv:f.kv,path,
+          tpCount:f.tps.length,route:f.route,crossTerritory:f.crossTerritory,servicePath:f.servicePath});
       }
     }
-    return {stations,visibleStations,previewLines,tpTotal};
+    return {stations,visibleStations,previewLines,tpTotal,warnings};
   }
   let currentCtx=null,renderedMap=null,stationLayer=null,lineLayer=null,latestModel=null;
   let mapZoomListener=null;
@@ -158,11 +172,11 @@
       const available=latestModel.visibleStations.filter(s=>s.located).length;
       const missing=latestModel.visibleStations.length-available;
       const routes=latestModel.previewLines.length;
-      status().textContent=`PS: ${available}${missing?' · GPSsiz: '+missing:''}${checked?' · taxminiy fider: '+routes:''}`;
+      status().textContent=`PS: ${available}${missing?' · GPSsiz: '+missing:''}${checked?' · taxminiy fider: '+routes:''}${latestModel.warnings.length?' · ⚠ manbasiz: '+latestModel.warnings.length:''}`;
     }
   }
   function popup(s){
-    const feeders=s.feeders.length? s.feeders.map(f=>`<li><span>${esc(f.name)}</span><em>${f.kv} kV · ${f.tps.length} TP</em></li>`).join(''):'<li>Fider papkalari topilmadi</li>';
+    const feeders=s.feeders.length? s.feeders.map(f=>`<li><span>${esc(f.name)}${f.crossTerritory?'<small>📁 '+esc(f.servicePath)+'</small>':''}</span><em>${f.kv} kV · ${f.tps.length} TP</em></li>`).join(''):'<li>Fiderlar biriktirilmagan</li>';
     return `<div class="hetk-ps-map-card"><strong>${esc(s.name)}</strong><small>📁 ${esc(s.path)}</small><div class="hetk-ps-map-card-stats"><span>📍 PS koordinatasi mavjud</span><span>⚡ ${s.feeders.length} fider</span></div><ul>${feeders}</ul><button type="button" class="hetk-ps-popup-route-open" data-ps-id="${esc(s.id)}">⚒ Fider tayanchlari / 6–10 kV yo‘nalish</button><p>6/10 kV chiziqlar — faqat ko‘rgazmali taxmin. Yo‘nalishni tayanch va burilishlar bilan aniqlashtirish mumkin. Haqiqiy kuchlanish tasdiqlanmagan.</p></div>`;
   }
   function updateTooltipVisibility(){
