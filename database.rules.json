@@ -1,5 +1,12 @@
 {
   "rules": {
+    "DispatchGridSimulation": {
+      "shared": {
+        ".read": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && (root.child('users').child(auth.uid).child('role').val() === 'super_admin' || root.child('users').child(auth.uid).child('role').val() === 'chief_dispatcher' || root.child('users').child(auth.uid).child('role').val() === 'dispatcher')",
+        ".write": "auth != null && root.child('users').child(auth.uid).child('active').val() === true && (root.child('users').child(auth.uid).child('role').val() === 'super_admin' || root.child('users').child(auth.uid).child('role').val() === 'chief_dispatcher' || root.child('users').child(auth.uid).child('role').val() === 'dispatcher') && newData.exists() && newData.child('updatedBy').val() === auth.uid && newData.child('revision').isNumber() && newData.child('revision').val() === (data.exists() ? data.child('revision').val() + 1 : 1)",
+        ".validate": "newData.child('version').val() === 1 && newData.child('simulationOnly').val() === true && newData.child('model').child('version').val() === 1 && newData.child('updatedBy').isString() && newData.child('updatedAt').isNumber()"
+      }
+    },
     ".read": false,
     ".write": false,
     "UserDeviceSessions": {
