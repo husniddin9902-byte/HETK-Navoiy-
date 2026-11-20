@@ -4197,6 +4197,26 @@ async function hetkSendDeletedElementToTelegram(tpId,tp,request,actor){
     if(tp.telegramArchiveMessageIds && tp.telegramArchiveMessageIds.length) await deleteTelegramMessages(tp.telegramArchiveMessageIds);
 }
 
+// v79: Actual TP/KTP deletion remains exclusively in Boshqaruv paneli.
+// Attach a U/J Master's completion notice to the SAME atomic Firebase deletion
+// update. Includes the current Master when the Master performed the deletion.
+async function hetkAppendUJMasterDeletionNotice(tpId,tp,actor,updates,now){
+    const zones=hetkGetTPWorkZoneIds(tp);
+    if(!zones.length) return {uids:[],payload:null};
+    await loadElementWorkZones(true);
+    const uids=Array.from(new Set(zones.map(zoneId=>elementWorkZonesCache[zoneId]?.currentMasterUid).filter(Boolean)));
+    if(!uids.length) return {uids:[],payload:null};
+    const id=database.ref('UserNotifications').push().key;
+    const payload={id,kind:'activity',action:'element_deleted',read:false,
+        title:`${actor.name || 'Mas’ul xodim'} ${tp.name || 'element'}ni o‘chirdi`,
+        actorUid:actor.uid||'',actorName:actor.name||'',actorRole:actor.role||'',
+        elementId:tpId,elementName:tp.name||'Element',
+        workZoneName:hetkGetTPWorkZoneNames(tp).join(', ')||'',
+        createdAt:now,expiresAt:now+HETK_NOTICE_LIFETIME_MS};
+    uids.forEach(uid=>{updates[`UserNotifications/${uid}/${id}`]=payload;});
+    return {uids,payload};
+}
+
 async function hetkDeleteElementImmediately(tpId,tp){
     if(!tpId || !tp) throw new Error('Element topilmadi.');
     if(tp.deletionPending) throw new Error('Bu elementda faol o‘chirish so‘rovi bor. Uni Bildirishnomalar bo‘limidan tasdiqlang yoki bekor qiling.');
@@ -4213,8 +4233,10 @@ async function hetkDeleteElementImmediately(tpId,tp){
         approvedBy:actor.uid,approvedByName:actor.name,expiresAt:now+HETK_NOTICE_LIFETIME_MS
     });
     updates[`TPComments/${tpId}`]=null;
+    const masterNotice=await hetkAppendUJMasterDeletionNotice(tpId,tp,actor,updates,now);
     if(window.HETKData)await window.HETKData.removeTP(tpId,tp,updates);
     else{updates[`TPs/${tpId}`]=null;await database.ref().update(updates);}
+    if(masterNotice.uids.length)await hetkSafeSendPush(masterNotice.uids,'notifications',masterNotice.payload);
     let telegramSent=true;
     try{await hetkSendDeletedElementToTelegram(tpId,tp,request,actor);}
     catch(error){telegramSent=false;console.warn('Element o‘chirildi, lekin Telegram e’loni yuborilmadi:',error);}
@@ -4255,6 +4277,7 @@ async function hetkFinalizeApprovedElementDeletion(requestId,request){
             approvedBy:actor.uid,approvedByName:actor.name,expiresAt:now+HETK_NOTICE_LIFETIME_MS
         });
         updates[`TPComments/${request.tpId}`]=null;
+        const masterNotice=await hetkAppendUJMasterDeletionNotice(request.tpId,tp,actor,updates,now);
         updates[`ElementDeletionRequests/${requestId}/status`]='approved';
         updates[`ElementDeletionRequests/${requestId}/resolvedAt`]=now;
         updates[`ElementDeletionRequests/${requestId}/resolvedBy`]=actor.uid;
@@ -4276,6 +4299,7 @@ async function hetkFinalizeApprovedElementDeletion(requestId,request){
         }
         if(window.HETKData)await window.HETKData.removeTP(request.tpId,tp,updates);
         else{updates[`TPs/${request.tpId}`]=null;await database.ref().update(updates);}
+        if(masterNotice.uids.length)await hetkSafeSendPush(masterNotice.uids,'notifications',masterNotice.payload);
         try{await hetkSendDeletedElementToTelegram(request.tpId,tp,request,actor);}
         catch(telegramError){console.warn('Element o‘chirildi, lekin Telegram e’loni yuborilmadi:',telegramError);}
         if(request.requesterUid && requesterNotice) await hetkSafeSendPush([request.requesterUid],'notifications',requesterNotice);
