@@ -449,3 +449,18 @@ body.dg-modal-open{overflow:hidden!important}
   #hetk-grid .dg-view-heading{display:none}
   #hetk-grid .dg-layer-tools{flex:1;justify-content:space-between}
 }
+
+/* v79 — GIS controls share the primary toolbar: no duplicate title row. */
+#hetk-grid #dg-view-title[hidden],#hetk-grid #dg-gis-toolbar-slot[hidden]{display:none!important}
+#hetk-grid .dg-gis-toolbar-slot{display:flex;align-items:center;justify-content:center;flex:0 1 auto;min-width:0;position:relative;z-index:90}
+#hetk-grid .dg-gis-toolbar-slot .dg-layer-tools{gap:7px}
+#hetk-grid .dg-toolbar{overflow:visible;position:relative;z-index:90}
+#hetk-grid .dg-layer-menu-panel{max-height:min(72vh,480px);overflow-y:auto;min-width:192px}
+#hetk-grid .dg-layer-group-title{font-weight:850;color:#21537d;font-size:11px;padding:6px 10px 4px}
+#hetk-grid .dg-layer-menu-separator{height:1px;background:#dce9f4;margin:3px 5px}
+#hetk-grid .dg-param-voltage-dot{height:7px;width:15px;border-radius:6px;background:var(--dg-voltage);margin-left:-3px;flex:none}
+#hetk-grid .dg-popup-delete{background:#fff1f1;color:#a92f43;border-color:#eab4bb}
+#hetk-grid .dg-toolbar-actions{flex:0 0 auto}
+@media(max-width:1320px){#hetk-grid .dg-toolbar{gap:5px}#hetk-grid .dg-gis-toolbar-slot .dg-layer-tools{gap:3px}#hetk-grid .dg-gis-toolbar-slot .dg-layer-menu>summary{padding:7px}#hetk-grid .dg-gis-toolbar-slot .dg-basemaps button{padding:6px}}
+@media(max-width:1000px){#hetk-grid .dg-toolbar{display:grid;grid-template-columns:1fr auto;align-items:center;gap:4px}#hetk-grid .dg-gis-toolbar-slot{grid-row:2;grid-column:1/-1;justify-content:flex-end}#hetk-grid .dg-toolbar-actions{grid-row:1;grid-column:2}#hetk-grid .dg-switch-views{grid-row:1;grid-column:1}}
+@media(max-width:520px){#hetk-grid .dg-toolbar{grid-template-columns:minmax(0,1fr) auto}#hetk-grid .dg-toolbar-actions{min-width:0;max-width:45vw}#hetk-grid .dg-toolbar-actions button{font-size:9px;padding:6px 4px}#hetk-grid .dg-gis-toolbar-slot{justify-content:flex-end}#hetk-grid .dg-layer-menu-panel{max-height:55vh}}
