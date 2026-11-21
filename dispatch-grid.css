@@ -464,3 +464,34 @@ body.dg-modal-open{overflow:hidden!important}
 @media(max-width:1320px){#hetk-grid .dg-toolbar{gap:5px}#hetk-grid .dg-gis-toolbar-slot .dg-layer-tools{gap:3px}#hetk-grid .dg-gis-toolbar-slot .dg-layer-menu>summary{padding:7px}#hetk-grid .dg-gis-toolbar-slot .dg-basemaps button{padding:6px}}
 @media(max-width:1000px){#hetk-grid .dg-toolbar{display:grid;grid-template-columns:1fr auto;align-items:center;gap:4px}#hetk-grid .dg-gis-toolbar-slot{grid-row:2;grid-column:1/-1;justify-content:flex-end}#hetk-grid .dg-toolbar-actions{grid-row:1;grid-column:2}#hetk-grid .dg-switch-views{grid-row:1;grid-column:1}}
 @media(max-width:520px){#hetk-grid .dg-toolbar{grid-template-columns:minmax(0,1fr) auto}#hetk-grid .dg-toolbar-actions{min-width:0;max-width:45vw}#hetk-grid .dg-toolbar-actions button{font-size:9px;padding:6px 4px}#hetk-grid .dg-gis-toolbar-slot{justify-content:flex-end}#hetk-grid .dg-layer-menu-panel{max-height:55vh}}
+
+/* v80: read-only 6/10 kV feeder paths share management-panel dot motion.
+   The animation is illustrative, not evidence of a live voltage/current. */
+#hetk-grid .leaflet-overlay-pane path.dg-gis-feeder-flow-path{
+  stroke-linecap:round;pointer-events:none;will-change:stroke-dashoffset;
+  animation:dg-feeder-flow-dots 950ms linear infinite;
+}
+@keyframes dg-feeder-flow-dots{from{stroke-dashoffset:0}to{stroke-dashoffset:-19}}
+@media(prefers-reduced-motion:reduce){
+  #hetk-grid .leaflet-overlay-pane path.dg-gis-feeder-flow-path{animation:none;opacity:.45}
+}
+/* A PS label must show the COMPLETE Folders name, even on small screens. */
+#hetk-grid .dg-smart-tag.dg-smart-ps{
+  white-space:normal;overflow:visible;text-overflow:clip;
+  overflow-wrap:anywhere;word-break:normal;height:auto;
+}
+/* Layer choices remain draft until the operator presses OK. */
+#hetk-grid .dg-layer-menu-actions{
+  display:flex;justify-content:flex-end;gap:7px;border-top:1px solid #dce9f4;
+  margin-top:4px;padding:9px 3px 2px;
+}
+#hetk-grid .dg-layer-menu-panel .dg-layer-menu-actions button{
+  width:auto;min-width:75px;justify-content:center;font-weight:800;
+  border:1px solid #c8d9ea;background:#f7fafc;
+}
+#hetk-grid .dg-layer-menu-panel .dg-layer-menu-actions .dg-params-apply{
+  background:#0e64aa;color:#fff;border-color:#0e64aa;
+}
+#hetk-grid .dg-layer-menu-panel .dg-layer-menu-actions .dg-params-apply:hover{
+  background:#07548d;color:#fff;
+}
