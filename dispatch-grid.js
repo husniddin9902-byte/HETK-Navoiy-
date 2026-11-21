@@ -1,4 +1,4 @@
-/* HETK-Navoiy — Dispatch Grid simulation v79
+/* HETK-Navoiy — Dispatch Grid simulation v80
  * NO SCADA CONTROL. Role-restricted Firebase RTDB shared simulation draft
  * autosaves with revision checks; existing local drafts are backed up before migration.
  * The animated dots are derived from the saved model and virtual QF states.
@@ -60,9 +60,32 @@
   }
   function mapStyleButtons(){return `<div class="dg-basemaps" role="group" aria-label="Xarita foni"><button type="button" data-map-style="street" aria-pressed="${mapStyle==='street'}" class="${mapStyle==='street'?'active':''}">🗺 Oddiy</button><button type="button" data-map-style="satellite" aria-pressed="${mapStyle==='satellite'}" class="${mapStyle==='satellite'?'active':''}">🛰 Sun’iy yo‘ldosh</button></div>`;}
   function mapParameterMenu(){
-    const option=(action,label,selected)=>`<button type="button" role="menuitemcheckbox" aria-checked="${selected}" data-action="${action}"><span class="dg-param-mark" aria-hidden="true">${selected?'✓':'○'}</span>${label}</button>`;
-    const voltage=VOLTAGES.map(v=>`<button type="button" role="menuitemcheckbox" aria-checked="${!!voltageVisible[v]}" data-voltage="${v}"><span class="dg-param-mark" aria-hidden="true">${voltageVisible[v]?'✓':'○'}</span><span class="dg-param-voltage-dot" style="--dg-voltage:${COLORS[v]}"></span>${v} kV</button>`).join('');
-    return `<details class="dg-layer-menu"><summary aria-label="Xarita parametrlarini ochish">⚙ Parametrlar <span aria-hidden="true">▾</span></summary><div class="dg-layer-menu-panel" role="group" aria-label="Ko‘rsatiladigan xarita qatlamlari"><div class="dg-layer-group-title">Liniya</div>${voltage}<div class="dg-layer-menu-separator"></div>${option('towers','Tayanch raqamlari',mapTowers)}${option('map-tps','TP/KTP',mapTps)}</div></details>`;
+    const option=(action,label,selected)=>`<button type="button" role="checkbox" aria-checked="${selected}" data-param-layer="${action}"><span class="dg-param-mark" aria-hidden="true">${selected?'✓':'○'}</span>${label}</button>`;
+    const voltage=VOLTAGES.map(v=>`<button type="button" role="checkbox" aria-checked="${!!voltageVisible[v]}" data-param-voltage="${v}"><span class="dg-param-mark" aria-hidden="true">${voltageVisible[v]?'✓':'○'}</span><span class="dg-param-voltage-dot" style="--dg-voltage:${COLORS[v]}"></span>${v} kV</button>`).join('');
+    return `<details class="dg-layer-menu"><summary aria-label="Xarita parametrlarini ochish" aria-haspopup="true">⚙ Parametrlar <span aria-hidden="true">▾</span></summary><div class="dg-layer-menu-panel" role="group" aria-label="Ko‘rsatiladigan xarita qatlamlari"><div class="dg-layer-group-title">Liniya</div>${voltage}<div class="dg-layer-menu-separator"></div>${option('towers','Tayanch raqamlari',mapTowers)}${option('map-tps','TP/KTP',mapTps)}<div class="dg-layer-menu-actions"><button type="button" class="dg-params-cancel" data-action="params-cancel">Bekor qilish</button><button type="button" class="dg-params-apply" data-action="params-apply">OK</button></div></div></details>`;
+  }
+  // Parameter ticks are a DRAFT until OK. Cancel, Escape and outside click
+  // never alter visible line layers; reopening always reflects committed state.
+  function setParameterTick(button,checked){
+    if(!button)return;
+    button.setAttribute('aria-checked',String(!!checked));
+    const mark=button.querySelector('.dg-param-mark');
+    if(mark)mark.textContent=checked?'✓':'○';
+  }
+  function resetParameterTicks(menu){
+    if(!menu)return;
+    menu.querySelectorAll('[data-param-voltage]').forEach(btn=>setParameterTick(btn,!!voltageVisible[Number(btn.dataset.paramVoltage)]));
+    menu.querySelectorAll('[data-param-layer]').forEach(btn=>setParameterTick(btn,btn.dataset.paramLayer==='towers'?mapTowers:btn.dataset.paramLayer==='map-tps'?mapTps:false));
+  }
+  function applyParameterTicks(menu){
+    if(!menu)return;
+    menu.querySelectorAll('[data-param-voltage]').forEach(btn=>{const kv=Number(btn.dataset.paramVoltage);if(VOLTAGES.includes(kv))voltageVisible[kv]=btn.getAttribute('aria-checked')==='true';});
+    menu.querySelectorAll('[data-param-layer]').forEach(btn=>{
+      const value=btn.getAttribute('aria-checked')==='true';
+      if(btn.dataset.paramLayer==='towers')mapTowers=value;
+      if(btn.dataset.paramLayer==='map-tps')mapTps=value;
+    });
+    refresh();
   }
   // READ ONLY: reuse exactly the same PS/fider/TP model and cable/overhead route
   // generator as the Boshqaruv panel map. Never write to the management database.
@@ -637,18 +660,19 @@
     }
     return true;
   }
-  function labelWidth(text,size){
-    // Match the CSS tag width. Use canvas measurement where supported, else
-    // a conservative estimate. A bounded width ensures long PS names cannot
-    // blanket the map on small monitors.
-    const maximum=Math.max(88,Math.min(size.x<650?166:234,size.x-40));
-    let raw=String(text).length*6.8+25;
+  function labelDimensions(text,size,kind){
+    // Full PS name comes from its Folders record. Do not truncate it with
+    // ellipses: on narrow screens wrap while leaving the original text intact.
+    const isPs=kind==='ps',maximum=Math.max(90,Math.min(isPs?(size.x<650?235:430):(size.x<650?166:234),size.x-30));
+    let raw=String(text).length*6.9+25;
     try{
       const canvas=document.createElement('canvas');
       const ctx=canvas.getContext('2d');
       if(ctx){ctx.font='800 11px system-ui, Arial, sans-serif';raw=ctx.measureText(String(text)).width+25;}
     }catch(e){}
-    return Math.min(maximum,Math.max(78,Math.ceil(raw)));
+    const width=Math.min(maximum,Math.max(78,Math.ceil(raw)));
+    const rows=isPs?Math.max(1,Math.ceil((raw-12)/Math.max(60,width-25))):1;
+    return {w:width,h:isPs?12+rows*17:29};
   }
   function candidatePositions(anchor,w,h){
     const p=anchor;
@@ -664,7 +688,7 @@
   }
   function placeCallout(anchor,text,kind,ref,context){
     const {size,occupied,segments,psPoints}=context;
-    const w=labelWidth(text,size),h=29;
+    const {w,h}=labelDimensions(text,size,kind);
     const preferRight=anchor.x<size.x/2,preferBelow=anchor.y<size.y/2;
     // Labels gravitate to different sides depending on their map position,
     // rather than every leader automatically pointing in the same direction.
@@ -690,7 +714,7 @@
       const dx=endX-anchor.x,dy=endY-anchor.y;
       const length=Math.hypot(dx,dy),angle=Math.atan2(dy,dx);
       const color=kind==='line'?(COLORS[ref.voltage]||'#56728a'):(ref.kind==='source'?'#1374d0':'#164579');
-      const html=`<div class="dg-smart-callout" style="--dg-accent:${color}"><i class="dg-smart-leader" aria-hidden="true" style="width:${length.toFixed(1)}px;transform:rotate(${angle.toFixed(5)}rad)"></i><span class="dg-smart-tag ${kind==='ps'?'dg-smart-ps':''}" style="left:${rect.x-anchor.x}px;top:${rect.y-anchor.y}px;width:${w}px" title="${esc(text)}">${esc(text)}</span></div>`;
+      const html=`<div class="dg-smart-callout" style="--dg-accent:${color}"><i class="dg-smart-leader" aria-hidden="true" style="width:${length.toFixed(1)}px;transform:rotate(${angle.toFixed(5)}rad)"></i><span class="dg-smart-tag ${kind==='ps'?'dg-smart-ps':''}" style="left:${rect.x-anchor.x}px;top:${rect.y-anchor.y}px;width:${w}px;min-height:${h}px" title="${esc(text)}">${esc(text)}</span></div>`;
       const marker=L.marker(map.containerPointToLatLng([anchor.x,anchor.y]),{icon:L.divIcon({className:'dg-smart-callout-icon',html,iconSize:[1,1],iconAnchor:[0,0]}),interactive:true,zIndexOffset:kind==='ps'?850:650}).addTo(callouts);
       if(kind==='line')marker.bindPopup(mapLinePopup(ref,context.overview));
       else marker.on('click',()=>openPsPanel(ref.id));
@@ -847,8 +871,9 @@
     if(header)header.insertBefore(button,header.firstChild);
     button.addEventListener('click',open);
     root.addEventListener('click',onClick);
-    root.addEventListener('click',ev=>{const menu=root.querySelector('.dg-layer-menu[open]');if(menu&&!menu.contains(ev.target))menu.open=false;});
-    root.addEventListener('keydown',ev=>{if(ev.key==='Escape'){const menu=root.querySelector('.dg-layer-menu[open]');if(menu){menu.open=false;ev.stopPropagation();return;}}if((ev.key==='Enter'||ev.key===' ')&&ev.target.matches('g[data-open-ps]')){ev.preventDefault();openPsPanel(ev.target.dataset.openPs);}});
+    root.addEventListener('click',ev=>{const menu=root.querySelector('.dg-layer-menu[open]');if(menu&&!menu.contains(ev.target)){resetParameterTicks(menu);menu.open=false;}});
+    root.addEventListener('toggle',ev=>{if(ev.target.matches?.('.dg-layer-menu')&&ev.target.open)resetParameterTicks(ev.target);},true);
+    root.addEventListener('keydown',ev=>{if(ev.key==='Escape'){const menu=root.querySelector('.dg-layer-menu[open]');if(menu){resetParameterTicks(menu);menu.open=false;ev.stopPropagation();return;}}if((ev.key==='Enter'||ev.key===' ')&&ev.target.matches('g[data-open-ps]')){ev.preventDefault();openPsPanel(ev.target.dataset.openPs);}});
     el('dg-editor-form').addEventListener('submit',onSave);
     el('dg-editor-form').addEventListener('input',ev=>{
       if(ev.target.matches('[data-folder-filter]'))updateFolderVisibility();
@@ -904,6 +929,18 @@
     const target=ev.target.closest('button');if(!target||!root.contains(target))return;
     if(target.dataset.view){view=target.dataset.view;refresh();return;}
     if(target.dataset.mapStyle){switchMapStyle(target.dataset.mapStyle);return;}
+    if(target.dataset.paramVoltage||target.dataset.paramLayer){
+      const menu=target.closest('.dg-layer-menu');if(!menu)return;
+      setParameterTick(target,target.getAttribute('aria-checked')!=='true');
+      return; // Keep the menu OPEN while the user selects several layers.
+    }
+    if(target.dataset.action==='params-apply'){
+      applyParameterTicks(target.closest('.dg-layer-menu'));return;
+    }
+    if(target.dataset.action==='params-cancel'){
+      const menu=target.closest('.dg-layer-menu');resetParameterTicks(menu);if(menu)menu.open=false;
+      return;
+    }
     if(target.dataset.folderToggle){
       const id=target.dataset.folderToggle;
       if(expandedFolders.has(id))expandedFolders.delete(id);else expandedFolders.add(id);
@@ -1105,6 +1142,11 @@
             opacity:0.91,dashArray:cable?'4 7':draft?'8 7':null,
             className:'dg-gis-feeder-route'}).addTo(mapLayer)
             .bindTooltip(esc(feed.name)+' · '+feed.kv+' kV · '+(draft?'taxminiy GPS yo‘nalish':'kiritilgan tayanch/burilish yo‘nalishi'),{sticky:true});
+          // Match Boshqaruv paneli's moving dots on 6/10 kV feeders.
+          // Each oriented branch starts at its recorded parent (PS -> feeder).
+          // This is an illustrative animation, never a live current reading.
+          L.polyline(points,{color:'#fff',weight:2,opacity:0.96,dashArray:'2 17',
+            lineCap:'round',interactive:false,className:'dg-gis-feeder-flow-path'}).addTo(mapLayer);
         }
       }
     }
@@ -1632,6 +1674,6 @@
     if(window.HETKAuth?.currentUser)authChanged(window.HETKAuth.currentUser);
     try{window.firebase?.auth?.().onAuthStateChanged?.(()=>{if(currentUser&&!cloudReady&&!cloudReadStarted)openCloudSession();});}catch(e){}
   }
-  window.HETKDispatchGrid = {open:()=>open(),analyzeDraft:()=>data?analyze():null,version:'79-voltage-feeder-tap-delete'};
+  window.HETKDispatchGrid = {open:()=>open(),analyzeDraft:()=>data?analyze():null,version:'80-feeder-flow-params-pslabels'};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
