@@ -1,4 +1,4 @@
-/* HETK-Navoiy v75 — existing Boshqaruv paneli xaritasi uchun PS + 6/10 kV taxminiy fider qatlami.
+/* HETK-Navoiy v83 — existing Boshqaruv paneli xaritasi uchun PS + 6/10 kV taxminiy fider qatlami.
    No SCADA, no switch commands, no writes to TPs or DispatchGridSimulation.
    Only Folders/$id.lat/lng is written through the existing folder editor (manageFolders permission).
 */
@@ -152,10 +152,50 @@
         // A coordinate-nearest draft; no claim of actual conductor alignment.
         const path=provisionalRoute([s.lat,s.lng],f.tps.map(p=>[p.lat,p.lng]));
         previewLines.push({stationId:s.id,feederId:f.id,name:f.name,kv:f.kv,path,
-          tpCount:f.tps.length,route:f.route,crossTerritory:f.crossTerritory,servicePath:f.servicePath});
+          tpCount:f.tps.length,tps:f.tps,route:f.route,crossTerritory:f.crossTerritory,servicePath:f.servicePath});
       }
     }
     return {stations,visibleStations,previewLines,tpTotal,warnings};
+  }
+  // v83: one shared, read-only projection for the management GIS, dispatch GIS
+  // and mnemonic diagram. Surveyed route legs take precedence; any TP not yet
+  // recorded as an endpoint retains a visibly provisional GPS connection.
+  // The projection does NOT alter feederRoute6kv or assert physical topology.
+  function snapToLeg(target,path){
+    if(!Array.isArray(path)||path.length<2)return null;
+    const a=path[0],b=path[path.length-1];
+    if(!validGps(a?.[0],a?.[1])||!validGps(b?.[0],b?.[1]))return null;
+    const scale=Math.cos((+a[0]+ +b[0])*Math.PI/360);
+    const dx=(+b[1]-+a[1])*scale,dy=+b[0]-+a[0];
+    const t=Math.max(0,Math.min(1,((+target[1]-+a[1])*scale*dx+(+target[0]-+a[0])*dy)/(dx*dx+dy*dy||1)));
+    const at=[+a[0]+(+b[0]-+a[0])*t,+a[1]+(+b[1]-+a[1])*t];
+    const d=(+target[0]-at[0])**2+((+target[1]-at[1])*scale)**2;
+    return {at,t,score:d};
+  }
+  function compositeRoutes(line,station){
+    const base=(line?.path||[]).filter(p=>Array.isArray(p)&&validGps(p[0],p[1]));
+    const raw=line?.route;
+    let graph=null;
+    if(Array.isArray(raw?.points)&&raw.points.length&&window.HETKFeederRouteEditor?.graph){
+      try{graph=window.HETKFeederRouteEditor.graph(raw,station);}catch(e){graph=null;}
+    }
+    const verified=!!(graph&&!graph.errors?.length&&graph.routes?.length);
+    if(!verified)return {segments:base.length>=2?[{path:base,mode:'draft',provisional:true}]:[],verified:false,confirmedTpIds:[]};
+    const segments=graph.routes.map(seg=>({...seg,provisional:false}));
+    const connected=new Set(raw.points.filter(p=>p.kind==='tp'&&p.tpId).map(p=>String(p.tpId)));
+    const tps=Array.isArray(line?.tps)?line.tps:station?.feeders?.find(f=>f.id===line.feederId)?.tps||[];
+    for(const tp of tps){
+      if(!tp?.id||connected.has(String(tp.id))||!validGps(tp.lat,tp.lng))continue;
+      const dest=[+tp.lat,+tp.lng];let best=null;
+      for(const seg of graph.routes){
+        const projected=snapToLeg(dest,seg.path);
+        if(projected&&(!best||projected.score<best.score))best={...projected,seg};
+      }
+      if(!best)continue;
+      segments.push({path:[best.at,dest],mode:'draft',provisional:true,tpId:tp.id,
+        fromId:best.seg.point?.parentId||'ps',toId:best.seg.point?.id||'',t:best.t,at:best.at});
+    }
+    return {segments,verified:true,confirmedTpIds:[...connected]};
   }
   let currentCtx=null,renderedMap=null,stationLayer=null,lineLayer=null,latestModel=null;
   let mapZoomListener=null;
@@ -222,16 +262,15 @@
     }
     for(const l of model.previewLines){
       const c=l.kv===6?'#ae7cf4':'#f4af49';
-      const ps=model.stations.get(l.stationId), routed= l.route?.points?.length &&
-        window.HETKFeederRouteEditor?.graph?.(l.route,ps);
-      const segments=routed&&!routed.errors.length&&routed.routes.length?routed.routes:[{path:l.path,mode:'draft'}];
-      const km=routed&&!routed.errors.length?routed.adjustedKm:pathDistance(l.path)*1.04;
+      const ps=model.stations.get(l.stationId),projection=compositeRoutes(l,ps);
+      const segments=projection.segments;
+      const km=segments.reduce((total,seg)=>total+pathDistance(seg.path),0)*1.04;
       for(const seg of segments){
         const sc=seg.mode==='cable'?'#d966e0':c;
         const poly=L.polyline(seg.path,{color:sc,weight:seg.mode==='draft'?3:4,opacity:.93,
           dashArray:seg.mode==='cable'?'4 8':seg.mode==='draft'?'8 6':null,
           interactive:true,className:'hetk-feeder-draft-path'})
-          .bindTooltip(esc(l.name)+' · '+l.kv+' kV · '+(routed&&!routed.errors.length?'KIRITILGAN BO‘LAK · TAXMINIY':'GPS TAXMINIY')+' · ≈'+km.toFixed(3)+' km',{sticky:true})
+          .bindTooltip(esc(l.name)+' · '+l.kv+' kV · '+(seg.provisional?'TAXMINIY GPS ULANISH':'KIRITILGAN TAYANCH / TRASSA')+' · ≈'+km.toFixed(3)+' km',{sticky:true})
           .addTo(lineLayer);
         poly.on?.('click',()=>window.HETKFeederRouteEditor?.open(l.stationId,l.feederId));
         L.polyline(seg.path,{color:'#fff',weight:2,opacity:.95,dashArray:'2 17',
@@ -277,5 +316,5 @@
     if(currentCtx?.map)draw();
   });
   document.addEventListener('hetk-auth-cleared',()=>clear());
-  window.HETKPSFeederMap={render,clear,refresh:()=>currentCtx?draw():[],getLatestModel:()=>latestModel,getPoints:()=>currentCtx?.points||{},buildModel,isPS,voltageForFeeder,provisionalRoute};
+  window.HETKPSFeederMap={render,clear,refresh:()=>currentCtx?draw():[],getLatestModel:()=>latestModel,getPoints:()=>currentCtx?.points||{},buildModel,isPS,voltageForFeeder,provisionalRoute,snapToLeg,compositeRoutes};
 })();
