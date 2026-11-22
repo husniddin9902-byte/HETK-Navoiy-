@@ -522,3 +522,8 @@ body.dg-modal-open{overflow:hidden!important}
 @media(max-width:520px){#hetk-grid .dg-mnemo-workspace{padding:6px}#hetk-grid .dg-mnemo-scroller{max-height:48vh;min-height:240px}#hetk-grid .dg-layer-menu-panel{max-height:58vh}}
 #hetk-grid .dg-mnemo-note[role="button"]{cursor:pointer}
 #hetk-grid .dg-mnemo-note[role="button"]:hover text{fill:#0e73b8;text-decoration:underline}
+
+/* v82 · technical single-line view (read-only projection). */
+#hetk-grid .dg-mnemo-technical-svg{font-family:Arial,'Segoe UI',sans-serif}
+#hetk-grid .dg-mnemo-workspace .dg-legacy-diagram[open]>summary{background:#e9f3fe;border-bottom:1px solid #cbddeb}
+#hetk-grid .dg-mnemo-technical-svg .dg-mnemo-light{pointer-events:none}
