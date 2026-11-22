@@ -286,6 +286,9 @@ async function save(){
   draft.revision=expected+1;baseRev=expected+1;confirmed=true;
   $('hetk-route-save-state').textContent='✓ Firebase saqlandi · rev '+baseRev;
   if(window.HETKPSFeederMap?.refresh)window.HETKPSFeederMap.refresh();
+  // Notify the separate dispatch mnemonic immediately; it otherwise waits
+  // for its periodic scoped read and might display old pole geometry.
+  document.dispatchEvent(new CustomEvent('hetk-feeder-route-changed',{detail:{feederId:selectedFeeder}}));
  }catch(err){$('hetk-route-save-state').textContent='Xatolik: '+(err?.message||'Firebase ruxsati mavjud emas');alert('Firebase saqlash muvaffaqiyatsiz: '+(err?.message||'ruxsat xatoligi'));}
  finally{button.disabled=false;}
 }
