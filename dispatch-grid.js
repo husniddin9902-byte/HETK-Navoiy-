@@ -1,4 +1,4 @@
-/* HETK-Navoiy — Dispatch Grid simulation v81
+/* HETK-Navoiy — Dispatch Grid simulation v82
  * NO SCADA CONTROL. Role-restricted Firebase RTDB shared simulation draft
  * autosaves with revision checks; existing local drafts are backed up before migration.
  * The animated dots are derived from the saved model and virtual QF states.
@@ -27,6 +27,28 @@
   let mnemoFilter={region:'',territory:'',ps:'',feeder:''};
   let mnemoLineWidth=3,mnemoLights=true;
   let mnemoExportBusy=false;
+  // Committed display preferences are local to the signed-in account.
+  // Draft checkboxes still affect nothing until OK is clicked.
+  function saveDisplayPreferences(){
+    if(!currentUser?.uid)return;
+    try{localStorage.setItem(STORAGE+'params.'+currentUser.uid,JSON.stringify({
+      voltageVisible,mapTowers,mapTps,mnemoLights,mnemoLineWidth
+    }));}catch(_e){}
+  }
+  function restoreDisplayPreferences(){
+    voltageVisible=Object.fromEntries(VOLTAGES.map(v=>[v,true]));
+    mapTowers=false;mapTps=false;mnemoLights=true;mnemoLineWidth=3;
+    if(!currentUser?.uid)return;
+    try{
+      const prefs=JSON.parse(localStorage.getItem(STORAGE+'params.'+currentUser.uid)||'null');
+      if(!prefs||typeof prefs!=='object')return;
+      for(const v of VOLTAGES)if(typeof prefs.voltageVisible?.[v]==='boolean')voltageVisible[v]=prefs.voltageVisible[v];
+      if(typeof prefs.mapTowers==='boolean')mapTowers=prefs.mapTowers;
+      if(typeof prefs.mapTps==='boolean')mapTps=prefs.mapTps;
+      if(typeof prefs.mnemoLights==='boolean')mnemoLights=prefs.mnemoLights;
+      if([2,3,4,5].includes(+prefs.mnemoLineWidth))mnemoLineWidth=+prefs.mnemoLineWidth;
+    }catch(_e){}
+  }
   const isSuperAdmin=()=>currentUser?.role==='super_admin';
   function canSeeFolder(id){return !window.HETKAuth?.canSeeFolder||window.HETKAuth.canSeeFolder(id,mainFolders());}
   function matchesScope(feederId,stationId){
@@ -125,6 +147,7 @@
     mnemoFilter=Object.fromEntries([...menu.querySelectorAll('[data-param-scope]')].map(select=>[select.dataset.paramScope,select.value||'']));
     const w=Number(menu.querySelector('[data-param-weight]')?.value);if([2,3,4,5].includes(w))mnemoLineWidth=w;
     menu.open=false;
+    saveDisplayPreferences();
     syncLiveScope();
     refresh();
   }
@@ -1054,6 +1077,7 @@
       feederPreviewEpoch++;feederPreviewModel=null;feederPreviewPoints={};feederPreviewBusy=false;feederPreviewUser='';stopLiveUpdates();mnemoFilter={region:'',territory:'',ps:'',feeder:''};
       cloudEpoch++;stopCloudListener();cloudReadStarted=false;cloudBusy=false;cloudBlocked=false;
       cloudReady=false;cloudReadError=false;cloudRevision=null;
+      restoreDisplayPreferences();
       existingTPs=null;existingTPsPending=false;data=loadLocal();overrides=loadSwitchesLocal();
       cloudWanted=true;cloudDirty=false; // Old local draft must NEVER auto-overwrite the server.
       syncFolderStations();chosen=null;activePsId=null;if(wasOpen)refresh();
@@ -1244,11 +1268,29 @@
       renderMap(result);
     } else {
       if(map){map.remove();map=null;mapLayer=null;baseMapLayer=null;callouts=null;}
+      // Remote TP updates must not jump the operator back to the top/left of
+      // a large vector diagram. Restore both nested scroll containers.
+      const prevDiagram=visual.querySelector('.dg-mnemo-scroller');
+      const prevWorkspace=visual.querySelector('.dg-mnemo-workspace');
+      const scrollState={left:prevDiagram?.scrollLeft||0,top:prevDiagram?.scrollTop||0,
+        outer:prevWorkspace?.scrollTop||0,legacy:visual.querySelector('.dg-legacy-diagram')?.open||false};
       const existing=renderDiagram(result,view==='technical');
       const live=window.HETKLiveMnemo?.render?.(currentMnemo(),{technical:view==='technical',animate:mnemoLights,lineWidth:mnemoLineWidth})||'';
       // Keep the existing high-voltage and manually entered dispatch schema.
       // Live feeder projection is additional and cannot mutate its source data.
-      visual.innerHTML=live?`<div class="dg-mnemo-workspace">${live}<details class="dg-legacy-diagram"><summary>Yuqori kuchlanish / avvalgi dispetcherlik sxemasi</summary>${existing}</details></div>`:existing;
+      // Existing high-voltage stations and QF simulation are kept intact.
+      // When lines have actually been entered, expose them in the technical
+      // view rather than burying the 35/110/220/500 kV model below a click.
+      const legacyOpen=view==='technical'&&data.lines.length>0?' open':'';
+      visual.innerHTML=live?`<div class="dg-mnemo-workspace">${live}<details class="dg-legacy-diagram"${legacyOpen}><summary>35–500 kV · avvalgi dispetcherlik sxemasi (virtual model)</summary>${existing}</details></div>`:existing;
+      const nextDiagram=visual.querySelector('.dg-mnemo-scroller');
+      const nextWorkspace=visual.querySelector('.dg-mnemo-workspace');
+      if(nextDiagram){nextDiagram.scrollLeft=scrollState.left;nextDiagram.scrollTop=scrollState.top;}
+      if(nextWorkspace)nextWorkspace.scrollTop=scrollState.outer;
+      // An already-open legacy high-voltage diagram is not collapsed when a TP
+      // changes; switching from GIS to Technical still uses the default above.
+      const legacy=visual.querySelector('.dg-legacy-diagram');
+      if(legacy&&scrollState.legacy)legacy.open=true;
     }
   }
   function geometryFor(line){
@@ -1360,14 +1402,39 @@
       else marker.on('click',()=>openPsPanel(p.id));
       bounds.push([num(p.lat),num(p.lng)]);
     });
-    if(mapTps)data.tps.forEach(t=>{
-      const f=feeder(t.feederId);if(f&&!matchesScope(f.folderId||f.id,f.psId))return;
-      if(t.lat==null||t.lng==null||!validGps(t.lat,t.lng))return;
-      L.circleMarker([num(t.lat),num(t.lng)],{radius:6,color:'#fff',weight:2,fillColor:'#9855bd',fillOpacity:1}).addTo(mapLayer)
-        .bindTooltip(esc(t.name),{direction:'top'})
-        .bindPopup(`<strong>${esc(t.name)}</strong><br>${num(t.kva)} kVA<br>Fider: ${esc(f?.name||'aniqlanmagan')}<br><button type="button" class="dg-popup-edit" data-edit="tp" data-id="${esc(t.id)}">✎ Tahrirlash</button>`);
-      bounds.push([num(t.lat),num(t.lng)]);
-    });
+    if(mapTps){
+      // v82 regression fix: the old branch rendered ONLY simulation data.tps,
+      // although the real HETK TPs live in the management TPs collection.
+      // Reuse the exact read-only data already fetched for the 6/10 kV GIS;
+      // never write to the main TPs or invent an electrical connection.
+      const visibleBase=window.HETKLiveMnemo?.mapTpMarkers?.(
+        feederPreviewPoints,mainFolders(),feederPreviewModel,mnemoFilter,canSeeFolder
+      )||[];
+      const dedup=new Set();
+      const draw=(id,name,lat,lng,kva,privateTP,source,feederName,feedKv,editId)=>{
+        if(!validGps(lat,lng)||dedup.has(id))return;
+        if(feedKv!=null&&!voltageVisible[Number(feedKv)])return;
+        dedup.add(id);
+        const ll=[num(lat),num(lng)];
+        const marker=L.circleMarker(ll,{radius:6,color:'#fff',weight:2,
+          fillColor:privateTP?'#d94e63':'#367dda',fillOpacity:1}).addTo(mapLayer);
+        marker.bindTooltip(esc(name),{direction:'top'});
+        marker.bindPopup(`<strong>${esc(name)}</strong><br>${kva!==''&&kva!=null?esc(kva)+' kVA':'Quvvati kiritilmagan'}<br>Fider: ${esc(feederName||'biriktirilmagan')}<br><small>${source==='base'?'HETK asosiy bazasi (faqat ko‘rish)':'Dispetcherlik lokal modeli'}</small>${editId?`<br><button type="button" class="dg-popup-edit" data-edit="tp" data-id="${esc(editId)}">✎ Tahrirlash</button>`:''}`);
+        bounds.push(ll);
+      };
+      const linkedLocalByBase=new Map(data.tps.filter(t=>t.linkedTpId).map(t=>[t.linkedTpId,t.id]));
+      visibleBase.forEach(t=>draw(t.id,t.name,t.lat,t.lng,t.kva,t.private,'base',t.feederName,t.kv,linkedLocalByBase.get(t.id)||''));
+      // Legacy manually created simulation TPs stay visible without doubles.
+      // Do not hide them merely because they are absent from the main database.
+      data.tps.forEach(t=>{
+        const f=feeder(t.feederId);
+        if(t.linkedTpId&&dedup.has(t.linkedTpId))return;
+        if(f&&!matchesScope(f.folderId||f.id,f.psId))return;
+        if(mnemoFilter.feeder&&!f)return;
+        if(mnemoFilter.ps&&(!f||!station(f.psId)|| (station(f.psId).folderId||station(f.psId).id)!==mnemoFilter.ps))return;
+        draw(t.linkedTpId||t.id,t.name,t.lat,t.lng,t.kva,false,'local',f?.name,Number(f?.voltage)||null,t.id);
+      });
+    }
     if(mapConsumers)data.consumers.forEach(c=>{
       if(c.lat==null||c.lng==null||!validGps(c.lat,c.lng))return;
       L.circleMarker([num(c.lat),num(c.lng)],{radius:6,color:'#fff',weight:2,fillColor:c.kind==='mahalla'?'#ed9c2e':'#c45e81',fillOpacity:1}).addTo(mapLayer)
@@ -1869,6 +1936,7 @@
   function init(){if(initialized)return;initialized=true;mapStyle=readMapStyle();createShell();
     window.addEventListener('online',()=>{if(cloudWanted&&cloudDirty&&cloudReady&&!cloudBlocked)queueCloudSave();else if(cloudWanted&&!cloudReady)openCloudSession();});
     document.addEventListener('hetk-management-scope-changed',e=>{if(e?.detail?.reason==='folders'&&currentUser){syncFolderStations();feederPreviewModel=null;loadFeederPreview(true);}});
+    document.addEventListener('hetk-scoped-data-changed',e=>{if(e?.detail?.type==='tps'&&currentUser&&root&&!root.hidden)loadFeederPreview(true);});
     document.addEventListener('hetk-scoped-data-changed',e=>{if(e?.detail?.type==='tps'&&currentUser){loadFeederPreview(true);}});
     document.addEventListener('hetk-auth-ready',e=>authChanged(e.detail&&e.detail.user));
     document.addEventListener('hetk-auth-user-updated',e=>authChanged(e.detail&&e.detail.user));
@@ -1876,6 +1944,6 @@
     if(window.HETKAuth?.currentUser)authChanged(window.HETKAuth.currentUser);
     try{window.firebase?.auth?.().onAuthStateChanged?.(()=>{if(currentUser&&!cloudReady&&!cloudReadStarted)openCloudSession();});}catch(e){}
   }
-  window.HETKDispatchGrid = {open:()=>open(),analyzeDraft:()=>data?analyze():null,version:'81-live-mnemo-readonly'};
+  window.HETKDispatchGrid = {open:()=>open(),analyzeDraft:()=>data?analyze():null,version:'82-technical-gis-fix'};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
