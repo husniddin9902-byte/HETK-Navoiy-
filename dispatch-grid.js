@@ -1,4 +1,4 @@
-/* HETK-Navoiy — Dispatch Grid simulation v83
+/* HETK-Navoiy — Dispatch Grid simulation v84
  * NO SCADA CONTROL. Role-restricted Firebase RTDB shared simulation draft
  * autosaves with revision checks; existing local drafts are backed up before migration.
  * The animated dots are derived from the saved model and virtual QF states.
@@ -58,6 +58,73 @@
       if(!folderIncludes(feederId,id)&&!folderIncludes(stationId,id))return false;
     }
     return true;
+  }
+  // The 6/10 kV mnemonic is a single virtual sheet. Zoom only transforms the
+  // read-only SVG; no data or topology is written back to Firebase.
+  let mnemoZoomScale=1,mnemoZoomManual=false,mnemoPan=null,mnemoReframe=false;
+  function mnemonicScroller(){return el('dg-visual-content')?.querySelector('.dg-mnemo-scroller');}
+  function setMnemonicZoom(value,anchor=null,remember=true){
+    const sc=mnemonicScroller(),scaled=sc?.querySelector('.dg-mnemo-scaled');
+    const svg=scaled?.querySelector('svg');
+    if(!sc||!scaled||!svg)return;
+    const w=Number(scaled.dataset.originalWidth),h=Number(scaled.dataset.originalHeight);
+    if(!Number.isFinite(w)||!Number.isFinite(h)||w<=0||h<=0)return;
+    const old=Number(scaled.dataset.zoom)||1;
+    const next=Math.min(6,Math.max(.008,Number(value)||1));
+    const p=anchor||{x:sc.clientWidth/2,y:sc.clientHeight/2};
+    const worldX=(sc.scrollLeft+p.x)/old,worldY=(sc.scrollTop+p.y)/old;
+    scaled.dataset.zoom=String(next);
+    scaled.style.width=Math.ceil(w*next)+'px';
+    scaled.style.height=Math.ceil(h*next)+'px';
+    svg.style.transformOrigin='0 0';svg.style.transform=`scale(${next})`;
+    // Even while zoomed out the sheet remains draggable and its viewport is
+    // not recreated. Preserve the pixel beneath the cursor or center.
+    sc.scrollLeft=Math.max(0,worldX*next-p.x);
+    sc.scrollTop=Math.max(0,worldY*next-p.y);
+    sc.classList.toggle('dg-mnemo-tiny',next<.23);
+    const label=el('dg-visual-content')?.querySelector('[data-mnemo-zoom-label]');
+    if(label)label.textContent=(next*100<1?(next*100).toFixed(1):Math.round(next*100))+'%';
+    mnemoZoomScale=next;
+    if(remember)mnemoZoomManual=true;
+  }
+  function fitMnemonic(full=false){
+    const sc=mnemonicScroller(),scaled=sc?.querySelector('.dg-mnemo-scaled');
+    if(!sc||!scaled)return;
+    const w=+scaled.dataset.originalWidth,h=+scaled.dataset.originalHeight;
+    const ratio=Math.min(1,(sc.clientWidth-26)/w,full?(sc.clientHeight-26)/h:1);
+    setMnemonicZoom(Math.max(.008,ratio),{x:0,y:0},full);
+    sc.scrollLeft=0;sc.scrollTop=0;
+  }
+  function initMnemonicNavigation(){
+    root.addEventListener('wheel',ev=>{
+      if(!ev.ctrlKey&&!ev.metaKey)return;
+      const sc=ev.target.closest('.dg-mnemo-scroller');if(!sc)return;
+      ev.preventDefault();
+      const b=sc.getBoundingClientRect(),k=Number(sc.querySelector('.dg-mnemo-scaled')?.dataset.zoom)||1;
+      setMnemonicZoom(k*Math.exp(-ev.deltaY*.0015),{x:ev.clientX-b.left,y:ev.clientY-b.top});
+    },{passive:false});
+    root.addEventListener('pointerdown',ev=>{
+      const sc=ev.target.closest('.dg-mnemo-scroller');
+      if(!sc||ev.button!==0||ev.target.closest('[data-mnemo-note],[data-open-ps]'))return;
+      mnemoPan={id:ev.pointerId,sc,x:ev.clientX,y:ev.clientY,left:sc.scrollLeft,top:sc.scrollTop};
+      sc.classList.add('dg-mnemo-panning');
+      try{sc.setPointerCapture(ev.pointerId);}catch(_e){}
+    });
+    root.addEventListener('pointermove',ev=>{
+      if(!mnemoPan||ev.pointerId!==mnemoPan.id)return;
+      mnemoPan.sc.scrollLeft=mnemoPan.left-(ev.clientX-mnemoPan.x);
+      mnemoPan.sc.scrollTop=mnemoPan.top-(ev.clientY-mnemoPan.y);
+    });
+    const stopPan=ev=>{if(!mnemoPan||ev.pointerId!==mnemoPan.id)return;
+      mnemoPan.sc.classList.remove('dg-mnemo-panning');mnemoPan=null;};
+    root.addEventListener('pointerup',stopPan);
+    root.addEventListener('pointercancel',stopPan);
+  }
+
+  function mnemoHighModel(){
+    const stations=(data?.stations||[]).filter(st=>visibleStation(st));
+    const ids=new Set(stations.map(st=>st.id));
+    return {stations,lines:(data?.lines||[]).filter(line=>ids.has(line.a)&&ids.has(line.b))};
   }
   function currentMnemo(){return window.HETKLiveMnemo?.build?.(feederPreviewModel,feederPreviewPoints,mainFolders(),mnemoFilter,voltageVisible)||{groups:[],issues:[],totalTps:0};}
 
@@ -137,6 +204,7 @@
   }
   function applyParameterTicks(menu){
     if(!menu)return;
+    const previousScope=JSON.stringify(mnemoFilter),previousVoltage=JSON.stringify(voltageVisible);
     menu.querySelectorAll('[data-param-voltage]').forEach(btn=>{const kv=Number(btn.dataset.paramVoltage);if(VOLTAGES.includes(kv))voltageVisible[kv]=btn.getAttribute('aria-checked')==='true';});
     menu.querySelectorAll('[data-param-layer]').forEach(btn=>{
       const value=btn.getAttribute('aria-checked')==='true';
@@ -147,6 +215,7 @@
     mnemoFilter=Object.fromEntries([...menu.querySelectorAll('[data-param-scope]')].map(select=>[select.dataset.paramScope,select.value||'']));
     const w=Number(menu.querySelector('[data-param-weight]')?.value);if([2,3,4,5].includes(w))mnemoLineWidth=w;
     menu.open=false;
+    if(previousScope!==JSON.stringify(mnemoFilter)||previousVoltage!==JSON.stringify(voltageVisible)){mnemoReframe=true;mnemoZoomManual=false;}
     saveDisplayPreferences();
     syncLiveScope();
     refresh();
@@ -1032,6 +1101,7 @@
     if(header)header.insertBefore(button,header.firstChild);
     button.addEventListener('click',open);
     root.addEventListener('click',onClick);
+    initMnemonicNavigation();
     root.addEventListener('click',ev=>{const menu=root.querySelector('.dg-layer-menu[open]');if(menu&&!menu.contains(ev.target)){resetParameterTicks(menu);menu.open=false;}});
     root.addEventListener('toggle',ev=>{if(ev.target.matches?.('.dg-layer-menu')&&ev.target.open)resetParameterTicks(ev.target);},true);
     root.addEventListener('keydown',ev=>{if(ev.key==='Escape'){const menu=root.querySelector('.dg-layer-menu[open]');if(menu){resetParameterTicks(menu);menu.open=false;ev.stopPropagation();return;}}if((ev.key==='Enter'||ev.key===' ')&&ev.target.matches('g[data-mnemo-note]')){ev.preventDefault();editMnemoNote(ev.target.dataset.mnemoNote,ev.target.dataset.mnemoFeeder);return;}if((ev.key==='Enter'||ev.key===' ')&&ev.target.matches('g[data-open-ps]')){ev.preventDefault();openPsPanel(ev.target.dataset.openPs);}});
@@ -1091,7 +1161,7 @@
     if(!isSuperAdmin())return showMsg('Faqat Bosh admin rasmiy vektorli sxemani yuklab olishi mumkin.','error');
     const model=currentMnemo();if(!model.groups.length)return showMsg('Filtrga mos sxema mavjud emas.','info');
     if(model.groups.length>500)return showMsg('Sxema 500 tadan ortiq fiderdan iborat. To‘liq SVG uchun viloyat, PS yoki fider filtrini tanlang.','error');
-    const svg=window.HETKLiveMnemo?.render?.(model,{svgOnly:true,animate:false,technical:view==='technical',lineWidth:mnemoLineWidth});
+    const svg=window.HETKLiveMnemo?.render?.(model,{svgOnly:true,animate:false,technical:view==='technical',lineWidth:mnemoLineWidth,legacy:mnemoHighModel(),voltage:voltageVisible});
     if(!svg)return showMsg('Vektor moduli topilmadi.','error');
     window.HETKLiveMnemo.downloadSvg(svg,'HETK-mnemosxema-'+new Date().toISOString().slice(0,10)+'.svg');
   }
@@ -1099,7 +1169,7 @@
     if(!isSuperAdmin())return showMsg('PDF chiqarish faqat Bosh admin uchun.','error');
     const model=currentMnemo();if(!model.groups.length)return showMsg('Chop etish uchun mos fider yo‘q.','info');
     if(model.groups.length>500)return showMsg('To‘liq PDF uchun 500 tadan kamroq fider tanlang; hech qanday fider tushirib qoldirilmaydi.','error');
-    const svg=window.HETKLiveMnemo?.render?.(model,{svgOnly:true,animate:false,technical:view==='technical',lineWidth:mnemoLineWidth});
+    const svg=window.HETKLiveMnemo?.render?.(model,{svgOnly:true,animate:false,technical:view==='technical',lineWidth:mnemoLineWidth,legacy:mnemoHighModel(),voltage:voltageVisible});
     if(!svg)return showMsg('Vektor chizma topilmadi.','error');
     // Chromium/Edge print pipelines preserve inline SVG as vector geometry.
     // This window is intentionally generated only following a super-admin click.
@@ -1131,7 +1201,11 @@
     const svgPs=ev.target.closest('[data-open-ps]');
     if(svgPs && svgPs.tagName.toLowerCase()!=='button'){openPsPanel(svgPs.dataset.openPs);return;}
     const target=ev.target.closest('button');if(!target||!root.contains(target))return;
-    if(target.dataset.view){view=target.dataset.view;refresh();return;}
+    if(target.dataset.view){if(view!==target.dataset.view){mnemoZoomManual=false;mnemoReframe=true;}view=target.dataset.view;refresh();return;}
+    if(target.dataset.action==='mnemo-zoom-in'){setMnemonicZoom(mnemoZoomScale*1.3);return;}
+    if(target.dataset.action==='mnemo-zoom-out'){setMnemonicZoom(mnemoZoomScale/1.3);return;}
+    if(target.dataset.action==='mnemo-zoom-fit'){fitMnemonic(true);return;}
+    if(target.dataset.action==='mnemo-zoom-reset'){setMnemonicZoom(1);return;}
     if(target.dataset.action==='mnemo-export-svg'){exportMnemoSvg();return;}
     if(target.dataset.action==='mnemo-print-pdf'){printMnemoPdf();return;}
     if(target.dataset.mapStyle){switchMapStyle(target.dataset.mapStyle);return;}
@@ -1273,19 +1347,25 @@
       const prevDiagram=visual.querySelector('.dg-mnemo-scroller');
       const prevWorkspace=visual.querySelector('.dg-mnemo-workspace');
       const scrollState={left:prevDiagram?.scrollLeft||0,top:prevDiagram?.scrollTop||0,
+        zoom:Number(prevDiagram?.querySelector('.dg-mnemo-scaled')?.dataset.zoom)||null,
         outer:prevWorkspace?.scrollTop||0,legacy:visual.querySelector('.dg-legacy-diagram')?.open||false};
       const existing=renderDiagram(result,view==='technical');
-      const live=window.HETKLiveMnemo?.render?.(currentMnemo(),{technical:view==='technical',animate:mnemoLights,lineWidth:mnemoLineWidth})||'';
+      const live=window.HETKLiveMnemo?.render?.(currentMnemo(),{technical:view==='technical',animate:mnemoLights,lineWidth:mnemoLineWidth,legacy:mnemoHighModel(),voltage:voltageVisible})||'';
       // Keep the existing high-voltage and manually entered dispatch schema.
       // Live feeder projection is additional and cannot mutate its source data.
       // Existing high-voltage stations and QF simulation are kept intact.
       // When lines have actually been entered, expose them in the technical
       // view rather than burying the 35/110/220/500 kV model below a click.
-      const legacyOpen=view==='technical'&&data.lines.length>0?' open':'';
+      const legacyOpen='';
       visual.innerHTML=live?`<div class="dg-mnemo-workspace">${live}<details class="dg-legacy-diagram"${legacyOpen}><summary>35–500 kV · avvalgi dispetcherlik sxemasi (virtual model)</summary>${existing}</details></div>`:existing;
       const nextDiagram=visual.querySelector('.dg-mnemo-scroller');
       const nextWorkspace=visual.querySelector('.dg-mnemo-workspace');
-      if(nextDiagram){nextDiagram.scrollLeft=scrollState.left;nextDiagram.scrollTop=scrollState.top;}
+      if(nextDiagram){
+        if(mnemoReframe){fitMnemonic(false);mnemoReframe=false;}
+        else if(scrollState.zoom){setMnemonicZoom(scrollState.zoom,{x:0,y:0},false);nextDiagram.scrollLeft=scrollState.left;nextDiagram.scrollTop=scrollState.top;}
+        else if(mnemoZoomManual)setMnemonicZoom(mnemoZoomScale,{x:0,y:0},false);
+        else fitMnemonic(false);
+      }
       if(nextWorkspace)nextWorkspace.scrollTop=scrollState.outer;
       // An already-open legacy high-voltage diagram is not collapsed when a TP
       // changes; switching from GIS to Technical still uses the default above.
