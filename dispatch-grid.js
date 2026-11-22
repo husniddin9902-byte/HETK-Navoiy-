@@ -1,4 +1,4 @@
-/* HETK-Navoiy — Dispatch Grid simulation v80
+/* HETK-Navoiy — Dispatch Grid simulation v81
  * NO SCADA CONTROL. Role-restricted Firebase RTDB shared simulation draft
  * autosaves with revision checks; existing local drafts are backed up before migration.
  * The animated dots are derived from the saved model and virtual QF states.
@@ -23,6 +23,22 @@
   let localChangeSerial=0, cloudStatusText='Firebase ulanishi tekshirilmoqda…';
   let cloudReady=false, cloudReadError=false, lastFolderSyncHash='';
   let feederPreviewModel=null, feederPreviewBusy=false, feederPreviewEpoch=0, feederPreviewUser='';
+  let feederPreviewPoints={},feederPreviewAgain=false,liveRefreshInterval=null,liveScopeRef=null,liveScopeFn=null,liveScopeId='',liveRefreshTimer=null;
+  let mnemoFilter={region:'',territory:'',ps:'',feeder:''};
+  let mnemoLineWidth=3,mnemoLights=true;
+  let mnemoExportBusy=false;
+  const isSuperAdmin=()=>currentUser?.role==='super_admin';
+  function canSeeFolder(id){return !window.HETKAuth?.canSeeFolder||window.HETKAuth.canSeeFolder(id,mainFolders());}
+  function matchesScope(feederId,stationId){
+    if(mnemoFilter.ps&&stationId!==mnemoFilter.ps)return false;
+    if(mnemoFilter.feeder&&feederId!==mnemoFilter.feeder)return false;
+    for(const id of [mnemoFilter.region,mnemoFilter.territory].filter(Boolean)){
+      if(!folderIncludes(feederId,id)&&!folderIncludes(stationId,id))return false;
+    }
+    return true;
+  }
+  function currentMnemo(){return window.HETKLiveMnemo?.build?.(feederPreviewModel,feederPreviewPoints,mainFolders(),mnemoFilter,voltageVisible)||{groups:[],issues:[],totalTps:0};}
+
 
   const el = id => document.getElementById(id);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -59,10 +75,28 @@
     if(root)root.querySelectorAll('[data-map-style]').forEach(b=>{const active=b.dataset.mapStyle===mapStyle;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));});
   }
   function mapStyleButtons(){return `<div class="dg-basemaps" role="group" aria-label="Xarita foni"><button type="button" data-map-style="street" aria-pressed="${mapStyle==='street'}" class="${mapStyle==='street'?'active':''}">🗺 Oddiy</button><button type="button" data-map-style="satellite" aria-pressed="${mapStyle==='satellite'}" class="${mapStyle==='satellite'?'active':''}">🛰 Sun’iy yo‘ldosh</button></div>`;}
+  function scopeOptions(){
+    const folders=mainFolders(),stations=feederPreviewModel?.visibleStations||[];
+    const regionOpts=Object.entries(folders).filter(([id,f])=>(f?.parentId||'root')==='root'&&canSeeFolder(id))
+      .sort((a,b)=>String(a[1].name).localeCompare(String(b[1].name),'uz')).map(([id,f])=>({id,name:f.name}));
+    const territories=Object.entries(folders).filter(([id,f])=>canSeeFolder(id)&&/(?:^|\s)(?:TET|ShET|ТЭТ|ШЭТ)(?:\s|$)/iu.test(String(f?.name||'')))
+      .filter(([id])=>!mnemoFilter.region||folderIncludes(id,mnemoFilter.region))
+      .sort((a,b)=>String(a[1].name).localeCompare(String(b[1].name),'uz')).map(([id,f])=>({id,name:folderPath(id,folders)}));
+    const stationsFiltered=stations.filter(x=>!mnemoFilter.region||folderIncludes(x.id,mnemoFilter.region)||x.feeders?.some(f=>folderIncludes(f.id,mnemoFilter.region)))
+      .filter(x=>!mnemoFilter.territory||folderIncludes(x.id,mnemoFilter.territory)||x.feeders?.some(f=>folderIncludes(f.id,mnemoFilter.territory)))
+      .map(x=>({id:x.id,name:x.name}));
+    const feeders=stations.flatMap(ps=>(ps.feeders||[]).filter(f=>matchesScope(f.id,ps.id)||(!mnemoFilter.ps&&!mnemoFilter.feeder&&(!mnemoFilter.region||folderIncludes(f.id,mnemoFilter.region))&&(!mnemoFilter.territory||folderIncludes(f.id,mnemoFilter.territory)))).map(f=>({id:f.id,name:`${f.name} (${ps.name})`})));
+    return {region:regionOpts,territory:territories,ps:stationsFiltered,feeder:feeders};
+  }
+  function selectScope(type,title,items){
+    const selected=mnemoFilter[type]||'';
+    return `<label class="dg-param-select"><span>${title}</span><select data-param-scope="${type}"><option value="">Barchasi</option>${items.map(x=>`<option value="${esc(x.id)}" ${x.id===selected?'selected':''}>${esc(x.name)}</option>`).join('')}</select></label>`;
+  }
   function mapParameterMenu(){
     const option=(action,label,selected)=>`<button type="button" role="checkbox" aria-checked="${selected}" data-param-layer="${action}"><span class="dg-param-mark" aria-hidden="true">${selected?'✓':'○'}</span>${label}</button>`;
     const voltage=VOLTAGES.map(v=>`<button type="button" role="checkbox" aria-checked="${!!voltageVisible[v]}" data-param-voltage="${v}"><span class="dg-param-mark" aria-hidden="true">${voltageVisible[v]?'✓':'○'}</span><span class="dg-param-voltage-dot" style="--dg-voltage:${COLORS[v]}"></span>${v} kV</button>`).join('');
-    return `<details class="dg-layer-menu"><summary aria-label="Xarita parametrlarini ochish" aria-haspopup="true">⚙ Parametrlar <span aria-hidden="true">▾</span></summary><div class="dg-layer-menu-panel" role="group" aria-label="Ko‘rsatiladigan xarita qatlamlari"><div class="dg-layer-group-title">Liniya</div>${voltage}<div class="dg-layer-menu-separator"></div>${option('towers','Tayanch raqamlari',mapTowers)}${option('map-tps','TP/KTP',mapTps)}<div class="dg-layer-menu-actions"><button type="button" class="dg-params-cancel" data-action="params-cancel">Bekor qilish</button><button type="button" class="dg-params-apply" data-action="params-apply">OK</button></div></div></details>`;
+    const options=scopeOptions();
+    return `<details class="dg-layer-menu"><summary aria-label="Xarita va mnemosxema parametrlarini ochish">⚙ Parametrlar <span aria-hidden="true">▾</span></summary><div class="dg-layer-menu-panel" role="group" aria-label="Ko‘rsatiladigan obyektlar va qatlamlar"><div class="dg-layer-group-title">Hudud va obyektlar</div>${selectScope('region','Viloyat / asosiy hudud',options.region)}${selectScope('territory','TET/ShET',options.territory)}${selectScope('ps','Podstansiya (PS)',options.ps)}${selectScope('feeder','Fider',options.feeder)}<div class="dg-layer-menu-separator"></div><div class="dg-layer-group-title">Liniya · kuchlanish</div>${voltage}<div class="dg-layer-menu-separator"></div>${option('towers','Tayanch raqamlari',mapTowers)}${option('map-tps','TP/KTP',mapTps)}<div class="dg-layer-menu-separator"></div><div class="dg-layer-group-title">Mnemosxema</div>${option('mnemo-lights','Harakatli chiroqchalar',mnemoLights)}<label class="dg-param-select"><span>Chiziq qalinligi (ekran, px)</span><select data-param-weight><option value="2" ${mnemoLineWidth===2?'selected':''}>2 px · ingichka</option><option value="3" ${mnemoLineWidth===3?'selected':''}>3 px · standart</option><option value="4" ${mnemoLineWidth===4?'selected':''}>4 px · qalin</option><option value="5" ${mnemoLineWidth===5?'selected':''}>5 px · juda qalin</option></select></label><div class="dg-layer-menu-actions"><button type="button" class="dg-params-cancel" data-action="params-cancel">Bekor qilish</button><button type="button" class="dg-params-apply" data-action="params-apply">OK</button></div></div></details>`;
   }
   // Parameter ticks are a DRAFT until OK. Cancel, Escape and outside click
   // never alter visible line layers; reopening always reflects committed state.
@@ -75,7 +109,9 @@
   function resetParameterTicks(menu){
     if(!menu)return;
     menu.querySelectorAll('[data-param-voltage]').forEach(btn=>setParameterTick(btn,!!voltageVisible[Number(btn.dataset.paramVoltage)]));
-    menu.querySelectorAll('[data-param-layer]').forEach(btn=>setParameterTick(btn,btn.dataset.paramLayer==='towers'?mapTowers:btn.dataset.paramLayer==='map-tps'?mapTps:false));
+    menu.querySelectorAll('[data-param-layer]').forEach(btn=>setParameterTick(btn,btn.dataset.paramLayer==='towers'?mapTowers:btn.dataset.paramLayer==='map-tps'?mapTps:btn.dataset.paramLayer==='mnemo-lights'?mnemoLights:false));
+    const weight=menu.querySelector('[data-param-weight]');if(weight)weight.value=String(mnemoLineWidth);
+    menu.querySelectorAll('[data-param-scope]').forEach(select=>select.value=mnemoFilter[select.dataset.paramScope]||'');
   }
   function applyParameterTicks(menu){
     if(!menu)return;
@@ -84,27 +120,129 @@
       const value=btn.getAttribute('aria-checked')==='true';
       if(btn.dataset.paramLayer==='towers')mapTowers=value;
       if(btn.dataset.paramLayer==='map-tps')mapTps=value;
+      if(btn.dataset.paramLayer==='mnemo-lights')mnemoLights=value;
     });
+    mnemoFilter=Object.fromEntries([...menu.querySelectorAll('[data-param-scope]')].map(select=>[select.dataset.paramScope,select.value||'']));
+    const w=Number(menu.querySelector('[data-param-weight]')?.value);if([2,3,4,5].includes(w))mnemoLineWidth=w;
+    menu.open=false;
+    syncLiveScope();
     refresh();
+  }
+  function changeScopeDraft(menu,field){
+    if(!menu)return;
+    const draft=Object.fromEntries([...menu.querySelectorAll('[data-param-scope]')].map(e=>[e.dataset.paramScope,e.value]));
+    const order=['region','territory','ps','feeder'],changed=order.indexOf(field);
+    for(let i=changed+1;i<order.length;i++)draft[order[i]]='';
+    const folders=mainFolders(),stations=feederPreviewModel?.visibleStations||[];
+    const allow=(id,parent)=>!parent||folderIncludes(id,parent);
+    const candidates={
+      territory:Object.entries(folders).filter(([id,f])=>canSeeFolder(id)&&/(?:^|\s)(?:TET|ShET|ТЭТ|ШЭТ)(?:\s|$)/iu.test(String(f?.name||''))&&allow(id,draft.region)).map(([id,f])=>({id,name:folderPath(id,folders)})),
+      ps:stations.filter(s=>[draft.region,draft.territory].filter(Boolean).every(id=>allow(s.id,id)||s.feeders?.some(f=>allow(f.id,id)))).map(s=>({id:s.id,name:s.name})),
+      feeder:stations.flatMap(s=>(s.feeders||[]).filter(f=>(!draft.ps||s.id===draft.ps)&&[draft.region,draft.territory].filter(Boolean).every(id=>allow(f.id,id)||allow(s.id,id))).map(f=>({id:f.id,name:f.name+' ('+s.name+')'})))
+    };
+    for(const type of order.slice(changed+1)){
+      const element=menu.querySelector(`[data-param-scope="${type}"]`);if(!element)continue;
+      element.innerHTML='<option value="">Barchasi</option>'+(candidates[type]||[]).map(o=>`<option value="${esc(o.id)}">${esc(o.name)}</option>`).join('');
+      element.value=draft[type];
+    }
   }
   // READ ONLY: reuse exactly the same PS/fider/TP model and cable/overhead route
   // generator as the Boshqaruv panel map. Never write to the management database.
-  async function loadFeederPreview(){
-    if(feederPreviewBusy || !currentUser?.uid || !window.HETKPSFeederMap?.buildModel || !window.HETKData?.readTPs)return;
+  async function loadFeederPreview(force=false){
+    if(feederPreviewBusy){feederPreviewAgain=feederPreviewAgain||force;return;}
+    if(!currentUser?.uid || !window.HETKPSFeederMap?.buildModel || !window.HETKData?.readTPs)return;
     const userId=currentUser.uid, epoch=++feederPreviewEpoch;
     feederPreviewBusy=true;
     try{
-      const snapshot=await window.HETKData.readTPs();
+      const snapshot=await window.HETKData.readTPs(!!force);
       if(epoch!==feederPreviewEpoch || currentUser?.uid!==userId)return;
       const ctx=window.HETKManagementStatsContext||{},points=snapshot?.val?.()||{};
+      feederPreviewPoints=Object.fromEntries(Object.entries(points).filter(([,tp])=>!ctx.pointAllowed||ctx.pointAllowed(tp)));
       feederPreviewModel=window.HETKPSFeederMap.buildModel(mainFolders(),points,{
-        selectedFolderId:'root',canSeeFolder:(id)=>!window.HETKAuth?.canSeeFolder || window.HETKAuth.canSeeFolder(id,mainFolders()),
+        selectedFolderId:'root',canSeeFolder:canSeeFolder,
         pointAllowed:(tp)=>!ctx.pointAllowed || ctx.pointAllowed(tp)
       });
       feederPreviewUser=userId;
-      if(root&&!root.hidden&&view==='combined')refresh();
+      if(root&&!root.hidden)refresh();
     }catch(error){console.warn('Dispetcherlik: 6/10 kV fider xaritasini o‘qish imkoni yo‘q:',error?.message||error);}
-    finally{if(epoch===feederPreviewEpoch)feederPreviewBusy=false;}
+    finally{
+      if(epoch===feederPreviewEpoch){
+        feederPreviewBusy=false;
+        if(feederPreviewAgain){feederPreviewAgain=false;setTimeout(()=>loadFeederPreview(true),30);}
+      }
+    }
+  }
+  const liveChildren=[];
+  function stopLiveScope(){
+    for(const entry of liveChildren.splice(0))try{entry.ref.off(entry.event,entry.callback);}catch(_){}
+    liveScopeRef=null;liveScopeFn=null;liveScopeId='';
+    if(liveRefreshTimer){clearTimeout(liveRefreshTimer);liveRefreshTimer=null;}
+  }
+  function patchLiveTP(key,value,removed=false){
+    if(!currentUser||!root||root.hidden||!key)return;
+    const ctx=window.HETKManagementStatsContext||{};
+    if(removed||!value||ctx.pointAllowed&&!ctx.pointAllowed(value))delete feederPreviewPoints[key];
+    else feederPreviewPoints[key]=value;
+    try{
+      feederPreviewModel=window.HETKPSFeederMap?.buildModel?.(mainFolders(),feederPreviewPoints,{
+        selectedFolderId:'root',canSeeFolder:canSeeFolder,
+        pointAllowed:tp=>!ctx.pointAllowed||ctx.pointAllowed(tp)
+      })||feederPreviewModel;
+      refresh();
+    }catch(e){console.warn('Mnemosxema yangi TP ko‘rinishi:',e?.message||e);}
+  }
+  function bindLiveEvent(ref,event,callback){
+    ref.on(event,callback,error=>{console.warn('Mnemosxema kuzatuv ruxsati:',error?.message||error);stopLiveScope();});
+    liveChildren.push({ref,event,callback});
+  }
+  function syncLiveScope(){
+    // The country-wide administrator listens to changed/removed children, NOT
+    // an expensive full-TPs 'value' stream. New push-key entries are watched
+    // from the last known key. Others get a specific regional/feeder index.
+    const scopeId=mnemoFilter.feeder||mnemoFilter.territory||mnemoFilter.region||'';
+    const path=currentUser&&root&&!root.hidden?(scopeId?'TPsByAncestor/'+scopeId:isSuperAdmin()?'TPs':''):'';
+    if(path===liveScopeId)return;
+    stopLiveScope();
+    if(!path||(scopeId&&!canSeeFolder(scopeId)))return;
+    try{
+      const ref=window.firebase?.database?.().ref(path);
+      if(!ref)return;
+      liveScopeId=path;
+      if(typeof ref.orderByKey==='function'){
+        // New TP IDs are generated by RTDB push(), whose keys sort by time.
+        // Missed/out-of-order IDs are still recovered by the periodic sync.
+        const known=Object.keys(feederPreviewPoints).sort();
+        const recent=known[known.length-1]||'';
+        const query=recent?ref.orderByKey().startAt(recent):ref.orderByKey().limitToLast(1);
+        bindLiveEvent(query,'child_added',snap=>{
+          if(snap?.key&&!feederPreviewPoints[snap.key])patchLiveTP(snap.key,snap.val());
+        });
+        bindLiveEvent(ref,'child_changed',snap=>patchLiveTP(snap?.key,snap?.val()));
+        bindLiveEvent(ref,'child_removed',snap=>patchLiveTP(snap?.key,null,true));
+      }else{
+        // Compatible fallback for environments where query APIs are absent.
+        let first=true;
+        const onValue=()=>{
+          if(first){first=false;return;}
+          if(liveRefreshTimer)clearTimeout(liveRefreshTimer);
+          liveRefreshTimer=setTimeout(()=>{liveRefreshTimer=null;loadFeederPreview(true);},350);
+        };
+        bindLiveEvent(ref,'value',onValue);
+      }
+    }catch(error){console.warn('Mnemosxema jonli TP obunasi:',error);stopLiveScope();}
+  }
+  function startLiveUpdates(){
+    stopLiveUpdates();
+    syncLiveScope();
+    // For broad country-wide views, do not attach a heavy all-TPs listener.
+    // Scoped notifications are immediate; broad views use cache-bypassing reads.
+    liveRefreshInterval=setInterval(()=>{
+      if(root&&!root.hidden&&currentUser&&document.visibilityState!=='hidden')loadFeederPreview(true);
+    },30000);
+  }
+  function stopLiveUpdates(){
+    if(liveRefreshInterval){clearInterval(liveRefreshInterval);liveRefreshInterval=null;}
+    stopLiveScope();
   }
   // Reuse the existing HETK folder hierarchy. The ID, not its mutable label, is saved.
   // This is a READ-ONLY use of the main application's loaded folder list.
@@ -730,12 +868,12 @@
     const overview=analyze();
     const context={size,overview,occupied:[],segments:[],psPoints:[]};
     // A hidden "Liniya" layer also hides its callout labels and conductors.
-    const lines=data.lines.filter(line=>voltageVisible[num(line.voltage)]).map(line=>{
+    const lines=data.lines.filter(line=>voltageVisible[num(line.voltage)]&&visibleDispatchLine(line)).map(line=>{
       const segments=projectedLineSegments(line,size);
       context.segments.push(...segments);
       return {line,segments,visibleLength:segments.reduce((sum,s)=>sum+s.length,0)};
     });
-    const stations=data.stations.filter(ps=>ps.kind!=='tap'&&ps.lat!=null&&ps.lng!=null&&validGps(ps.lat,ps.lng)&&bounds.contains([num(ps.lat),num(ps.lng)]))
+    const stations=data.stations.filter(ps=>visibleStation(ps)&&ps.kind!=='tap'&&ps.lat!=null&&ps.lng!=null&&validGps(ps.lat,ps.lng)&&bounds.contains([num(ps.lat),num(ps.lng)]))
       .map(ps=>({ps,point:map.latLngToContainerPoint([num(ps.lat),num(ps.lng)])}));
     context.psPoints=stations.map(s=>s.point);
     // Group only genuinely close PS markers. Clicking original markers still
@@ -873,7 +1011,7 @@
     root.addEventListener('click',onClick);
     root.addEventListener('click',ev=>{const menu=root.querySelector('.dg-layer-menu[open]');if(menu&&!menu.contains(ev.target)){resetParameterTicks(menu);menu.open=false;}});
     root.addEventListener('toggle',ev=>{if(ev.target.matches?.('.dg-layer-menu')&&ev.target.open)resetParameterTicks(ev.target);},true);
-    root.addEventListener('keydown',ev=>{if(ev.key==='Escape'){const menu=root.querySelector('.dg-layer-menu[open]');if(menu){resetParameterTicks(menu);menu.open=false;ev.stopPropagation();return;}}if((ev.key==='Enter'||ev.key===' ')&&ev.target.matches('g[data-open-ps]')){ev.preventDefault();openPsPanel(ev.target.dataset.openPs);}});
+    root.addEventListener('keydown',ev=>{if(ev.key==='Escape'){const menu=root.querySelector('.dg-layer-menu[open]');if(menu){resetParameterTicks(menu);menu.open=false;ev.stopPropagation();return;}}if((ev.key==='Enter'||ev.key===' ')&&ev.target.matches('g[data-mnemo-note]')){ev.preventDefault();editMnemoNote(ev.target.dataset.mnemoNote,ev.target.dataset.mnemoFeeder);return;}if((ev.key==='Enter'||ev.key===' ')&&ev.target.matches('g[data-open-ps]')){ev.preventDefault();openPsPanel(ev.target.dataset.openPs);}});
     el('dg-editor-form').addEventListener('submit',onSave);
     el('dg-editor-form').addEventListener('input',ev=>{
       if(ev.target.matches('[data-folder-filter]'))updateFolderVisibility();
@@ -889,6 +1027,8 @@
       }
     });
     root.addEventListener('change',ev=>{
+      const scope=ev.target.closest('select[data-param-scope]');
+      if(scope){changeScopeDraft(scope.closest('.dg-layer-menu'),scope.dataset.paramScope);return;}
       const select=ev.target.closest('select[data-earth-state]');if(!select)return;
       const [id,end]=String(select.dataset.earthState).split(':');const line=data.lines.find(l=>l.id===id);
       if(!line||!['a','b'].includes(end)||(!cloudReady&&!cloudReadError))return;
@@ -907,11 +1047,11 @@
     if(!currentUser){
       cloudEpoch++;stopCloudListener();cloudWanted=false;cloudReady=false;cloudDirty=false;
       cloudBlocked=false;cloudRevision=null;cloudReadStarted=false;cloudReadError=false;
-      feederPreviewEpoch++;feederPreviewModel=null;feederPreviewBusy=false;feederPreviewUser='';
+      feederPreviewEpoch++;feederPreviewModel=null;feederPreviewPoints={};feederPreviewBusy=false;feederPreviewUser='';stopLiveUpdates();mnemoFilter={region:'',territory:'',ps:'',feeder:''};
       if(wasOpen)close();activePsId=null;data=empty();overrides={};existingTPs=null;existingTPsPending=false;return;
     }
     if(prior!==(u.uid||null)){
-      feederPreviewEpoch++;feederPreviewModel=null;feederPreviewBusy=false;feederPreviewUser='';
+      feederPreviewEpoch++;feederPreviewModel=null;feederPreviewPoints={};feederPreviewBusy=false;feederPreviewUser='';stopLiveUpdates();mnemoFilter={region:'',territory:'',ps:'',feeder:''};
       cloudEpoch++;stopCloudListener();cloudReadStarted=false;cloudBusy=false;cloudBlocked=false;
       cloudReady=false;cloudReadError=false;cloudRevision=null;
       existingTPs=null;existingTPsPending=false;data=loadLocal();overrides=loadSwitchesLocal();
@@ -921,13 +1061,55 @@
       Promise.resolve().then(()=>openCloudSession());
     }
   }
-  function open(){if(!canEdit())return;root.hidden=false;root.setAttribute('aria-hidden','false');document.body.classList.add('dg-modal-open');syncFolderStations();refresh();updateSidebar();setCloudStatus(cloudStatusText);if(cloudWanted&&!cloudReady)openCloudSession();if(!feederPreviewBusy)loadFeederPreview();}
-  function close(){if(!root)return;activePsId=null;callouts=null;root.hidden=true;root.setAttribute('aria-hidden','true');document.body.classList.remove('dg-modal-open');closeEditor();if(map){map.remove();map=null;mapLayer=null;baseMapLayer=null;}}
+  function open(){if(!canEdit())return;root.hidden=false;root.setAttribute('aria-hidden','false');document.body.classList.add('dg-modal-open');syncFolderStations();refresh();updateSidebar();setCloudStatus(cloudStatusText);if(cloudWanted&&!cloudReady)openCloudSession();loadFeederPreview(true);startLiveUpdates();}
+  function close(){if(!root)return;stopLiveUpdates();activePsId=null;callouts=null;root.hidden=true;root.setAttribute('aria-hidden','true');document.body.classList.remove('dg-modal-open');closeEditor();if(map){map.remove();map=null;mapLayer=null;baseMapLayer=null;}}
+  function exportMnemoSvg(){
+    if(!isSuperAdmin())return showMsg('Faqat Bosh admin rasmiy vektorli sxemani yuklab olishi mumkin.','error');
+    const model=currentMnemo();if(!model.groups.length)return showMsg('Filtrga mos sxema mavjud emas.','info');
+    if(model.groups.length>500)return showMsg('Sxema 500 tadan ortiq fiderdan iborat. To‘liq SVG uchun viloyat, PS yoki fider filtrini tanlang.','error');
+    const svg=window.HETKLiveMnemo?.render?.(model,{svgOnly:true,animate:false,technical:view==='technical',lineWidth:mnemoLineWidth});
+    if(!svg)return showMsg('Vektor moduli topilmadi.','error');
+    window.HETKLiveMnemo.downloadSvg(svg,'HETK-mnemosxema-'+new Date().toISOString().slice(0,10)+'.svg');
+  }
+  function printMnemoPdf(){
+    if(!isSuperAdmin())return showMsg('PDF chiqarish faqat Bosh admin uchun.','error');
+    const model=currentMnemo();if(!model.groups.length)return showMsg('Chop etish uchun mos fider yo‘q.','info');
+    if(model.groups.length>500)return showMsg('To‘liq PDF uchun 500 tadan kamroq fider tanlang; hech qanday fider tushirib qoldirilmaydi.','error');
+    const svg=window.HETKLiveMnemo?.render?.(model,{svgOnly:true,animate:false,technical:view==='technical',lineWidth:mnemoLineWidth});
+    if(!svg)return showMsg('Vektor chizma topilmadi.','error');
+    // Chromium/Edge print pipelines preserve inline SVG as vector geometry.
+    // This window is intentionally generated only following a super-admin click.
+    const page=window.open('','_blank');
+    if(!page)return showMsg('Chop etish oynasi bloklandi. Brauzerdan popupga ruxsat bering.','error');
+    const printed=svg.replace(/width="[0-9]+" height="[0-9]+" viewBox=/,'width="100%" height="auto" viewBox=');
+    page.document.open();page.document.write(`<!doctype html><html lang="uz"><head><meta charset="UTF-8"><title>HETK · Mnemosxema · PDF</title><style id="paper-style">@page{size:A1 landscape;margin:8mm}</style><style>body{margin:0;background:white;font:12px Arial,sans-serif}svg{width:100%;height:auto;display:block;break-inside:avoid}small{display:block;color:#456;break-inside:avoid}.tools{display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:10px;background:#eef5fd;margin-bottom:10px;color:#164b7a}.tools button,.tools select{padding:8px 12px;border-radius:6px;border:1px solid #8caec9;background:#fff;color:#153d67;font:600 12px Arial}@media print{.tools{display:none}}</style></head><body><div class="tools"><label>Chop o‘lchami: <select id="paper" onchange="setPaper(this.value)"><option value="A4 landscape">A4</option><option value="A3 landscape">A3</option><option value="A2 landscape">A2</option><option value="A1 landscape" selected>A1</option><option value="A0 landscape">A0</option><option value="1200mm 900mm">90 × 120 sm</option><option value="2000mm 3000mm">2 × 3 metr</option><option value="3000mm 5000mm">3 × 5 metr</option></select></label><button type="button" onclick="window.print()">Vektor PDF / Chop etish</button></div>${printed}<small>HETK mnemosxema · kiritilgan model, jonli telemetriya emas · ${esc(new Date().toLocaleDateString('uz-UZ'))}</small><script>function setPaper(v){document.getElementById('paper-style').textContent='@page{size:'+v+';margin:8mm}';}<\/script></body></html>`);page.document.close();
+    page.focus();
+  }
+  async function editMnemoNote(pointId,feederId){
+    if(!isSuperAdmin())return showMsg('Izohni tahrirlash hozircha faqat Bosh admin uchun.','error');
+    const folders=mainFolders(),route=folders[feederId]?.feederRoute6kv;
+    if(!route?.points?.some(p=>p.id===pointId)||!canSeeFolder(feederId))return showMsg('Fider yoki liniya nuqtasi topilmadi.','error');
+    if(!/^[A-Za-z0-9_-]{1,90}$/.test(pointId)||!/^[-A-Za-z0-9_]{1,160}$/.test(feederId))return showMsg('Noto‘g‘ri nuqta identifikatori.','error');
+    const old=folders[feederId]?.mnemoNotes?.[pointId];
+    const value=prompt('Liniya yonidagi vaqtinchalik yozuv (tayanch soni, masofa). Bo‘sh qoldirsangiz avtomatik hisob chiqadi:',typeof old==='string'?old:old?.text||'');
+    if(value===null)return;
+    const text=String(value).trim();
+    if(text.length>100)return showMsg('Izoh 100 ta belgidan oshmasin.','error');
+    try{
+      const ref=window.firebase?.database?.().ref('Folders/'+feederId+'/mnemoNotes/'+pointId);
+      if(!ref||!currentUser)return showMsg('Firebase ulanmadi.','error');
+      await ref.set(text?{text,updatedBy:currentUser.uid,updatedAt:window.firebase.database.ServerValue.TIMESTAMP}:null);
+      showMsg('Liniya yozuvi alohida saqlandi. Mavjud fider va TP ma’lumotlari o‘zgartirilmadi.','success');
+    }catch(error){showMsg('Izohni saqlab bo‘lmadi: '+(error?.message||error),'error');}
+  }
   function onClick(ev){
+    const note=ev.target.closest('[data-mnemo-note]');if(note){editMnemoNote(note.dataset.mnemoNote,note.dataset.mnemoFeeder);return;}
     const svgPs=ev.target.closest('[data-open-ps]');
     if(svgPs && svgPs.tagName.toLowerCase()!=='button'){openPsPanel(svgPs.dataset.openPs);return;}
     const target=ev.target.closest('button');if(!target||!root.contains(target))return;
     if(target.dataset.view){view=target.dataset.view;refresh();return;}
+    if(target.dataset.action==='mnemo-export-svg'){exportMnemoSvg();return;}
+    if(target.dataset.action==='mnemo-print-pdf'){printMnemoPdf();return;}
     if(target.dataset.mapStyle){switchMapStyle(target.dataset.mapStyle);return;}
     if(target.dataset.paramVoltage||target.dataset.paramLayer){
       const menu=target.closest('.dg-layer-menu');if(!menu)return;
@@ -1034,12 +1216,19 @@
       ['Ta’minotsiz TP/KTP*',result.affectedTps.length,'fa-building'],['Ta’sirlangan mahalla/tashkilot*',result.affected.length,'fa-exclamation-triangle']
     ].map(([label,val,ic])=>`<div class="dg-kpi"><i class="fas ${ic}"></i><div><b>${val}</b><span>${label}</span></div></div>`).join('');
     let title='';
-    if(view==='simple') title='Sodda dispetcherlik sxemasi';
-    if(view==='technical') title='Texnik bir chiziqli ko‘rinish (soddalashtirilgan)';
+    if(view==='simple') title='Umumiy jonli mnemosxema';
+    if(view==='technical') title='Texnik mnemosxema · mavjud bir chiziqli model';
     // GIS controls belong in the vacant centre of the TOP toolbar, not in a
     // second title row that steals map height. Other views keep their title.
     const slot=el('dg-gis-toolbar-slot');
-    if(slot){slot.hidden=view!=='combined';slot.innerHTML=view==='combined'?`<div class="dg-layer-tools">${mapStyleButtons()}${mapParameterMenu()}</div>`:'';}
+    if(slot){
+      slot.hidden=false;
+      const oldMenu=slot.querySelector('.dg-layer-menu[open]');
+      // Do not destroy the user's uncommitted checkmarks when a remote TP arrives.
+      if(!oldMenu){
+        slot.innerHTML=`<div class="dg-layer-tools">${view==='combined'?mapStyleButtons():''}${mapParameterMenu()}${view!=='combined'&&isSuperAdmin()?'<button type="button" class="dg-mnemo-export" data-action="mnemo-export-svg">↓ SVG</button><button type="button" class="dg-mnemo-export" data-action="mnemo-print-pdf">▤ PDF / Chop</button>':''}</div>`;
+      }
+    }
     const heading=el('dg-view-title');
     heading.hidden=view==='combined';
     heading.innerHTML=view==='combined'?'':`<div class="dg-view-heading"><strong>${esc(title)}</strong></div>`;
@@ -1055,7 +1244,11 @@
       renderMap(result);
     } else {
       if(map){map.remove();map=null;mapLayer=null;baseMapLayer=null;callouts=null;}
-      visual.innerHTML=renderDiagram(result,view==='technical');
+      const existing=renderDiagram(result,view==='technical');
+      const live=window.HETKLiveMnemo?.render?.(currentMnemo(),{technical:view==='technical',animate:mnemoLights,lineWidth:mnemoLineWidth})||'';
+      // Keep the existing high-voltage and manually entered dispatch schema.
+      // Live feeder projection is additional and cannot mutate its source data.
+      visual.innerHTML=live?`<div class="dg-mnemo-workspace">${live}<details class="dg-legacy-diagram"><summary>Yuqori kuchlanish / avvalgi dispetcherlik sxemasi</summary>${existing}</details></div>`:existing;
     }
   }
   function geometryFor(line){
@@ -1065,6 +1258,14 @@
     const pts=[{lat:num(a.lat),lng:num(a.lng)},...sorted.map((t,i)=>({lat:t.lat==null?fallback[i].lat:num(t.lat),lng:t.lng==null?fallback[i].lng:num(t.lng),number:t.number})),{lat:num(b.lat),lng:num(b.lng)}];
     return pts;
   }
+  function visibleStation(st){
+    if(![mnemoFilter.region,mnemoFilter.territory,mnemoFilter.ps,mnemoFilter.feeder].some(Boolean))return true;
+    const id=st.folderId||'',psId=st.folderId||st.id?.replace(/^folderps_/, '')||'';
+    if(mnemoFilter.ps&&psId!==mnemoFilter.ps)return false;
+    if(mnemoFilter.feeder){const src=feederPreviewModel?.stations?.get?.(psId);if(!src?.feeders?.some(f=>f.id===mnemoFilter.feeder))return false;}
+    return [mnemoFilter.region,mnemoFilter.territory].filter(Boolean).every(scope=>folderIncludes(id,scope)||feederPreviewModel?.stations?.get?.(psId)?.feeders?.some(f=>folderIncludes(f.id,scope)));
+  }
+  function visibleDispatchLine(line){return visibleStation(station(line.a)||{})||visibleStation(station(line.b)||{});}
   function renderMap(result){
     if(!window.L || !el('dg-map')){el('dg-map').textContent='Xarita kutubxonasi yuklanmagan.';return;}
     const mapIsNew=!map;
@@ -1094,7 +1295,7 @@
     else mapLayer=L.layerGroup().addTo(map);
     const bounds=[];
     data.lines.forEach(l=>{
-      if(!voltageVisible[num(l.voltage)])return;
+      if(!voltageVisible[num(l.voltage)]||!visibleDispatchLine(l))return;
       const coords=geometryFor(l).map(x=>[x.lat,x.lng]);
       if(coords.length<2||coords.some(p=>!Number.isFinite(p[0])||!Number.isFinite(p[1])))return;
       const st=lineStateInfo(l,result),on=st.active;
@@ -1129,7 +1330,7 @@
     // A drawn provisional line must never be mistaken for a surveyed circuit.
     if(feederPreviewModel){
       for(const feed of feederPreviewModel.previewLines||[]){
-        if(!voltageVisible[feed.kv])continue;
+        if(!voltageVisible[feed.kv]||!matchesScope(feed.feederId,feed.stationId))continue;
         const ps=feederPreviewModel.stations?.get?.(feed.stationId);
         const routed=feed.route?.points?.length && window.HETKFeederRouteEditor?.graph?.(feed.route,ps);
         const good=routed && !routed.errors?.length && routed.routes?.length;
@@ -1151,6 +1352,7 @@
       }
     }
     data.stations.forEach(p=>{
+      if(!visibleStation(p))return;
       if(p.lat==null||p.lng==null||!Number.isFinite(Number(p.lat))||!Number.isFinite(Number(p.lng)))return;
       const color=p.kind==='source'?'#1e7adf':p.kind==='tap'?'#e8a547':'#153e75';
       const marker=L.circleMarker([num(p.lat),num(p.lng)],{radius:p.kind==='tap'?5:9,color:'#fff',weight:2,fillColor:color,fillOpacity:1}).addTo(mapLayer);
@@ -1159,8 +1361,8 @@
       bounds.push([num(p.lat),num(p.lng)]);
     });
     if(mapTps)data.tps.forEach(t=>{
+      const f=feeder(t.feederId);if(f&&!matchesScope(f.folderId||f.id,f.psId))return;
       if(t.lat==null||t.lng==null||!validGps(t.lat,t.lng))return;
-      const f=feeder(t.feederId);
       L.circleMarker([num(t.lat),num(t.lng)],{radius:6,color:'#fff',weight:2,fillColor:'#9855bd',fillOpacity:1}).addTo(mapLayer)
         .bindTooltip(esc(t.name),{direction:'top'})
         .bindPopup(`<strong>${esc(t.name)}</strong><br>${num(t.kva)} kVA<br>Fider: ${esc(f?.name||'aniqlanmagan')}<br><button type="button" class="dg-popup-edit" data-edit="tp" data-id="${esc(t.id)}">✎ Tahrirlash</button>`);
@@ -1666,14 +1868,14 @@
   }
   function init(){if(initialized)return;initialized=true;mapStyle=readMapStyle();createShell();
     window.addEventListener('online',()=>{if(cloudWanted&&cloudDirty&&cloudReady&&!cloudBlocked)queueCloudSave();else if(cloudWanted&&!cloudReady)openCloudSession();});
-    document.addEventListener('hetk-management-scope-changed',e=>{if(e?.detail?.reason==='folders'&&currentUser){syncFolderStations();feederPreviewModel=null;loadFeederPreview();}});
-    document.addEventListener('hetk-scoped-data-changed',e=>{if(e?.detail?.type==='tps'&&currentUser){feederPreviewModel=null;loadFeederPreview();}});
+    document.addEventListener('hetk-management-scope-changed',e=>{if(e?.detail?.reason==='folders'&&currentUser){syncFolderStations();feederPreviewModel=null;loadFeederPreview(true);}});
+    document.addEventListener('hetk-scoped-data-changed',e=>{if(e?.detail?.type==='tps'&&currentUser){loadFeederPreview(true);}});
     document.addEventListener('hetk-auth-ready',e=>authChanged(e.detail&&e.detail.user));
     document.addEventListener('hetk-auth-user-updated',e=>authChanged(e.detail&&e.detail.user));
     document.addEventListener('hetk-auth-cleared',()=>authChanged(null));
     if(window.HETKAuth?.currentUser)authChanged(window.HETKAuth.currentUser);
     try{window.firebase?.auth?.().onAuthStateChanged?.(()=>{if(currentUser&&!cloudReady&&!cloudReadStarted)openCloudSession();});}catch(e){}
   }
-  window.HETKDispatchGrid = {open:()=>open(),analyzeDraft:()=>data?analyze():null,version:'80-feeder-flow-params-pslabels'};
+  window.HETKDispatchGrid = {open:()=>open(),analyzeDraft:()=>data?analyze():null,version:'81-live-mnemo-readonly'};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
