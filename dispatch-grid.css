@@ -495,3 +495,30 @@ body.dg-modal-open{overflow:hidden!important}
 #hetk-grid .dg-layer-menu-panel .dg-layer-menu-actions .dg-params-apply:hover{
   background:#07548d;color:#fff;
 }
+
+/* v81: dynamic 6/10-kV mnemonic is drawn from existing Folders/TPs/route data.
+   Scroll SVG, never squeeze/overwrite map or the legacy dispatch diagram. */
+#hetk-grid .dg-mnemo-workspace{height:100%;width:100%;overflow:auto;display:flex;flex-direction:column;gap:12px;padding:9px;background:#edf4fb}
+#hetk-grid .dg-mnemo-toolbar{display:flex;flex-wrap:wrap;gap:6px 15px;align-items:center;justify-content:space-between;flex:none;font-size:12px;color:#173f69}
+#hetk-grid .dg-mnemo-toolbar strong{font-size:14px;color:#0c568e}
+#hetk-grid .dg-mnemo-toolbar span{font-weight:700;color:#456789}
+#hetk-grid .dg-mnemo-scroller{width:100%;overflow:auto;border:1px solid #cdddec;border-radius:11px;background:#f3f7fc;min-height:280px;max-height:min(65vh,820px);flex:0 0 auto;box-shadow:0 3px 12px #0b34500c}
+#hetk-grid .dg-mnemo-svg{display:block;max-width:none;width:auto;height:auto;min-width:100%;background:#f3f7fc;font-family:Arial,'Segoe UI',sans-serif}
+#hetk-grid .dg-mnemo-hint{font-size:10px;line-height:1.55;color:#4e6984;background:#f7fbff;border:1px solid #dfebf6;padding:8px 11px;border-radius:8px;flex:none}
+#hetk-grid .dg-mnemo-warning{font-size:11px;color:#945f10;background:#fff6e7;border:1px solid #f6deb3;padding:8px 10px;border-radius:7px}
+#hetk-grid .dg-mnemo-empty{margin:auto;padding:26px;background:#f5f9fd;border:1px dashed #b9cede;color:#476781;border-radius:9px;font-size:12px;text-align:center}
+#hetk-grid .dg-legacy-diagram{border:1px solid #cadfeb;border-radius:9px;background:white;min-height:42px;flex:none;overflow:hidden}
+#hetk-grid .dg-legacy-diagram>summary{cursor:pointer;background:#f6fafe;padding:11px 13px;color:#1c507e;font-size:12px;font-weight:800;list-style:revert}
+#hetk-grid .dg-legacy-diagram .dg-diagram-wrap{height:min(60vh,550px);max-height:600px}
+#hetk-grid .dg-mnemo-export{white-space:nowrap!important;border:1px solid #9cc5e5;background:#e9f4ff;color:#135c94;border-radius:8px;padding:7px 9px;font-size:10px;font-weight:800}
+#hetk-grid .dg-mnemo-export:hover{background:#d0eaff}
+#hetk-grid .dg-param-select{display:flex;flex-direction:column;padding:3px 8px;gap:4px;min-width:0}
+#hetk-grid .dg-param-select span{color:#55718a;font-size:10px;font-weight:750}
+#hetk-grid .dg-param-select select{max-width:100%;width:100%;font-size:11px;line-height:1.3;padding:6px 5px;border:1px solid #cadbea;border-radius:6px;background:#f8fbff;color:#1b4b73;cursor:pointer}
+#hetk-grid .dg-layer-menu-panel{min-width:245px;max-width:min(340px,91vw);max-height:min(76vh,650px)}
+#hetk-grid .dg-layer-menu-panel .dg-layer-menu-actions{position:sticky;bottom:-7px;background:white;z-index:3}
+@media(prefers-reduced-motion:reduce){#hetk-grid .dg-mnemo-light{display:none}}
+@media(max-width:850px){#hetk-grid .dg-mnemo-scroller{max-height:52vh}#hetk-grid .dg-layer-tools{gap:4px}#hetk-grid .dg-mnemo-export{padding:6px 5px;font-size:9px}}
+@media(max-width:520px){#hetk-grid .dg-mnemo-workspace{padding:6px}#hetk-grid .dg-mnemo-scroller{max-height:48vh;min-height:240px}#hetk-grid .dg-layer-menu-panel{max-height:58vh}}
+#hetk-grid .dg-mnemo-note[role="button"]{cursor:pointer}
+#hetk-grid .dg-mnemo-note[role="button"]:hover text{fill:#0e73b8;text-decoration:underline}
