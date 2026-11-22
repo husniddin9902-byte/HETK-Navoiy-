@@ -1,4 +1,4 @@
-/* HETK-Navoiy — Dispatch Grid simulation v82
+/* HETK-Navoiy — Dispatch Grid simulation v83
  * NO SCADA CONTROL. Role-restricted Firebase RTDB shared simulation draft
  * autosaves with revision checks; existing local drafts are backed up before migration.
  * The animated dots are derived from the saved model and virtual QF states.
@@ -1374,9 +1374,9 @@
       for(const feed of feederPreviewModel.previewLines||[]){
         if(!voltageVisible[feed.kv]||!matchesScope(feed.feederId,feed.stationId))continue;
         const ps=feederPreviewModel.stations?.get?.(feed.stationId);
-        const routed=feed.route?.points?.length && window.HETKFeederRouteEditor?.graph?.(feed.route,ps);
-        const good=routed && !routed.errors?.length && routed.routes?.length;
-        const legs=good?routed.routes:[{path:feed.path,mode:'draft'}];
+        // Same hybrid route as the management GIS and v83 mnemonic: real
+        // tower legs plus dashed estimates for TP endpoints not yet mapped.
+        const legs=window.HETKPSFeederMap?.compositeRoutes?.(feed,ps)?.segments||[{path:feed.path,mode:'draft'}];
         for(const leg of legs){
           const points=leg.path||[];
           if(points.length<2 || points.some(p=>!validGps(p[0],p[1])))continue;
@@ -1937,6 +1937,7 @@
     window.addEventListener('online',()=>{if(cloudWanted&&cloudDirty&&cloudReady&&!cloudBlocked)queueCloudSave();else if(cloudWanted&&!cloudReady)openCloudSession();});
     document.addEventListener('hetk-management-scope-changed',e=>{if(e?.detail?.reason==='folders'&&currentUser){syncFolderStations();feederPreviewModel=null;loadFeederPreview(true);}});
     document.addEventListener('hetk-scoped-data-changed',e=>{if(e?.detail?.type==='tps'&&currentUser&&root&&!root.hidden)loadFeederPreview(true);});
+    document.addEventListener('hetk-feeder-route-changed',()=>{if(currentUser&&root&&!root.hidden)loadFeederPreview(true);});
     document.addEventListener('hetk-scoped-data-changed',e=>{if(e?.detail?.type==='tps'&&currentUser){loadFeederPreview(true);}});
     document.addEventListener('hetk-auth-ready',e=>authChanged(e.detail&&e.detail.user));
     document.addEventListener('hetk-auth-user-updated',e=>authChanged(e.detail&&e.detail.user));
@@ -1944,6 +1945,6 @@
     if(window.HETKAuth?.currentUser)authChanged(window.HETKAuth.currentUser);
     try{window.firebase?.auth?.().onAuthStateChanged?.(()=>{if(currentUser&&!cloudReady&&!cloudReadStarted)openCloudSession();});}catch(e){}
   }
-  window.HETKDispatchGrid = {open:()=>open(),analyzeDraft:()=>data?analyze():null,version:'82-technical-gis-fix'};
+  window.HETKDispatchGrid = {open:()=>open(),analyzeDraft:()=>data?analyze():null,version:'83-auto-gis-progressive'};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
