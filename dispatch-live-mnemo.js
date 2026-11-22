@@ -1,6 +1,7 @@
-/* HETK 82: read-only live mnemonic projection of existing Folders + TPs + feederRoute6kv.
- * This module NEVER writes to Firebase and NEVER invents electrical connections.
- * SVG is vector; dynamic lights are an illustrative route animation, not SCADA telemetry.
+/* HETK v83: read-only automatic schematic, derived from the SAME provisional
+ * 6/10 kV GPS routes as GIS, progressively refined by recorded feeder poles.
+ * An estimated line is always explicitly dashed, never treated as confirmed.
+ * No Firebase writes, no inferred SCADA telemetry or switch state.
  */
 (function(){
 'use strict';
@@ -37,43 +38,154 @@ function feedBelongs(station,feed,filter,folders){
   }
   return true;
 }
+/* Build a graphical topology from the live GIS projection. No extra stored
+ * electrical edges are created: projected edges exist only in memory and are
+ * visibly distinguished from entered feederRoute6kv legs in the SVG.
+ */
+function projectedTopology(group,previewLine){
+  const nodes=[],byId=new Map(),gps=group.allTps.filter(t=>valid(t.lat,t.lng)),
+    noGps=group.allTps.filter(t=>!valid(t.lat,t.lng));
+  const add=p=>{nodes.push(p);byId.set(p.id,p);};
+  const raw=group.confirmed?group.nodes:[];
+  const linkedByPoint=new Map(group.linked.map(x=>[x.point.id,x.tp]));
+  for(const point of raw){
+    add({...point,kind:point.kind||'pole',tp:linkedByPoint.get(point.id)||null,
+      estimated:false,recorded:true});
+  }
+  const attached=new Set(group.linked.map(x=>x.tp.id));
+  const remaining=gps.filter(tp=>!attached.has(tp.id));
+  let autoNum=0;
+  const makeId=()=>`__mn83_${autoNum++}`;
+  let estimatedCount=0;
+  if(group.confirmed&&raw.length){
+    // Reuse exactly the same snapped draft legs that are now drawn in GIS.
+    const composite=window.HETKPSFeederMap?.compositeRoutes?.(previewLine,group.station);
+    const attachByEdge=new Map();
+    for(const leg of composite?.segments||[]){
+      if(!leg.provisional||!leg.tpId||!byId.has(leg.toId))continue;
+      const tp=remaining.find(x=>x.id===leg.tpId);
+      if(!tp)continue;
+      if(!attachByEdge.has(leg.toId))attachByEdge.set(leg.toId,[]);
+      attachByEdge.get(leg.toId).push({tp,t:Math.max(0,Math.min(1,+leg.t||0)),at:leg.at});
+    }
+    // A different/old GIS bundle might not yet have compositeRoutes; still
+    // use a provisional endpoint rather than leaving the TP as an orphan card.
+    const mapped=new Set([...attachByEdge.values()].flat().map(a=>a.tp.id));
+    for(const tp of remaining.filter(x=>!mapped.has(x.id))){
+      let best=null;
+      for(const point of raw){
+        const parent=point.parentId==='ps'?group.station:byId.get(point.parentId);
+        if(!parent||!valid(parent.lat,parent.lng))continue;
+        const a=[+parent.lat,+parent.lng],b=[+point.lat,+point.lng],target=[+tp.lat,+tp.lng];
+        const snap=window.HETKPSFeederMap?.snapToLeg?.(target,[a,b]);
+        if(snap&&(!best||snap.score<best.score))best={...snap,toId:point.id};
+      }
+      if(!best){add({id:makeId(),parentId:'ps',kind:'tp',tp,lat:tp.lat,lng:tp.lng,estimated:true});estimatedCount++;continue;}
+      if(!attachByEdge.has(best.toId))attachByEdge.set(best.toId,[]);
+      attachByEdge.get(best.toId).push({tp,t:best.t,at:best.at});
+    }
+    // Split the original leg at a calculated branch location; the original
+    // conductor remains recorded, only the TP drop is provisional.
+    for(const [edgeId,attachments] of attachByEdge){
+      const end=byId.get(edgeId);if(!end)continue;
+      const originalParent=end.parentId;
+      let prior=originalParent;
+      attachments.sort((a,b)=>a.t-b.t||a.tp.id.localeCompare(b.tp.id));
+      for(const item of attachments){
+        const pointId=makeId();
+        add({id:pointId,parentId:prior,kind:'junction',lat:item.at?.[0],lng:item.at?.[1],
+          estimated:false,recorded:false,virtualJunction:true});
+        add({id:makeId(),parentId:pointId,kind:'tp',tp:item.tp,lat:item.tp.lat,lng:item.tp.lng,estimated:true});
+        estimatedCount++;
+        prior=pointId;
+      }
+      end.parentId=prior;
+    }
+  }else{
+    // The order is the existing provisionalRoute path from the main HETK GIS.
+    // A compact junction serves up to four successive GPS TPs, so the result
+    // is a legible one-line scheme instead of a kilometre-long KTP chain.
+    const stops=(previewLine?.path||[]).slice(1);
+    const available=[...gps],sorted=[];
+    for(const coord of stops){
+      if(!available.length)break;
+      let best=0,score=Infinity;
+      available.forEach((tp,i)=>{const d=(+tp.lat-+coord[0])**2+(+tp.lng-+coord[1])**2;if(d<score){score=d;best=i;}});
+      sorted.push(...available.splice(best,1));
+    }
+    sorted.push(...available.sort((a,b)=>a.name.localeCompare(b.name,'uz')));
+    let parentId='ps';
+    for(let i=0;i<sorted.length;i+=4){
+      const batch=sorted.slice(i,i+4),last=batch[batch.length-1];
+      const junction=makeId();
+      add({id:junction,parentId,kind:'junction',lat:last.lat,lng:last.lng,
+        estimated:true,virtualJunction:true});
+      for(const tp of batch){
+        add({id:makeId(),parentId:junction,kind:'tp',tp,lat:tp.lat,lng:tp.lng,estimated:true});
+        estimatedCount++;
+      }
+      parentId=junction;
+    }
+  }
+  // A TP with no GPS is shown only as an unlocated provisional endpoint.
+  // This NEVER creates a geographic coordinate or appears as a confirmed link.
+  for(const tp of noGps){add({id:makeId(),parentId:'ps',kind:'tp',tp,estimated:true,noGps:true});estimatedCount++;}
+  const children=new Map([['ps',[]],...nodes.map(p=>[p.id,[]])]);
+  for(const n of nodes){if(!children.has(n.parentId))children.set(n.parentId,[]);children.get(n.parentId).push(n);}
+  for(const kids of children.values())kids.sort((a,b)=>{
+    // Endpoint drops first; continue the feeder magistral after the drops.
+    const ka=a.kind==='tp'?0:a.virtualJunction?2:1,kb=b.kind==='tp'?0:b.virtualJunction?2:1;
+    return ka-kb||String(a.number||a.tp?.name||a.id).localeCompare(String(b.number||b.tp?.name||b.id),'uz');
+  });
+  return {nodes,byId,children,estimatedCount,confirmedCount:group.linked.length,
+    recordedSegments:group.confirmed?raw.length:0};
+}
 function build(preview,points,folders,filter,voltage){
   const groups=[],issues=[];
   const stations=preview?.visibleStations||[];
   const feedIds=new Set(stations.flatMap(s=>s.feeders||[]).map(f=>f.id));
+  const previewByFeed=new Map((preview?.previewLines||[]).map(f=>[f.feederId,f]));
   const tpByFeed=new Map();
   for(const [id,tp] of Object.entries(points||{})){
-    const fid=nearestFeeder(tp,feedIds,folders);
-    if(!fid)continue;
+    const fid=nearestFeeder(tp,feedIds,folders);if(!fid)continue;
     if(!tpByFeed.has(fid))tpByFeed.set(fid,[]);
-    tpByFeed.get(fid).push({id,name:tp.name||tp.address||id,kva:tp.power??tp.kva??'',isPrivate:tp.isPrivate===true,lat:tp.lat,lng:tp.lng});
+    tpByFeed.get(fid).push({id,name:tp.name||tp.address||id,kva:tp.power??tp.kva??'',
+      isPrivate:tp.isPrivate===true,lat:tp.lat,lng:tp.lng});
   }
   for(const station of stations)for(const feed of station.feeders||[]){
     if(!voltage?.[feed.kv]||!feedBelongs(station,feed,filter,folders))continue;
     const tps=(tpByFeed.get(feed.id)||[]).sort((a,b)=>a.name.localeCompare(b.name,'uz'));
     const rawPoints=Array.isArray(feed.route?.points)?feed.route.points:[];
-    const graph=rawPoints.length&&window.HETKFeederRouteEditor?.graph?window.HETKFeederRouteEditor.graph(feed.route,station):null;
-    const confirmed=!!(graph&&!graph.errors?.length&&valid(station.lat,station.lng));
-    if(graph?.errors?.length)issues.push(`${feed.name}: trassa tekshiruvida xatolik bor`);
+    let graph=null;
+    if(rawPoints.length&&window.HETKFeederRouteEditor?.graph){
+      try{graph=window.HETKFeederRouteEditor.graph(feed.route,station);}catch(_e){graph=null;}
+    }
+    const confirmed=!!(graph&&!graph.errors?.length&&graph.routes?.length&&valid(station.lat,station.lng));
+    if(graph?.errors?.length)issues.push(`${feed.name}: tayanch trassasi xato, taxminiy yo‘nalish ishlatilmoqda`);
     const nodes=confirmed?rawPoints.map((p,i)=>({...p,sourceIndex:i})):[];
     const byId=new Map(nodes.map(p=>[p.id,p]));
     const children=new Map([['ps',[]],...nodes.map(p=>[p.id,[]])]);
     for(const p of nodes)if(children.has(p.parentId))children.get(p.parentId).push(p);
-    // A TP is electrically connected only if the recorded feeder route has an
-    // explicit TP endpoint ID. GPS closeness never creates a connection.
     const feederTps=new Map(tps.map(t=>[t.id,t]));
-    // An endpoint naming a deleted/foreign TP must never be displayed as a
-    // confirmed electrical consumer. Keep it as a warning, not a fake link.
     const linked=nodes.filter(p=>p.kind==='tp'&&p.tpId&&feederTps.has(p.tpId))
       .map(p=>({point:p,tp:feederTps.get(p.tpId)}));
-    const linkedIds=new Set(linked.map(item=>item.tp.id));
+    const linkedIds=new Set(linked.map(x=>x.tp.id));
     for(const p of nodes.filter(p=>p.kind==='tp'&&!feederTps.has(p.tpId)))
-      issues.push(`${feed.name}: ${p.number||p.id} nuqtasida TP/KTP havolasi topilmadi`);
-    const unlinked=tps.filter(tp=>!linkedIds.has(tp.id));
-    groups.push({station,feed,linked,unlinked,nodes,byId,children,confirmed,graph,allTps:tps,notes:folders[feed.id]?.mnemoNotes||{}});
+      issues.push(`${feed.name}: ${p.number||p.id} tayanchdagi TP havolasi topilmadi`);
+    const unlinked=tps.filter(t=>!linkedIds.has(t.id));
+    const group={station,feed,linked,unlinked,nodes,byId,children,confirmed,graph,
+      allTps:tps,notes:folders[feed.id]?.mnemoNotes||{}};
+    const previewLine=previewByFeed.get(feed.id)||{stationId:station.id,feederId:feed.id,
+      path:window.HETKPSFeederMap?.provisionalRoute?.(
+        [station.lat,station.lng],tps.filter(t=>valid(t.lat,t.lng)).map(t=>[+t.lat,+t.lng]))||[],
+      route:feed.route,tps:feed.tps||tps};
+    group.projected=projectedTopology(group,previewLine);
+    groups.push(group);
   }
   groups.sort((a,b)=>a.station.name.localeCompare(b.station.name,'uz')||a.feed.name.localeCompare(b.feed.name,'uz'));
-  return {groups,issues,totalTps:groups.reduce((s,g)=>s+g.allTps.length,0),totalLinked:groups.reduce((s,g)=>s+g.linked.length,0)};
+  return {groups,issues,totalTps:groups.reduce((s,g)=>s+g.allTps.length,0),
+    totalLinked:groups.reduce((s,g)=>s+g.linked.length,0),
+    totalEstimated:groups.reduce((s,g)=>s+g.projected.estimatedCount,0)};
 }
 /* All permitted GPS points on the GIS layer, not merely the local
  * DispatchGridSimulation.tps list. A TP that has no feeder remains a map
@@ -131,199 +243,114 @@ function wrapLabel(value,maxLen=22){
 function centeredLines(lines,x,y,color='#153e66',size=11,weight=700){
   return lines.map((v,i)=>`<text x="${x}" y="${y+i*14}" text-anchor="middle" fill="${color}" font-size="${size}" font-weight="${weight}">${esc(v)}</text>`).join('');
 }
-function render(model,opts={}){
-  const animate=opts.animate!==false,technical=!!opts.technical;
-  if(technical)return renderTechnical(model,opts);
-  // Screen is virtualised at 90 feeder cards. An export must NEVER silently
-  // omit the rest; the caller rejects >500 first with a filter instruction.
-  const maxGroups=Math.min(model?.groups?.length||0,opts.maxGroups||(opts.svgOnly?500:90)),groups=(model?.groups||[]).slice(0,maxGroups);
-  if(!groups.length)return `<div class="dg-mnemo-empty">Filtrga mos 6/10 kV fider topilmadi. PS papkasi, fider va uning bog‘lanishlarini tekshiring.</div>`;
-  const all=[],extents=[];let y=30,width=1200;
-  for(const group of groups){
-    const layout=subtreeLayout(group,y),color=colors[group.feed.kv]||'#3186f6',lineWidth=[2,3,4,5].includes(+opts.lineWidth)?+opts.lineWidth:3;
-    const visibleCount=group.nodes.length,hasRoute=group.confirmed&&visibleCount>0;
-    const extraCount=group.unlinked.length;
-    const headerH=hasRoute?Math.max(190,layout.height):150;
-    const rowH=headerH+(extraCount?64+Math.ceil(extraCount/5)*42:0);
-    const top=y+8, startX=40;
-    let maxX=460;
-    all.push(`<rect x="${startX}" y="${top}" width="{panelWidth}" height="${rowH}" rx="11" fill="${groups.indexOf(group)%2?'#f9fbff':'#fff'}" stroke="#d6e5f3" stroke-width="1.4"/>`);
-    all.push(`<text x="58" y="${top+23}" fill="#174c7d" font-size="14" font-weight="800">${esc(group.feed.name)} · ${group.feed.kv} kV</text>`);
-    if(group.station.crossTerritory||group.feed.crossTerritory)all.push(`<text x="58" y="${top+40}" fill="#6b7890" font-size="10">Hududlararo manba PS</text>`);
-    const root=layout.locations.get('ps')||{x:102,y:top+80};
-    const psRows=wrapLabel(group.station.name,22);
-    const psW=198,psH=Math.max(62,27+psRows.length*14);
-    const psTitle=centeredLines(psRows,root.x,root.y-(psRows.length*14)/2-1,'#fff',11,750)
-      +`<text x="${root.x}" y="${root.y+(psRows.length*14)/2+9}" text-anchor="middle" fill="#beddfa" font-size="10">${group.feed.kv} kV</text>`;
-    // The PS rectangle is drawn AFTER lines, so their source point never
-    // crosses or obscures its complete name.
-    const psBox=box(root.x-psW/2,root.y-psH/2,psW,psH,'#124879','#124879',psTitle);
-    if(hasRoute){
-      for(const p of group.nodes){
-        const source=layout.locations.get(p.parentId),target=layout.locations.get(p.id);
-        if(!source||!target)continue;
-        const path=`M ${source.x} ${source.y} L ${source.x+45} ${source.y} L ${source.x+45} ${target.y} L ${target.x} ${target.y}`;
-        const cable=p.mode==='cable';
-        all.push(`<path d="${path}" fill="none" stroke="${cable?'#b46cc5':color}" stroke-width="${lineWidth}" ${cable?'stroke-dasharray="7 5"':''} stroke-linejoin="round"/>`);
-        if(animate){
-          all.push(`<circle r="3.5" fill="#fff" stroke="${color}" stroke-width="1" class="dg-mnemo-light"><animateMotion path="${path}" dur="${(2.8+Math.min(2,group.nodes.length/12)).toFixed(1)}s" repeatCount="indefinite" begin="0s"/></circle>`);
-        }
-        const parent=p.parentId==='ps'?group.station:group.byId.get(p.parentId);
-        const dist=km(parent,p),poles=(p.kind==='pole'?1:0)+(p.mode==='overhead'?Math.max(0,num(p.intermediateCount)):0);
-        const computed=`${poles} tayanch${dist!=null?' · '+Math.round(dist*1000)+' m':''}`;
-        const note=group.notes[p.id],manual=typeof note==='string'?note:note?.text;
-        const supportText=manual?String(manual):computed;
-        const lx=p.parentId==='ps'?source.x+106:Math.min(source.x+54,target.x-26),ly=Math.min(source.y,target.y)-13;
-        all.push(`<g class="dg-mnemo-note" ${!opts.svgOnly?`data-mnemo-note="${esc(p.id)}" data-mnemo-feeder="${esc(group.feed.id)}" role="button" tabindex="0"`:''}><title>${esc(computed)}${manual?' · Qo‘lda: '+esc(manual):''}</title><text x="${lx}" y="${ly}" font-size="9.5" fill="${manual?'#a45b14':'#425a75'}" ${manual?'font-weight="700"':''}>${esc(supportText)}${manual?' ✎':''}</text></g>`);
-        if(p.kind==='tp'){
-          const tp=group.allTps.find(t=>t.id===p.tpId);
-          const privateTP=tp?.isPrivate===true;
-          const nameRows=wrapLabel(tp?.name||p.number||'TP/KTP',20);
-          const boxH=Math.max(52,28+nameRows.length*14);
-          const nameTexts=centeredLines(nameRows,target.x,target.y-(nameRows.length*14)/2-2,privateTP?'#8e2635':'#154875',11,750);
-          const powerText=`<text x="${target.x}" y="${target.y+nameRows.length*7+9}" text-anchor="middle" fill="${privateTP?'#8e2635':'#154875'}" font-size="10">${tp?.kva!==''&&tp?.kva!=null?esc(String(tp.kva)+' kVA'):'quvvat ko‘rsatilmagan'}</text>`;
-          all.push(box(target.x-69,target.y-boxH/2,138,boxH,privateTP?'#ffe6e8':'#e5f1ff',privateTP?'#d54455':'#2c78d8',nameTexts+powerText));
-          maxX=Math.max(maxX,target.x+92);
-        }else{
-          all.push(`<circle cx="${target.x}" cy="${target.y}" r="${p.kind==='pole'?4.7:5.7}" stroke="${color}" fill="#fff" stroke-width="2"/>`);
-          if(technical||p.kind==='turn')all.push(`<text x="${target.x}" y="${target.y+19}" font-size="9.5" text-anchor="middle" fill="#56718b">${esc(p.number||'')}</text>`);
-          maxX=Math.max(maxX,target.x+52);
-        }
-      }
-    }else{
-      all.push(`<text x="300" y="${root.y-4}" fill="#926c2c" font-size="13" font-weight="700">Fider yo‘nalishi GISda hali tasdiqlanmagan</text>`);
-      all.push(`<text x="300" y="${root.y+16}" fill="#7a8b9e" font-size="11">Tarmoqni taxminan ulab chizmadik. Ulanish nuqtalarini kiriting.</text>`);
-    }
-    all.push(psBox);
-    if(group.unlinked.length){
-      const labelY=y+headerH+25;
-      all.push(`<text x="58" y="${labelY}" fill="#966726" font-size="11" font-weight="750">Fider papkasidagi, lekin trassada ulanmagan TP/KTP (${group.unlinked.length})</text>`);
-      group.unlinked.forEach((t,i)=>{
-        const x=58+(i%5)*202,by=labelY+9+Math.floor(i/5)*42;
-        const stroke=t.isPrivate?'#c84a58':'#94a5b8';
-        const names=wrapLabel(t.name,25);
-        const fontSize=names.length>1?9.0:10;
-        all.push(box(x,by,188,31,t.isPrivate?'#ffe5e8':'#f1f5fa',stroke,centeredLines(names,x+94,by+(names.length>1?11:20),'#35536b',fontSize,600),6));
-      });
-      maxX=Math.max(maxX,1100);
-    }
-    extents.push({maxX});y+=rowH+14;
-  }
-  width=Math.min(3600,Math.max(1160,...extents.map(e=>e.maxX+90)));
-  const fullHeight=Math.max(y+20,250);
-  const body=all.join('').replaceAll('{panelWidth}',String(width-80));
-  const headline=`<text x="41" y="22" font-weight="750" font-size="13" fill="#1b4c79">Jonli 6/10 kV mnemosxema · mavjud HETK ma’lumotlari</text>`;
-  const legend=`<g transform="translate(${width-370},8)"><rect width="354" height="25" rx="6" fill="#edf5fc"/><circle cx="13" cy="12" r="6" fill="#e5f1ff" stroke="#2c78d8" stroke-width="1.5"/><text x="25" y="16" font-size="11" fill="#31546c">ETK</text><circle cx="100" cy="12" r="6" fill="#ffe6e8" stroke="#d54455" stroke-width="1.5"/><text x="112" y="16" font-size="11" fill="#31546c">Xususiy</text><path d="M185 12h27" stroke="#b46cc5" stroke-width="2" stroke-dasharray="5 3"/><text x="219" y="16" font-size="11" fill="#31546c">Yer osti kabeli</text></g>`;
-  const svg=`<svg xmlns="http://www.w3.org/2000/svg" class="dg-mnemo-svg" width="${width}" height="${fullHeight}" viewBox="0 0 ${width} ${fullHeight}" role="img" aria-label="Jonli elektr taqsimot mnemosxemasi"><rect width="${width}" height="${fullHeight}" fill="#f3f7fc"/>${headline}${legend}${body}</svg>`;
-  if(opts.svgOnly)return svg;
-  const omitted=(model.groups.length-maxGroups);
-  return `<div class="dg-mnemo-toolbar"><strong>⚡ Jonli mnemosxema</strong><span>${groups.length} fider · ${groups.reduce((s,g)=>s+g.allTps.length,0)} TP/KTP · ${groups.reduce((s,g)=>s+g.linked.length,0)} tasdiqlangan ulanish</span></div>${omitted?`<div class="dg-mnemo-warning">Birdaniga ${maxGroups} ta fider ko‘rsatilmoqda, yana ${omitted} tasi bor. Viloyat / PS / fider filtrini tanlang.</div>`:''}<div class="dg-mnemo-scroller">${svg}</div><div class="dg-mnemo-hint">Qizil ramka — xususiy TP/KTP. Ajratilgan TP/KTP fider papkasidan avtomatik olindi, ammo trassadagi elektr ulanishi hali belgilanmagan. Chiroqchalar — model yo‘nalishi, real tok o‘lchovi emas. Oraliq tayanchlar va GISdagi masofa kiritilgan koordinatalar asosida hisoblanadi.</div>`;
-}
-/* v82 technical view: genuine orthogonal single-line projection of the
- * entered PS → feeder → branch/pole → TP endpoint topology. Symbols for real
- * QF, isolators and transformers MUST NOT be invented from a folder name.
+/* Both tabs are views of the SAME projected tree. The simple view omits
+ * support detail; the technical view adds a shina, branches, pole numbers and
+ * entered segment annotations. No "unlinked KTP" card grid remains.
  */
-function renderTechnical(model,opts={}){
-  const allGroups=model?.groups||[];
-  const count=Math.min(allGroups.length,opts.maxGroups||(opts.svgOnly?500:90));
-  const groups=allGroups.slice(0,count);
-  if(!groups.length)return '<div class="dg-mnemo-empty">Filtrga mos 6/10 kV fider topilmadi. PS va fider papkalarini tekshiring.</div>';
-  const weight=[2,3,4,5].includes(+opts.lineWidth)?+opts.lineWidth:3,animate=opts.animate!==false;
-  const shapes=[],widths=[];let offset=35;
+function render(model,opts={}){
+  const technical=!!opts.technical,animate=opts.animate!==false;
+  const all=model?.groups||[],maxGroups=Math.min(all.length,opts.maxGroups||(opts.svgOnly?500:90));
+  const groups=all.slice(0,maxGroups);
+  if(!groups.length)return '<div class="dg-mnemo-empty">Tanlangan hudud va kuchlanishda fider mavjud emas.</div>';
+  const lineWidth=[2,3,4,5].includes(+opts.lineWidth)?+opts.lineWidth:3;
+  const parts=[],widths=[];let offset=35;
   for(let index=0;index<groups.length;index++){
-    const g=groups[index],color=colors[g.feed.kv]||colors[10];
-    const good=g.confirmed&&g.nodes.length>0;
-    const positions=new Map(),children=g.children;
-    let leafY=offset+166,depthLimit=0;
-    // A recorded route is a tree. Show actual junction hierarchy, including
-    // bends and poles, and never infer edges by geographical proximity.
-    function layout(id,depth,seen=new Set()){
-      if(depth>45||seen.has(id))return leafY;
-      const kids=good?(children.get(id)||[]):[];
-      let y;if(!kids.length){y=leafY;leafY+=76;}
-      else{const ys=kids.map(p=>layout(p.id,depth+1,new Set([...seen,id])));y=(ys[0]+ys[ys.length-1])/2;}
-      const x=depth===0?160:330+(depth-1)*180;
-      positions.set(id,{x,y});depthLimit=Math.max(depthLimit,depth);
+    const g=groups[index],top=offset,color=colors[g.feed.kv]||colors[10];
+    const projection=g.projected||{nodes:[],children:new Map([['ps',[]]]),byId:new Map(),estimatedCount:0,confirmedCount:0,recordedSegments:0};
+    const positions=new Map(),startY=top+(technical?174:118);
+    let leafY=startY,maxDepth=0;
+    function walk(id,depth,visiting=new Set()){
+      if(depth>100||visiting.has(id))return leafY;
+      const kids=projection.children.get(id)||[];
+      let y;
+      if(!kids.length){y=leafY;leafY+=technical?73:66;}
+      else{
+        const ys=kids.map(p=>walk(p.id,depth+1,new Set([...visiting,id])));
+        y=(ys[0]+ys[ys.length-1])/2;
+      }
+      const x=(technical?205:180)+Math.min(depth,100)*(technical?142:132);
+      positions.set(id,{x,y});maxDepth=Math.max(maxDepth,depth);
       return y;
     }
-    layout('ps',0);
-    const branchHeight=good?Math.max(200,leafY-offset-48):170;
-    const unlinked=g.unlinked,unlinkedRows=Math.ceil(unlinked.length/5);
-    const rowH=branchHeight+(unlinked.length?78+unlinkedRows*55:0)+64;
-    const paneWidth=Math.max(1160,good?Math.min(9000,470+Math.max(0,depthLimit-1)*180):1160);
-    widths.push(paneWidth);
-    const top=offset,root=positions.get('ps')||{x:160,y:offset+166};
-    const con=[];
-    con.push(`<rect x="32" y="${top}" width="{paneWidth}" height="${rowH}" rx="13" fill="${index%2?'#fbfdff':'#fff'}" stroke="#cadbe9" stroke-width="1.5"/>`);
-    con.push(`<text x="56" y="${top+28}" font-size="15" fill="#153a65" font-weight="800">${esc(g.station.name)}</text>`);
-    con.push(`<text x="56" y="${top+48}" font-size="11" fill="#60788e">PS · mavjud papka ma’lumotlari</text>`);
-    // Horizontal 6/10 kV busbar and a schematic outgoing feeder tap. This is
-    // an abstraction, NOT evidence about the number/state of switchgear.
-    const busY=top+80;
-    con.push(`<path d="M 82 ${busY} H ${paneWidth-55}" stroke="${color}" stroke-width="${Math.max(7,weight+3)}" stroke-linecap="square"/>`);
-    con.push(`<text x="${paneWidth-55}" y="${busY-14}" text-anchor="end" font-size="11" font-weight="800" fill="${color}">${g.feed.kv} kV · shina (shartli)</text>`);
-    con.push(`<circle cx="160" cy="${busY}" r="5.5" fill="#fff" stroke="${color}" stroke-width="2.5"/>`);
-    const feederStart=busY+38;
-    con.push(`<path d="M160 ${busY+5} V ${feederStart}" stroke="${color}" stroke-width="${weight}"/>`);
-    // Breaker/isolator states are not part of the recorded feeder topology.
-    // An unfilled labelled junction avoids signalling a fictitious closed QF.
-    con.push(`<circle cx="160" cy="${feederStart}" r="4.3" stroke="${color}" stroke-width="2" fill="#fff"/>`);
-    con.push(`<text x="183" y="${feederStart+4}" font-size="12" font-weight="800" fill="#214e76">${esc(g.feed.name)} · ${g.feed.kv} kV</text>`);
-    con.push(`<path d="M160 ${feederStart+5} V ${root.y}" stroke="${good?color:'#b5c1d0'}" stroke-width="${weight}" ${good?'':'stroke-dasharray="7 6"'}/>`);
-    if(good){
-      const tpLookup=new Map(g.linked.map(link=>[link.point.id,link.tp]));
-      for(const p of g.nodes){
-        const from=positions.get(p.parentId),to=positions.get(p.id);
-        if(!from||!to)continue;
-        const midX=Math.round((from.x+to.x)/2), cable=p.mode==='cable';
-        const path=`M ${from.x} ${from.y} H ${midX} V ${to.y} H ${to.x}`;
-        const stroke=cable?'#ad68ce':color;
-        con.push(`<path d="${path}" fill="none" stroke="${stroke}" stroke-width="${weight}" ${cable?'stroke-dasharray="7 5"':''} stroke-linejoin="round"/>`);
-        con.push(`<circle cx="${midX}" cy="${to.y}" r="2.9" fill="${stroke}"/>`);
-        if(animate){con.push(`<circle r="3" fill="#fff" stroke="${stroke}" stroke-width="1" class="dg-mnemo-light"><animateMotion path="${path}" dur="3.5s" repeatCount="indefinite"/></circle>`);}
-        const parent=p.parentId==='ps'?g.station:g.byId.get(p.parentId);
-        const calculated=km(parent,p);
-        const computed=`${p.kind==='pole'?1:0}${p.mode==='overhead'&&+p.intermediateCount?' + '+num(p.intermediateCount):''} tayanch${calculated==null?'':' · '+Math.round(calculated*1000)+' m'}`;
-        const stored=g.notes[p.id],manual=typeof stored==='string'?stored:stored?.text;
-        const note=String(manual||computed);
-        con.push(`<g class="dg-mnemo-note" ${opts.svgOnly?'':`data-mnemo-note="${esc(p.id)}" data-mnemo-feeder="${esc(g.feed.id)}" role="button" tabindex="0"`}><title>${esc(computed)}</title><text x="${midX+5}" y="${Math.min(from.y,to.y)-10}" font-size="9.5" fill="${manual?'#97581b':'#597187'}">${esc(note)}${manual?' ✎':''}</text></g>`);
-        if(p.kind==='tp'){
-          const tp=tpLookup.get(p.id);
-          if(tp){
-            const label=wrapLabel(tp.name,18),h=Math.max(52,28+label.length*14),fill=tp.isPrivate?'#ffe9e8':'#e9f3ff',strokeTp=tp.isPrivate?'#d45565':'#2d7ee3';
-            con.push(box(to.x-67,to.y-h/2,134,h,fill,strokeTp,centeredLines(label,to.x,to.y-(label.length*14)/2+2,'#163f66',10,750)+`<text x="${to.x}" y="${to.y+label.length*7+10}" text-anchor="middle" font-size="10" fill="#27496e">${tp.kva!==''?esc(tp.kva+' kVA'):'kVA kiritilmagan'}</text>`,11));
-          }else{
-            con.push(`<circle cx="${to.x}" cy="${to.y}" r="8" fill="#fff" stroke="#d96b35" stroke-width="2"/><text x="${to.x+14}" y="${to.y+4}" font-size="10" fill="#ac5326">TP havolasi topilmadi: ${esc(p.number||p.id)}</text>`);
-          }
-        }else{
-          con.push(`<circle cx="${to.x}" cy="${to.y}" r="${p.kind==='pole'?4.5:5.5}" fill="#fff" stroke="${stroke}" stroke-width="2"/>`);
-          if(p.number)con.push(`<text x="${to.x}" y="${to.y+19}" font-size="10" fill="#3b5d7a" text-anchor="middle">${esc(p.number)}</text>`);
+    walk('ps',0);
+    const root=positions.get('ps')||{x:technical?205:180,y:startY};
+    const height=Math.max(technical?260:185,leafY-top+14);
+    const needWidth=Math.max(1200,300+Math.min(maxDepth,100)*(technical?142:132)+200);
+    widths.push(needWidth);
+    const content=[];
+    content.push(`<rect x="35" y="${top}" width="{paneWidth}" height="${height}" rx="13" fill="${index%2?'#fafdff':'#fff'}" stroke="#cbdced" stroke-width="1.5"/>`);
+    content.push(`<text x="57" y="${top+27}" font-size="15" font-weight="800" fill="#174675">${esc(g.station.name)}</text>`);
+    content.push(`<text x="57" y="${top+47}" font-size="11" fill="#4f718f">${esc(g.feed.name)} · ${g.feed.kv} kV · ${g.allTps.length} TP/KTP · ${projection.recordedSegments} kiritilgan nuqta · ${projection.estimatedCount} taxminiy ulanish</text>`);
+    if(technical){
+      const busY=top+77;
+      content.push(`<path d="M 78 ${busY} H {busEnd}" stroke="${color}" stroke-width="${Math.max(6,lineWidth+3)}"/>`);
+      content.push(`<text x="{busLabel}" y="${busY-12}" text-anchor="end" fill="${color}" font-size="11" font-weight="800">${g.feed.kv} kV · shina (shartli)</text>`);
+      content.push(`<circle cx="${root.x}" cy="${busY}" r="5" fill="white" stroke="${color}" stroke-width="2"/>`);
+      content.push(`<path d="M${root.x} ${busY+5} V${root.y}" stroke="${color}" stroke-width="${lineWidth}"/>`);
+      content.push(`<circle cx="${root.x}" cy="${busY+37}" r="4" fill="#fff" stroke="${color}" stroke-width="2"/>`);
+      content.push(`<text x="${root.x+18}" y="${busY+41}" font-size="11" font-weight="700" fill="#214e75">${esc(g.feed.name)}</text>`);
+    }else{
+      // Source block in the simple view (no fabricated breaker symbol).
+      const psY=root.y-25;
+      content.push(box(65,psY,175,53,'#164a7b','#164a7b',
+        centeredLines(wrapLabel(g.station.name,24).slice(0,2),152,psY+19,'#fff',11,750)+
+        `<text x="152" y="${psY+45}" text-anchor="middle" fill="#d0e7ff" font-size="10">${g.feed.kv} kV</text>`,11));
+    }
+    for(const n of projection.nodes){
+      const parent=positions.get(n.parentId),to=positions.get(n.id);
+      if(!parent||!to)continue;
+      const estimated=n.estimated===true,empty=n.noGps===true;
+      const segmentColor=empty?'#96a2b1':n.mode==='cable'?'#a769c8':color;
+      const mid=Math.round((parent.x+to.x)/2);
+      const path=`M${parent.x} ${parent.y} H${mid} V${to.y} H${to.x}`;
+      const dashed=estimated||n.mode==='cable';
+      content.push(`<path d="${path}" fill="none" stroke="${segmentColor}" stroke-width="${lineWidth}" ${dashed?`stroke-dasharray="${estimated?'7 6':'4 5'}"`:''} stroke-linejoin="round" stroke-linecap="round"/>`);
+      if(animate&&!empty){
+        content.push(`<circle r="3.2" fill="#fff" stroke="${segmentColor}" stroke-width="1" class="dg-mnemo-light"><animateMotion path="${path}" dur="${estimated?'4.2':'3.5'}s" repeatCount="indefinite"/></circle>`);
+      }
+      const manualRaw=g.notes[n.id],manual=typeof manualRaw==='string'?manualRaw:manualRaw?.text;
+      if(technical&&(manual||n.recorded)){
+        // If an explicit leg was split by a provisional TP branch, keep
+        // its original recorded start point for the length annotation.
+        const sourcePoint=n.recorded?g.byId.get(n.id):null;
+        const sourceParent=sourcePoint?.parentId||n.parentId;
+        const prev=sourceParent==='ps'?g.station:(sourcePoint?g.byId.get(sourceParent):projection.byId.get(sourceParent));
+        const distance=km(prev,n);
+        const defaultInfo=technical?(n.kind==='pole'?'Tayanch ':n.kind==='cable'?'Kabel ':n.kind==='turn'?'Burilish ':n.kind==='tp'?'TP ':'')+(n.number||'')+(distance==null?'':' · '+Math.round(distance*1000)+' m'):'';
+        if(manual||n.recorded){
+          content.push(`<g class="dg-mnemo-note" ${opts.svgOnly?'':`data-mnemo-note="${esc(n.id)}" data-mnemo-feeder="${esc(g.feed.id)}" role="button" tabindex="0"`}><title>${esc(defaultInfo)}</title><text x="${mid+5}" y="${Math.min(parent.y,to.y)-9}" font-size="9.5" fill="${manual?'#9b5c19':'#6e8196'}">${esc(manual||defaultInfo)}${manual?' ✎':''}</text></g>`);
         }
       }
-    }else{
-      con.push(`<text x="340" y="${root.y-12}" font-size="13" font-weight="800" fill="#9c6727">Elektr ulanish topologiyasi kiritilmagan / tasdiqlanmagan</text>`);
-      con.push(`<text x="340" y="${root.y+10}" font-size="11" fill="#6f7f91">Fiderdan TP/KTPga elektr liniyasi taxmin bilan chizilmadi</text>`);
+      if(n.kind==='tp'){
+        const tp=n.tp;
+        if(!tp){
+          content.push(`<circle cx="${to.x}" cy="${to.y}" r="7" stroke="#d86a38" stroke-width="2" fill="#fff"/><text x="${to.x+12}" y="${to.y+4}" fill="#a65831" font-size="10">TP havolasi yo‘q</text>`);
+          continue;
+        }
+        const names=wrapLabel(tp.name,19).slice(0,3),h=Math.max(47,23+names.length*13);
+        const fill=empty?'#fff6de':tp.isPrivate?'#ffebee':'#eaf3ff',outline=empty?'#b68b37':tp.isPrivate?'#d14a5e':'#377bd2';
+        const labelY=to.y-(names.length*13)/2+1;
+        const label=centeredLines(names,to.x,labelY,'#21486e',10,750)
+          +`<text x="${to.x}" y="${to.y+names.length*6.5+11}" fill="#426783" font-size="9" text-anchor="middle">${tp.kva!==''?esc(tp.kva+' kVA'):'kVA yo‘q'}${empty?' · GPS yo‘q':estimated?' · ≈':''}</text>`;
+        content.push(box(to.x-67,to.y-h/2,134,h,fill,outline,label,9));
+      }else if(n.virtualJunction){
+        content.push(`<circle cx="${to.x}" cy="${to.y}" r="${technical?4.5:3.5}" fill="${estimated?'#fff':segmentColor}" stroke="${segmentColor}" stroke-width="2"/>`);
+      }else{
+        content.push(`<circle cx="${to.x}" cy="${to.y}" r="${n.kind==='pole'?5:4.5}" fill="#fff" stroke="${segmentColor}" stroke-width="2"/>`);
+        if(technical&&n.number)content.push(`<text x="${to.x}" y="${to.y+18}" text-anchor="middle" fill="#3b5877" font-size="10">${esc(n.number)}</text>`);
+      }
     }
-    if(unlinked.length){
-      const start=top+branchHeight+70;
-      con.push(`<path d="M55 ${start-21} H${paneWidth-55}" stroke="#e1e7ed" stroke-width="1.5"/>`);
-      con.push(`<text x="56" y="${start}" fill="#9a6123" font-size="12" font-weight="750">Ulanishi ko‘rsatilmagan TP/KTP · ${unlinked.length} ta (elektr chizig‘i ulanmagan)</text>`);
-      unlinked.forEach((t,i)=>{
-        const x=57+(i%5)*216,by=start+13+Math.floor(i/5)*55;
-        const lines=wrapLabel(t.name,23),h=43;
-        con.push(box(x,by,203,h,t.isPrivate?'#ffebec':'#f0f6fe',t.isPrivate?'#d35b6d':'#92a6bd',centeredLines(lines.slice(0,2),x+101,by+(lines.length>1?14:19),'#274e75',10,700)+`<text x="${x+101}" y="${by+35}" text-anchor="middle" font-size="9" fill="#697e91">${t.kva!==''?esc(t.kva+' kVA'):'quvvat ko‘rsatilmagan'}</text>`,8));
-      });
-    }
-    con.push(`<text x="${paneWidth-55}" y="${top+rowH-12}" text-anchor="end" font-size="10" fill="#7c8997">${good?'GISda kiritilgan topologiya':'Topologiya mavjud emas'} · ${g.linked.length} tasdiqlangan TP/KTP</text>`);
-    shapes.push(con.join(''));
-    offset+=rowH+17;
+    content.push(`<text x="{busLabel}" y="${top+height-14}" text-anchor="end" font-size="10" fill="#6e8195">${projection.estimatedCount?'Uzlukli chiziq: GPS bo‘yicha taxminiy ulanish · ':''}${projection.confirmedCount} ta kiritilgan TP ulanishi</text>`);
+    parts.push(content.join(''));
+    offset+=height+17;
   }
-  const width=Math.max(1230,...widths.map(n=>n+64)),height=offset+16;
-  const svg=`<svg xmlns="http://www.w3.org/2000/svg" class="dg-mnemo-svg dg-mnemo-technical-svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="HETK texnik bir chiziqli mnemosxema"><rect width="${width}" height="${height}" fill="#edf4fb"/><text x="37" y="23" fill="#1d4e78" font-size="14" font-weight="800">Texnik bir chiziqli sxema · kiritilgan ma’lumotlar asosida</text>${shapes.join('').replaceAll('{paneWidth}',String(width-64))}</svg>`;
+  const width=Math.max(1260,...widths.map(x=>x+65));
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" class="dg-mnemo-svg ${technical?'dg-mnemo-technical-svg':''}" width="${width}" height="${offset+20}" viewBox="0 0 ${width} ${offset+20}" role="img" aria-label="Avtomatik 6/10 kV mnemosxema"><rect width="${width}" height="${offset+20}" fill="#edf4fb"/><text x="37" y="23" fill="#1c507e" font-size="14" font-weight="800">${technical?'Texnik bir chiziqli sxema':'Sodda mnemosxema'} · GIS yo‘nalishidan avtomatik</text><g transform="translate(${Math.max(500,width-510)},5)"><path d="M0 11h28" stroke="#e3a640" stroke-width="3"/><text x="35" y="15" font-size="10" fill="#46627b">Kiritilgan trassa</text><path d="M170 11h29" stroke="#e3a640" stroke-width="3" stroke-dasharray="6 5"/><text x="207" y="15" font-size="10" fill="#46627b">Taxminiy</text></g>${parts.join('').replaceAll('{paneWidth}',String(width-70)).replaceAll('{busEnd}',String(width-115)).replaceAll('{busLabel}',String(width-122))}</svg>`;
   if(opts.svgOnly)return svg;
-  const hidden=allGroups.length-count;
-  const metrics=`${groups.length} fider · ${groups.reduce((s,g)=>s+g.allTps.length,0)} TP/KTP · ${groups.reduce((s,g)=>s+g.linked.length,0)} tasdiqlangan TP ulanishi`;
-  return `<div class="dg-mnemo-toolbar"><strong>⚡ Texnik bir chiziqli sxema</strong><span>${metrics}</span></div>${hidden?`<div class="dg-mnemo-warning">${count} ta fider chizildi; ${hidden} ta boshqa fider uchun parametrdan filtrlash kerak.</div>`:''}<div class="dg-mnemo-scroller">${svg}</div><div class="dg-mnemo-hint">Shina va fider chiqishlari sxematik. Transformator, o‘chirgich, ajratkich va ularning holatlari bazada ko‘rsatilmagan bo‘lsa, taxminan qo‘shilmaydi. Ko‘k/qizil TP ramkalari — ETK/xususiy; ulanishi qayd qilinmagan TP lar chiziqqa bog‘lanmaydi. Harakatli nuqtalar real telemetriya emas.</div>`;
+  const hidden=all.length-maxGroups;
+  const tps=groups.reduce((a,g)=>a+g.allTps.length,0),recorded=groups.reduce((a,g)=>a+g.projected.confirmedCount,0),approx=groups.reduce((a,g)=>a+g.projected.estimatedCount,0);
+  const warning=hidden?`<div class="dg-mnemo-warning">${maxGroups} fider ko‘rsatilmoqda; qolgan ${hidden} tasi uchun parametrdan PS yoki fiderni tanlang.</div>`:'';
+  return `<div class="dg-mnemo-toolbar"><strong>⚡ ${technical?'Texnik bir chiziqli sxema':'Jonli mnemosxema'}</strong><span>${groups.length} fider · ${tps} TP/KTP · ${recorded} aniq · ${approx} taxminiy</span></div>${warning}<div class="dg-mnemo-scroller">${svg}</div><div class="dg-mnemo-hint">Uzluksiz liniyalar — kiritilgan trassa bo‘laklari; uzlukli liniyalar — xaritadagi GPS bo‘yicha taxminiy yo‘nalish. Yangi TP/KTP va tayanchlar kiritilsa, xarita va ushbu sxema avtomatik qayta tuziladi. Bu SCADA yoki real tok holati emas.</div>`;
 }
 function downloadSvg(svg,fileName){
   if(!svg||!/^<svg[\s>]/.test(svg))throw new Error('Vektor sxema topilmadi');
@@ -331,5 +358,5 @@ function downloadSvg(svg,fileName){
   const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=fileName||'HETK-mnemosxema.svg';
   document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),5000);
 }
-window.HETKLiveMnemo={build,render,mapTpMarkers,downloadSvg,feedBelongs,version:'82-technical-projection'};
+window.HETKLiveMnemo={build,render,mapTpMarkers,downloadSvg,feedBelongs,version:'83-auto-gis-progressive'};
 })();
