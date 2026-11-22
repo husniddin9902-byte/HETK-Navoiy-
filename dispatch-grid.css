@@ -527,3 +527,18 @@ body.dg-modal-open{overflow:hidden!important}
 #hetk-grid .dg-mnemo-technical-svg{font-family:Arial,'Segoe UI',sans-serif}
 #hetk-grid .dg-mnemo-workspace .dg-legacy-diagram[open]>summary{background:#e9f3fe;border-bottom:1px solid #cbddeb}
 #hetk-grid .dg-mnemo-technical-svg .dg-mnemo-light{pointer-events:none}
+
+/* v84: one shared SVG sheet with scale-aware pan and zoom. */
+#hetk-grid .dg-mnemo-toolbar{align-items:center;gap:10px}
+#hetk-grid .dg-mnemo-toolbar>span{flex:1;min-width:200px}
+#hetk-grid .dg-mnemo-zoom-tools{display:flex;align-items:center;gap:4px;background:#fff;border:1px solid #cbddec;border-radius:8px;padding:3px;white-space:nowrap}
+#hetk-grid .dg-mnemo-zoom-tools button{background:#edf5fe;color:#125487;border:1px solid #c3dbef;border-radius:5px;min-height:28px;min-width:30px;padding:3px 7px;font-size:12px;font-weight:800;cursor:pointer}
+#hetk-grid .dg-mnemo-zoom-tools button:hover{background:#d8eaff}
+#hetk-grid .dg-mnemo-zoom-label{min-width:48px;text-align:center;font-weight:750;color:#254e74;font-size:11px}
+#hetk-grid .dg-mnemo-scroller{height:min(69vh,840px);min-height:300px;max-height:none;overflow:auto;cursor:grab;touch-action:pan-x pan-y;user-select:none;overscroll-behavior:contain}
+#hetk-grid .dg-mnemo-scroller.dg-mnemo-panning{cursor:grabbing}
+#hetk-grid .dg-mnemo-scaled{position:relative;display:block;width:max-content;height:max-content;overflow:visible}
+#hetk-grid .dg-mnemo-scaled>.dg-mnemo-svg{position:absolute;left:0;top:0;display:block;transform-origin:0 0;max-width:none;min-width:0;width:auto;height:auto;pointer-events:auto}
+#hetk-grid .dg-mnemo-station-label{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round}
+#hetk-grid .dg-mnemo-tiny .dg-mnemo-tp text,#hetk-grid .dg-mnemo-tiny .dg-mnemo-labels text{display:none}
+@media(max-width:850px){#hetk-grid .dg-mnemo-scroller{height:55vh;max-height:none;min-height:250px}#hetk-grid .dg-mnemo-zoom-tools{width:100%;justify-content:flex-end}}
