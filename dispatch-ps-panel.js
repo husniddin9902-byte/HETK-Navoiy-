@@ -1,4 +1,4 @@
-/* HETK-Navoiy v85 · PS inspector only. Existing map, diagrams and menus stay unchanged.
+/* HETK-Navoiy v86 · PS inspector only. Existing map, diagrams and menus stay unchanged.
  * This view reads authorised HETK feeder/TP data. Operational measurements are
  * separate, user-entered records inside the existing revision-controlled model.
  * No SCADA/QF state, meter telemetry or PS status is inferred from a reading.
@@ -31,45 +31,128 @@ function opsTransformers(o){return arr(o?.transformers).filter(t=>t&&/^[A-Za-z\d
 function opsMeasurements(o){return arr(o?.measurements).filter(m=>m&&m.id&&safeDate(m.at));}
 function measuredAt(o,kind,id){return opsMeasurements(o).filter(m=>m.kind===kind&&String(m.targetId)===String(id)).sort((a,b)=>Date.parse(b.at)-Date.parse(a.at));}
 function lastMeasurement(o,kind,id){return measuredAt(o,kind,id)[0]||null;}
-function pointFolderIds(tp){return [...new Set([tp?.primaryFolderId,tp?.folderId,...Object.entries(tp?.folders||{}).filter(([,v])=>v===true||v===1).map(([id])=>id)].filter(Boolean))];}
+function pointFolderIds(tp){return [...new Set([tp?.primaryFolderId,tp?.folderId,...Object.entries(tp?.folders||{}).filter(([,v])=>v===true||v===1).map(([id])=>id)].filter(Boolean).map(String))];}
+// Main HETK Folders is authoritative for PS -> feeder/line -> TP nesting.
+// The GIS preview is optional: loading TPs/GPS must not hide existing feeder folders.
+function isPsFolder(folder){
+ if(!folder)return false;
+ if(window.HETKPSFeederMap?.isPS)return window.HETKPSFeederMap.isPS(folder);
+ if(folder.psFolder===true)return true;
+ const n=String(folder.name||'').normalize('NFKC').trim().replace(/^[^\p{L}\p{N}]+/u,'').trim();
+ return /^(?:PS|ПС)(?=$|[\s.\-–—_:/'‘’ʼʻ`´"«»(])/iu.test(n)||(/(?:^|[^\d])(?:500|220|110|35)\s*\/\s*(?:110|35|10|6)(?=\s|$|[’ʼʻ'"«»])/iu.test(n)&&!/(?:fider|fedir|фидер)/iu.test(n));
+}
+function isFeederFolder(folder){
+ if(!folder||isPsFolder(folder))return false;
+ const n=String(folder.name||'').normalize('NFKC').trim();
+ return /(?:fider|fedir|fid[eі]r|фидер|liniya|линия|\b(?:L|Л)[-\s–—])/iu.test(n)||!!folder.sourcePsFolderId;
+}
+function owningPs(folderId,folders){
+ const seen=new Set();let id=String(folderId||''),depth=0;
+ while(id&&id!=='root'&&folders[id]&&!seen.has(id)&&depth++<160){
+  seen.add(id);if(isPsFolder(folders[id]))return id;
+  id=String(folders[id].parentId||'root');
+ }
+ return '';
+}
+function feederVoltage(folder,ps){
+ const n=String(folder?.name||'');
+ const explicit=n.match(/(?:^|[^\d])(500|220|110|35|10|6)\s*(?:k\s*v|кв)(?=\s|$|[.,;:()])/iu);
+ if(explicit)return Number(explicit[1]);
+ const parser=window.HETKPSFeederMap?.voltageForFeeder;
+ return parser?N(parser(n,ps?.name||'')):null;
+}
+function psFolderKey(ctx){
+ const f=ctx.folders||{},ps=ctx.ps;
+ const id=String(ps.folderId||String(ps.id||'').replace(/^folderps_/,''));
+ if(f[id])return id;
+ // Legacy, folderless stations are never matched by an ambiguous duplicate name.
+ const matching=Object.keys(f).filter(key=>isPsFolder(f[key])&&String(f[key].name||'').normalize('NFKC').trim().toLocaleLowerCase()===String(ps.name||'').normalize('NFKC').trim().toLocaleLowerCase());
+ return matching.length===1?matching[0]:id;
+}
+function childStations(ctx){
+ const folders=ctx.folders||{},psId=psFolderKey(ctx),items=[];
+ for(const [id,f] of Object.entries(folders)){
+  if(id===psId||!isPsFolder(f)||ctx.canSeeFolder&&!ctx.canSeeFolder(id))continue;
+  // Find the nearest ancestor PS, ignoring intermediate organizational folders.
+  if(owningPs(f.parentId,folders)!==psId)continue;
+  items.push({id,name:f.name||id});
+ }
+ return items.sort((a,b)=>textCompare(a.name,b.name));
+}
+function parentStation(ctx){
+ const folders=ctx.folders||{},psId=psFolderKey(ctx),parent=owningPs(folders[psId]?.parentId,folders);
+ if(!parent||ctx.canSeeFolder&&!ctx.canSeeFolder(parent))return null;
+ return {id:parent,name:folders[parent]?.name||parent};
+}
 function buildFeeders(ctx){
- const ps=ctx.ps,folderId=ps.folderId||String(ps.id).replace(/^folderps_/,'');
- const source=ctx.previewModel?.stations?.get?.(folderId)||ctx.previewModel?.visibleStations?.find?.(p=>p.id===folderId);
- const locals=arr(ctx.data.feeders).filter(f=>f.psId===ps.id||f.psId===folderId);
- const used=new Set(),list=[];
- for(const p of arr(source?.feeders)){
-  if(ctx.canSeeFolder&&!ctx.canSeeFolder(p.id))continue;
-  const record=locals.find(f=>f.folderId===p.id||f.id===p.id);
-  const key=String(p.id);used.add(key);if(record)used.add(record.id);
-  list.push({key,name:p.name||record?.name||key,kv:N(p.kv)??N(record?.voltage),record,preview:p,tps:[]});
+ const ps=ctx.ps,folders=ctx.folders||{},psId=psFolderKey(ctx),list=[],byKey=new Map();
+ const source=ctx.previewModel?.stations?.get?.(psId)||ctx.previewModel?.visibleStations?.find?.(p=>p.id===psId);
+ const locals=arr(ctx.data?.feeders).filter(f=>String(f.psId)===String(ps.id)||String(f.psId)===psId);
+ const localByFolder=new Map(locals.filter(f=>f.folderId).map(f=>[String(f.folderId),f]));
+ const previews=new Map(arr(source?.feeders).map(p=>[String(p.id),p]));
+ const add=(key,name,kv,record,preview,folderSourced)=>{
+  key=String(key);if(!key||byKey.has(key))return byKey.get(key);
+  const f={key,name:name||key,kv:N(kv),record:record||null,preview:preview||null,tps:[],folderSourced:!!folderSourced};
+  list.push(f);byKey.set(key,f);return f;
+ };
+ // First index the actual HETK folder structure, independent of asynchronous GIS loading.
+ // A nested PS is never a feeder of its parent, and any explicit source-PS link wins.
+ for(const [id,folder] of Object.entries(folders)){
+  if(!isFeederFolder(folder)||ctx.canSeeFolder&&!ctx.canSeeFolder(id))continue;
+  const explicit=String(folder.sourcePsFolderId||'').trim();
+  const stationId=explicit||owningPs(folder.parentId,folders);
+  if(stationId!==psId)continue;
+  const record=localByFolder.get(id)||locals.find(f=>String(f.id)===id)||null;
+  const preview=previews.get(id)||null;
+  add(id,folder.name,feederVoltage(folder,ps)??N(preview?.kv)??N(record?.voltage),record,preview,true);
  }
- for(const f of locals)if(!used.has(f.id)&&!(f.folderId&&used.has(f.folderId))){
-  list.push({key:String(f.folderId||f.id),name:f.name,kv:N(f.voltage),record:f,preview:null,tps:[]});
+ // Include already resolved projection entries, including cross-territory feeders.
+ for(const preview of previews.values()){
+  const id=String(preview.id);
+  if(ctx.canSeeFolder&&!ctx.canSeeFolder(id))continue;
+  const record=localByFolder.get(id)||locals.find(f=>String(f.id)===id)||null;
+  add(id,folders[id]?.name||preview.name||record?.name||id,N(preview.kv)??N(record?.voltage),record,preview,!!folders[id]);
  }
- if(!list.length)return list;
- // Folders remain authoritative. GPS is not necessary to show a TP in a feeder list.
- // Choose the deepest matching feeder folder so a TP is never counted twice.
- const folders=ctx.folders||{};
- for(const [id,tp] of Object.entries(ctx.previewPoints||{})){
-  if(!tp)continue;const ancestors=pointFolderIds(tp);
-  let best=null,depth=Infinity;
-  for(const f of list){if(!folders[f.key])continue;
-   for(const fid of ancestors){let at=fid,hops=0;const seen=new Set();
-    while(at&&folders[at]&&!seen.has(at)&&hops<80){if(at===f.key&&hops<depth){best=f;depth=hops;}seen.add(at);at=folders[at].parentId;hops++;}
+ // Preserve legacy manually entered feeders when no matching folder exists.
+ for(const record of locals){
+  const id=String(record.folderId||record.id);
+  const existing=byKey.get(id);
+  if(existing){if(!existing.record)existing.record=record;continue;}
+  if(record.folderId&&folders[id]&&ctx.canSeeFolder&&!ctx.canSeeFolder(id))continue;
+  // If the record has an actual folder with a different source PS, don't borrow it.
+  if(record.folderId&&folders[id]&&owningPs(folders[id].parentId,folders)!==psId&&String(folders[id].sourcePsFolderId||'')!==psId)continue;
+  add(id,record.name,N(record.voltage),record,null,!!folders[id]);
+ }
+ // Follow each TP's primary folder chain to its nearest feeder in THIS PS.
+ // Stop at a nested PS boundary: its TP belongs only to that substation.
+ function belongingFeeder(tp){
+  for(const start of pointFolderIds(tp)){
+   const visited=new Set();let id=start,n=0;
+   while(id&&id!=='root'&&folders[id]&&!visited.has(id)&&n++<160){
+    if(byKey.has(id))return byKey.get(id);
+    if(isPsFolder(folders[id]))break;
+    visited.add(id);id=String(folders[id].parentId||'root');
    }
   }
-  if(best)best.tps.push({id,name:tp.name||tp.address||'TP/KTP',kva:N(tp.power)??N(tp.kva),source:'base'});
+  return null;
  }
- // Old dispatch-local TP entries still appear, but duplicates from the base are removed.
+ const haveByFeeder=new Map(list.map(f=>[f.key,new Set()]));
+ function attach(f,id,name,kva,origin){
+  if(!f)return;id=String(id);const seen=haveByFeeder.get(f.key);
+  if(seen.has(id))return;seen.add(id);
+  f.tps.push({id,name:name||id,kva:N(kva),source:origin});
+ }
+ for(const [id,tp] of Object.entries(ctx.previewPoints||{})){
+  if(!tp)continue;
+  attach(belongingFeeder(tp),id,tp.name||tp.address||'TP/KTP',N(tp.power)??N(tp.kva),'base');
+ }
  for(const f of list){
-  const have=new Set(f.tps.map(t=>t.id));
-  for(const t of arr(ctx.data.tps).filter(t=>f.record&&t.feederId===f.record.id)){
-   const id=String(t.linkedTpId||t.id);if(have.has(id))continue;have.add(id);
-   f.tps.push({id,name:t.name||id,kva:N(t.kva),source:'dispatch'});
+  for(const t of arr(ctx.data?.tps).filter(t=>[f.key,f.record?.id,f.record?.folderId].filter(Boolean).map(String).includes(String(t.feederId)))){
+   attach(f,String(t.linkedTpId||t.id),t.name||t.id,N(t.kva),'dispatch');
   }
-  // An older build may have the visible feeder but not the full point catalog.
-  for(const p of arr(f.preview?.tps)){if(have.has(String(p.id)))continue;have.add(String(p.id));const tp=ctx.previewPoints?.[p.id];
-   f.tps.push({id:String(p.id),name:tp?.name||p.name||p.id,kva:N(tp?.power)??N(tp?.kva),source:'base'});
+  for(const t of arr(f.preview?.tps)){
+   const tp=ctx.previewPoints?.[t.id];
+   attach(f,String(t.id),tp?.name||t.name||t.id,N(tp?.power)??N(tp?.kva),'preview');
   }
   f.tps.sort((a,b)=>textCompare(a.name,b.name));
   f.nominal=f.tps.reduce((sum,t)=>sum+(t.kva||0),0);
@@ -93,7 +176,7 @@ function header(ctx,fs,s){
  const ps=ctx.ps;
  return `<div class="dg-p85-header"><div class="dg-p85-head-id"><span class="dg-p85-sub-icon">⚡</span><div><h2>${E(ps.name)}</h2><p>${E(ps.folder||ctx.folderPath?.(ps.folderId)||'Podstansiya')} · ${E(arr(ps.volts).join('/'))} kV</p></div></div><div class="dg-p85-head-actions"><button type="button" data-p85="close" aria-label="Yopish">✕</button></div></div>
  <nav class="dg-p85-tabs" aria-label="PS bo‘limlari">${[['overview','⌂ Umumiy'],['transformers','▣ Transformatorlar'],['feeders','⌘ Fiderlar'],['loads','▥ Yuklamalar'],['history','◷ Tarix / Analitika'],['export','⇩ Yuklab olish'],['virtual','◇ Virtual QF']].map(([id,label])=>`<button type="button" class="${state.tab===id?'active':''}" data-p85="tab" data-value="${id}" aria-selected="${state.tab===id}">${label}</button>`).join('')}</nav>
- <div class="dg-p85-metrics">${compactMetric(String(s.trs.length),'Transformator','⚡')}${compactMetric(String(fs.length),'Fider','⌘')}${compactMetric(String(s.tps),'TP/KTP','◈')}${compactMetric(fmt(s.nominal)+' kVA','Jami nominal','◆')}${compactMetric(fmt(s.kw)+(s.kw!==null?' kW':''),'So‘nggi yuklama','▤')}</div>`;
+ <div class="dg-p85-metrics">${compactMetric(String(s.trs.length),'Transformator','⚡')}${compactMetric(String(fs.length),'Fider','⌘')}${compactMetric((ctx.previewReady||Object.keys(ctx.previewPoints||{}).length)?String(s.tps):'…','TP/KTP','◈')}${compactMetric((ctx.previewReady||Object.keys(ctx.previewPoints||{}).length)?fmt(s.nominal)+' kVA':'…','Jami nominal','◆')}${compactMetric(fmt(s.kw)+(s.kw!==null?' kW':''),'So‘nggi yuklama','▤')}</div>`;
 }
 function sectionTitle(title,button=''){return `<div class="dg-p85-section-head"><h3>${title}</h3>${button}</div>`;}
 function actionButton(id,label,attrs=''){return `<button type="button" class="dg-p85-action" data-p85="${id}" ${attrs}>${label}</button>`;}
@@ -112,7 +195,13 @@ function feederList(fs,o){
  const q=state.search.trim().toLocaleLowerCase();const matching=fs.filter(f=>!q||[f.name,...f.tps.map(t=>t.name)].join(' ').toLocaleLowerCase().includes(q));
  return `<div class="dg-p85-feeder-list">${matching.length?matching.map(f=>feederRow(f,o)).join(''):'<div class="dg-p85-empty">Mos fider topilmadi</div>'}</div>`;
 }
-function feedersPane(fs,o){return `<section class="dg-p85-card">${sectionTitle(`Fiderlar (${fs.length} ta)`,`<div class="dg-p85-title-tools"><input class="dg-p85-search" data-p85-search type="search" value="${E(state.search)}" placeholder="Fider yoki TP/KTP qidirish" aria-label="Fider yoki TP/KTP qidirish">${actionButton('add-feeder','+ Fider')}</div>`)}${feederList(fs,o)}</section>`;}
+function childStationsPanel(ctx){
+ const children=childStations(ctx||{}),parent=parentStation(ctx||{});
+ if(!children.length&&!parent)return '';
+ const back=parent?`<button type="button" class="dg-p86-substation dg-p86-parent" data-p85="open-sub-ps" data-id="${E(parent.id)}"><span>↑</span><b>Yuqori PS: ${E(parent.name)}</b><span aria-hidden="true">›</span></button>`:'';
+ return `<section class="dg-p85-card dg-p86-substations">${sectionTitle(children.length?`Ichki podstansiyalar (${children.length} ta)`:'PS iyerarxiyasi')}<div class="dg-p86-substations-list">${back}${children.map(p=>`<button type="button" class="dg-p86-substation" data-p85="open-sub-ps" data-id="${E(p.id)}"><span>▣</span><b>${E(p.name)}</b><small>PS panelini ochish</small><span aria-hidden="true">›</span></button>`).join('')}</div></section>`;
+}
+function feedersPane(fs,o){return `${childStationsPanel(state.ctx)}<section class="dg-p85-card">${sectionTitle(`Fiderlar (${fs.length} ta)`,`<div class="dg-p85-title-tools"><input class="dg-p85-search" data-p85-search type="search" value="${E(state.search)}" placeholder="Fider yoki TP/KTP qidirish" aria-label="Fider yoki TP/KTP qidirish">${actionButton('add-feeder','+ Fider')}</div>`)}${feederList(fs,o)}</section>`;}
 function transformersPane(s,o){
  return `<section class="dg-p85-card">${sectionTitle(`Transformatorlar (${s.trs.length} ta)`,actionButton('add-tr','+ Transformator qo‘shish'))}${s.trs.length?s.trs.map(t=>transformerCard(t,o)).join(''):'<div class="dg-p85-empty">T1, T2 va boshqa transformatorlarni quvvati bilan qo‘shishingiz mumkin.</div>'}${transformerForm(o)}</section>`;
 }
@@ -257,6 +346,7 @@ function exportReport(){const ctx=state.ctx,o=storedOps(),fs=buildFeeders(ctx),s
 function onClick(ev){const btn=ev.target.closest('[data-p85]');if(!btn||!state.box?.contains(btn))return;
  ev.preventDefault();ev.stopPropagation();const act=btn.dataset.p85,id=btn.dataset.id;
  if(act==='close'){state.ctx?.onClose?.();return;}
+ if(act==='open-sub-ps'){state.ctx?.onOpenSubPs?.(id);return;}
  if(act==='add-feeder'){state.ctx?.onAddFeeder?.();return;}
  if(act==='edit-feeder'){state.ctx?.onEditFeeder?.(id);return;}
  if(act==='tab'){state.tab=btn.dataset.value;state.measurementTarget=null;state.editingTransformer=null;render(true);return;}
@@ -302,5 +392,5 @@ function mount(box,ctx){
  if(state.psId!==ctx.ps.id){state.psId=ctx.ps.id;state.tab='overview';state.openFeeder='';state.search='';state.measurementTarget=null;state.editingTransformer=null;state.year=todayYear();state.historyFilter='all';}
  state.ctx=ctx;render();
 }
-window.HETKPSPanel={mount,buildFeeders,summary,version:85};
+window.HETKPSPanel={mount,buildFeeders,childStations,summary,version:86};
 })();
