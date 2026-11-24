@@ -1,4 +1,4 @@
-/* HETK-Navoiy — Dispatch Grid simulation v84
+/* HETK-Navoiy — Dispatch Grid simulation v85
  * NO SCADA CONTROL. Role-restricted Firebase RTDB shared simulation draft
  * autosaves with revision checks; existing local drafts are backed up before migration.
  * The animated dots are derived from the saved model and virtual QF states.
@@ -135,7 +135,7 @@
   const num = (v, fallback=0) => { const n = Number(v); return Number.isFinite(n) ? n : fallback; };
   const clamp = (n,a,b) => Math.min(b,Math.max(a,n));
   const uid = () => 'g'+Date.now().toString(36)+Math.random().toString(36).slice(2,9);
-  const empty = () => ({ version:1, stations:[], lines:[], feeders:[], tps:[], consumers:[] });
+  const empty = () => ({ version:1, stations:[], lines:[], feeders:[], tps:[], consumers:[], psOperations:{} });
   const isAllowed = u => !!(u && u.active!==false && ROLE_SET.has(u.role));
   const storeKey = () => STORAGE + (currentUser && (currentUser.uid || currentUser.login) || 'unknown');
   const arr = (x) => Array.isArray(x) ? x : [];
@@ -579,7 +579,7 @@
     try{
       const raw=JSON.parse(localStorage.getItem(storeKey())||'null');
       if(raw&&Array.isArray(raw.stations)&&Array.isArray(raw.lines))
-        return normalizeTowerIds({version:1,stations:arr(raw.stations),lines:arr(raw.lines),feeders:arr(raw.feeders),tps:arr(raw.tps),consumers:arr(raw.consumers)});
+        return normalizeTowerIds({version:1,stations:arr(raw.stations),lines:arr(raw.lines),feeders:arr(raw.feeders),tps:arr(raw.tps),consumers:arr(raw.consumers),psOperations:(raw.psOperations&&typeof raw.psOperations==='object'&&!Array.isArray(raw.psOperations)?raw.psOperations:{})});
     }catch(e){/* Keep a clean draft on corrupt data. */}
     return empty();
   }
@@ -607,7 +607,7 @@
   }
   function applyCloud(packet){
     backupLocal('Firebase nusxasini avtomatik yuklashdan oldin');
-    data=normalizeTowerIds({version:1,...Object.fromEntries(['stations','lines','feeders','tps','consumers'].map(k=>[k,arr(packet.model[k])]))});
+    data=normalizeTowerIds({version:1,...Object.fromEntries(['stations','lines','feeders','tps','consumers'].map(k=>[k,arr(packet.model[k])])),psOperations:(packet.model.psOperations&&typeof packet.model.psOperations==='object'&&!Array.isArray(packet.model.psOperations)?packet.model.psOperations:{})});
     syncFolderStations();
     overrides=onlyValidSwitches(packet.virtualSwitches||{},data);
     cloudRevision=Number(packet.revision)||0;
@@ -795,56 +795,35 @@
     if(station(id)?.kind==='tap'||!station(id))return;
     activePsId=id;showObjects=false;showImpact=false;updateSidebar();renderPsPanel();
   }
+  // v85: only the PS slide-out is redesigned. The main dispatch renderer and
+  // virtual QF editor are unchanged. Base feeder/TP records remain read-only.
   function renderPsPanel(){
     const box=el('dg-ps-panel');if(!box)return;
     const ps=station(activePsId);
     if(!ps||ps.kind==='tap'){box.hidden=true;activePsId=null;return;}
-    const r=analyze(),attached=data.lines.filter(l=>l.a===ps.id||l.b===ps.id);
-    const feeders=data.feeders.filter(f=>f.psId===ps.id);
-    const allTps=feeders.flatMap(f=>data.tps.filter(t=>t.feederId===f.id));
-    const kva=allTps.reduce((total,t)=>total+Math.max(0,num(t.kva)),0);
-    const loads=feeders.filter(f=>f.loadKw!=null&&f.loadKw!=='');
-    const totalLoad=loads.reduce((sum,f)=>sum+num(f.loadKw),0);
-    const statusLine=(l)=>{
-      const end=l.a===ps.id?'a':'b',side=end.toUpperCase(), other=station(l[end==='a'?'b':'a']);
-      const opened=actualOpen(l,end), earth=earthState(l,end);
-      const status=earth==='on'?'Yerga ulagich qayd etilgan':opened?'QF ochiq': 'QF yopiq';
-      const alarming=(earth==='on'&&!opened);
-      return `<article class="dg-ps-line ${alarming?'dg-ps-alert':''}">
-        <div class="dg-ps-line-title"><span class="dg-ps-volt" style="--volt:${COLORS[l.voltage]||'#64748b'}">${num(l.voltage)} kV</span><div><strong>${esc(l.name)}</strong><small>Ulanish: ${esc(other?.name||'aniqlanmagan')} · ${esc(lineLengthInfo(l).label)}</small></div></div>
-        <div class="dg-ps-line-ctrl"><div class="dg-qf-state ${opened?'is-open':'is-closed'}">QF-${side}: ${opened?'○ Ochiq':'● Yopiq'}</div>
-        <button type="button" class="dg-ps-simulate" data-switch="${esc(l.id+':'+end)}">${opened?'Virtual yopish':'Virtual ochish'}</button></div>
-        <label class="dg-ps-earth">Yerga ulagich (${side} uchi) · <select data-earth-state="${esc(l.id+':'+end)}"><option value="unknown" ${earth==='unknown'?'selected':''}>Ma’lumot kiritilmagan</option><option value="off" ${earth==='off'?'selected':''}>Olingan deb qayd etilgan</option><option value="on" ${earth==='on'?'selected':''}>O‘rnatilgan deb qayd etilgan</option></select></label>
-        ${alarming?'<div class="dg-ps-warning">⚠ Virtual QF yopiq va yerga ulagich o‘rnatilgan deb qayd etilgan. Bu xavfli mos kelmaslik, haqiqiy holat tekshirilishi shart!</div>':''}
-      </article>`;
-    };
-    const feederCard=(f)=>{
-      const tps=data.tps.filter(t=>t.feederId===f.id), totalKva=tps.reduce((sum,t)=>sum+Math.max(0,num(t.kva)),0);
-      const last=f.meterAt?new Date(f.meterAt).toLocaleString('uz-UZ'):'—';
-      return `<article class="dg-ps-feeder" data-feeder-record="${esc(f.id)}">
-        <div class="dg-ps-feeder-head"><div><strong>${esc(f.name)}</strong><small>${num(f.voltage)} kV · ${tps.length} TP/KTP · ${totalKva.toLocaleString('uz-UZ')} kVA nominal</small></div><button type="button" data-edit="feeder" data-id="${esc(f.id)}">✎</button></div>
-        <div class="dg-ps-tp-names">${tps.length?tps.map(t=>`<span>${esc(t.name)} · ${showReading(t.kva)} kVA</span>`).join(''):'TP/KTP hali biriktirilmagan'}</div>
-        <div class="dg-ps-input-grid">
-        <label>Yuklama (kW)<input type="number" min="0" step="any" data-feeder-field="loadKw" value="${esc(f.loadKw??'')}" placeholder="kW"></label>
-        <label>Tok (A)<input type="number" min="0" step="any" data-feeder-field="loadAmp" value="${esc(f.loadAmp??'')}" placeholder="A"></label>
-        <label>Hisoblagich raqami<input maxlength="70" data-feeder-field="meterNumber" value="${esc(f.meterNumber??'')}" placeholder="Raqam"></label>
-        <label>Ko‘rsatkich (kWh)<input type="number" min="0" step="any" data-feeder-field="meterKwh" value="${esc(f.meterKwh??'')}" placeholder="kWh"></label>
-        </div>
-        <div class="dg-ps-feeder-bottom"><small>Oxirgi qayd: ${esc(last)}</small><button type="button" data-save-feeder="${esc(f.id)}">Saqlash</button></div>
-        ${arr(f.readings).length?`<div class="dg-ps-readings"><b>Oxirgi ko‘rsatkichlar:</b> ${arr(f.readings).slice(-3).reverse().map(x=>`<span>${esc(new Date(x.at).toLocaleDateString('uz-UZ'))}: ${showReading(x.kwh)} kWh</span>`).join('')}</div>`:''}
-      </article>`;
-    };
-    box.hidden=false;
-    box.innerHTML=`<header class="dg-ps-panel-head"><div><small>PS BOSHQARUV KARTASI · LOKAL SINOV</small><h2>${esc(ps.name)}</h2><span>${esc(arr(ps.volts).join('/'))} kV · ${ps.kind==='source'?'Manba PS':'Oddiy PS'}</span></div><button type="button" data-action="close-ps-panel" aria-label="PS oynasini yopish">✕</button></header>
-      <div class="dg-ps-panel-body"><div class="dg-ps-banner">⚠ Bu ma’lumotlar lokal qoralama. QF tugmalari haqiqiy tarmoqni boshqarmaydi; holatlar SCADA bilan tekshirilmagan.</div>
-      <div class="dg-ps-metrics"><div><b>${attached.length}</b><small>Ulangan liniya</small></div><div><b>${feeders.length}</b><small>Fider</small></div><div><b>${kva.toLocaleString('uz-UZ')}</b><small>TP/KTP kVA</small></div><div><b>${loads.length?showReading(totalLoad):'—'}</b><small>Yuklama kW*</small></div></div>
-      <div class="dg-ps-folder">📁 ${esc(ps.folder|| (ps.folderId?folderPath(ps.folderId):'Papka biriktirilmagan'))}</div>
-      <div class="dg-ps-section-head"><h3>Ulangan liniyalar va PSdagi QF</h3><small>${r.energized[ps.id]?'Modelda manbaga ulangan':'Modelda ta’minot yo‘q / aniqlanmagan'}</small></div>
-      ${attached.length?attached.map(statusLine).join(''):'<p class="dg-ps-empty">Bu PSga liniya bog‘lanmagan.</p>'}
-      <div class="dg-ps-section-head"><h3>Fiderlar, yuklama va hisoblagichlar</h3><button type="button" data-action="ps-add-feeder">+ Fider</button></div>
-      ${feeders.length?feeders.map(feederCard).join(''):'<p class="dg-ps-empty">Hali fider biriktirilmagan. «+ Fider» orqali mavjud HETK papkasini tanlang.</p>'}
-      <div class="dg-ps-note">* Yuklama va hisoblagich qiymatlari qo‘lda kiritiladi; 0 yoki bo‘sh qiymat real o‘lchov sifatida tasdiqlanmagan. kVA nominal TP quvvati, kW yuklama. Yerga ulagich haqidagi belgi operativ xavfsizlik kafolati emas.</div>
-      </div>`;
+    if(!window.HETKPSPanel?.mount){box.hidden=false;box.textContent='PS panel moduli yuklanmadi. Sahifani yangilang.';return;}
+    window.HETKPSPanel.mount(box,{
+      ps,data,folders:mainFolders(),previewModel:feederPreviewModel,
+      previewPoints:feederPreviewPoints,user:currentUser,
+      folderPath,folderIncludes,canSeeFolder,
+      canPersist:()=>cloudReady&&!cloudBlocked&&!cloudReadError,
+      onSave:()=>saveLocal(),onClose:()=>{activePsId=null;box.hidden=true;},
+      onMessage:(msg,kind)=>showMsg(msg,kind),
+      onAddFeeder:()=>{openEditor('feeder');const fld=el('dg-editor-form')?.elements.namedItem('psId');if(fld)fld.value=ps.id;},
+      onEditFeeder:id=>openEditor('feeder',id),
+      virtualLinesMarkup:data.lines.filter(l=>l.a===ps.id||l.b===ps.id).map(l=>{
+        const end=l.a===ps.id?'a':'b',other=station(l[end==='a'?'b':'a']);
+        const opened=actualOpen(l,end),earth=earthState(l,end);
+        return `<article class="dg-ps-line"><div class="dg-ps-line-title"><span class="dg-ps-volt" style="--volt:${COLORS[l.voltage]||'#64748b'}">${num(l.voltage)} kV</span><div><strong>${esc(l.name)}</strong><small>${esc(other?.name||'Ulanish aniqlanmagan')} · ${esc(lineLengthInfo(l).label)}</small></div></div><div class="dg-ps-line-ctrl"><span class="dg-qf-state ${opened?'is-open':'is-closed'}">QF: ${opened?'○ Ochiq':'● Yopiq'} (virtual)</span><button type="button" class="dg-ps-simulate" data-switch="${esc(l.id+':'+end)}">${opened?'Virtual yopish':'Virtual ochish'}</button></div><label class="dg-ps-earth">Yerga ulagich (${end.toUpperCase()}) <select data-earth-state="${esc(l.id+':'+end)}"><option value="unknown" ${earth==='unknown'?'selected':''}>Ma’lumot yo‘q</option><option value="off" ${earth==='off'?'selected':''}>Olingan (virtual)</option><option value="on" ${earth==='on'?'selected':''}>O‘rnatilgan (virtual)</option></select></label></article>`;
+      }).join(''),
+      onExportSvg:()=>{
+        if(!isSuperAdmin())return showMsg('Vektor sxema eksporti faqat Bosh admin uchun.','error');
+        const prev={...mnemoFilter};try{
+          mnemoFilter={...prev,ps:ps.folderId||String(ps.id).replace(/^folderps_/,''),feeder:''};
+          exportMnemoSvg();
+        }finally{mnemoFilter=prev;}
+      }
+    });
   }
   // Viewport-based decluttering: roughly 3 cm on a 96-CSS-pixel/inch display.
   // Recomputed on pan/zoom, so zoomed-out lines lose their name instead of
@@ -2025,6 +2004,6 @@
     if(window.HETKAuth?.currentUser)authChanged(window.HETKAuth.currentUser);
     try{window.firebase?.auth?.().onAuthStateChanged?.(()=>{if(currentUser&&!cloudReady&&!cloudReadStarted)openCloudSession();});}catch(e){}
   }
-  window.HETKDispatchGrid = {open:()=>open(),analyzeDraft:()=>data?analyze():null,version:'83-auto-gis-progressive'};
+  window.HETKDispatchGrid = {open:()=>open(),analyzeDraft:()=>data?analyze():null,version:'85-ps-inspector'};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
