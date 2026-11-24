@@ -1,4 +1,4 @@
-/* HETK-Navoiy — Dispatch Grid simulation v85
+/* HETK-Navoiy — Dispatch Grid simulation v86
  * NO SCADA CONTROL. Role-restricted Firebase RTDB shared simulation draft
  * autosaves with revision checks; existing local drafts are backed up before migration.
  * The animated dots are derived from the saved model and virtual QF states.
@@ -805,12 +805,19 @@
     window.HETKPSPanel.mount(box,{
       ps,data,folders:mainFolders(),previewModel:feederPreviewModel,
       previewPoints:feederPreviewPoints,user:currentUser,
+      previewReady:!!(feederPreviewModel&&feederPreviewUser===currentUser?.uid),
       folderPath,folderIncludes,canSeeFolder,
       canPersist:()=>cloudReady&&!cloudBlocked&&!cloudReadError,
       onSave:()=>saveLocal(),onClose:()=>{activePsId=null;box.hidden=true;},
       onMessage:(msg,kind)=>showMsg(msg,kind),
       onAddFeeder:()=>{openEditor('feeder');const fld=el('dg-editor-form')?.elements.namedItem('psId');if(fld)fld.value=ps.id;},
       onEditFeeder:id=>openEditor('feeder',id),
+      onOpenSubPs:folderId=>{
+        // A nested PS remains an independent PS, not a feeder. Open its own card.
+        let nested=data.stations.find(s=>s.kind!=='tap'&&s.folderId===folderId);
+        if(!nested){syncFolderStations();nested=data.stations.find(s=>s.kind!=='tap'&&s.folderId===folderId);}
+        if(nested)openPsPanel(nested.id);else showMsg('Ichki PS topilmadi. Papkalar yangilanganini tekshiring.','error');
+      },
       virtualLinesMarkup:data.lines.filter(l=>l.a===ps.id||l.b===ps.id).map(l=>{
         const end=l.a===ps.id?'a':'b',other=station(l[end==='a'?'b':'a']);
         const opened=actualOpen(l,end),earth=earthState(l,end);
@@ -1994,7 +2001,7 @@
   }
   function init(){if(initialized)return;initialized=true;mapStyle=readMapStyle();createShell();
     window.addEventListener('online',()=>{if(cloudWanted&&cloudDirty&&cloudReady&&!cloudBlocked)queueCloudSave();else if(cloudWanted&&!cloudReady)openCloudSession();});
-    document.addEventListener('hetk-management-scope-changed',e=>{if(e?.detail?.reason==='folders'&&currentUser){syncFolderStations();feederPreviewModel=null;loadFeederPreview(true);}});
+    document.addEventListener('hetk-management-scope-changed',e=>{if(e?.detail?.reason==='folders'&&currentUser){syncFolderStations();feederPreviewModel=null;feederPreviewUser='';if(root&&!root.hidden)refresh();loadFeederPreview(true);}});
     document.addEventListener('hetk-scoped-data-changed',e=>{if(e?.detail?.type==='tps'&&currentUser&&root&&!root.hidden)loadFeederPreview(true);});
     document.addEventListener('hetk-feeder-route-changed',()=>{if(currentUser&&root&&!root.hidden)loadFeederPreview(true);});
     document.addEventListener('hetk-scoped-data-changed',e=>{if(e?.detail?.type==='tps'&&currentUser){loadFeederPreview(true);}});
@@ -2004,6 +2011,6 @@
     if(window.HETKAuth?.currentUser)authChanged(window.HETKAuth.currentUser);
     try{window.firebase?.auth?.().onAuthStateChanged?.(()=>{if(currentUser&&!cloudReady&&!cloudReadStarted)openCloudSession();});}catch(e){}
   }
-  window.HETKDispatchGrid = {open:()=>open(),analyzeDraft:()=>data?analyze():null,version:'85-ps-inspector'};
+  window.HETKDispatchGrid = {open:()=>open(),analyzeDraft:()=>data?analyze():null,version:'86-folder-first-ps-inspector'};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
