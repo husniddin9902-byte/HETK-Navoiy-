@@ -639,3 +639,11 @@ body.dg-modal-open{overflow:hidden!important}
 @media(max-width:1100px){#hetk-grid .dg-p85-overview{grid-template-columns:1fr}#hetk-grid .dg-p85-wide{grid-column:auto}#hetk-grid .dg-p85-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}#hetk-grid .dg-p85-reading-fields{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:780px){#hetk-grid .dg-ps-panel.dg-p85{left:5px;right:5px;top:5px;bottom:5px;width:auto;max-width:none}#hetk-grid .dg-p85-header{padding:12px}#hetk-grid .dg-p85-header h2{font-size:17px}#hetk-grid .dg-p85-sub-icon{width:41px;height:41px;flex-basis:41px}#hetk-grid .dg-p85-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}#hetk-grid .dg-p85-tabs{padding:6px}#hetk-grid .dg-p85-analytics{grid-template-columns:1fr}#hetk-grid .dg-p85-reading-fields{grid-template-columns:repeat(2,minmax(0,1fr))}#hetk-grid .dg-p85-export-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:520px){#hetk-grid .dg-p85-metric{padding:7px 8px}#hetk-grid .dg-p85-metric strong{font-size:13px}#hetk-grid .dg-p85-metric-icon{width:26px;height:26px;flex-basis:26px}#hetk-grid .dg-p85-feeder-row{flex-wrap:wrap}#hetk-grid .dg-p85-feeder-title{flex-basis:calc(100% - 40px)}#hetk-grid .dg-p85-feeder-kw{margin-left:28px;text-align:left}#hetk-grid .dg-p85-assignment{flex:1}#hetk-grid .dg-p85-reading-fields{grid-template-columns:1fr}#hetk-grid .dg-p85-wide-field{grid-column:auto}#hetk-grid .dg-p85-export-grid{grid-template-columns:1fr}#hetk-grid .dg-p85-transformer{flex-wrap:wrap}#hetk-grid .dg-p85-season{padding:9px}}
+
+/* v86: nested PS folders are a separate navigable section, never fake feeders. */
+#hetk-grid .dg-p86-substations-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px}
+#hetk-grid .dg-p86-substation{display:flex;align-items:center;gap:9px;text-align:left;min-width:0;padding:11px 13px;border:1px solid #c1dbf2;border-radius:10px;background:linear-gradient(110deg,#f6fbff,#eaf4fe);color:#174b80;cursor:pointer}
+#hetk-grid .dg-p86-substation:hover{background:#dcefff;border-color:#6eabe5}
+#hetk-grid .dg-p86-substation b{font-size:12px;flex:1;overflow-wrap:anywhere}
+#hetk-grid .dg-p86-substation small{font-size:10px;color:#6685a4}
+#hetk-grid .dg-p86-substation>span:last-child{font-weight:900;font-size:18px}
