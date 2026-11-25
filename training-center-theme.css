@@ -825,3 +825,23 @@
 #hetk-training-overlay .hetk-rich-book-text.is-cyrillic-book-text p {
   white-space:break-spaces;
 }
+
+/* v87: mavzu matniga qo'yilgan figure bloklarini o'quvchi va muharrirda bir xil ko'rsatish. */
+#hetk-training-overlay .hetk-topic-content-blocks .hetk-topic-paragraph{margin:0 0 1em;min-width:0;line-height:inherit;white-space:break-spaces;tab-size:4;overflow-wrap:anywhere}
+#hetk-training-overlay .hetk-topic-content-blocks .hetk-topic-paragraph figure{display:block;margin:18px auto;max-width:100%;text-align:center;clear:both}
+#hetk-training-overlay .hetk-topic-content-blocks .hetk-topic-paragraph figure img{display:block;max-width:100%;max-height:680px;height:auto;object-fit:contain;margin:0 auto;border-radius:9px}
+#hetk-training-overlay .hetk-topic-content-blocks .hetk-topic-paragraph figure figcaption{font:13px/1.5 Arial,sans-serif;opacity:.75;margin-top:6px}
+#hetk-training-overlay .hetk-v15-block-rich figure{display:block;max-width:100%;margin:18px auto;text-align:center}
+#hetk-training-overlay .hetk-v15-block-rich figure img{display:block;max-width:100%;max-height:550px;height:auto;object-fit:contain;margin:auto;border-radius:8px}
+#hetk-training-overlay .hetk-v15-block-rich figure figcaption{font-size:12px;color:#6c8190;margin-top:6px}
+#hetk-training-overlay .hetk-v15-block-rich-tools .hetk-topic-inline-image-button{background:#0879ca;color:#fff;border-color:#0879ca;font-weight:800}
+/* v87: lotin/kirill bob matnida probel, tab va abzatslar siqilmaydi. */
+#hetk-training-overlay .hetk-rich-editor-wrap .hetk-rich-editor,
+#hetk-training-overlay .hetk-rich-book-text{white-space:break-spaces;text-align:left;word-spacing:normal;letter-spacing:normal;tab-size:4;overflow-wrap:anywhere}
+#hetk-training-overlay .hetk-rich-book-text div,
+#hetk-training-overlay .hetk-rich-book-text p{white-space:inherit}
+#hetk-training-overlay .hetk-rich-editor-wrap [data-rich-indent]{border:1px solid #9ebdd6;background:#f5fbff;color:#174866;border-radius:8px;padding:5px 10px;min-height:34px;cursor:pointer;font-weight:700}
+#hetk-training-overlay .hetk-topic-paragraph figure.layout-left,#hetk-training-overlay .hetk-v15-block-rich figure.layout-left{float:left;clear:none;max-width:43%;margin:4px 18px 12px 0}
+#hetk-training-overlay .hetk-topic-paragraph figure.layout-right,#hetk-training-overlay .hetk-v15-block-rich figure.layout-right{float:right;clear:none;max-width:43%;margin:4px 0 12px 18px}
+#hetk-training-overlay .hetk-topic-paragraph figure.layout-auto,#hetk-training-overlay .hetk-topic-paragraph figure.layout-full{float:none;clear:both}
+@media(max-width:600px){#hetk-training-overlay .hetk-topic-paragraph figure.layout-left,#hetk-training-overlay .hetk-topic-paragraph figure.layout-right{float:none;max-width:100%;margin:16px auto}}
