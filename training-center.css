@@ -50,7 +50,7 @@
  .hetk-v11-reader .reader-topline>button{font-size:14px;padding:4px 0}
  .hetk-v11-reader .reader-book-title{font-size:16px;text-align:right;max-width:none}
  .hetk-v11-reader .reader-controls{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px;width:100%}
- .hetk-v11-reader .chapter{display:grid;width:100%;min-width:0;grid-template-columns:auto minmax(0,1fr) auto auto;gap:5px}
+ .hetk-v11-reader .chapter{display:grid;width:100%;min-width:0;grid-template-columns:minmax(0,1fr) auto auto;gap:5px}
  .hetk-v11-reader .chapter>span{font-size:13px}
  .hetk-v11-reader .chapter select{width:100%;min-width:0;max-width:none;padding:8px 9px}
  .hetk-v11-reader .chapter button{padding:8px 11px}
